@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Neon Snake</title>
+<style>
+  html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+  canvas { display:block; margin:auto; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:14px; align-items:center; font-weight:700; }
+  .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
+  .pill.button { cursor:pointer; user-select:none; }
+  .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+  .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
+  .btn:active { transform:translateY(1px); }
+  @media (min-width: 860px){ .btns { display:none; } }
+</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div class="pill" id="score">Score: 0</div>
+    <div class="pill" id="best">Best: 0</div>
+    <div class="pill" id="status">Press Space to start</div>
+    <div class="pill button" id="musicPill" title="Toggle music (M)">♪ Music: On</div>
+  </div>
+  <div class="btns">
+    <button class="btn" id="upBtn">⬆︎</button>
+    <button class="btn" id="leftBtn">⬅︎</button>
+    <button class="btn" id="rightBtn">➡︎</button>
+    <button class="btn" id="downBtn">⬇︎</button>
+    <button class="btn" id="restartBtn">Restart</button>
+    <button class="btn" id="musicToggle">Music: On</button>
+  </div>
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const statusEl = document.getElementById('status');
+  const upBtn=document.getElementById('upBtn');
+  const leftBtn=document.getElementById('leftBtn');
+  const rightBtn=document.getElementById('rightBtn');
+  const downBtn=document.getElementById('downBtn');
+  const restartBtn=document.getElementById('restartBtn');
+  const musicToggleBtn=document.getElementById('musicToggle');
+  const musicPill=document.getElementById('musicPill');
+
+  let audioCtx=null;
+  function ensureAC(){
+    if(!audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return null;
+      audioCtx=new AC();
+    }
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function beep(freq=600,dur=0.07,type='square',gain=0.06){
+    try{
+      const ac=ensureAC(); if(!ac) return;
+      const t=ac.currentTime;
+      const o=ac.createOscillator();
+      const g=ac.createGain();
+      o.type=type;
+      o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(gain,t);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g).connect(ac.destination);
+      o.start();
+      o.stop(t+dur);
+    }catch(_){}
+  }
+  const SFX={
+    move:()=>beep(520,0.04,'square',0.035),
+    eat:()=>beep(880,0.10,'sine',0.07),
+    die:()=>beep(180,0.18,'triangle',0.09),
+    start:()=>beep(700,0.08,'sine',0.06),
+    pause:()=>beep(300,0.06,'square',0.04)
+  };
+
+  // --------- Procedural Background Music ----------
+  // Lightweight step sequencer with bass + hi-hat + airy pad
+  const Music=(function(){
+    let enabled=true;     // user toggle
+    let playing=false;    // currently running
+    let interval=null;    // scheduler
+    let step=0;           // 16th notes counter
+    let bpm=96;           // tempo (ramps up slightly with score)
+    let masterGain=null;  // master volume with fades
+    // Chord progression (Am–F–C–G) in MIDI numbers relative to A3=220Hz
+    const chords=[
+      [57, 60, 64], // A3, C4, E4
+      [53, 57, 60], // F3, A3, C4
+      [55, 60, 64], // G3, C4, E4 (C)
+      [50, 55, 59]  // D3, G3, B3 (G)
+    ];
+    function midiToHz(m){ return 440 * Math.pow(2,(m-69)/12); }
+    function env(ac, gainNode, t, a=0.005, d=0.12, s=0.0008, r=0.15, peak=0.17){
+      const g=gainNode.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(0.00001,t);
+      g.exponentialRampToValueAtTime(peak, t+a);
+      g.exponentialRampToValueAtTime(peak*s, t+a+d);
+      g.exponentialRampToValueAtTime(0.00001, t+a+d+r);
+    }
+    function makeMaster(ac){
+      if(masterGain) return masterGain;
+      masterGain=ac.createGain();
+      masterGain.gain.value=0.0;
+      masterGain.connect(ac.destination);
+      return masterGain;
+    }
+    function fadeTo(val, time=0.25){
+      const ac=ensureAC(); if(!ac||!masterGain) return;
+      const g=masterGain.gain, t=ac.currentTime;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value,t);
+      g.linearRampToValueAtTime(val, t+time);
+    }
+    function playBass(ac, rootMidi, when){
+      const o=ac.createOscillator();
+      const g=ac.createGain();
+      o.type='sawtooth';
+      o.frequency.setValueAtTime(midiToHz(rootMidi-12), when); // deep bass
+      env(ac,g,when,0.002,0.1,0.4,0.25,0.23);
+      o.connect(g).connect(masterGain);
+      o.start(when);
+      o.stop(when+0.45);
+    }
+    function playHat(ac, when){
+      const n=ac.createBufferSource();
+      // simple noise burst
+      const buf=ac.createBuffer(1, ac.sampleRate*0.15, ac.sampleRate);
+      const data=buf.getChannelData(0);
+      for(let i=0;i<data.length;i++){ data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length, 4); }
+      n.buffer=buf;
+      const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000;
+      const g=ac.createGain(); g.gain.value=0.12;
+      n.connect(hp).connect(g).connect(masterGain);
+      n.start(when);
+      n.stop(when+0.12);
+    }
+    function playPluck(ac, midi, when){
+      const o=ac.createOscillator();
+      const g=ac.createGain();
+      o.type='triangle';
+      o.frequency.setValueAtTime(midiToHz(midi), when);
+      env(ac,g,when,0.003,0.09,0.2,0.18,0.14);
+      o.connect(g).connect(masterGain);
+      o.start(when);
+      o.stop(when+0.35);
+    }
+    function padChord(ac, chord, when){
+      // soft airy pad every bar (ducked in mix)
+      chord.forEach((m,i)=>{
+        const o=ac.createOscillator();
+        const g=ac.createGain();
+        o.type='sine';
+        o.detune.value = (i-1)*7; // slight spread
+        o.frequency.setValueAtTime(midiToHz(m)+ (i?0:0), when);
+        // longer envelope but very low
+        const gg=g.gain, t=when;
+        gg.setValueAtTime(0.00001,t);
+        gg.linearRampToValueAtTime(0.03, t+0.4);
+        gg.linearRampToValueAtTime(0.02, t+1.8);
+        gg.linearRampToValueAtTime(0.00001, t+2.2);
+        o.connect(g).connect(masterGain);
+        o.start(t);
+        o.stop(t+2.25);
+      });
+    }
+    function currentBpm(){ return bpm; }
+    function setBpm(x){
+      bpm=Math.max(82, Math.min(138, x));
+    }
+    function setEnabled(v){
+      enabled=!!v;
+      if(!enabled) stop(true);
+      if(enabled && !playing) start();
+      updateLabels();
+    }
+    function updateLabels(){
+      const label = enabled ? "♪ Music: On" : "♪ Music: Off";
+      if(musicToggleBtn) musicToggleBtn.textContent=label.replace('♪ ','Music: ');
+      if(musicPill) musicPill.textContent=label;
+    }
+    function start(){
+      const ac=ensureAC(); if(!ac || !enabled) { updateLabels(); return; }
+      makeMaster(ac);
+      if(playing) return;
+      playing=true;
+      fadeTo(0.22,0.35);
+      const stepDur = ()=> 60/currentBpm()/4; // 16th note
+      let bar=0;
+      // schedule pad at bar start
+      padChord(ac, chords[bar%chords.length], ac.currentTime+0.02);
+      interval = setInterval(()=>{
+        if(!playing) return;
+        const t=ac.currentTime+0.005;
+        const chord = chords[bar%chords.length];
+        // Hats on every 8th (every 2 steps), accent on quarters
+        if(step%2===0) playHat(ac,t);
+        // Bass on 1 & 3 (every 4 steps)
+        if(step%4===0) playBass(ac, chord[0], t);
+        // Simple pluck on off-beats for a pulse
+        if(step%8===4) playPluck(ac, chord[1], t+0.01);
+        step=(step+1)%16;
+        if(step===0){ bar++; padChord(ac, chords[bar%chords.length], t+0.02); }
+      }, stepDur()*1000);
+      updateLabels();
+    }
+    function stop(hard=false){
+      if(interval){ clearInterval(interval); interval=null; }
+      playing=false;
+      if(masterGain){
+        fadeTo(0.0, hard?0.08:0.3);
+      }
+      updateLabels();
+    }
+    function paused(){ return playing===false; }
+    function resume(){ if(enabled && !playing) start(); }
+    return { start, stop, resume, paused, setBpm, setEnabled, updateLabels };
+  })();
+  // ------------------------------------------------
+
+  const COLS=24, ROWS=24;
+  function resize(){
+    const pad=12;
+    const availW=Math.max(320, window.innerWidth - pad*2);
+    const availH=Math.max(320, window.innerHeight - pad*2);
+    const cell=Math.floor(Math.min(availW/COLS, availH/ROWS));
+    canvas.width = cell*COLS; canvas.height = cell*ROWS;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const HS_KEY='neonsnake_best';
+  let best=0; try{ best=Number(localStorage.getItem(HS_KEY)||0);}catch(_){ }
+  bestEl.textContent='Best: '+best;
+
+  let snake, prevSnake, dir, nextDir, food, running, gameOver, score, acc, stepMs;
+
+  function newGame(){
+    const midX=Math.floor(COLS/2), midY=Math.floor(ROWS/2);
+    snake=[{x:midX, y:midY},{x:midX-1, y:midY},{x:midX-2, y:midY}];
+    prevSnake=snake.map(p=>({...p}));
+    dir={x:1,y:0}; nextDir={x:1,y:0};
+    score=0; stepMs=140; acc=0;
+    running=false; gameOver=false;
+    statusEl.textContent='Press Space to start';
+    spawnFood();
+    updateHUD();
+    draw();
+    // music reset
+    Music.setBpm(96);
+    Music.stop(true);
+  }
+
+  function updateHUD(){
+    scoreEl.textContent='Score: '+score;
+    if(score>best){ best=score; try{ localStorage.setItem(HS_KEY,String(best)); }catch(_){ } }
+    bestEl.textContent='Best: '+best;
+    // ramp tempo slightly with score
+    Music.setBpm(96 + Math.min(32, Math.floor(score/4)*2));
+  }
+
+  function spawnFood(){
+    const free=[];
+    const taken=new Set(snake.map(c=>c.x+','+c.y));
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(!taken.has(x+','+y)) free.push({x,y});
+    food = free.length ? free[Math.floor(Math.random()*free.length)] : null;
+  }
+
+  function curSpeed(){ return Math.max(60, stepMs - Math.floor(score/5)*6); }
+
+  function tick(dt){
+    if(!running||gameOver) return;
+    acc+=dt;
+    const speed=curSpeed();
+    while(acc>=speed){
+      acc-=speed;
+      step();
+    }
+  }
+
+  function step(){
+    prevSnake = snake.map(p=>({...p}));
+    dir = validateDir(nextDir, dir);
+    const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+    if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
+      gameOver=true; running=false; statusEl.textContent='Game Over — Press Space'; SFX.die(); Music.stop(); draw(); return;
+    }
+    snake.unshift(head);
+    if(food && head.x===food.x && head.y===food.y){
+      score+=1; updateHUD(); spawnFood(); SFX.eat();
+    } else {
+      snake.pop(); SFX.move();
+    }
+  }
+
+  function validateDir(n, cur){
+    if((n.x===-cur.x && n.y===0) || (n.y===-cur.y && n.x===0)) return cur; return n;
+  }
+
+  function roundRect(x,y,w,h,r){
+    const rr=Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y, x+w,y+h, rr);
+    ctx.arcTo(x+w,y+h, x,y+h, rr);
+    ctx.arcTo(x,y+h, x,y, rr);
+    ctx.arcTo(x,y, x+w,y, rr);
+    ctx.closePath();
+  }
+
+  function drawSegment(x,y,cw,ch,baseColor,glowColor,rad){
+    ctx.shadowColor=glowColor;
+    ctx.shadowBlur=Math.max(cw,ch)*0.22;
+    roundRect(x+1,y+1,cw-2,ch-2,rad);
+    const g=ctx.createLinearGradient(x,y,x+cw,y+ch);
+    g.addColorStop(0, baseColor);
+    g.addColorStop(1, '#ffffff15');
+    ctx.fillStyle=g;
+    ctx.fill();
+    ctx.shadowBlur=0;
+  }
+
+  function drawEye(cx,cy,r){
+    ctx.beginPath();
+    ctx.fillStyle='#0b0f14';
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle='#e6edf3';
+    ctx.arc(cx,cy,r*0.45,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  function ease(t){ return 1 - (1-t)*(1-t); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const cw=canvas.width/COLS, ch=canvas.height/ROWS;
+
+    const bg=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+    bg.addColorStop(0,'#0f1729'); bg.addColorStop(1,'#0b1120');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle='#111827';
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+      if(((x+y)&1)===0) ctx.fillRect(Math.floor(x*cw), Math.floor(y*ch), Math.ceil(cw), Math.ceil(ch));
+    }
+
+    if(food){
+      const fx=food.x*cw, fy=food.y*ch;
+      const rg=ctx.createRadialGradient(fx+cw/2,fy+ch/2,1, fx+cw/2,fy+ch/2, Math.max(cw,ch)*0.6);
+      rg.addColorStop(0,'#f59e0b'); rg.addColorStop(1,'#f59e0b22');
+      ctx.fillStyle=rg; ctx.beginPath();
+      ctx.shadowColor='#f59e0b'; ctx.shadowBlur=Math.max(cw,ch)*0.35;
+      ctx.arc(fx+cw/2,fy+ch/2, Math.min(cw,ch)*0.38, 0, Math.PI*2);
+      ctx.fill(); ctx.shadowBlur=0;
+    }
+
+    const t = running && !gameOver ? ease(Math.min(1, acc / curSpeed())) : 0;
+
+    for(let i=snake.length-1;i>=0;i--){
+      const to = snake[i];
+      const from = (prevSnake[i] || to);
+      const ix = lerp(from.x, to.x, t);
+      const iy = lerp(from.y, to.y, t);
+      const x=ix*cw, y=iy*ch;
+      const ratio = i/(snake.length-1||1);
+      const hue=200 - ratio*70;
+      const base=`hsl(${hue} 80% 60%)`;
+      const glow=`hsl(${hue} 90% 65% / 0.9)`;
+      drawSegment(x, y, cw, ch, base, glow, Math.min(cw,ch)*0.28);
+    }
+
+    if(snake.length){
+      const to = snake[0];
+      const from = (prevSnake[0] || to);
+      const hx = lerp(from.x, to.x, t)*cw;
+      const hy = lerp(from.y, to.y, t)*ch;
+      drawSegment(hx,hy,cw,ch,'#22d3ee','#67e8f9', Math.min(cw,ch)*0.35);
+
+      const eyeR=Math.min(cw,ch)*0.09;
+      let ex1,ey1,ex2,ey2;
+      const look = dir;
+      if(look.x===1&&look.y===0){ ex1=hx+cw*0.62; ey1=hy+ch*0.35; ex2=hx+cw*0.62; ey2=hy+ch*0.65; }
+      else if(look.x===-1&&look.y===0){ ex1=hx+cw*0.38; ey1=hy+ch*0.35; ex2=hx+cw*0.38; ey2=hy+ch*0.65; }
+      else if(look.x===0&&look.y===1){ ex1=hx+cw*0.35; ey1=hy+ch*0.62; ex2=hx+cw*0.65; ey2=hy+ch*0.62; }
+      else { ex1=hx+cw*0.35; ey1=hy+ch*0.38; ex2=hx+cw*0.65; ey2=hy+ch*0.38; }
+      drawEye(ex1,ey1,eyeR); drawEye(ex2,ey2,eyeR);
+    }
+
+    if(gameOver){
+      ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='32px system-ui, sans-serif';
+      ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 16);
+      ctx.font='18px system-ui, sans-serif';
+      ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
+      ctx.fillText('Press Space', canvas.width/2, canvas.height/2 + 36);
+    } else if(!running){
+      ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='24px system-ui, sans-serif';
+      ctx.fillText('Press Space to start', canvas.width/2, canvas.height/2);
+      ctx.font='14px system-ui, sans-serif';
+      ctx.fillText('Arrows/WASD to move — Space to pause — M to toggle music', canvas.width/2, canvas.height/2+24);
+    }
+  }
+
+  function start(){ if(running||gameOver) return; running=true; statusEl.textContent=''; SFX.start(); Music.resume(); }
+  function restart(){ newGame(); }
+  function pause(){ if(!running||gameOver) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); }
+
+  function onKey(e){
+    const c=e.code;
+    if(c==='Space'){ if(gameOver){ restart(); } else if(!running){ start(); } else { pause(); } }
+    else if(c==='ArrowUp'||c==='KeyW'){ nextDir={x:0,y:-1}; }
+    else if(c==='ArrowDown'||c==='KeyS'){ nextDir={x:0,y:1}; }
+    else if(c==='ArrowLeft'||c==='KeyA'){ nextDir={x:-1,y:0}; }
+    else if(c==='ArrowRight'||c==='KeyD'){ nextDir={x:1,y:0}; }
+    else if(c==='KeyM'){ // toggle music
+      // user intent counts as gesture; ensure AC
+      ensureAC();
+      const currentlyOn = (musicToggleBtn.textContent.indexOf('On')>-1);
+      Music.setEnabled(!currentlyOn);
+    }
+    // prevent page scroll with arrows/space on some browsers
+    if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c)) e.preventDefault();
+  }
+  window.addEventListener('keydown', onKey, {passive:false});
+
+  function toggleMusic(){
+    ensureAC();
+    const currentlyOn = (musicToggleBtn.textContent.indexOf('On')>-1);
+    Music.setEnabled(!currentlyOn);
+  }
+
+  upBtn.addEventListener('click', ()=>{ nextDir={x:0,y:-1}; if(!running&&!gameOver) start(); });
+  downBtn.addEventListener('click', ()=>{ nextDir={x:0,y:1}; if(!running&&!gameOver) start(); });
+  leftBtn.addEventListener('click', ()=>{ nextDir={x:-1,y:0}; if(!running&&!gameOver) start(); });
+  rightBtn.addEventListener('click', ()=>{ nextDir={x:1,y:0}; if(!running&&!gameOver) start(); });
+  restartBtn.addEventListener('click', ()=>{ restart(); });
+  musicToggleBtn.addEventListener('click', toggleMusic);
+  musicPill.addEventListener('click', toggleMusic);
+
+  let tsx=0, tsy=0, swiping=false;
+  canvas.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; tsx=t.clientX; tsy=t.clientY; swiping=true; }, {passive:true});
+  canvas.addEventListener('touchend', (e)=>{ if(!swiping) return; const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy; swiping=false; const ax=Math.abs(dx), ay=Math.abs(dy); if(Math.max(ax,ay)<20) { if(!running&&!gameOver) start(); return; } if(ax>ay) nextDir={x:dx>0?1:-1,y:0}; else nextDir={x:0,y:dy>0?1:-1}; if(!running&&!gameOver) start(); }, {passive:true});
+
+  let last=performance.now();
+  function loop(){ const now=performance.now(); const dt=Math.min(60, now-last); last=now; tick(dt); draw(); requestAnimationFrame(loop); }
+
+  // init
+  Music.updateLabels();
+  newGame();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

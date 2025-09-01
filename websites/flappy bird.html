@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sky Hopper — Fullscreen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style>
+  /* Fullscreen canvas + mobile-friendly */
+  html, body { height:100%; margin:0; }
+  body {
+    background:#70c5ce;          /* graceful fallback behind canvas */
+    overscroll-behavior:none;
+    touch-action:none;            /* prevents page scroll on tap-to-flap */
+    -webkit-user-select:none; user-select:none;
+  }
+  canvas#game {
+    position:fixed; inset:0;      /* fullscreen */
+    width:100vw; height:100vh;
+    display:block;
+    background: linear-gradient(#70c5ce, #d0f4f7);
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+/* =========================
+   Sky Hopper — Fullscreen Edition
+   Changes:
+   - True fullscreen with devicePixelRatio scaling & letterboxing.
+   - Virtual world units (360x640) so physics/UI feel consistent on any screen.
+   - Parallax sky, clouds, scrolling ground.
+   - Glossy pipes + caps.
+   - Bird sprite with wing animation, tilt based on velocity, occasional blink.
+   - Kept your audio, score/HS, difficulty ramp, controls.
+   ========================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d", { alpha: false }); // better perf for full-screen
+
+/* ----- HiDPI fullscreen + virtual world ----- */
+let dpr = window.devicePixelRatio || 1;
+const WORLD_W = 360, WORLD_H = 640;   // logical game space
+let viewScale = 1, viewOffsetX = 0, viewOffsetY = 0;
+function resizeCanvas() {
+  const cssW = window.innerWidth, cssH = window.innerHeight;
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  // letterbox fit
+  const sx = canvas.width / WORLD_W, sy = canvas.height / WORLD_H;
+  viewScale = Math.min(sx, sy);
+  viewOffsetX = (canvas.width - WORLD_W * viewScale) * 0.5;
+  viewOffsetY = (canvas.height - WORLD_H * viewScale) * 0.5;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener("resize", resizeCanvas, { passive: true });
+resizeCanvas();
+
+/* ----- Game state (ported to world units) ----- */
+let frames = 0;
+const gravity = 0.25;
+const jump = 4.6;
+let score = 0;
+let gameOver = false;
+let started = false;
+const HS_KEY = "skyhopper_highscore";
+let highScore = 0;
+try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
+let newBestThisRun = false;
+
+/* ----- Audio (your original) ----- */
+let audioCtx = null;
+const MUSIC_NOTES = [523.25,587.33,659.25,587.33,523.25,392.00,440.00,392.00,523.25,659.25,783.99,659.25,587.33,523.25,440.00,392.00];
+const MUSIC_TEMPO_MS = 170;
+let music = { isOn: false, interval: null, gain: null, noteIndex: 0 };
+function ensureAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+}
+function startMusic() {
+  ensureAudio();
+  if (!audioCtx || music.isOn) return;
+  if (!music.gain) {
+    music.gain = audioCtx.createGain();
+    music.gain.gain.value = 0.18;
+    music.gain.connect(audioCtx.destination);
+  }
+  music.isOn = true;
+  music.interval = setInterval(() => {
+    if (!music.isOn || !audioCtx) return;
+    const freq = MUSIC_NOTES[music.noteIndex % MUSIC_NOTES.length];
+    music.noteIndex++;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+    osc.connect(g).connect(music.gain);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  }, MUSIC_TEMPO_MS);
+}
+function stopMusic() {
+  if (music.interval) clearInterval(music.interval);
+  music.interval = null; music.isOn = false;
+}
+function resumeAudio() {
+  ensureAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq=440, duration=0.08, type="sine", gain=0.04) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(gain, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t0); osc.stop(t0 + duration);
+}
+const SFX = {
+  flap(){ beep(600, 0.06, "square", 0.05); },
+  score(){ beep(900, 0.07, "triangle", 0.05); },
+  hit(){ beep(180, 0.12, "sine", 0.06); setTimeout(()=>beep(120, 0.12, "sine", 0.05), 30); },
+  newHigh(){ beep(900, 0.08, "triangle", 0.06); setTimeout(()=>beep(1200, 0.10, "triangle", 0.05), 70); }
+};
+
+/* ----- Difficulty ramp (unchanged logic) ----- */
+const basePipeSpeed = 2.5;
+const rampPerSecond = 0.035;
+let speedMultiplier = 1;
+let firstPassTime = null;
+let spawnAccumulator = 0;
+const spawnSpacing = 240;
+function updateDifficulty() {
+  if (firstPassTime && !gameOver) {
+    const seconds = (performance.now() - firstPassTime) / 1000;
+    speedMultiplier = 1 + rampPerSecond * seconds;
+  } else {
+    speedMultiplier = 1;
+  }
+}
+
+/* ----- Art helpers ----- */
+function withWorldTransform(fn) {
+  ctx.save();
+  ctx.translate(viewOffsetX, viewOffsetY);
+  ctx.scale(viewScale, viewScale);
+
+  // ⬇️ Clip so nothing renders outside 0..WORLD_W / 0..WORLD_H
+  ctx.beginPath();
+  ctx.rect(0, 0, WORLD_W, WORLD_H);
+  ctx.clip();
+
+  fn();
+  ctx.restore();
+}
+
+function drawText(txt, x, y, size=24, align="center", color="#fff") {
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.font = `bold ${size}px system-ui, -apple-system, Segoe UI, Arial`;
+  ctx.textAlign = align;
+  ctx.fillText(txt, x+2, y+2);
+  ctx.fillStyle = color;
+  ctx.fillText(txt, x, y);
+}
+
+/* ----- Background: sky, clouds, hills, ground ----- */
+const groundH = 96;
+const clouds = Array.from({length: 7}, (_,i)=>({
+  x: Math.random()*WORLD_W,
+  y: 20 + Math.random()*200,
+  s: 0.2 + Math.random()*0.5,
+  w: 60 + Math.random()*80
+}));
+function drawSky() {
+  const g = ctx.createLinearGradient(0,0,0,WORLD_H);
+  g.addColorStop(0,"#70c5ce");
+  g.addColorStop(1,"#d0f4f7");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,WORLD_W,WORLD_H);
+}
+function drawCloud(cx, cy, w) {
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, w*0.45, w*0.28, 0, 0, Math.PI*2);
+  ctx.ellipse(cx-w*0.25, cy+4, w*0.25, w*0.18, 0, 0, Math.PI*2);
+  ctx.ellipse(cx+w*0.25, cy+6, w*0.3, w*0.2, 0, 0, Math.PI*2);
+  ctx.fill();
+}
+function updateAndDrawClouds(speed) {
+  for (const c of clouds) {
+    c.x -= speed * c.s * 0.3; // slow parallax
+    if (c.x < -c.w) c.x = WORLD_W + c.w;
+    drawCloud(c.x, c.y, c.w);
+  }
+}
+function drawHills() {
+  // far layer
+  ctx.fillStyle = "#9ed0a7";
+  ctx.beginPath();
+  ctx.moveTo(0, WORLD_H - groundH - 40);
+  for (let x=0; x<=WORLD_W; x+=10) {
+    const y = WORLD_H - groundH - 40 - Math.sin(x*0.02)*8;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(WORLD_W,WORLD_H); ctx.lineTo(0,WORLD_H); ctx.closePath(); ctx.fill();
+  // near layer
+  ctx.fillStyle = "#7ecb86";
+  ctx.beginPath();
+  ctx.moveTo(0, WORLD_H - groundH - 16);
+  for (let x=0; x<=WORLD_W; x+=10) {
+    const y = WORLD_H - groundH - 16 - Math.cos(x*0.03)*10;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(WORLD_W,WORLD_H); ctx.lineTo(0,WORLD_H); ctx.closePath(); ctx.fill();
+}
+let groundOffset = 0;
+function drawGround(scrollSpeed) {
+  groundOffset = (groundOffset + scrollSpeed) % 48;
+  // grass top
+  ctx.fillStyle = "#5aa353";
+  ctx.fillRect(0, WORLD_H - groundH, WORLD_W, 14);
+  // dirt pattern
+  ctx.fillStyle = "#d9a774";
+  ctx.fillRect(0, WORLD_H - groundH + 14, WORLD_W, groundH - 14);
+  ctx.fillStyle = "#c38957";
+  for (let x = -48 + (-groundOffset); x < WORLD_W + 48; x += 48) {
+    ctx.fillRect(x, WORLD_H - groundH + 14, 24, 10);
+    ctx.fillRect(x+24, WORLD_H - groundH + 34, 24, 10);
+    ctx.fillRect(x, WORLD_H - groundH + 54, 24, 10);
+  }
+}
+
+/* ----- Bird (animated sprite) ----- */
+const bird = {
+  x: WORLD_W * 0.28,
+  y: WORLD_H * 0.5,
+  width: 32,
+  height: 24,
+  velocity: 0,
+  wingPhase: 0,
+  blinkTimer: 0,
+  draw() {
+    const cx = this.x, cy = this.y;
+    const tilt = Math.max(-0.6, Math.min(1.2, this.velocity * 0.06));
+    const wingAngle = Math.sin(this.wingPhase) * 0.8; // flap
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(tilt);
+
+    // Body
+    const r = this.height * 0.55;
+    const bodyGrad = ctx.createRadialGradient(-4,-4,2, 0,0, r);
+    bodyGrad.addColorStop(0, "#fff3a1");
+    bodyGrad.addColorStop(1, "#f6c945");
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.ellipse(0,0, r*1.0, r*0.9, 0, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.stroke();
+
+    // Wing
+    ctx.save();
+    ctx.translate(-4, 0);
+    ctx.rotate(wingAngle);
+    ctx.fillStyle = "#f0b82e";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r*0.55, r*0.35, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // Beak
+    ctx.fillStyle = "#f79e2b";
+    ctx.beginPath();
+    ctx.moveTo(r*0.9, -3);
+    ctx.lineTo(r*1.3, 0);
+    ctx.lineTo(r*0.9, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.stroke();
+
+    // Eye (blink)
+    const blink = (this.blinkTimer > 0);
+    ctx.fillStyle = "#000";
+    if (blink) {
+      ctx.fillRect(6, -5, 8, 2);
+    } else {
+      ctx.beginPath(); ctx.arc(8, -5, 3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(7.5, -5.5, 1.2, 0, Math.PI*2); ctx.fill();
+    }
+
+    ctx.restore();
+  },
+  flap() { this.velocity = -jump; this.wingPhase += 0.7; },
+  update() {
+    this.velocity += gravity;
+    this.y += this.velocity;
+    this.wingPhase += 0.25;
+    // occasional blink
+    if (Math.random() < 0.01 && this.blinkTimer <= 0) this.blinkTimer = 6;
+    if (this.blinkTimer > 0) this.blinkTimer--;
+    // ground collision
+    if (this.y + this.height/2 >= WORLD_H - groundH) setGameOver();
+    // ceiling clamp
+    if (this.y - this.height/2 < 0) { this.y = this.height/2; this.velocity = 0; }
+  }
+};
+
+/* ----- Pipes (glossy with caps) ----- */
+const pipes = [];
+const pipeGap = 140;
+const pipeWidth = 64;
+const maxPipeStep = 80;
+let lastTopHeight = null;
+
+function spawnPipe() {
+  const minTop = 20;
+  const maxTop = WORLD_H - groundH - pipeGap - 60;
+  let topHeight;
+  if (lastTopHeight === null) {
+    topHeight = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+  } else {
+    const lowerBound = Math.max(minTop, lastTopHeight - maxPipeStep);
+    const upperBound = Math.min(maxTop, lastTopHeight + maxPipeStep);
+    topHeight = Math.floor(Math.random() * (upperBound - lowerBound + 1)) + lowerBound;
+  }
+  lastTopHeight = topHeight;
+  const bottomHeight = WORLD_H - groundH - topHeight - pipeGap;
+  pipes.push({ x: WORLD_W + 10, top: topHeight, bottom: bottomHeight, scored: false });
+}
+
+function drawPipeRect(x, y, w, h) {
+  // glossy cylinder look
+  const grad = ctx.createLinearGradient(x,0,x+w,0);
+  grad.addColorStop(0.00, "#1e9f57");
+  grad.addColorStop(0.25, "#27c769");
+  grad.addColorStop(0.60, "#1fb15c");
+  grad.addColorStop(1.00, "#158f4a");
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, h);
+  // highlight strip
+  ctx.fillStyle = "rgba(255,255,255,0.16)";
+  ctx.fillRect(x+4, y+3, 6, h-6);
+  // cap
+  ctx.fillStyle = "#14914a";
+  ctx.fillRect(x-6, y-10, w+12, 12);
+  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x-6, y-10, w+12, 12);
+}
+
+function updatePipes(currentSpeed) {
+  for (let i = 0; i < pipes.length; i++) {
+    const p = pipes[i];
+    p.x -= currentSpeed;
+    // collision
+    const bx1 = bird.x - bird.width/2, bx2 = bird.x + bird.width/2;
+    const px1 = p.x, px2 = p.x + pipeWidth;
+    const inX = (bx2 > px1 && bx1 < px2);
+    const hitsTop = bird.y - bird.height/2 < p.top;
+    const hitsBottom = bird.y + bird.height/2 > (WORLD_H - groundH - p.bottom);
+    if (inX && (hitsTop || hitsBottom)) { setGameOver(); break; }
+    // scoring
+    if (!gameOver && !p.scored && px2 < bird.x - bird.width/2) {
+      p.scored = true; score += 1; SFX.score();
+      if (firstPassTime === null) firstPassTime = performance.now();
+    }
+  }
+  // prune
+  while (pipes.length && pipes[0].x + pipeWidth < -10) pipes.shift();
+}
+
+function drawPipes() {
+  for (const p of pipes) {
+    // top
+    drawPipeRect(p.x, 0, pipeWidth, p.top);
+    // bottom
+    const y = WORLD_H - groundH - p.bottom;
+    drawPipeRect(p.x, y, pipeWidth, p.bottom);
+  }
+}
+
+/* ----- Game control ----- */
+function setGameOver() {
+  if (gameOver) return;
+  gameOver = true;
+  stopMusic();
+  if (score > highScore) {
+    highScore = score; newBestThisRun = true;
+    try { localStorage.setItem(HS_KEY, String(highScore)); } catch(_) {}
+    SFX.newHigh();
+  } else {
+    SFX.hit();
+  }
+}
+
+function restartGame() {
+  score = 0;
+  bird.y = WORLD_H * 0.5;
+  bird.velocity = 0;
+  pipes.length = 0;
+  frames = 0;
+  gameOver = false;
+  lastTopHeight = null;
+  firstPassTime = null;
+  speedMultiplier = 1;
+  spawnAccumulator = 0;
+  newBestThisRun = false;
+  groundOffset = 0;
+  resumeAudio();
+  startMusic();
+}
+
+/* ----- Main loop ----- */
+function loop() {
+  // reset transform & clear whole canvas (also clears the letterbox)
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  
+  const currentSpeed = basePipeSpeed * speedMultiplier;
+  const bgSpeed = gameOver ? 0 : currentSpeed;
+
+  withWorldTransform(() => {
+    // Background layers
+    drawSky();
+    updateAndDrawClouds(bgSpeed);   // ⬅️ use bgSpeed
+    drawHills();
+
+    // Start text
+    if (!started && !gameOver) {
+      drawText("Tap or press SPACE to start", WORLD_W/2, WORLD_H/2, 22);
+    } else {
+      if (!gameOver) {
+        bird.update();
+        spawnAccumulator += currentSpeed;
+        if (spawnAccumulator >= spawnSpacing) {
+          spawnPipe();
+          spawnAccumulator -= spawnSpacing;
+        }
+        updatePipes(currentSpeed);
+      }
+      drawPipes();
+      // HUD
+      drawText(String(score), WORLD_W/2, 60, 40);
+      drawText(`Best: ${highScore}`, 10, 26, 16, "left");
+      drawText(`x${speedMultiplier.toFixed(2)} speed`, WORLD_W-10, 26, 16, "right");
+    }
+
+    // Bird & ground always on top
+    bird.draw();
+    drawGround(bgSpeed);            // ⬅️ use bgSpeed
+
+    // Game over overlay
+    if (gameOver) {
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(0,0,WORLD_W,WORLD_H);
+      drawText(newBestThisRun ? "New High Score!" : "Game Over", WORLD_W/2, WORLD_H/2 - 24, 32);
+      drawText(`Score: ${score}  |  Best: ${highScore}`, WORLD_W/2, WORLD_H/2 + 4, 18);
+      drawText("Tap or press SPACE to restart", WORLD_W/2, WORLD_H/2 + 30, 18);
+    }
+  });
+
+  updateDifficulty();
+  frames++;
+  requestAnimationFrame(loop);
+}
+
+/* ----- Input ----- */
+function doFlapOrStart() {
+  resumeAudio();
+  if (!started) { started = true; startMusic(); }
+  if (gameOver) restartGame();
+  bird.flap();
+  SFX.flap();
+}
+document.addEventListener("keydown", e => { if (e.code === "Space") doFlapOrStart(); });
+canvas.addEventListener("mousedown", doFlapOrStart);
+document.addEventListener("touchstart", (e) => { e.preventDefault(); doFlapOrStart(); }, { passive: false });
+
+/* ----- Page visibility (pause music) ----- */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopMusic();
+  else if (started && !gameOver) startMusic();
+});
+
+/* ----- Boot ----- */
+score = 0; started = false; gameOver = false;
+loop();
+</script>
+</body>
+</html>

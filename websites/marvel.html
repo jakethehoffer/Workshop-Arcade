@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MCU — Fact Match (Guess-The-Character)</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0b0f14;
+    --panel:#0e1522;
+    --ink:#e6edf3;
+    --muted:#93a4b8;
+    --accent:#5eead4;
+    --stroke:#26334a;
+    --ok:#22c55e;
+    --no:#ef4444;
+    --partial:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
+    overscroll-behavior-y:none;
+    -webkit-text-size-adjust:100%;
+  }
+  *{-webkit-tap-highlight-color: transparent;}
+
+  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:14px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg, rgba(255,255,255,.025), transparent)}
+  header h1{margin:0;font-size:18px}
+  header .sub{color:var(--muted);font-size:13px}
+  header .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button, .btn {
+    background: rgba(94,234,212,.12);
+    border:1px solid rgba(94,234,212,.35);
+    color:var(--accent);
+    padding:8px 12px;border-radius:10px; font-weight:700; cursor:pointer;
+    touch-action: manipulation;
+  }
+  button:disabled{opacity:.6; cursor:not-allowed}
+  .pill{border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+  main{display:grid; grid-template-columns: 320px 1fr; gap:14px; padding:14px 16px}
+  .panel{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:12px}
+  .panel h2{margin:2px 0 10px 0; font-size:15px}
+  .bankSearch{display:flex; gap:8px; margin-bottom:10px}
+  .bankSearch input, select{
+    width:100%; padding:8px 10px; border-radius:10px; border:1px solid var(--stroke); background:#0b1220; color:var(--ink); font-size:14px;
+  }
+  .bank{ display:grid; grid-template-columns: 1fr 1fr; gap:6px 8px; max-height:calc(100vh - 280px); overflow:auto; padding-right:4px}
+  .charBtn{padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:10px; cursor:pointer; background:rgba(255,255,255,.03); font-weight:600; text-align:left}
+  .charBtn:hover{border-color:rgba(94,234,212,.45)}
+  .charBtn.selected{outline:2px solid rgba(94,234,212,.55)}
+  .factsGrid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px}
+  .fact{padding:8px 10px; border:1px solid rgba(255,255,255,.06); border-radius:10px; background:rgba(255,255,255,.02); font-size:13px}
+  .fact b{display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px}
+  .tag{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 8px; font-size:12px; border:1px solid rgba(255,255,255,.1)}
+  .tag.ok{background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color:#bef264}
+  .tag.no{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color:#fecaca}
+  .guessCard{border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02)}
+  .guesses{display:grid; gap:10px}
+  .empty{color:var(--muted); font-size:14px; border:1px dashed rgba(255,255,255,.12); border-radius:12px; padding:16px; text-align:center}
+  .legend{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .legend .tag{font-size:11px}
+  .footer{padding:12px 16px; color:var(--muted); font-size:12px; border-top:1px solid rgba(255,255,255,.06)}
+  .winOverlay{
+    position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5);
+  }
+  .winOverlay.show{display:grid}
+  .winPanel{background:rgba(14,21,34,.98); border:1px solid rgba(255,255,255,.12); border-radius:16px; width:min(520px, 96vw); padding:18px}
+  .winPanel h3{margin:0 0 4px 0}
+  .muted{color:var(--muted)}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .sp{height:1px; background:rgba(255,255,255,.07); margin:10px 0}
+
+  @media (max-width: 840px){
+    main{ grid-template-columns: 1fr; }
+    header .sub{ font-size:12px; }
+    .bank{ grid-template-columns: 1fr; max-height: 40vh; }
+    .factsGrid{ grid-template-columns: 1fr 1fr; }
+    .bankSearch input{ font-size:16px; }
+    button, .btn{ padding:12px 14px; }
+    .pill{ font-size:12px; padding:7px 12px; }
+  }
+
+  body.modal-open{ overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>MCU — Fact Match</h1>
+      <div class="sub">Guess the hidden character by comparing facts. Tap a character to see which facts match the target.</div>
+    </div>
+    <div class="actions">
+      <span class="pill" id="guessesLeftPill">Guesses left: —</span>
+      <button id="newGameBtn">New Game</button>
+      <button id="sfxBtn" class="btn">🔊 SFX: On</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Character Bank</h2>
+      <div class="bankSearch">
+        <input id="bankFilter" inputmode="search" autocomplete="off" placeholder="Filter (name, * and ? wildcards)" />
+      </div>
+      <div class="bank" id="bankList"></div>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <h2>Guesses</h2>
+        <div class="legend">
+          <span class="tag ok">Matches target</span>
+          <span class="tag no">Doesn't match</span>
+        </div>
+      </div>
+      <div id="guesses" class="guesses">
+        <div class="empty">No guesses yet. Pick a character from the left to compare their facts with the target.</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">
+    Tip: Use the bank search to narrow options. You win by tapping the exact character! “New Game” picks a fresh target.
+  </div>
+</div>
+
+<!-- Win Overlay -->
+<div class="winOverlay" id="win">
+  <div class="winPanel">
+    <h3>🎉 You found the target!</h3>
+    <div class="muted" id="winName"></div>
+    <div class="sp"></div>
+    <div id="winFacts" class="factsGrid" style="margin-bottom:10px"></div>
+    <div class="row">
+      <button id="playAgainBtn">Play Again</button>
+      <span class="muted" id="stats"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Lose Overlay -->
+<div class="winOverlay" id="lose">
+  <div class="winPanel">
+    <h3>💀 Out of guesses!</h3>
+    <div class="muted">The target was:</div>
+    <div class="muted" id="loseName" style="font-weight:800;margin-top:4px;"></div>
+    <div class="sp"></div>
+    <div id="loseFacts" class="factsGrid" style="margin-bottom:10px"></div>
+    <div class="row">
+      <button id="playAgainBtnLose">Try Again</button>
+      <span class="muted" id="statsLose"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------
+   Mobile-safe polyfills
+--------------------------- */
+if (!Element.prototype.closest) {
+  Element.prototype.closest = function(selector) {
+    let el = this;
+    while (el && el.nodeType === 1) {
+      if (el.matches ? el.matches(selector) : el.msMatchesSelector(selector)) return el;
+      el = el.parentElement || el.parentNode;
+    }
+    return null;
+  };
+}
+if (!Object.values) {
+  Object.values = function(obj) {
+    return Object.keys(obj).map(function(k){ return obj[k]; });
+  };
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  (function(){
+    'use strict';
+
+    const MAX_GUESSES = 6;
+
+    // SFX
+    const SFX = (() => {
+      let ctx = null;
+      let enabled = true;
+      function ensureCtx() {
+        if (!enabled) return;
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      }
+      function beep({ freq = 440, dur = 0.12, type = 'sine', vol = 0.2, attack = 0.01, release = 0.05 }) {
+        if (!enabled) return;
+        ensureCtx();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(vol, t + attack);
+        gain.gain.linearRampToValueAtTime(0, t + attack + dur + release);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + attack + dur + release + 0.01);
+      }
+      function chord(freqs, opt = {}) {
+        freqs.forEach(f => beep({ freq: f, vol: opt.vol ?? 0.15, dur: opt.dur ?? 0.18, type: opt.type ?? 'triangle' }));
+      }
+      return {
+        click()  { beep({ freq: 600, dur: 0.06, type: 'square', vol: 0.15 }); },
+        ui()     { beep({ freq: 420, dur: 0.05, type: 'square', vol: 0.12 }); },
+        wrong()  { beep({ freq: 180, dur: 0.18, type: 'sawtooth', vol: 0.25 }); },
+        correct(){ chord([523.25, 659.25, 783.99], { vol: 0.14 }); },
+        win()    { chord([523.25, 659.25, 783.99], { vol: 0.14 }); setTimeout(()=>chord([659.25, 783.99, 987.77], { vol: 0.14 }), 140); },
+        lose()   { beep({ freq: 140, dur: 0.28, type: 'sawtooth', vol: 0.22 }); setTimeout(()=>beep({ freq:110, dur: 0.36, type:'sawtooth', vol:0.22 }), 140); },
+        toggle() { enabled = !enabled; return enabled; },
+        resume() { ensureCtx(); },
+      };
+    })();
+
+    // MCU-specific fact schema
+    const FACT_KEYS = ['species','color','origin','affiliation','role','type'];
+    const FACT_LABEL = {
+      species:'Species',
+      color:'Signature Color',
+      origin:'Debut (Film/Series)',
+      affiliation:'Affiliation',
+      role:'Role',
+      type:'Power/Style'
+    };
+
+    // Dataset: popular MCU characters (films & Disney+). Keep values consistent for reliable matching.
+    const CHARACTER_FACTS = {
+  IRON_MAN: {display:'Iron Man (Tony Stark)', species:'Human', color:'Red', origin:'Iron Man', affiliation:'Avengers', role:'Hero', type:'Tech'},
+  CAPTAIN_AMERICA: {display:'Captain America (Steve Rogers)', species:'Human', color:'Blue', origin:'Captain America: The First Avenger', affiliation:'Avengers', role:'Hero', type:'Super Soldier'},
+  THOR: {display:'Thor', species:'Asgardian', color:'Red', origin:'Thor', affiliation:'Asgard', role:'Hero', type:'Godly'},
+  HULK: {display:'Hulk (Bruce Banner)', species:'Human', color:'Green', origin:'The Incredible Hulk', affiliation:'Avengers', role:'Hero', type:'Gamma'},
+  BLACK_WIDOW: {display:'Black Widow (Natasha Romanoff)', species:'Human', color:'Black', origin:'Iron Man 2', affiliation:'Avengers', role:'Hero', type:'Spy'},
+  HAWKEYE: {display:'Hawkeye (Clint Barton)', species:'Human', color:'Purple', origin:'Thor', affiliation:'Avengers', role:'Hero', type:'Archer'},
+  SPIDER_MAN: {display:'Spider-Man (Peter Parker)', species:'Human', color:'Red', origin:'Captain America: Civil War', affiliation:'Avengers', role:'Hero', type:'Tech'},
+  BLACK_PANTHER: {display:'Black Panther (T’Challa)', species:'Human', color:'Black', origin:'Captain America: Civil War', affiliation:'Wakanda', role:'Hero', type:'Vibranium'},
+  DOCTOR_STRANGE: {display:'Doctor Strange', species:'Human', color:'Red', origin:'Doctor Strange', affiliation:'Kamar-Taj', role:'Hero', type:'Mystic'},
+  CAPTAIN_MARVEL: {display:'Captain Marvel (Carol Danvers)', species:'Human', color:'Gold', origin:'Captain Marvel', affiliation:'Avengers', role:'Hero', type:'Cosmic'},
+  ANT_MAN: {display:'Ant-Man (Scott Lang)', species:'Human', color:'Red', origin:'Ant-Man', affiliation:'Avengers', role:'Hero', type:'Tech'},
+  WASP: {display:'Wasp (Hope van Dyne)', species:'Human', color:'Gold', origin:'Ant-Man', affiliation:'Avengers', role:'Hero', type:'Tech'},
+  SCARLET_WITCH: {display:'Scarlet Witch (Wanda Maximoff)', species:'Enhanced', color:'Red', origin:'Avengers: Age of Ultron', affiliation:'Avengers', role:'Hero', type:'Mystic'},
+  VISION: {display:'Vision', species:'Android', color:'Gold', origin:'Avengers: Age of Ultron', affiliation:'Avengers', role:'Hero', type:'Android'},
+  FALCON: {display:'Falcon (Sam Wilson)', species:'Human', color:'Red', origin:'Captain America: The Winter Soldier', affiliation:'Avengers', role:'Hero', type:'Tech'},
+  WINTER_SOLDIER: {display:'Winter Soldier (Bucky Barnes)', species:'Human', color:'Silver', origin:'Captain America: The First Avenger', affiliation:'Avengers', role:'Hero', type:'Super Soldier'},
+  WAR_MACHINE: {display:'War Machine (James Rhodes)', species:'Human', color:'Grey', origin:'Iron Man 2', affiliation:'Avengers', role:'Hero', type:'Tech'},
+  SHURI: {display:'Shuri', species:'Human', color:'Purple', origin:'Black Panther', affiliation:'Wakanda', role:'Support', type:'Tech'},
+  VALKYRIE: {display:'Valkyrie', species:'Asgardian', color:'White', origin:'Thor: Ragnarok', affiliation:'Asgard', role:'Hero', type:'Warrior'},
+  KORG: {display:'Korg', species:'Alien', color:'Grey', origin:'Thor: Ragnarok', affiliation:'Asgard', role:'Support', type:'Warrior'},
+  LOKI: {display:'Loki', species:'Asgardian', color:'Green', origin:'Thor', affiliation:'Asgard', role:'Antihero', type:'Godly'},
+  HELA: {display:'Hela', species:'Asgardian', color:'Green', origin:'Thor: Ragnarok', affiliation:'Asgard', role:'Villain', type:'Mystic'},
+  WONG: {display:'Wong', species:'Human', color:'Brown', origin:'Doctor Strange', affiliation:'Kamar-Taj', role:'Support', type:'Mystic'},
+  SHANG_CHI: {display:'Shang-Chi', species:'Human', color:'Red', origin:'Shang-Chi', affiliation:'Ten Rings', role:'Hero', type:'Martial'},
+  STAR_LORD: {display:'Star-Lord (Peter Quill)', species:'Human', color:'Red', origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:'Cosmic'},
+  GAMORA: {display:'Gamora', species:'Alien', color:'Green', origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:'Assassin'},
+  DRAX: {display:'Drax', species:'Alien', color:'Green', origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:'Warrior'},
+  ROCKET: {display:'Rocket', species:'Alien', color:'Brown', origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:'Tech'},
+  GROOT: {display:'Groot', species:'Flora', color:'Brown', origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:'Cosmic'},
+  NEBULA: {display:'Nebula', species:'Alien', color:'Blue', origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Antihero', type:'Cybernetic'},
+  MANTIS: {display:'Mantis', species:'Alien', color:'Green', origin:'Guardians Vol. 2', affiliation:'Guardians', role:'Hero', type:'Empath'},
+  YONDU: {display:'Yondu', species:'Alien', color:'Blue', origin:'Guardians of the Galaxy', affiliation:'Ravagers', role:'Antihero', type:'Cosmic'},
+  THANOS: {display:'Thanos', species:'Eternal', color:'Purple', origin:'Avengers: Infinity War', affiliation:'Titan', role:'Villain', type:'Cosmic'},
+  ULTRON: {display:'Ultron', species:'AI', color:'Red', origin:'Avengers: Age of Ultron', affiliation:'Rogue AI', role:'Villain', type:'Android'},
+  NICK_FURY: {display:'Nick Fury', species:'Human', color:'Black', origin:'Iron Man', affiliation:'S.H.I.E.L.D.', role:'Support', type:'Spy'},
+  MARIA_HILL: {display:'Maria Hill', species:'Human', color:'Blue', origin:'Avengers', affiliation:'S.H.I.E.L.D.', role:'Support', type:'Tactician'},
+  PEGGY_CARTER: {display:'Peggy Carter', species:'Human', color:'Blue', origin:'Captain America: The First Avenger', affiliation:'S.H.I.E.L.D.', role:'Support', type:'Spy'},
+  KATE_BISHOP: {display:'Kate Bishop', species:'Human', color:'Purple', origin:'Hawkeye', affiliation:'Street-Level', role:'Hero', type:'Archer'},
+  MOON_KNIGHT: {display:'Moon Knight (Marc Spector)', species:'Human', color:'White', origin:'Moon Knight', affiliation:'Street-Level', role:'Hero', type:'Mystic'},
+  DAREDEVIL: {display:'Daredevil (Matt Murdock)', species:'Human', color:'Red', origin:'Daredevil', affiliation:'Street-Level', role:'Hero', type:'Martial'},
+  JESSICA_JONES: {display:'Jessica Jones', species:'Human', color:'Purple', origin:'Jessica Jones', affiliation:'Street-Level', role:'Hero', type:'Detective'},
+  LUKE_CAGE: {display:'Luke Cage', species:'Human', color:'Yellow', origin:'Luke Cage', affiliation:'Street-Level', role:'Hero', type:'Super Strength'},
+  IRON_FIST: {display:'Iron Fist (Danny Rand)', species:'Human', color:'Green', origin:'Iron Fist', affiliation:'Street-Level', role:'Hero', type:'Martial'},
+  KINGPIN: {display:'Kingpin (Wilson Fisk)', species:'Human', color:'White', origin:'Daredevil', affiliation:'Crime Syndicate', role:'Villain', type:'Crime'},
+  GREEN_GOBLIN: {display:'Green Goblin (Norman Osborn)', species:'Human', color:'Green', origin:'Spider-Man: No Way Home', affiliation:'Sinister Six', role:'Villain', type:'Tech'},
+  DOCTOR_OCTOPUS: {display:'Doctor Octopus (Otto Octavius)', species:'Human', color:'Green', origin:'Spider-Man: No Way Home', affiliation:'Sinister Six', role:'Villain', type:'Tech'},
+  MYSTERIO: {display:'Mysterio (Quentin Beck)', species:'Human', color:'Green', origin:'Spider-Man: Far From Home', affiliation:'Sinister Six', role:'Villain', type:'Illusion'},
+  ELECTRO: {display:'Electro (Max Dillon)', species:'Human', color:'Yellow', origin:'Spider-Man: No Way Home', affiliation:'Sinister Six', role:'Villain', type:'Electric'},
+  VENOM: {display:'Venom (Eddie Brock)', species:'Symbiote', color:'Black', origin:'Venom', affiliation:'Symbiote', role:'Antihero', type:'Symbiote'},
+  DEADPOOL: {display:'Deadpool (Wade Wilson)', species:'Human', color:'Red', origin:'Deadpool', affiliation:'X-Force', role:'Antihero', type:'Regeneration'},
+  WOLVERINE: {display:'Wolverine (Logan)', species:'Mutant', color:'Yellow', origin:'Deadpool 3', affiliation:'X-Men', role:'Hero', type:'Regeneration'},
+  PROFESSOR_X: {display:'Professor X (Charles Xavier)', species:'Mutant', color:'Blue', origin:'Doctor Strange in the Multiverse of Madness', affiliation:'X-Men', role:'Support', type:'Telepath'},
+  MAGNETO: {display:'Magneto (Erik Lehnsherr)', species:'Mutant', color:'Red', origin:'X-Men', affiliation:'Brotherhood', role:'Villain', type:'Magnetism'},
+  FANTASTIC_MR: {display:'Mister Fantastic (Reed Richards)', species:'Human', color:'Blue', origin:'Doctor Strange in the Multiverse of Madness', affiliation:'Fantastic Four', role:'Hero', type:'Elastic'},
+  INVISIBLE_WOMAN: {display:'Invisible Woman (Sue Storm)', species:'Human', color:'Blue', origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:'Force Fields'},
+  HUMAN_TORCH: {display:'Human Torch (Johnny Storm)', species:'Human', color:'Orange', origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:'Fire'},
+  THING: {display:'Thing (Ben Grimm)', species:'Human', color:'Orange', origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:'Super Strength'}
+};
+
+
+    const BANK = Object.keys(CHARACTER_FACTS).map(k => ({ token: k, display: CHARACTER_FACTS[k].display }));
+
+    // State
+    let target = null;
+    let guesses = [];
+    let games = { played:0, wins:0 };
+    let guessesLeft = MAX_GUESSES;
+    let over = false;
+
+    // Utils
+    const byId = function(id){ return document.getElementById(id); };
+    function choice(arr){ return arr[(Math.random()*arr.length)|0]; }
+    function patternToRegex(pat) {
+      if (!pat) return null;
+      let raw = (pat + '').toUpperCase().trim();
+      const hasWildcards = /[*?]/.test(raw);
+      if (!hasWildcards) raw = `*${raw}*`;
+      const esc = function(s){ return s.replace(/[.+^${}()|[\]\\]/g, '\\$&'); };
+      let rx = '';
+      for (var i=0;i<raw.length;i++){
+        const ch = raw[i];
+        rx += ch === '*' ? '.*' : ch === '?' ? '.' : esc(ch);
+      }
+      return new RegExp('^' + rx + '$');
+    }
+    function compareFacts(guessToken, targetToken){
+      const ga = CHARACTER_FACTS[guessToken];
+      const ta = CHARACTER_FACTS[targetToken];
+      const res = {};
+      for (var i=0;i<FACT_KEYS.length;i++){ var k=FACT_KEYS[i]; res[k] = (ga[k] === ta[k]); }
+      return res;
+    }
+    function isCorrectGuess(guessToken, targetToken){
+      const m = compareFacts(guessToken, targetToken);
+      for (var i=0;i<FACT_KEYS.length;i++){ if(!m[FACT_KEYS[i]]) return false; }
+      return true;
+    }
+
+    // DOM
+    const bankList = byId('bankList');
+    const bankFilter = byId('bankFilter');
+    const guessesLeftPill = byId('guessesLeftPill');
+    const sfxBtn = byId('sfxBtn');
+    const guessesEl = byId('guesses');
+
+    function renderBank(){
+      const patt = (bankFilter.value||'').trim();
+      const rx = patt ? patternToRegex(patt) : null;
+      const items = BANK
+        .filter(c => !rx || rx.test(c.display.toUpperCase()) || rx.test(c.token))
+        .sort((a,b)=> a.display.localeCompare(b.display));
+      bankList.innerHTML = items.length
+        ? items.map(c => {
+            const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
+            return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
+          }).join('')
+        : '<div class="empty">No characters match your filter.</div>';
+    }
+
+    // iOS audio unlock
+    document.addEventListener('touchstart', function(){ SFX.resume(); }, { passive:true });
+
+    bankList.addEventListener('click', function(e){
+      const btn = (e.target && (e.target.closest && e.target.closest('.charBtn'))) || null;
+      if (!btn || over) return;
+      SFX.resume();
+      SFX.click();
+      const token = btn.getAttribute('data-token');
+      onGuess(token);
+    });
+
+    bankFilter.addEventListener('input', renderBank);
+
+    function renderGuessCard(entry){
+      const cf = CHARACTER_FACTS[entry.token];
+      const matches = entry.matches;
+      var okCount = 0;
+      for (var i=0;i<FACT_KEYS.length;i++){ if (matches[FACT_KEYS[i]]) okCount++; }
+      const rows = FACT_KEYS.map(function(k){
+        const ok = !!matches[k];
+        const tagClass = ok ? 'ok' : 'no';
+        return (
+          '<div class="fact">' +
+            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<div class="row">' +
+              '<span>'+cf[k]+'</span>' +
+              '<span class="tag '+tagClass+'">'+(ok?'Match':'No match')+'</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+      return (
+        '<div class="guessCard">' +
+          '<div class="row" style="margin-bottom:8px">' +
+            '<div style="font-weight:800">'+cf.display+'</div>' +
+            '<div class="pill">'+okCount+'/'+FACT_KEYS.length+' facts match</div>' +
+          '</div>' +
+          '<div class="factsGrid">'+rows+'</div>' +
+        '</div>'
+      );
+    }
+
+    function renderGuesses(){
+      guessesEl.innerHTML = guesses.length
+        ? guesses.map(renderGuessCard).join('')
+        : '<div class="empty">No guesses yet. Pick a character from the left to compare their facts with the target.</div>';
+    }
+
+    function updateGuessesPill(){ guessesLeftPill.textContent = 'Guesses left: ' + guessesLeft; }
+
+    // Game flow
+    function resetGame(){
+      guesses = [];
+      target = choice(BANK).token;
+      guessesLeft = MAX_GUESSES;
+      over = false;
+      renderBank();
+      renderGuesses();
+      updateGuessesPill();
+    }
+
+    function onGuess(token){
+      for (var i=0;i<guesses.length;i++){ if (guesses[i].token === token) return; }
+
+      const matches = compareFacts(token, target);
+      guesses.unshift({ token: token, matches: matches });
+      renderGuesses();
+      renderBank();
+
+      if (isCorrectGuess(token, target)){
+        games.played++; games.wins++;
+        over = true;
+        SFX.correct();
+        showWin(token);
+        return;
+      }
+
+      guessesLeft = Math.max(0, guessesLeft - 1);
+      updateGuessesPill();
+      SFX.wrong();
+
+      if (guessesLeft === 0){
+        games.played++;
+        over = true;
+        SFX.lose();
+        showLoss();
+      }
+    }
+
+    // WIN overlay
+    const win = byId('win');
+    const winName = byId('winName');
+    const winFacts = byId('winFacts');
+    const statsEl = byId('stats');
+    const playAgainBtn = byId('playAgainBtn');
+
+    function showWin(token){
+      const cf = CHARACTER_FACTS[token];
+      winName.textContent = 'Target: ' + cf.display;
+      winFacts.innerHTML = FACT_KEYS.map(function(k){
+        return (
+          '<div class="fact">' +
+            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<div>'+cf[k]+'</div>' +
+          '</div>'
+        );
+      }).join('');
+      statsEl.textContent = 'Games: ' + games.played + ' • Wins: ' + games.wins;
+      document.body.classList.add('modal-open');
+      win.classList.add('show');
+      SFX.win();
+    }
+
+    playAgainBtn.addEventListener('click', function(){
+      SFX.ui();
+      win.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      resetGame();
+    });
+
+    // LOSE overlay
+    const lose = byId('lose');
+    const loseName = byId('loseName');
+    const loseFacts = byId('loseFacts');
+    const statsLose = byId('statsLose');
+    const playAgainBtnLose = byId('playAgainBtnLose');
+
+    function showLoss(){
+      const cf = CHARACTER_FACTS[target];
+      loseName.textContent = cf.display;
+      loseFacts.innerHTML = FACT_KEYS.map(function(k){
+        return (
+          '<div class="fact">' +
+            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<div>'+cf[k]+'</div>' +
+          '</div>'
+        );
+      }).join('');
+      statsLose.textContent = 'Games: ' + games.played + ' • Wins: ' + games.wins;
+      document.body.classList.add('modal-open');
+      lose.classList.add('show');
+    }
+
+    playAgainBtnLose.addEventListener('click', function(){
+      SFX.ui();
+      lose.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      resetGame();
+    });
+
+    // header controls
+    byId('newGameBtn').addEventListener('click', function(){
+      games.played++;
+      SFX.ui();
+      win.classList.remove('show');
+      lose.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      resetGame();
+    });
+
+    // SFX toggle
+    sfxBtn.addEventListener('click', function(){
+      const on = SFX.toggle();
+      sfxBtn.textContent = on ? '🔊 SFX: On' : '🔇 SFX: Off';
+      if (on) { SFX.resume(); SFX.ui(); }
+    });
+
+    // INIT
+    resetGame();
+    renderBank();
+
+    // Quick sanity tests (skip on mobile)
+    (function runTests(){
+      var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) return;
+      try{
+        const results = [];
+        function assert(name, cond){ results.push({name:name, pass: !!cond}); if(!cond) console.error('[TEST FAIL]', name); }
+        function same(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+        assert('dataset has at least 20', Object.keys(CHARACTER_FACTS).length >= 20);
+        assert('every entry has all facts', Object.keys(CHARACTER_FACTS).every(function(k){ return FACT_KEYS.every(function(f){ return CHARACTER_FACTS[k][f]; }); }));
+        const tokens = Object.keys(CHARACTER_FACTS);
+        const t0 = tokens[0], t1 = tokens[1];
+        const m = compareFacts(t0, t1);
+        assert('compareFacts has all keys', same(Object.keys(m).sort(), FACT_KEYS.slice().sort()));
+        assert('isCorrectGuess detects same', isCorrectGuess(t0, t0) === true);
+        assert('patternToRegex exact', patternToRegex('THOR').test('THOR'));
+        assert('patternToRegex *', patternToRegex('S*R').test('SPIDER_MAN') || patternToRegex('S*R').test('STAR_LORD'));
+        assert('patternToRegex ?', patternToRegex('T?OR').test('THOR'));
+        assert('patternToRegex contains', patternToRegex('LOKI').test('LOKI'));
+        console.log('[FactMatch tests]', results.filter(r=>r.pass).length + '/' + results.length + ' passed', results);
+      }catch(e){
+        console.warn('[tests skipped]', e);
+      }
+    })();
+
+  })();
+});
+</script>
+</body>
+</html>

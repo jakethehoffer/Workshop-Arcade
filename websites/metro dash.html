@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Metro Dash</title>
+  <style>
+    html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    canvas { display:block; margin:auto; background: radial-gradient(1200px 600px at 50% -200px, #1f2a44 0%, #0b0f14 60%); }
+    .hud { position:fixed; inset:0; pointer-events:none; display:flex; align-items:flex-start; justify-content:space-between; padding:10px 14px; }
+    .hud .left, .hud .right { font-weight:600; opacity:.95; }
+    .btns { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+    .btn { pointer-events:auto; background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; }
+    .btn:active { transform: translateY(1px); }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div class="left" id="scoreHUD">Score: 0</div>
+    <div class="right" id="bestHUD">Best: 0</div>
+  </div>
+  <div class="btns">
+    <button class="btn" id="muteBtn">🔊</button>
+    <button class="btn" id="restartBtn" style="display:none">Restart</button>
+  </div>
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const aspect=16/9; const pad=8; const availW=Math.max(320,window.innerWidth-pad*2); const availH=Math.max(240,window.innerHeight-pad*2); let w=availW; let h=Math.floor(availW/aspect); if(h>availH){ h=availH; w=Math.floor(availH*aspect); } canvas.width=w; canvas.height=h;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const scoreHUD=document.getElementById('scoreHUD');
+  const bestHUD=document.getElementById('bestHUD');
+  const muteBtn=document.getElementById('muteBtn');
+  const restartBtn=document.getElementById('restartBtn');
+
+  const HS_KEY='metrodash_highscore';
+  let best=0; try{ best=Number(localStorage.getItem(HS_KEY)||0);}catch(_){ }
+  bestHUD.textContent='Best: '+best;
+
+  let audioCtx=null, muted=false;
+  function ensureAudio(){ if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) audioCtx=new AC(); } if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
+  function blip(freq=600,duration=0.07,type='square',gain=0.05){ if(muted||!audioCtx) return; const t=audioCtx.currentTime; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.setValueAtTime(freq,t); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+duration); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(t+duration); }
+  const SFX={ coin(v){ const f=v===1?760:v===2?920:v===3?1100:1320; blip(f,0.06,'triangle',0.06); }, move(){ blip(520,0.04,'square',0.04); }, dash(){ blip(820,0.05,'square',0.05); }, jump(){ blip(700,0.06,'sine',0.05); }, slide(){ blip(360,0.05,'sine',0.05); }, hit(){ blip(180,0.12,'sine',0.07); setTimeout(()=>blip(120,0.12,'sine',0.06),40);} };
+
+  const music = { on:false, loop:null, gain:null, note:0, tempo:160, bassNote:0 };
+  const MELODY = [392,440,523.25,440,392,329.63,392,329.63,392,440,523.25,659.25,587.33,523.25,440,392];
+  const BASS = [98,98,147,147,130.81,130.81,98,98];
+  function startMusic(){
+    if(!ensureAudio()) return;
+    if(!music.gain){ music.gain=audioCtx.createGain(); music.gain.gain.value=muted?0:0.16; music.gain.connect(audioCtx.destination); }
+    if(music.on) return;
+    music.on=true;
+    music.loop=setInterval(()=>{
+      if(!audioCtx||!music.on) return;
+      const now=audioCtx.currentTime;
+      const m=audioCtx.createOscillator(); const mg=audioCtx.createGain();
+      const b=audioCtx.createOscillator(); const bg=audioCtx.createGain();
+      m.type='square'; b.type='triangle';
+      const mf=MELODY[music.note%MELODY.length]; const bf=BASS[music.bassNote%BASS.length];
+      m.frequency.setValueAtTime(mf,now);
+      b.frequency.setValueAtTime(bf,now);
+      mg.gain.setValueAtTime(0.0001,now);
+      mg.gain.exponentialRampToValueAtTime(0.22,now+0.02);
+      mg.gain.exponentialRampToValueAtTime(0.0001,now+0.14);
+      bg.gain.setValueAtTime(0.0001,now);
+      bg.gain.exponentialRampToValueAtTime(0.12,now+0.02);
+      bg.gain.exponentialRampToValueAtTime(0.0001,now+0.22);
+      m.connect(mg).connect(music.gain);
+      b.connect(bg).connect(music.gain);
+      m.start(now); m.stop(now+0.16);
+      b.start(now); b.stop(now+0.24);
+      music.note++; if(music.note%4===0) music.bassNote++;
+    }, music.tempo);
+  }
+  function stopMusic(){ if(music.loop){ clearInterval(music.loop); } music.loop=null; music.on=false; }
+  function updateMute(){ if(music.gain) music.gain.gain.value = muted?0:0.16; }
+
+  const lanes=3;
+  const laneCenterX=i=>(canvas.width*0.2)+i*(canvas.width*0.6/(lanes-1));
+
+  const player={ lane:1, targetLane:1, x:0, y:0, w:44, h:64, vy:0, onGround:true, sliding:false, slideT:0, dashT:0, dashDur:160, dashFrom:0, dashTo:0 };
+  player.x=laneCenterX(1)-player.w/2;
+  player.y=canvas.height-20-player.h;
+
+  let started=false, gameOver=false;
+  let speed=5, baseSpeed=5, dist=0, score=0;
+  let spawnTimer=0, coinTimer=0;
+  let slideQueued=false;
+
+  const obstacles=[];
+  const coins=[];
+  const dashTrail=[];
+
+  function reset(){
+    started=false; gameOver=false; speed=baseSpeed; dist=0; score=0; spawnTimer=0; coinTimer=0; player.lane=1; player.targetLane=1; player.vy=0; player.onGround=true; player.sliding=false; player.slideT=0; player.h=64; player.y=canvas.height-20-player.h; player.x=laneCenterX(1)-player.w/2; player.dashT=0; obstacles.length=0; coins.length=0; dashTrail.length=0; restartBtn.style.display='none'; slideQueued=false; scoreHUD.textContent='Score: 0';
+  }
+  reset();
+
+  function startSlide(){ if(player.onGround&&!player.sliding){ player.sliding=true; player.slideT=400; player.h=40; player.y=canvas.height-20-player.h; SFX.slide(); } }
+  function endSlide(){ if(player.sliding){ player.sliding=false; player.h=64; player.y=canvas.height-20-player.h; } }
+  function jump(){ if(!started||gameOver) return; if(player.sliding){ endSlide(); player.vy=-14; player.onGround=false; SFX.jump(); return;} if(player.onGround){ player.vy=-14; player.onGround=false; SFX.jump(); } }
+  function slide(){ if(!started||gameOver) return; if(player.onGround){ startSlide(); } else { slideQueued=true; if(player.vy<8) player.vy=8; SFX.slide(); } }
+
+  function beginDash(toLane){ if(toLane===player.lane) return; player.targetLane=toLane; player.dashT=player.dashDur; player.dashFrom=player.x; player.dashTo=laneCenterX(toLane)-player.w/2; SFX.dash(); }
+  function moveLane(delta){ if(!started||gameOver) return; const nl=Math.min(lanes-1,Math.max(0,player.targetLane+delta)); if(nl!==player.targetLane){ beginDash(nl); SFX.move(); } }
+
+  function easeOutCubic(t){ t=1-t; return 1-t*t*t; }
+
+  let last=performance.now();
+  function loop(){
+    const now=performance.now();
+    const dt=Math.min(50,now-last); last=now;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const roadTop=canvas.height*0.25;
+    const roadBot=canvas.height-10;
+    const roadL=canvas.width*0.15;
+    const roadR=canvas.width*0.85;
+    ctx.fillStyle='#141c2b';
+    ctx.beginPath(); ctx.moveTo(roadL,roadTop); ctx.lineTo(roadR,roadTop); ctx.lineTo(roadR,roadBot); ctx.lineTo(roadL,roadBot); ctx.closePath(); ctx.fill();
+
+    if(!started){
+      ctx.fillStyle='#e6edf3';
+      ctx.font='24px system-ui, sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('Press SPACE / Tap to start', canvas.width/2, canvas.height/2);
+      ctx.font='14px system-ui, sans-serif';
+      ctx.fillText('←/→ or A/D to switch lanes — ↑/W to jump — ↓/S to slide', canvas.width/2, canvas.height/2+28);
+    }
+
+    if(started&&!gameOver){
+      if(player.dashT>0){ const t=Math.max(0,1-player.dashT/player.dashDur); const e=easeOutCubic(t); const prevX=player.x; player.x=player.dashFrom+(player.dashTo-player.dashFrom)*e; dashTrail.push({x:prevX,y:player.y,w:player.w,h:player.h,alpha:0.18,life:120}); player.dashT-=dt; if(player.dashT<=0){ player.x=player.dashTo; player.lane=player.targetLane; } } else { player.x=laneCenterX(player.lane)-player.w/2; }
+      speed+=0.00025*dt;
+      dist+=speed*dt/16.7;
+      spawnTimer-=dt; coinTimer-=dt;
+      if(spawnTimer<=0){ const r=Math.random(); const type=r<0.45?'low':r<0.8?'high':'block'; const lane=Math.floor(Math.random()*lanes); const size=type==='block'?{w:46,h:60}:type==='low'?{w:40,h:40}:{w:40,h:90}; obstacles.push({lane,y:-size.h,w:size.w,h:size.h,type}); spawnTimer=420+Math.random()*480; }
+      if(coinTimer<=0){ const lane=Math.floor(Math.random()*lanes); const roll=Math.random(); const ctype=roll<0.6?'bronze':roll<0.85?'silver':roll<0.97?'gold':'gem'; const val=ctype==='bronze'?1:ctype==='silver'?2:ctype==='gold'?3:5; const r2=ctype==='gem'?11:9; coins.push({lane,y:-20,r:r2,taken:false,type:ctype,val}); coinTimer=260+Math.random()*240; }
+      player.vy+=0.7*dt/16.7;
+      player.y+=player.vy*dt/16.7;
+      if(player.y+player.h>=canvas.height-20){ player.y=canvas.height-20-player.h; player.vy=0; if(!player.onGround&&slideQueued&&!player.sliding){ startSlide(); slideQueued=false; } player.onGround=true; } else { player.onGround=false; }
+      if(player.sliding){ player.slideT-=dt; if(player.slideT<=0) endSlide(); }
+      for(let i=obstacles.length-1;i>=0;i--){ const o=obstacles[i]; o.y+=speed*dt/16.7; const px=player.x, py=player.y, pw=player.w, ph=player.h; const ox=laneCenterX(o.lane)-o.w/2, oy=o.y, ow=o.w, oh=o.h; if(oy>canvas.height+20){ obstacles.splice(i,1); continue;} if(px<ox+ow&&px+pw>ox&&py<oy+oh&&py+ph>oy){ if(o.type==='low'&&!player.sliding&&py+ph>oy+oh*0.6){ gameOverSequence(); break;} else if(o.type==='high'&&player.onGround&&py<oy+oh*0.6){ gameOverSequence(); break;} else if(o.type==='block'){ gameOverSequence(); break;} } }
+      for(let i=coins.length-1;i>=0;i--){ const c=coins[i]; c.y+=speed*dt/16.7; const px=player.x+player.w/2, py=player.y+player.h*0.5; const cx=laneCenterX(c.lane), cy=c.y+c.r; const dx=px-cx, dy=py-cy; if(Math.hypot(dx,dy)<c.r+Math.min(player.w,player.h)*0.35){ if(!c.taken){ c.taken=true; score+=c.val; SFX.coin(c.val);} } if(cy>canvas.height+20||c.taken){ coins.splice(i,1); continue;} }
+      scoreHUD.textContent='Score: '+score;
+    }
+
+    ctx.strokeStyle='#2a344a'; ctx.lineWidth=2; for(let i=0;i<lanes;i++){ const x=laneCenterX(i); ctx.beginPath(); ctx.moveTo(x,roadTop); ctx.lineTo(x,roadBot); ctx.stroke(); }
+
+    for(const c of coins){ const color=c.type==='gem'?'#b794f6':c.type==='gold'?'#ffd166':c.type==='silver'?'#c0cad4':'#b88b4a'; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(laneCenterX(c.lane), c.y+c.r, c.r, 0, Math.PI*2); ctx.fill(); }
+
+    for(const o of obstacles){ const ox=laneCenterX(o.lane)-o.w/2; const oy=o.y; const cx=laneCenterX(o.lane); const hintY=oy-50; ctx.save(); ctx.globalAlpha=0.8; if(o.type==='low'){ ctx.fillStyle='#ffffffaa'; ctx.beginPath(); ctx.moveTo(cx, hintY+14); ctx.lineTo(cx-14, hintY-10); ctx.lineTo(cx+14, hintY-10); ctx.closePath(); ctx.fill(); } else if(o.type==='high'){ ctx.fillStyle='#ffffffaa'; ctx.beginPath(); ctx.moveTo(cx, hintY-14); ctx.lineTo(cx-14, hintY+10); ctx.lineTo(cx+14, hintY+10); ctx.closePath(); ctx.fill(); } else { ctx.fillStyle='#ffef5eaa'; ctx.beginPath(); ctx.arc(cx, hintY, 10, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='#222'; ctx.font='12px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillText('!', cx, hintY+4); } ctx.restore(); ctx.fillStyle=o.type==='block'?'#ef476f':(o.type==='high'?'#06d6a0':'#118ab2'); ctx.fillRect(ox, oy, o.w, o.h); }
+
+    for(let i=dashTrail.length-1;i>=0;i--){ const t=dashTrail[i]; t.life-=dt; t.alpha*=0.92; ctx.fillStyle=`rgba(230,237,243,${Math.max(0,t.alpha)})`; ctx.fillRect(t.x,t.y,t.w,t.h); if(t.life<=0||t.alpha<0.02) dashTrail.splice(i,1); }
+
+    ctx.fillStyle='#e6edf3';
+    ctx.fillRect(player.x,player.y,player.w,player.h);
+
+    if(gameOver){ ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#e6edf3'; ctx.font='32px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillText('Game Over', canvas.width/2, canvas.height/2-20); ctx.font='18px system-ui, sans-serif'; ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2+10); ctx.fillText('Press SPACE / Tap to restart', canvas.width/2, canvas.height/2+38); }
+
+    requestAnimationFrame(loop);
+  }
+
+  function gameOverSequence(){ if(gameOver) return; gameOver=true; stopMusic(); SFX.hit(); restartBtn.style.display='inline-block'; if(score>best){ best=score; bestHUD.textContent='Best: '+best; try{ localStorage.setItem(HS_KEY,String(best)); }catch(_){ } } }
+
+  function start(){ if(started) return; started=true; ensureAudio(); startMusic(); }
+  function restart(){ reset(); start(); }
+
+  window.addEventListener('keydown',(e)=>{ if(e.code==='Space'){ if(!started){ start(); } else if(gameOver){ restart(); } else { jump(); } } if(e.code==='ArrowLeft'||e.code==='KeyA') moveLane(-1); if(e.code==='ArrowRight'||e.code==='KeyD') moveLane(1); if(e.code==='ArrowUp'||e.code==='KeyW') jump(); if(e.code==='ArrowDown'||e.code==='KeyS') slide(); });
+
+  let touchStartX=0, touchStartY=0, touchHandled=false;
+  canvas.addEventListener('touchstart',(e)=>{ e.preventDefault(); ensureAudio(); if(!started){ start(); return;} if(gameOver){ restart(); return;} const t=e.changedTouches[0]; touchStartX=t.clientX; touchStartY=t.clientY; touchHandled=false; },{passive:false});
+  canvas.addEventListener('touchmove',(e)=>{ e.preventDefault(); if(touchHandled||!started||gameOver) return; const t=e.changedTouches[0]; const dx=t.clientX-touchStartX; const dy=t.clientY-touchStartY; const adx=Math.abs(dx), ady=Math.abs(dy); if(Math.max(adx,ady)<24) return; touchHandled=true; if(adx>ady){ if(dx>0) moveLane(1); else moveLane(-1); } else { if(dy>0) slide(); else jump(); } },{passive:false});
+  canvas.addEventListener('touchend',(e)=>{ e.preventDefault(); },{passive:false});
+
+  canvas.addEventListener('mousedown',()=>{ ensureAudio(); if(!started){ start(); } else if(gameOver){ restart(); } });
+
+  muteBtn.addEventListener('click',()=>{ muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; ensureAudio(); updateMute(); });
+  restartBtn.addEventListener('click',()=>{ restart(); });
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

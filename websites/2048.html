@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>2048 — HTML5 Canvas (No Libraries)</title>
+  <style>
+    :root{
+      --bg0:#faf8ef;            /* light base */
+      --bg1:#f3eee0;            /* gradient stop */
+      --board:#bbada0;          /* board background */
+      --grid:#cdc1b4;           /* empty cell background */
+      --text:#776e65;           /* dark text */
+      --text-light:#f9f6f2;     /* light text on dark tiles */
+      --accent:#edc22e;         /* brand accent */
+      --fade: .28s cubic-bezier(.22,.61,.36,1); /* UI fade timing */
+    }
+
+    /* Optional embedded font declaration. Tries local Montserrat; otherwise
+       falls back to a clean system stack. To fully inline, replace src with
+       a data: URL to a WOFF2. */
+    @font-face{
+      font-family:"EmbeddedMontserrat";
+      font-style:normal; font-weight:700;
+      src: local("Montserrat Bold"), local("Montserrat-Bold");
+    }
+
+    /* Page layout */
+    html,body{height:100%;margin:0;
+      background:linear-gradient(160deg,var(--bg0),var(--bg1));
+      color:var(--text);
+      font-family:EmbeddedMontserrat, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif}
+
+    .wrap{max-width:min(92vw,720px);margin:16px auto;padding:12px}
+    header{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+    h1{font-size:clamp(28px,6vw,44px);line-height:1;margin:0;color:#776e65}
+    .badges{margin-left:auto;display:flex;gap:10px}
+    .badge{background:#bbada0;color:#fff;border-radius:10px;padding:8px 12px;min-width:110px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+    .badge .label{font-size:12px;opacity:.9}
+    .badge .value{font-size:22px;font-weight:700}
+
+    .controls{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+    button{appearance:none;border:0;border-radius:10px;padding:10px 14px;background:#8f7a66;color:white;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    button:active{transform:translateY(1px)}
+
+    /* Canvas container keeps a square that scales responsively */
+    .board{position:relative;margin-top:12px;aspect-ratio:1/1;width:100%;background:transparent}
+    canvas{width:100%;height:100%;display:block;touch-action:none;}
+
+    /* Overlay messages (win / game over). Kept in layout but faded by opacity */
+    .overlay{position:absolute;inset:0;display:grid;place-items:center;
+      background:rgba(238,228,218,.65);backdrop-filter:saturate(1.2) blur(1px);
+      opacity:0; pointer-events:none; transition:opacity var(--fade)}
+    .overlay.show{opacity:1; pointer-events:auto}
+    .card{background:rgba(255,255,255,.92);border-radius:14px;padding:18px 20px;box-shadow:0 6px 30px rgba(0,0,0,.12);text-align:center;max-width:min(90%,420px)}
+    .card h2{margin:0 0 10px 0}
+    .card p{margin:0 0 14px 0}
+    .card .actions{display:flex;gap:10px;justify-content:center}
+    .card .primary{background:var(--accent);color:#000}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>2048</h1>
+      <div class="badges">
+        <div class="badge" aria-live="polite"><div class="label">Score</div><div id="score" class="value">0</div></div>
+        <div class="badge"><div class="label">Best</div><div id="best" class="value">0</div></div>
+      </div>
+    </header>
+
+    <div class="controls">
+      <button id="newBtn" title="Start a new game (N)">New Game</button>
+      <button id="undoBtn" title="Undo last move (Z)" disabled>Undo</button>
+      <span aria-hidden="true" style="opacity:.7">Use ← ↑ → ↓ or swipe</span>
+    </div>
+
+    <div class="board" id="board">
+      <canvas id="game" width="600" height="600" aria-label="2048 game board" role="img"></canvas>
+      <div id="overlay" class="overlay" aria-live="polite" aria-hidden="true">
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="overlayTitle" aria-describedby="overlayDesc">
+          <h2 id="overlayTitle">You win!</h2>
+          <p id="overlayDesc">Reached 2048. Keep going?</p>
+          <div class="actions">
+            <button id="keepBtn" class="primary">Keep Playing</button>
+            <button id="restartBtn">Restart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="opacity:.7;margin-top:10px">Vanilla HTML5 Canvas. Smooth slide + merge pop animations, elegant font, gradient background, responsive grid, fade-in overlays, and self-tests (console).</p>
+  </div>
+
+  <script>
+  /* ============================================================
+   * 2048 — HTML5 Canvas (Vanilla JS)
+   * ------------------------------------------------------------
+   * - Smooth slide tweens + merge/spawn pop
+   * - Embedded font (local Montserrat if present)
+   * - Gradient background
+   * - Responsive board derived from grid size
+   * - Win/Lose overlays that fade in; Keep Playing only on win
+   * - Undo (one level)
+   * - Self-tests (console) to catch regressions
+   * ============================================================ */
+
+  // --- Tunable constants -----------------------------------------------------
+  const SIZE = 4;                     // grid size (4x4)
+  const WIN_VALUE = 2048;             // target tile to win
+  const START_TILES = 2;              // tiles to place at game start
+  const FOUR_PROB = 0.1;              // chance to spawn a 4 instead of 2
+  const SLIDE_TIME = 140;             // ms for slide animation
+  const POP_TIME = 110;               // ms for spawn/merge pop
+
+  const TILE_COLORS = {               // background color by tile value
+    0:"#cdc1b4", 2:"#eee4da", 4:"#ede0c8",
+    8:"#f2b179", 16:"#f59563", 32:"#f67c5f", 64:"#f65e3b",
+    128:"#edcf72", 256:"#edcc61", 512:"#edc850", 1024:"#edc53f", 2048:"#edc22e"
+  };
+
+  // --- DOM & canvas setup ----------------------------------------------------
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl  = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayDesc  = document.getElementById('overlayDesc');
+  const keepBtn = document.getElementById('keepBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const newBtn = document.getElementById('newBtn');
+  const undoBtn = document.getElementById('undoBtn');
+
+  // --- Game state ------------------------------------------------------------
+  let tiles = [];          // {id,value,r,c,fromR,fromC,toR,toC,scale,removing,mergedInto}
+  let board;               // 2D array holding tile id or 0
+  let score, best, won, over, keepPlaying;
+  let moving = false;      // during slide animation
+  let lastState = null;    // snapshot for undo
+
+  let idCounter = 1;
+  const cell = (r,c)=>({r,c});
+
+  // Resize canvas to fit its container while keeping internal resolution crisp
+  function fitCanvasToCSSSize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = Math.floor(rect.width * dpr);
+    const h = Math.floor(rect.height * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w; canvas.height = h;
+    }
+    draw();
+  }
+  new ResizeObserver(fitCanvasToCSSSize).observe(canvas);
+  window.addEventListener('orientationchange', ()=>setTimeout(fitCanvasToCSSSize,200));
+
+  // --- Game lifecycle --------------------------------------------------------
+  function newGame(){
+    board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+    tiles = [];
+    score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null;
+    for(let i=0;i<START_TILES;i++) spawnRandomTile(true); // true => spawn immediately
+    best = Number(localStorage.getItem('best2048')||0);
+    updateHUD();
+    hideOverlay();
+    draw();
+  }
+
+  function snapshot(){
+    // Defensive guards: ensure structures exist before mapping to avoid
+    // "Cannot read properties of undefined (reading 'map')".
+    const tilesArr = Array.isArray(tiles) ? tiles : [];
+    const boardArr = Array.isArray(board) ? board : [];
+    return {
+      tiles: tilesArr.map(t=>({id:t.id,value:t.value,r:t.r,c:t.c})),
+      board: boardArr.map(row=> row && Array.isArray(row) ? row.slice() : []),
+      score: Number(score||0), won: !!won, over: !!over, keepPlaying: !!keepPlaying
+    };
+  }
+
+  function restore(state){
+    tiles = (state && Array.isArray(state.tiles))
+      ? state.tiles.map(t=>({ ...t, fromR:t.r, fromC:t.c, toR:t.r, toC:t.c, scale:1, removing:false, mergedInto:false }))
+      : [];
+    board = (state && Array.isArray(state.board))
+      ? state.board.map(row=>row.slice())
+      : Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+    score = Number(state?.score||0);
+    won = !!state?.won; over = !!state?.over; keepPlaying = !!state?.keepPlaying;
+  }
+
+  function undo(){
+    if(!lastState || moving) return;
+    restore(lastState);
+    lastState = null;
+    undoBtn.disabled = true;
+    updateHUD();
+    draw();
+  }
+
+  function updateHUD(){
+    scoreEl.textContent = score;
+    if(score>best){ best = score; localStorage.setItem('best2048', best); }
+    bestEl.textContent = best;
+  }
+
+  // --- Tile utilities --------------------------------------------------------
+  function getEmptyCells(){
+    const list=[];
+    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(board[r][c]===0) list.push(cell(r,c));
+    return list;
+  }
+
+  function spawnRandomTile(immediate=false){
+    const empties = getEmptyCells();
+    if(empties.length===0) return false;
+    const spot = empties[Math.floor(Math.random()*empties.length)];
+    const value = Math.random()<FOUR_PROB ? 4 : 2;
+    const t = { id:idCounter++, value, r:spot.r, c:spot.c, fromR:spot.r, fromC:spot.c, toR:spot.r, toC:spot.c, scale: immediate?1:0.5, removing:false, mergedInto:false };
+    tiles.push(t);
+    board[spot.r][spot.c] = t.id;
+    if(!immediate) animatePop(t, POP_TIME); // spawn pop
+    return true;
+  }
+
+  function tileAt(r,c){ const id = board[r]?.[c]; return id? tiles.find(t=>t.id===id): null; }
+
+  // --- Movement & merging with animation ------------------------------------
+  const DIRS = { left:{dr:0,dc:-1}, right:{dr:0,dc:1}, up:{dr:-1,dc:0}, down:{dr:1,dc:0} };
+
+  function move(dir){
+    if(over || (won && !keepPlaying) || moving) return false;
+
+    lastState = snapshot();
+    undoBtn.disabled = false;
+
+    const {dr,dc} = DIRS[dir];
+    const range = [...Array(SIZE).keys()];
+    const orderR = dr>0 ? [...range].reverse() : range; // iterate from far side
+    const orderC = dc>0 ? [...range].reverse() : range;
+
+    let moved = false;
+    let gained = 0;
+
+    // Reset movement targets
+    tiles.forEach(t=>{ t.fromR = t.r; t.fromC = t.c; t.toR = t.r; t.toC = t.c; t.removing=false; t.mergedInto=false; });
+
+    // Process each cell in travel order, sliding and merging
+    for(const r of orderR){
+      for(const c of orderC){
+        const t = tileAt(r,c); if(!t) continue;
+        let nr = r, nc = c;
+        // Slide until boundary or obstacle
+        while(true){
+          const tr = nr + dr, tc = nc + dc;
+          if(tr<0||tr>=SIZE||tc<0||tc>=SIZE) break;
+          const other = tileAt(tr,tc);
+          if(!other){ nr=tr; nc=tc; continue; }
+          if(other.value===t.value && !other.mergedInto && !t.mergedInto){
+            // Merge candidate: mark destination as merge target
+            other.mergedInto = true; // temp flag to avoid double merge in this pass
+            nr = tr; nc = tc;
+          }
+          break;
+        }
+        if(nr!==r || nc!==c) moved = true;
+        // If merging into a tile of same value
+        const dest = tileAt(nr,nc);
+        if(dest && dest!==t && dest.value===t.value && dest.mergedInto){
+          // t moves onto dest and causes merge -> t disappears, dest doubles
+          t.toR = nr; t.toC = nc; t.removing = true; // this one will disappear
+          dest.toR = nr; dest.toC = nc; // stays put but will pop & double later
+          gained += dest.value * 2;
+        } else {
+          t.toR = nr; t.toC = nc;
+        }
+      }
+    }
+
+    // If nothing moved, cancel undo snapshot — and if *no* moves exist anywhere, trigger Game Over
+    if(!moved){
+      lastState = null;
+      undoBtn.disabled = true;
+      // Check global move availability when a move attempt results in no change
+      if(!canAnyMove()){
+        over = true;
+        showOverlay('Game Over','No moves left. Try again!', false);
+      }
+      return false;
+    }
+
+    // Animate: prepare board mapping for interpolation frame-by-frame
+    moving = true;
+    const start = performance.now();
+
+    function frame(){
+      const t = performance.now();
+      const p = Math.min(1, (t-start)/SLIDE_TIME);
+      draw(p); // p is progress 0..1 for slide tween
+      if(p<1){ requestAnimationFrame(frame); }
+      else {
+        // Commit movement: rebuild board with survivors at their destinations
+        board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+
+        const survivors = [];
+        for(const tile of tiles){
+          if(tile.removing){ continue; }
+          if(tile.mergedInto){ tile.value *= 2; tile.mergedInto = false; animatePop(tile, POP_TIME); }
+          tile.r = tile.toR; tile.c = tile.toC; tile.fromR = tile.r; tile.fromC = tile.c;
+          survivors.push(tile);
+          board[tile.r][tile.c] = tile.id;
+        }
+        tiles = survivors;
+
+        score += gained; updateHUD();
+        checkEndStates();
+        if(!over) spawnRandomTile();
+
+        moving = false;
+        draw();
+      }
+    }
+    requestAnimationFrame(frame);
+    return true;
+  }
+
+  function checkEndStates(){
+    // Win if any tile >= WIN_VALUE
+    if(!won){
+      for(const t of tiles){ if(t.value>=WIN_VALUE){ won=true; break; } }
+      if(won) { showOverlay('You Win!','Reached '+WIN_VALUE+'. Keep going?', true); return; }
+    }
+    // Game over: no empty cells AND no possible merges
+    if(getEmptyCells().length===0){
+      if(!canAnyMove()) { over=true; showOverlay('Game Over','No moves left. Try again!', false); }
+    }
+  }
+
+  function canAnyMove(){
+    // If any adjacent equal or empty cell exists, a move is possible
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const id = board[r][c]; if(id===0) return true;
+        const v = tiles.find(t=>t.id===id).value;
+        if(r+1<SIZE){ const id2 = board[r+1][c]; if(id2===0 || tiles.find(t=>t.id===id2).value===v) return true; }
+        if(c+1<SIZE){ const id3 = board[r][c+1]; if(id3===0 || tiles.find(t=>t.id===id3).value===v) return true; }
+      }
+    }
+    return false;
+  }
+
+  // --- Rendering -------------------------------------------------------------
+  function draw(progress=1){
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Board metrics derived from SIZE so it responds to different grids
+    const pad = Math.floor(W*0.06);                 // outer padding
+    const size = Math.min(W,H) - pad*2;             // square board area
+    const gap = Math.floor(size * (SIZE>=5? 0.02 : 0.03)); // tighter gaps on larger grids
+    const cellSize = Math.floor((size - gap*(SIZE-1))/SIZE);
+    const boardX = Math.floor((W - (cellSize*SIZE + gap*(SIZE-1)))/2);
+    const boardY = Math.floor((H - (cellSize*SIZE + gap*(SIZE-1)))/2);
+    const radius = Math.floor(cellSize*0.1);
+
+    // Board background
+    roundRect(ctx, boardX - pad*0.5, boardY - pad*0.5,
+                    cellSize*SIZE + gap*(SIZE-1) + pad,
+                    cellSize*SIZE + gap*(SIZE-1) + pad, 14, '#bbada0');
+
+    // Grid cells
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const x = boardX + c*(cellSize+gap);
+        const y = boardY + r*(cellSize+gap);
+        roundRect(ctx, x, y, cellSize, cellSize, radius, '#cdc1b4');
+      }
+    }
+
+    // Tiles — draw with interpolation
+    for(const t of tiles){
+      const sx = boardX + t.fromC*(cellSize+gap);
+      const sy = boardY + t.fromR*(cellSize+gap);
+      const dx = boardX + t.toC*(cellSize+gap);
+      const dy = boardY + t.toR*(cellSize+gap);
+
+      // Easing for slide (ease-out cubic)
+      const e = easeOutCubic(progress);
+      const x = sx + (dx - sx) * e;
+      const y = sy + (dy - sy) * e;
+
+      drawTile(x,y,cellSize, radius, t.value, t.scale || 1);
+    }
+  }
+
+  function drawTile(x,y,size,radius,value,scale){
+    const bg = TILE_COLORS[value] || '#3c3a32';
+    const fontColor = value<=4 ? '#776e65' : '#f9f6f2';
+
+    const s = size*scale;
+    const ox = Math.round(x + (size - s)/2);
+    const oy = Math.round(y + (size - s)/2);
+
+    roundRect(ctx, ox, oy, s, s, radius, bg);
+
+    // Choose font size based on digits; font family prefers the embedded name
+    const digits = String(value).length;
+    const base = Math.floor(size * (digits<=2?0.5: digits===3?0.45: 0.38));
+    ctx.fillStyle = fontColor;
+    ctx.font = `700 ${base}px EmbeddedMontserrat, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(value, ox + s/2, oy + s/2);
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+  }
+
+  function easeOutCubic(p){ return 1 - Math.pow(1-p,3); }
+
+  // Short pop animation (used on spawn and after a merge)
+  function animatePop(tile, duration){
+    const start = performance.now();
+    function tick(){
+      const now = performance.now();
+      const t = Math.min(1, (now - start)/duration);
+      // Scale up to ~1.12 then settle to 1.0
+      tile.scale = t<0.5 ? (0.5 + t*1.24) : (1.12 - (t-0.5)*0.24*2);
+      draw();
+      if(t<1) requestAnimationFrame(tick); else { tile.scale = 1; draw(); }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // --- Overlay controls ------------------------------------------------------
+  function showOverlay(title, desc, canKeep){
+    overlayTitle.textContent = title; overlayDesc.textContent = desc;
+    // Show or hide the Keep Playing button depending on context
+    keepBtn.style.display = canKeep ? '' : 'none';
+    overlay.setAttribute('aria-hidden','false');
+    overlay.classList.add('show');
+    // Focus the most relevant action
+    requestAnimationFrame(()=> (canKeep ? keepBtn : restartBtn).focus());
+  }
+  function hideOverlay(){
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden','true');
+  }
+
+  keepBtn.addEventListener('click',()=>{ keepPlaying = true; hideOverlay(); draw(); });
+  restartBtn.addEventListener('click',()=>{ newGame(); }); // in-page reset
+  newBtn.addEventListener('click',()=> newGame());
+  undoBtn.addEventListener('click',()=> undo());
+
+  // --- Input: keyboard + touch ----------------------------------------------
+  const DIR_KEYS = {ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down', a:'left', d:'right', w:'up', s:'down'};
+  window.addEventListener('keydown', e=>{
+    const k = e.key;
+    if(k==='n' || k==='N') { newGame(); return; }
+    if(k==='z' || k==='Z') { undo(); return; }
+    if(overlay.classList.contains('show')){
+      // Block moves while overlay is up; let the focused button handle keys.
+      e.preventDefault();
+      return;
+    }
+    const dir = DIR_KEYS[k];
+    if(dir){ e.preventDefault(); move(dir); }
+  }, {passive:false});
+
+  // Touch swipe handling (simple threshold)
+  let touchStart = null;
+  canvas.addEventListener('touchstart', e=>{
+    if(e.touches.length!==1) return;
+    const t = e.touches[0]; touchStart = {x:t.clientX, y:t.clientY};
+  }, {passive:true});
+
+  canvas.addEventListener('touchend', e=>{
+    if(!touchStart) return; const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x; const dy = t.clientY - touchStart.y;
+    const ax = Math.abs(dx), ay = Math.abs(dy); const TH = 24; // px threshold
+    if(Math.max(ax,ay) > TH){
+      const dir = (ax>ay) ? (dx<0?'left':'right') : (dy<0?'up':'down');
+      move(dir);
+    }
+    touchStart = null;
+  }, {passive:true});
+
+  // --- Self-test harness (logs to console) ----------------------------------
+  function runSelfTests(){
+    const ENABLE_SELF_TESTS = true; // set false to skip
+    if(!ENABLE_SELF_TESTS) return;
+
+    const tests = [];
+    const log = (name, pass, info='')=>tests.push({Test:name, Pass:pass?'✅':'❌', Info:info});
+
+    // Helpers to build a board from a numeric matrix without rendering
+    function loadBoardFromMatrix(mat){
+      tiles = []; board = Array.from({length:SIZE},()=>Array(SIZE).fill(0)); idCounter=1;
+      for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+        const v = mat[r][c];
+        if(v>0){ const t={id:idCounter++, value:v, r, c, fromR:r, fromC:c, toR:r, toC:c, scale:1, removing:false, mergedInto:false}; tiles.push(t); board[r][c]=t.id; }
+      }
+      won=false; over=false; keepPlaying=false; // reset flags
+    }
+
+    function extractValueMatrix(){
+      const out = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+      for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+        const id = board[r][c];
+        out[r][c] = id ? tiles.find(t=>t.id===id).value : 0;
+      }
+      return out;
+    }
+
+    // Save state to restore after tests
+    const saved = snapshot();
+    const savedShow = showOverlay;
+    const overlayCalls = [];
+    // Stub showOverlay so tests don't affect UI
+    window.showOverlay = (title, desc, canKeep)=>{ overlayCalls.push({title, canKeep}); };
+
+    // Test 1: No-move full board -> canAnyMove === false
+    loadBoardFromMatrix([
+      [2,4,2,4],
+      [4,2,4,2],
+      [2,4,2,4],
+      [4,2,4,2]
+    ]);
+    log('canAnyMove() on full no-merge board', !canAnyMove()?true:false);
+
+    // Test 2: Merge available -> canAnyMove === true
+    loadBoardFromMatrix([
+      [2,2,4,8],
+      [0,0,0,0],
+      [0,0,0,0],
+      [0,0,0,0]
+    ]);
+    log('canAnyMove() when a merge exists', canAnyMove());
+
+    // Test 3: Win detection -> overlay called with Keep=true
+    loadBoardFromMatrix([
+      [2,4,2,4],
+      [4,2048,4,2],
+      [2,4,2,4],
+      [4,2,4,2]
+    ]);
+    checkEndStates();
+    log('Win triggers overlay with Keep=true', overlayCalls.some(c=>c.title.includes('Win') && c.canKeep===true));
+
+    // Test 4: Game over detection -> overlay called with Keep=false
+    overlayCalls.length = 0;
+    loadBoardFromMatrix([
+      [2,4,2,4],
+      [4,2,4,2],
+      [2,4,2,4],
+      [4,2,4,2]
+    ]);
+    checkEndStates();
+    log('Game Over triggers overlay with Keep=false', overlayCalls.some(c=>c.title.includes('Game Over') && c.canKeep===false));
+
+    // Test 5: No-move attempt triggers immediate Game Over overlay
+    overlayCalls.length = 0;
+    loadBoardFromMatrix([
+      [2,4,2,4],
+      [4,2,4,2],
+      [2,4,2,4],
+      [4,2,4,2]
+    ]);
+    move('left'); // should not move; should raise Game Over
+    log('No-move swipe triggers Game Over overlay', overlayCalls.some(c=>c.title.includes('Game Over') && c.canKeep===false));
+
+    // Test 6: snapshot()/restore() round-trip preserves board values
+    loadBoardFromMatrix([
+      [2,0,2,0],
+      [0,4,0,4],
+      [8,0,0,0],
+      [0,0,0,0]
+    ]);
+    const before = JSON.stringify(extractValueMatrix());
+    const snap = snapshot();
+    if(tiles[0]) tiles[0].value += 2; // mutate something
+    restore(snap);
+    const after = JSON.stringify(extractValueMatrix());
+    log('snapshot()/restore() round-trip', before===after);
+
+    // Restore state and function
+    restore(saved);
+    window.showOverlay = savedShow;
+
+    try{ console.table(tests); }catch{ console.log(tests); }
+  }
+
+  // --- Kick off --------------------------------------------------------------
+  fitCanvasToCSSSize();
+  newGame();              // start immediately with two tiles
+  runSelfTests();         // run tests AFTER initialization so snapshot() is safe
+  </script>
+</body>
+</html>
