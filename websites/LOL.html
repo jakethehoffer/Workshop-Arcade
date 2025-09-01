@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>League of Legends — Fact Match (Guess-The-Champion)</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0b0f14;
+    --panel:#0e1522;
+    --ink:#e6edf3;
+    --muted:#93a4b8;
+    --accent:#5eead4;
+    --stroke:#26334a;
+    --ok:#22c55e;
+    --no:#ef4444;
+    --partial:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
+    overscroll-behavior-y:none;
+    -webkit-text-size-adjust:100%;
+  }
+  *{-webkit-tap-highlight-color: transparent;}
+
+  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:14px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg, rgba(255,255,255,.025), transparent)}
+  header h1{margin:0;font-size:18px}
+  header .sub{color:var(--muted);font-size:13px}
+  header .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button, .btn {
+    background: rgba(94,234,212,.12);
+    border:1px solid rgba(94,234,212,.35);
+    color:var(--accent);
+    padding:8px 12px;border-radius:10px; font-weight:700; cursor:pointer;
+    touch-action: manipulation;
+  }
+  button:disabled{opacity:.6; cursor:not-allowed}
+  .pill{border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+  main{display:grid; grid-template-columns: 320px 1fr; gap:14px; padding:14px 16px}
+  .panel{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:12px}
+  .panel h2{margin:2px 0 10px 0; font-size:15px}
+  .bankSearch{display:flex; gap:8px; margin-bottom:10px}
+  .bankSearch input{width:100%; padding:8px 10px; border-radius:10px; border:1px solid var(--stroke); background:#0b1220; color:var(--ink); font-size:14px;}
+  .bank{ display:grid; grid-template-columns: 1fr 1fr; gap:6px 8px; max-height:calc(100vh - 280px); overflow:auto; padding-right:4px}
+  .charBtn{padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:10px; cursor:pointer; background:rgba(255,255,255,.03); font-weight:600; text-align:left}
+  .charBtn:hover{border-color:rgba(94,234,212,.45)}
+  .charBtn.selected{outline:2px solid rgba(94,234,212,.55)}
+  .factsGrid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px}
+  .fact{padding:8px 10px; border:1px solid rgba(255,255,255,.06); border-radius:10px; background:rgba(255,255,255,.02); font-size:13px}
+  .fact b{display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px}
+  .tag{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 8px; font-size:12px; border:1px solid rgba(255,255,255,.1)}
+  .tag.ok{background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color:#bef264}
+  .tag.no{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color:#fecaca}
+  .guessCard{border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02)}
+  .guesses{display:grid; gap:10px}
+  .empty{color:var(--muted); font-size:14px; border:1px dashed rgba(255,255,255,.12); border-radius:12px; padding:16px; text-align:center}
+  .legend{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .legend .tag{font-size:11px}
+  .footer{padding:12px 16px; color:var(--muted); font-size:12px; border-top:1px solid rgba(255,255,255,.06)}
+  .winOverlay{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5);}
+  .winOverlay.show{display:grid}
+  .winPanel{background:rgba(14,21,34,.98); border:1px solid rgba(255,255,255,.12); border-radius:16px; width:min(520px, 96vw); padding:18px}
+  .winPanel h3{margin:0 0 4px 0}
+  .muted{color:var(--muted)}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .sp{height:1px; background:rgba(255,255,255,.07); margin:10px 0}
+
+  @media (max-width: 840px){
+    main{ grid-template-columns: 1fr; }
+    header .sub{ font-size:12px; }
+    .bank{ grid-template-columns: 1fr; max-height: 40vh; }
+    .factsGrid{ grid-template-columns: 1fr 1fr; }
+    .bankSearch input{ font-size:16px; }
+    button, .btn{ padding:12px 14px; }
+    .pill{ font-size:12px; padding:7px 12px; }
+  }
+
+  body.modal-open{ overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>League of Legends — Fact Match</h1>
+      <div class="sub">Guess the hidden champion by comparing facts. Tap a champion to see which facts match the target.</div>
+    </div>
+    <div class="actions">
+      <span class="pill" id="guessesLeftPill">Guesses left: —</span>
+      <button id="newGameBtn">New Game</button>
+      <button id="sfxBtn" class="btn">🔊 SFX: On</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Champion Bank</h2>
+      <div class="bankSearch">
+        <input id="bankFilter" inputmode="search" autocomplete="off" placeholder="Filter (name, * and ? wildcards)" />
+      </div>
+      <div class="bank" id="bankList"></div>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <h2>Guesses</h2>
+        <div class="legend">
+          <span class="tag ok">Matches target</span>
+          <span class="tag no">Doesn't match</span>
+        </div>
+      </div>
+      <div id="guesses" class="guesses">
+        <div class="empty">No guesses yet. Pick a champion from the left to compare their facts with the target.</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">
+    Tip: Use the bank search to narrow options. You win by tapping the exact champion! “New Game” picks a fresh target.
+  </div>
+</div>
+
+<!-- Win Overlay -->
+<div class="winOverlay" id="win">
+  <div class="winPanel">
+    <h3>🎉 You found the target!</h3>
+    <div class="muted" id="winName"></div>
+    <div class="sp"></div>
+    <div id="winFacts" class="factsGrid" style="margin-bottom:10px"></div>
+    <div class="row">
+      <button id="playAgainBtn">Play Again</button>
+      <span class="muted" id="stats"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Lose Overlay -->
+<div class="winOverlay" id="lose">
+  <div class="winPanel">
+    <h3>💀 Out of guesses!</h3>
+    <div class="muted">The target was:</div>
+    <div class="muted" id="loseName" style="font-weight:800;margin-top:4px;"></div>
+    <div class="sp"></div>
+    <div id="loseFacts" class="factsGrid" style="margin-bottom:10px"></div>
+    <div class="row">
+      <button id="playAgainBtnLose">Try Again</button>
+      <span class="muted" id="statsLose"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------
+   Mobile-safe polyfills
+--------------------------- */
+if (!Element.prototype.closest) {
+  Element.prototype.closest = function(selector) {
+    let el = this;
+    while (el && el.nodeType === 1) {
+      if (el.matches ? el.matches(selector) : el.msMatchesSelector(selector)) return el;
+      el = el.parentElement || el.parentNode;
+    }
+    return null;
+  };
+}
+if (!Object.values) {
+  Object.values = function(obj) { return Object.keys(obj).map(function(k){ return obj[k]; }); };
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  (function(){
+    'use strict';
+
+    const MAX_GUESSES = 8;
+
+    // SFX
+    const SFX = (() => {
+      let ctx = null;
+      let enabled = true;
+      function ensureCtx() {
+        if (!enabled) return;
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      }
+      function beep({ freq = 440, dur = 0.12, type = 'sine', vol = 0.2, attack = 0.01, release = 0.05 }) {
+        if (!enabled) return;
+        ensureCtx();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(vol, t + attack);
+        gain.gain.linearRampToValueAtTime(0, t + attack + dur + release);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + attack + dur + release + 0.01);
+      }
+      function chord(freqs, opt = {}) {
+        freqs.forEach(f => beep({ freq: f, vol: opt.vol ?? 0.15, dur: opt.dur ?? 0.18, type: opt.type ?? 'triangle' }));
+      }
+      return {
+        click()  { beep({ freq: 600, dur: 0.06, type: 'square', vol: 0.15 }); },
+        ui()     { beep({ freq: 420, dur: 0.05, type: 'square', vol: 0.12 }); },
+        wrong()  { beep({ freq: 180, dur: 0.18, type: 'sawtooth', vol: 0.25 }); },
+        correct(){ chord([523.25, 659.25, 783.99], { vol: 0.14 }); },
+        win()    { chord([523.25, 659.25, 783.99], { vol: 0.14 }); setTimeout(()=>chord([659.25, 783.99, 987.77], { vol: 0.14 }), 140); },
+        lose()   { beep({ freq: 140, dur: 0.28, type: 'sawtooth', vol: 0.22 }); setTimeout(()=>beep({ freq:110, dur: 0.36, type:'sawtooth', vol:0.22 }), 140); },
+        toggle() { enabled = !enabled; return enabled; },
+        resume() { ensureCtx(); },
+      };
+    })();
+
+    // --- Fact schema for LoL ---
+    // Six strong, broadly-applicable categories:
+    // - Region (Runeterra region)
+    // - Class  (Fighter, Assassin, Mage, Marksman, Tank, Support)
+    // - Resource (Mana, Energy, Fury, Ferocity, Manaless)
+    // - Range (Melee, Ranged)
+    // - Damage (AD, AP, Mixed)
+    // - Species (Human, Yordle, Vastaya, Undead, Ascended, Voidborn, Golem, Celestial, Iceborn, etc.)
+    const FACT_KEYS = ['region','class','resource','range','damage','species'];
+    const FACT_LABEL = {
+      region:'Region',
+      class:'Class',
+      resource:'Resource',
+      range:'Range',
+      damage:'Damage Type',
+      species:'Species'
+    };
+
+    // --- Champion dataset (70+ popular champs) ---
+    const CHARACTER_FACTS = {
+      // Demacia
+      GAREN: {display:'Garen', region:'Demacia', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
+      LUX: {display:'Lux', region:'Demacia', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
+      JARVAN_IV: {display:'Jarvan IV', region:'Demacia', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      VAYNE: {display:'Vayne', region:'Demacia', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      FIORA: {display:'Fiora', region:'Demacia', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      GALIO: {display:'Galio', region:'Demacia', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Golem'},
+
+      // Noxus
+      DARIUS: {display:'Darius', region:'Noxus', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      DRAVEN: {display:'Draven', region:'Noxus', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      KATARINA: {display:'Katarina', region:'Noxus', class:'Assassin', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
+      SWAIN: {display:'Swain', region:'Noxus', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
+      LEBLANC: {display:'LeBlanc', region:'Noxus', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
+      SION: {display:'Sion', region:'Noxus', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Undead'},
+      RIVEN: {display:'Riven', region:'Noxus', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
+      TALON: {display:'Talon', region:'Noxus', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      VLADIMIR: {display:'Vladimir', region:'Noxus', class:'Mage', resource:'Manaless', range:'Ranged', damage:'AP', species:'Human'},
+
+      // Ionia
+      AHRI: {display:'Ahri', region:'Ionia', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Vastaya'},
+      IRELIA: {display:'Irelia', region:'Ionia', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      YASUO: {display:'Yasuo', region:'Ionia', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
+      ZED: {display:'Zed', region:'Ionia', class:'Assassin', resource:'Energy', range:'Melee', damage:'AD', species:'Human'},
+      SHEN: {display:'Shen', region:'Ionia', class:'Tank', resource:'Energy', range:'Melee', damage:'AD', species:'Human'},
+      KENNEN: {display:'Kennen', region:'Ionia', class:'Mage', resource:'Energy', range:'Ranged', damage:'AP', species:'Yordle'},
+      AKALI: {display:'Akali', region:'Ionia', class:'Assassin', resource:'Energy', range:'Melee', damage:'AP', species:'Human'},
+      MASTER_YI: {display:'Master Yi', region:'Ionia', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+
+      // Piltover
+      CAITLYN: {display:'Caitlyn', region:'Piltover', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      VI: {display:'Vi', region:'Piltover', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      EZREAL: {display:'Ezreal', region:'Piltover', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      JAYCE: {display:'Jayce', region:'Piltover', class:'Fighter', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      HEIMERDINGER: {display:'Heimerdinger', region:'Piltover', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Yordle'},
+
+      // Zaun
+      JINX: {display:'Jinx', region:'Zaun', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      EKKO: {display:'Ekko', region:'Zaun', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      SINGED: {display:'Singed', region:'Zaun', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Human'},
+      TWITCH: {display:'Twitch', region:'Zaun', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Chemically-Altered'},
+      VIKTOR: {display:'Viktor', region:'Zaun', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Augmented'},
+      DR_MUNDO: {display:'Dr. Mundo', region:'Zaun', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Chemically-Altered'},
+
+      // Freljord
+      ASHE: {display:'Ashe', region:'Freljord', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      SEJUANI: {display:'Sejuani', region:'Freljord', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Iceborn'},
+      ANIVIA: {display:'Anivia', region:'Freljord', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Spirit'},
+      LISSANDRA: {display:'Lissandra', region:'Freljord', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Iceborn'},
+      TRYNDAMERE: {display:'Tryndamere', region:'Freljord', class:'Fighter', resource:'Fury', range:'Melee', damage:'AD', species:'Human'},
+      BRAUM: {display:'Braum', region:'Freljord', class:'Support', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+
+      // Shurima
+      AZIR: {display:'Azir', region:'Shurima', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Ascended'},
+      XERATH: {display:'Xerath', region:'Shurima', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Ascended'},
+      RENEKTON: {display:'Renekton', region:'Shurima', class:'Fighter', resource:'Fury', range:'Melee', damage:'AD', species:'Ascended'},
+      NASUS: {display:'Nasus', region:'Shurima', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Ascended'},
+      SIVIR: {display:'Sivir', region:'Shurima', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+
+      // Bilgewater
+      MISS_FORTUNE: {display:'Miss Fortune', region:'Bilgewater', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+      GANGPLANK: {display:'Gangplank', region:'Bilgewater', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      PYKE: {display:'Pyke', region:'Bilgewater', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Undead'},
+      NAUTILUS: {display:'Nautilus', region:'Bilgewater', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Undead'},
+      TWISTED_FATE: {display:'Twisted Fate', region:'Bilgewater', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
+
+      // Shadow Isles
+      THRESH: {display:'Thresh', region:'Shadow Isles', class:'Support', resource:'Mana', range:'Ranged', damage:'AP', species:'Undead'},
+      HECARIM: {display:'Hecarim', region:'Shadow Isles', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Undead'},
+      KALISTA: {display:'Kalista', region:'Shadow Isles', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Undead'},
+      MAOKAI: {display:'Maokai', region:'Shadow Isles', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Treant'},
+
+      // Targon
+      LEONA: {display:'Leona', region:'Targon', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Aspect'},
+      DIANA: {display:'Diana', region:'Targon', class:'Assassin', resource:'Mana', range:'Melee', damage:'AP', species:'Aspect'},
+      PANTHEON: {display:'Pantheon', region:'Targon', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Aspect'},
+      TARIC: {display:'Taric', region:'Targon', class:'Support', resource:'Mana', range:'Melee', damage:'AP', species:'Aspect'},
+      AURELION_SOL: {display:'Aurelion Sol', region:'Targon', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Celestial'},
+
+      // Ixtal
+      QIYANA: {display:'Qiyana', region:'Ixtal', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      NEEKO: {display:'Neeko', region:'Ixtal', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Vastaya'},
+      NIDALEE: {display:'Nidalee', region:'Ixtal', class:'Assassin', resource:'Mana', range:'Ranged', damage:'AP', species:'Vastaya'},
+      RENGAR: {display:'Rengar', region:'Ixtal', class:'Assassin', resource:'Ferocity', range:'Melee', damage:'AD', species:'Vastaya'},
+
+      // Bandle City
+      TEEMO: {display:'Teemo', region:'Bandle City', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Yordle'},
+      TRISTANA: {display:'Tristana', region:'Bandle City', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Yordle'},
+      POPPY: {display:'Poppy', region:'Bandle City', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Yordle'},
+      VEIGAR: {display:'Veigar', region:'Bandle City', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Yordle'},
+      LULU: {display:'Lulu', region:'Bandle City', class:'Support', resource:'Mana', range:'Ranged', damage:'AP', species:'Yordle'},
+
+      // Void
+      KASSADIN: {display:'Kassadin', region:'Void', class:'Assassin', resource:'Mana', range:'Melee', damage:'AP', species:'Human'},
+      KHAZIX: {display:"Kha'Zix", region:'Void', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Voidborn'},
+      CHOGATH: {display:"Cho'Gath", region:'Void', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Voidborn'},
+      VELKOZ: {display:"Vel'Koz", region:'Void', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Voidborn'},
+      KAISA: {display:"Kai'Sa", region:'Void', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+    };
+
+    const BANK = Object.keys(CHARACTER_FACTS).map(k => ({ token: k, display: CHARACTER_FACTS[k].display }));
+
+    // State
+    let target = null;
+    let guesses = [];
+    let games = { played:0, wins:0 };
+    let guessesLeft = MAX_GUESSES;
+    let over = false;
+
+    // Utils
+    const byId = id => document.getElementById(id);
+    const choice = arr => arr[(Math.random()*arr.length)|0];
+    function patternToRegex(pat) {
+      if (!pat) return null;
+      let raw = (pat + '').toUpperCase().trim();
+      const hasWildcards = /[*?]/.test(raw);
+      if (!hasWildcards) raw = `*${raw}*`;
+      const esc = s => s.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+      let rx = '';
+      for (let i=0;i<raw.length;i++){
+        const ch = raw[i];
+        rx += ch === '*' ? '.*' : ch === '?' ? '.' : esc(ch);
+      }
+      return new RegExp('^' + rx + '$');
+    }
+    function compareFacts(guessToken, targetToken){
+      const ga = CHARACTER_FACTS[guessToken];
+      const ta = CHARACTER_FACTS[targetToken];
+      const res = {};
+      for (let i=0;i<FACT_KEYS.length;i++){ const k=FACT_KEYS[i]; res[k] = (ga[k] === ta[k]); }
+      return res;
+    }
+    function isCorrectGuess(guessToken, targetToken){
+      const m = compareFacts(guessToken, targetToken);
+      for (let i=0;i<FACT_KEYS.length;i++){ if(!m[FACT_KEYS[i]]) return false; }
+      return true;
+    }
+
+    // DOM
+    const bankList = byId('bankList');
+    const bankFilter = byId('bankFilter');
+    const guessesLeftPill = byId('guessesLeftPill');
+    const sfxBtn = byId('sfxBtn');
+    const guessesEl = byId('guesses');
+
+    function renderBank(){
+      const patt = (bankFilter.value||'').trim();
+      const rx = patt ? patternToRegex(patt) : null;
+      const items = BANK
+        .filter(c => !rx || rx.test(c.display.toUpperCase()) || rx.test(c.token))
+        .sort((a,b)=> a.display.localeCompare(b.display));
+      bankList.innerHTML = items.length
+        ? items.map(c => {
+            const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
+            return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
+          }).join('')
+        : '<div class="empty">No champions match your filter.</div>';
+    }
+
+    // iOS audio unlock
+    document.addEventListener('touchstart', function(){ SFX.resume(); }, { passive:true });
+
+    bankList.addEventListener('click', function(e){
+      const btn = (e.target && (e.target.closest && e.target.closest('.charBtn'))) || null;
+      if (!btn || over) return;
+      SFX.resume();
+      SFX.click();
+      const token = btn.getAttribute('data-token');
+      onGuess(token);
+    });
+
+    bankFilter.addEventListener('input', renderBank);
+
+    function renderGuessCard(entry){
+      const cf = CHARACTER_FACTS[entry.token];
+      const matches = entry.matches;
+      let okCount = 0;
+      for (let i=0;i<FACT_KEYS.length;i++){ if (matches[FACT_KEYS[i]]) okCount++; }
+      const rows = FACT_KEYS.map(function(k){
+        const ok = !!matches[k];
+        const tagClass = ok ? 'ok' : 'no';
+        return (
+          '<div class="fact">' +
+            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<div class="row">' +
+              '<span>'+cf[k]+'</span>' +
+              '<span class="tag '+tagClass+'">'+(ok?'Match':'No match')+'</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+      return (
+        '<div class="guessCard">' +
+          '<div class="row" style="margin-bottom:8px">' +
+            '<div style="font-weight:800">'+cf.display+'</div>' +
+            '<div class="pill">'+okCount+'/'+FACT_KEYS.length+' facts match</div>' +
+          '</div>' +
+          '<div class="factsGrid">'+rows+'</div>' +
+        '</div>'
+      );
+    }
+
+    function renderGuesses(){
+      guessesEl.innerHTML = guesses.length
+        ? guesses.map(renderGuessCard).join('')
+        : '<div class="empty">No guesses yet. Pick a champion from the left to compare their facts with the target.</div>';
+    }
+
+    function updateGuessesPill(){ guessesLeftPill.textContent = 'Guesses left: ' + guessesLeft; }
+
+    // Game flow
+    function resetGame(){
+      guesses = [];
+      target = choice(BANK).token;
+      guessesLeft = MAX_GUESSES;
+      over = false;
+      renderBank();
+      renderGuesses();
+      updateGuessesPill();
+    }
+
+    function onGuess(token){
+      for (let i=0;i<guesses.length;i++){ if (guesses[i].token === token) return; }
+
+      const matches = compareFacts(token, target);
+      guesses.unshift({ token: token, matches: matches });
+      renderGuesses();
+      renderBank();
+
+      if (isCorrectGuess(token, target)){
+        games.played++; games.wins++;
+        over = true;
+        SFX.correct();
+        showWin(token);
+        return;
+      }
+
+      guessesLeft = Math.max(0, guessesLeft - 1);
+      updateGuessesPill();
+      SFX.wrong();
+
+      if (guessesLeft === 0){
+        games.played++;
+        over = true;
+        SFX.lose();
+        showLoss();
+      }
+    }
+
+    // WIN overlay
+    const win = byId('win');
+    const winName = byId('winName');
+    const winFacts = byId('winFacts');
+    const statsEl = byId('stats');
+    const playAgainBtn = byId('playAgainBtn');
+
+    function showWin(token){
+      const cf = CHARACTER_FACTS[token];
+      winName.textContent = 'Target: ' + cf.display;
+      winFacts.innerHTML = FACT_KEYS.map(function(k){
+        return (
+          '<div class="fact">' +
+            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<div>'+cf[k]+'</div>' +
+          '</div>'
+        );
+      }).join('');
+      statsEl.textContent = 'Games: ' + games.played + ' • Wins: ' + games.wins;
+      document.body.classList.add('modal-open');
+      win.classList.add('show');
+      SFX.win();
+    }
+
+    playAgainBtn.addEventListener('click', function(){
+      SFX.ui();
+      win.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      resetGame();
+    });
+
+    // LOSE overlay
+    const lose = byId('lose');
+    const loseName = byId('loseName');
+    const loseFacts = byId('loseFacts');
+    const statsLose = byId('statsLose');
+    const playAgainBtnLose = byId('playAgainBtnLose');
+
+    function showLoss(){
+      const cf = CHARACTER_FACTS[target];
+      loseName.textContent = cf.display;
+      loseFacts.innerHTML = FACT_KEYS.map(function(k){
+        return (
+          '<div class="fact">' +
+            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<div>'+cf[k]+'</div>' +
+          '</div>'
+        );
+      }).join('');
+      statsLose.textContent = 'Games: ' + games.played + ' • Wins: ' + games.wins;
+      document.body.classList.add('modal-open');
+      lose.classList.add('show');
+    }
+
+    playAgainBtnLose.addEventListener('click', function(){
+      SFX.ui();
+      lose.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      resetGame();
+    });
+
+    // header controls
+    byId('newGameBtn').addEventListener('click', function(){
+      games.played++;
+      SFX.ui();
+      win.classList.remove('show');
+      lose.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      resetGame();
+    });
+
+    // SFX toggle
+    sfxBtn.addEventListener('click', function(){
+      const on = SFX.toggle();
+      sfxBtn.textContent = on ? '🔊 SFX: On' : '🔇 SFX: Off';
+      if (on) { SFX.resume(); SFX.ui(); }
+    });
+
+    // INIT
+    resetGame();
+    renderBank();
+
+    // Smoke tests (desktop only)
+    (function runTests(){
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) return;
+      try{
+        const results = [];
+        const assert = (name, cond) => { results.push({name, pass: !!cond}); if(!cond) console.error('[TEST FAIL]', name); };
+        const same = (a,b) => JSON.stringify(a)===JSON.stringify(b);
+        assert('dataset has at least 30', Object.keys(CHARACTER_FACTS).length >= 30);
+        assert('every entry has all facts', Object.keys(CHARACTER_FACTS).every(k => FACT_KEYS.every(f => CHARACTER_FACTS[k][f])));
+        const tokens = Object.keys(CHARACTER_FACTS);
+        const t0 = tokens[0], t1 = tokens[1];
+        const m = compareFacts(t0, t1);
+        assert('compareFacts has all keys', same(Object.keys(m).sort(), FACT_KEYS.slice().sort()));
+        assert('isCorrectGuess detects same', isCorrectGuess(t0, t0) === true);
+        assert('patternToRegex contains', patternToRegex('ASHE').test('ASHE'));
+        console.log('[FactMatch tests]', results.filter(r=>r.pass).length + '/' + results.length + ' passed', results);
+      }catch(e){
+        console.warn('[tests skipped]', e);
+      }
+    })();
+
+  })();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checkers — Singleplayer & Two-Player</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0a0f17;
+    --panel:#0e1524;
+    --grid:#0b1322;
+    --light:#1a2440;
+    --dark:#0e1630;
+    --ink:#e6edf3;
+    --muted:#a7b7ce;
+    --accent:#5eead4;
+    --ring:#7c9eff;
+    --red:#ef4444;
+    --blue:#5b7bd1;
+    --ok:#22c55e;
+    --warn:#f59e0b;
+    --stroke:#1a2742;
+    --tile: 88px;          /* ⬅️ Bigger tiles by default */
+    --gap: 10px;
+    --radius: 16px;
+  }
+  @media (max-width: 760px){
+    :root{ --tile: 60px; --gap: 8px; --radius: 14px; }
+  }
+
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial
+  }
+
+  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:16px}
+
+  header,footer{
+    background:linear-gradient(180deg,#0a1222,#09101f);
+    border-bottom:1px solid var(--stroke);
+    padding:12px 16px
+  }
+  footer{border-top:1px solid var(--stroke);border-bottom:0}
+  .title{font-weight:700;letter-spacing:.2px}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--stroke);border-radius:12px;overflow:hidden}
+  .seg button{
+    padding:10px 14px;border:0;cursor:pointer;background:#0e1629;color:var(--muted)
+  }
+  .seg button[aria-pressed="true"]{
+    background:var(--panel);color:var(--ink);outline:2px solid #1b2b4d
+  }
+  .btn{
+    padding:10px 14px;border:1px solid var(--stroke);background:#0e1629;color:var(--ink);
+    border-radius:12px;cursor:pointer
+  }
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+
+  /* 🔊 ADDED: pressed state outline for toggle-style buttons */
+  .btn[aria-pressed="true"]{ outline:2px solid var(--ring) }
+
+  .select{
+    background:#0e1629;border:1px solid var(--stroke);color:var(--ink);
+    border-radius:12px;padding:10px 12px
+  }
+
+  main{display:grid;place-items:center;padding:0 12px}
+  .board-wrap{display:grid;gap:12px;align-items:start}
+
+  .status{display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .pill{
+    font-size:.95rem;background:#0e1a30;border:1px solid var(--stroke);
+    padding:8px 12px;border-radius:999px;color:var(--muted)
+  }
+  .turn{display:inline-flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+  .dot.red{background:var(--red)}
+  .dot.black{background:var(--blue)}
+
+  .board{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(8, var(--tile));
+    grid-template-rows:repeat(8, var(--tile));
+    gap: var(--gap);
+    background:var(--grid);
+    padding: var(--gap);
+    border:1px solid var(--stroke);
+    border-radius: var(--radius);
+    box-shadow: 0 14px 40px rgba(0,0,0,.40), inset 0 0 0 1px rgba(255,255,255,.02);
+    touch-action: manipulation;
+    user-select: none;
+  }
+
+  /* Each tile is a grid container that centers its child perfectly */
+  .sq{
+    width:100%;height:100%;border-radius:10px;overflow:hidden;
+    display:grid;place-items:center;position:relative;
+  }
+  .sq.light{ background:linear-gradient(180deg,#1b2746,#15223f) }
+  .sq.dark{  background:linear-gradient(180deg,#0f1734,#0b122a) }
+
+  .sq.hl{ outline:3px solid var(--ring); outline-offset:-3px }
+  .sq.move{ box-shadow: inset 0 0 0 3px var(--accent) }
+
+  /* Mandatory-capture hints (human only) */
+  .sq.force-src{ outline:3px solid var(--warn); outline-offset:-3px; }
+  .sq.force-dst{ box-shadow: inset 0 0 0 3px var(--ok); }
+
+  /* Game Over overlay */
+  .gameover{
+    position:fixed; inset:0; z-index:50;
+    background:rgba(6,10,18,.75);
+    display:none; align-items:center; justify-content:center;
+  }
+  .gameover.show{ display:flex; }
+  .go-card{
+    width:min(92vw,420px);
+    background:#0e1524; border:1px solid var(--stroke);
+    border-radius:16px; padding:20px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+  }
+  .go-title{ font-size:1.4rem; margin:0 0 6px; }
+  .go-sub{ color:var(--muted); margin:0 0 16px; }
+  .go-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  /* ✅ Pieces are now perfectly centered (no top edge touching) */
+  .piece{
+    width: 74%;
+    height: 74%;
+    border-radius: 999px;
+    display:grid;place-items:center;
+    box-shadow: inset 0 4px 10px rgba(255,255,255,.12), inset 0 -6px 14px rgba(0,0,0,.5), 0 2px 10px rgba(0,0,0,.55);
+    transform: translateZ(0);
+    transition: transform .08s ease;
+  }
+  .piece:active{ transform: scale(.98) }
+  .piece.red{
+    background: radial-gradient(60% 60% at 35% 30%, #ff7b7b, #d43636);
+    border:3px solid #4b0f0f;
+  }
+  .piece.black{
+    background: radial-gradient(60% 60% at 35% 30%, #4a5d82, #223052);
+    border:3px solid #0b0f1a;
+  }
+  .piece.king::after{
+    content:"♛"; font-weight:900; font-size: 1.35rem;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.6));
+  }
+  .piece.red.king::after{ color:#ffd166 }
+  .piece.black.king::after{ color:#b3e5ff }
+
+  .toast{
+    position:absolute;left:50%;top:-14px;transform:translate(-50%,-100%);
+    background:#0e1a30;border:1px solid var(--stroke);
+    padding:8px 12px;border-radius:10px;color:var(--muted)
+  }
+
+  footer small{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">✔️ Checkers — Singleplayer & Two-Player</div>
+    <div class="controls">
+      <div class="seg" role="tablist" aria-label="Mode">
+        <button id="mode-sp" role="tab" aria-pressed="true">Singleplayer</button>
+        <button id="mode-pvp" role="tab" aria-pressed="false">Two-Player</button>
+      </div>
+      <label>AI strength:
+        <select id="aiDepth" class="select">
+          <option value="3">Weak</option>
+          <option value="5">Medium</option>
+          <option value="7" selected>Strong</option>
+        </select>
+      </label>
+      <button id="newBtn" class="btn">New Game</button>
+      <button id="undoBtn" class="btn">Undo</button>
+      <button id="sndBtn" class="btn" aria-pressed="true">🔊 Sound</button> <!-- 🔊 ADDED -->
+    </div>
+  </header>
+
+  <main>
+    <div class="board-wrap">
+      <div class="status">
+        <div class="pill" id="ruleHint">Mandatory captures. Multi-jumps allowed. Crowning ends the sequence.</div>
+        <div class="turn pill"><span id="turnDot" class="dot red"></span><span id="turnText">Red to move</span></div>
+      </div>
+      <div id="board" class="board" aria-label="Checkers board"></div>
+      <div id="toast" class="toast" style="display:none"></div>
+    </div>
+  </main>
+
+  <div id="gameOver" class="gameover" role="dialog" aria-modal="true" aria-labelledby="goTitle">
+  <div class="go-card">
+    <h2 id="goTitle" class="go-title">Game Over</h2>
+    <p class="go-sub"><strong><span id="goWinner">Red</span></strong> wins!</p>
+    <div class="go-actions">
+      <button id="goPlay" class="btn">Play again</button>
+    </div>
+  </div>
+</div>
+
+  <footer>
+    <small>Rules: 8×8 American checkers. Kings move/capture both ways. Switching modes restarts cleanly.</small>
+  </footer>
+</div>
+
+<script>
+/* ======================
+   Representation & Rules
+   ====================== */
+const RED = 1, REDK=2, BLK=-1, BLKK=-2;
+const SIZE = 8;
+
+let mode = 'SP';   // 'SP' singleplayer vs AI, 'PVP' local two-player
+let aiPlays = BLK; // AI plays Black by default
+let aiDepth = 7;
+
+let turn = RED;
+let board = [];
+let history = [];
+let locked = false;
+let mustContinueFrom = null;
+
+const elBoard   = document.getElementById('board');
+const elTurnText= document.getElementById('turnText');
+const elTurnDot = document.getElementById('turnDot');
+const elToast   = document.getElementById('toast');
+const elUndo    = document.getElementById('undoBtn');
+const elNew     = document.getElementById('newBtn');
+const elModeSP  = document.getElementById('mode-sp');
+const elModePVP = document.getElementById('mode-pvp');
+const elDepth   = document.getElementById('aiDepth');
+const elSnd     = document.getElementById('sndBtn'); /* 🔊 ADDED */
+// Game over elements
+const elGameOver = document.getElementById('gameOver');
+const elGoWinner = document.getElementById('goWinner');
+const elGoPlay   = document.getElementById('goPlay');
+
+/* ⏱️ Animation timing */
+const MOVE_STEP_MS = 420; // tweak 300–600 to taste
+const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+
+/* 🔊 ADDED: lightweight synth SFX (no external files) */
+const Sound = (() => {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = AC ? new AC() : null;
+  let enabled = JSON.parse(localStorage.getItem('sndEnabled') ?? 'true');
+  if (!ctx) enabled = false;
+
+  const master = ctx ? ctx.createGain() : null;
+  if (master) { master.gain.value = 0.12; master.connect(ctx.destination); }
+
+  function resume(){ if(ctx && ctx.state === 'suspended') ctx.resume(); }
+
+  function pulse(freq=440, dur=0.08, type='sine'){
+    if(!enabled || !ctx) return;
+    const now = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.6, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    o.connect(g); g.connect(master);
+    o.start(now); o.stop(now + dur + 0.02);
+  }
+  function noise(dur=0.1){
+    if(!enabled || !ctx) return;
+    const buf = ctx.createBuffer(1, Math.max(1, ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2 - 1) * 0.35;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const flt = ctx.createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=1400;
+    const g = ctx.createGain(); g.gain.value = 0.9;
+    src.connect(flt); flt.connect(g); g.connect(master);
+    src.start(); src.stop(ctx.currentTime + dur);
+  }
+
+  const api = {
+    get enabled(){ return enabled; },
+    toggle(){ enabled = !enabled; localStorage.setItem('sndEnabled', JSON.stringify(enabled)); return enabled; },
+    resume,
+    click(){ pulse(600,0.06,'square'); },
+    move(){ pulse(330,0.08,'triangle'); },
+    capture(){ noise(0.09); pulse(150,0.12,'sawtooth'); },
+    crown(){ pulse(700,0.12,'triangle'); setTimeout(()=>pulse(980,0.12,'triangle'),120); },
+    undo(){ pulse(240,0.09,'sine'); },
+    error(){ pulse(220,0.08,'sawtooth'); setTimeout(()=>pulse(170,0.08,'sawtooth'),70); },
+    start(){ pulse(520,0.10,'square'); },
+    gameover(win=true){
+      if(win){ pulse(784,0.12,'triangle'); setTimeout(()=>pulse(988,0.14,'triangle'),120); }
+      else { pulse(196,0.22,'sine'); }
+    }
+  };
+  return api;
+})();
+
+/* Mobile/desktop: unlock audio on first user gesture */           /* 🔊 ADDED */
+document.addEventListener('pointerdown', () => Sound.resume(), { once:true });
+
+function showGameOver(winnerText){
+  locked = true;                  // freeze board interactions
+  elGoWinner.textContent = winnerText;
+  elGameOver.classList.add('show');
+  // 🔊 ADDED: win/lose jingle (AI vs human uses aiPlays to decide)
+  const winSide = (winnerText==='Red') ? RED : BLK;
+  const humanWon = (mode === 'PVP') ? true : (winSide !== aiPlays);
+  Sound.gameover(humanWon);
+}
+
+function hideGameOver(){
+  elGameOver.classList.remove('show');
+}
+elGoPlay.addEventListener('click', ()=>{ hideGameOver(); newGame(); });
+
+
+// --- Mandatory-capture highlighting state ---
+let forcedSources = new Set();
+let forcedTargets = new Set();
+
+function isHumanTurn(){
+  // In SP, human is the side that's not aiPlays; in PVP both are human
+  return mode === 'PVP' || (mode === 'SP' && turn !== aiPlays);
+}
+
+// Compute what to highlight when captures are mandatory for the human
+function updateForcedHighlights(){
+  forcedSources.clear(); forcedTargets.clear();
+
+  if(!isHumanTurn()) return;
+
+  // If in a continuation jump, auto-show that piece's captures
+  if(mustContinueFrom){
+    const {r,c} = mustContinueFrom;
+    selected = {r,c};
+    legalDest = genCapturesFrom(board, r, c).map(m => ({...m, from:[r,c]}));
+    return; // regular selection highlighting will show targets
+  }
+
+  const moves = generateMoves(board, turn);
+  const caps = moves.filter(m => m.caps.length);
+  if(!caps.length) return;
+
+  // Highlight ALL sources & their landing squares
+  for(const m of caps){
+    forcedSources.add(m.from.join(','));
+    const [er,ec] = m.steps[m.steps.length-1];
+    forcedTargets.add([er,ec].join(','));
+  }
+}
+
+function toast(msg, ms=1400){
+  elToast.textContent = msg;
+  elToast.style.display = 'block';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=> elToast.style.display='none', ms);
+}
+function updateTurnUI(){
+  elTurnText.textContent = (turn===RED? 'Red':'Black') + ' to move';
+  elTurnDot.className = 'dot ' + (turn===RED ? 'red' : 'black');
+}
+
+function initBoard(){
+  board = Array.from({length:SIZE}, (_,r)=> Array.from({length:SIZE}, (_,c)=> {
+    if((r+c)%2===0) return 0;
+    if(r<3) return BLK;
+    if(r>4) return RED;
+    return 0;
+  }));
+}
+
+function copyBoard(B=board){ return B.map(row=> row.slice()) }
+function isKing(v){ return Math.abs(v)===2 }
+function colorOf(v){ return v>0?RED:BLK }
+function inBounds(r,c){ return r>=0&&r<SIZE&&c>=0&&c<SIZE }
+function willCrown(v, r){
+  if(isKing(v)) return false;
+  return (v===RED && r===0) || (v===BLK && r===SIZE-1);
+}
+function promote(v){ return v>0?REDK:BLKK }
+
+const DIRS = {
+  [RED]: [[-1,-1],[-1,1]],
+  [BLK]: [[1,-1],[1,1]],
+  K: [[-1,-1],[-1,1],[1,-1],[1,1]]
+};
+
+/* ============
+   Move Gen
+   ============ */
+function generateMoves(B, side){
+  const restrict = (B===board && mustContinueFrom) ? mustContinueFrom : null;
+  const captureMoves = [], quietMoves = [];
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const v = B[r][c];
+      if(!v || colorOf(v)!==side) continue;
+      if(restrict && (restrict.r!==r || restrict.c!==c)) continue;
+      const caps = genCapturesFrom(B,r,c);
+      if(caps.length) captureMoves.push(...caps);
+      else quietMoves.push(...genQuietsFrom(B,r,c));
+    }
+  }
+  if(captureMoves.length) return captureMoves;
+  if(restrict) return []; // must continue but no capture found – engine will end turn
+  return quietMoves;
+}
+function genQuietsFrom(B,r,c){
+  const v=B[r][c];
+  const dirs = isKing(v)?DIRS.K:DIRS[colorOf(v)];
+  const moves=[];
+  for(const [dr,dc] of dirs){
+    const nr=r+dr,nc=c+dc;
+    if(inBounds(nr,nc) && B[nr][nc]===0){
+      moves.push({from:[r,c],steps:[[nr,nc]],caps:[], crownAtEnd: willCrown(v,nr)});
+    }
+  }
+  return moves;
+}
+function genCapturesFrom(B,r,c){
+  const v=B[r][c];
+  const acc=[];
+  function dfs(brd, cr, cc, path, caps){
+    let found=false;
+    const currVal = brd[cr][cc];
+    const dirsNow = (isKing(currVal)?DIRS.K:DIRS[colorOf(currVal)]);
+    for(const [dr,dc] of dirsNow){
+      const mr=cr+dr, mc=cc+dc, lr=cr+2*dr, lc=cc+2*dc;
+      if(!inBounds(lr,lc)) continue;
+      if(brd[mr][mc]!==0 && colorOf(brd[mr][mc])===-colorOf(currVal) && brd[lr][lc]===0){
+        const nb = copyBoard(brd);
+        nb[lr][lc]=nb[cr][cc]; nb[cr][cc]=0;
+        nb[mr][mc]=0;
+        // crown => sequence ends immediately (American rules)
+        if(!isKing(nb[lr][lc]) && willCrown(currVal, lr)){
+          nb[lr][lc] = promote(nb[lr][lc]);
+          acc.push({from:[r,c],steps:[...path,[lr,lc]],caps:[...caps,[mr,mc]],crownAtEnd:true});
+          found=true;
+          continue;
+        }
+        found=true;
+        dfs(nb, lr, lc, [...path,[lr,lc]], [...caps,[mr,mc]]);
+      }
+    }
+    if(!found && path.length){
+      acc.push({from:[r,c],steps:path.slice(),caps:caps.slice(),crownAtEnd:false});
+    }
+  }
+  dfs(B,r,c,[],[]);
+  return acc;
+}
+
+/* ============
+   Apply / Undo
+   ============ */
+function applyMove(B, move){
+  const nb = copyBoard(B);
+  const [sr,sc] = move.from;
+  const v = nb[sr][sc];
+  nb[sr][sc]=0;
+  let r=sr,c=sc;
+  for(const [nr,nc] of move.steps){ r=nr; c=nc; }
+  nb[r][c]=v;
+  for(const [cr,cc] of move.caps){ nb[cr][cc]=0; }
+  if(move.crownAtEnd && willCrown(v,r)) nb[r][c]=promote(v);
+  return nb;
+}
+
+/* =================
+   Evaluation + AI
+   ================= */
+function evaluate(B){
+  let score=0, redCount=0, blkCount=0;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const v=B[r][c]; if(!v) continue;
+    const sgn=Math.sign(v), king=isKing(v);
+    let val = king?180:100;
+    if(!king){ val += (sgn===RED? (7-r) : r)*4; }     // advancement
+    if(r>=2&&r<=5&&c>=2&&c<=5) val += 6;               // center
+    if(!king && ((sgn===RED && r===7) || (sgn===BLK && r===0))) val += 8; // back rank
+    const dirs = king?DIRS.K:DIRS[sgn];                // mobility
+    let mob=0; for(const [dr,dc] of dirs){const nr=r+dr,nc=c+dc;if(inBounds(nr,nc)&&B[nr][nc]===0) mob++;}
+    val += mob*2;
+    score += sgn*val;
+    if(sgn===RED) redCount++; else blkCount++;
+  }
+  score += (redCount-blkCount)*8;
+  return score;
+}
+
+function evalSigned(B, side){
+  // evaluate() returns + if Red is better, - if Black is better.
+  // Convert to "from the POV of 'side' to move":
+  return (side === RED) ? evaluate(B) : -evaluate(B);
+}
+
+function orderMoves(B, side, moves){
+  return moves.slice().sort((a,b)=>{
+    // 1) captures first (more captures preferred)
+    if(a.caps.length !== b.caps.length) return b.caps.length - a.caps.length;
+    // 2) prefer moves that crown
+    if(a.crownAtEnd !== b.crownAtEnd) return (a.crownAtEnd ? -1 : 1);
+    // 3) prefer landing closer to center (bigger edge-distance)
+    const [ar,ac]=a.steps[a.steps.length-1];
+    const [br,bc]=b.steps[b.steps.length-1];
+    const acenter = (Math.min(ar,7-ar)+Math.min(ac,7-ac));
+    const bcenter = (Math.min(br,7-br)+Math.min(bc,7-bc));
+    return (bcenter - acenter); // larger distance from edge (more central) first
+  });
+}
+
+function bestAIMove(B, side, maxDepth, timeLimitMs=1200){
+  const t0=performance.now();
+  let best=null, bestScore=-Infinity;
+  for(let depth=2; depth<=maxDepth; depth++){
+    const res = searchRoot(B, side, depth, t0, timeLimitMs);
+    if(res && res.move){ best=res.move; bestScore=res.score; }
+    if(res && res.timeout) break;
+  }
+  return best;
+}
+function searchRoot(B, side, depth, t0, limit){
+  const moves = orderMoves(B, side, generateMoves(B, side));
+  if(!moves.length) return { move:null, score:-100000 };
+
+  let alpha = -Infinity, beta = Infinity;
+  let bestMove = moves[0], bestScore = -Infinity;
+
+  for(const m of moves){
+    if(performance.now() - t0 > limit) return { move:bestMove, score:bestScore, timeout:true };
+    const nb = applyMove(B, m);
+    const score = -alphabeta(nb, -side, depth - 1, -beta, -alpha, t0, limit);
+    if(score > bestScore){ bestScore = score; bestMove = m; }
+    if(score > alpha) alpha = score;
+  }
+  return { move:bestMove, score:bestScore };
+}
+
+function alphabeta(B, side, depth, alpha, beta, t0, limit){
+  if(performance.now() - t0 > limit) return evalSigned(B, side);
+
+  const moves = orderMoves(B, side, generateMoves(B, side));
+
+  // Terminal / leaf
+  if(depth === 0) return evalSigned(B, side);
+  if(moves.length === 0){
+    // No legal moves: side to move loses
+    return -100000;
+  }
+
+  let val = -Infinity;
+  for(const m of moves){
+    const nb = applyMove(B, m);
+    const sc = -alphabeta(nb, -side, depth - 1, -beta, -alpha, t0, limit);
+    if(sc > val) val = sc;
+    if(val > alpha) alpha = val;
+    if(alpha >= beta) break; // prune
+  }
+  return val;
+}
+
+/* ======================
+   Rendering & Interaction
+   ====================== */
+let selected=null;
+let legalDest = [];
+
+function render(){
+  // ⬅️ compute forced-capture hints for the current (human) turn
+  updateForcedHighlights();
+
+  elBoard.innerHTML='';
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const isDark = (r+c)%2===1;
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + (isDark?'dark':'light');
+      sq.dataset.r=r; sq.dataset.c=c;
+      if(isDark) sq.addEventListener('click', onSquareClick, {passive:true});
+      elBoard.appendChild(sq);
+
+      const v = board[r][c];
+      if(v!==0){
+        const p = document.createElement('div');
+        p.className = 'piece ' + (v>0?'red':'black') + (isKing(v)?' king':'');
+        p.dataset.r=r; p.dataset.c=c;
+        sq.appendChild(p);
+        if(isDark && selected && selected.r===r && selected.c===c){
+          sq.classList.add('hl');
+        }
+      }
+
+      // ⬅️ If no selection is active, show capture-source hints (human only)
+      if(!selected){
+        const key = r+','+c;
+        if(forcedSources.has(key)) sq.classList.add('force-src');
+      }
+    }
+  }
+
+  // Existing selection-destination highlight
+  if(selected && legalDest.length){
+    const dests = new Set(legalDest.map(m=> m.steps[m.steps.length-1].join(',')));
+    for(const child of elBoard.children){
+      const r=+child.dataset.r, c=+child.dataset.c;
+      if(dests.has([r,c].join(','))) child.classList.add('move');
+    }
+  } else {
+    // ⬅️ If nothing selected, show capture landing squares (human only)
+    for(const child of elBoard.children){
+      const r=+child.dataset.r, c=+child.dataset.c;
+      const key = r+','+c;
+      if(forcedTargets.has(key)) child.classList.add('force-dst');
+    }
+  }
+
+  updateTurnUI();
+}
+
+function onSquareClick(e){
+  if(locked) return;
+  const r=+e.currentTarget.dataset.r, c=+e.currentTarget.dataset.c;
+  const v=board[r][c];
+
+  if(v!==0 && colorOf(v)===turn){
+    if(mustContinueFrom && (mustContinueFrom.r!==r || mustContinueFrom.c!==c)){
+      toast('Finish your multi-jump with the same piece.');
+      Sound.error(); /* 🔊 ADDED */
+      return;
+    }
+    selected = {r,c};
+    legalDest = generateMoves(board, turn).filter(m=> m.from[0]===r && m.from[1]===c);
+    Sound.click(); /* 🔊 ADDED */
+    render();
+    return;
+  }
+  if(selected){
+    const chosen = legalDest.find(m=>{
+      const [er,ec] = m.steps[m.steps.length-1];
+      return er===r && ec===c;
+    });
+    if(chosen){
+      makePlayerMove(chosen);
+    }else{
+      selected=null; legalDest=[]; render();
+    }
+  }
+}
+
+async function makePlayerMove(move){
+  if(locked) return;
+  locked = true;
+  pushHistory();
+
+  await animateApplyMove(move);
+
+  // If you allow partial sequences, this continues the same piece
+  if(move.caps.length){
+    const end = move.steps[move.steps.length-1];
+    const landedVal = board[end[0]][end[1]];
+    const moreCaps = genCapturesFrom(board, end[0], end[1]);
+    if(moreCaps.length && !(move.crownAtEnd && willCrown(landedVal,end[0])) ){
+      mustContinueFrom = {r:end[0], c:end[1]};
+      selected = {r:end[0], c:end[1]};
+      legalDest = moreCaps.map(m=> ({...m, from:end}));
+      locked = false; // let the player continue
+      render();
+      return;
+    }
+  }
+  mustContinueFrom = null;
+  selected = null; legalDest=[];
+  locked = false;
+  endTurn();
+}
+
+
+function endTurn(){
+  const opp = -turn;
+  const oppMoves = generateMoves(board, opp);
+  if(oppMoves.length===0){
+    // The side that just moved (current 'turn') is the winner
+    showGameOver(turn===RED ? 'Red' : 'Black');
+    render();
+    return;
+  }
+  turn = -turn;
+  render();
+  if(mode==='SP' && turn===aiPlays){
+    locked = true;
+    setTimeout(aiMove, 160);
+  }
+}
+
+async function aiMove(){
+  // Scale thinking time with selected strength so deeper searches actually finish
+  const timeMs = (aiDepth <= 3) ? 800 : (aiDepth <= 5 ? 1400 : 2400);
+
+  const mv = bestAIMove(board, aiPlays, aiDepth, timeMs);
+
+  // If AI has no legal moves, human wins
+  if(!mv){
+    showGameOver((-aiPlays) === RED ? 'Red' : 'Black');
+    render();
+    return;
+  }
+
+  pushHistory();
+await animateApplyMove(mv);
+
+
+  // After AI moves, check if the human has any moves left
+  const humanSide = -aiPlays;
+  const humanMoves = generateMoves(board, humanSide);
+  if(humanMoves.length === 0){
+    showGameOver(aiPlays === RED ? 'Red' : 'Black'); // AI wins
+    render();
+    return;
+  }
+
+  mustContinueFrom = null;
+  turn = -turn; // switch to human
+  locked = false;
+  render();
+}
+
+/* Smooth, readable per-hop animation that also updates the board state */
+async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
+  let [r,c] = move.from;
+  let v = board[r][c];
+
+  for(let i=0;i<move.steps.length;i++){
+    const [nr,nc] = move.steps[i];
+
+    // move one hop on the REAL board
+    board[r][c] = 0;
+    board[nr][nc] = v;
+
+    // remove the captured piece for this hop (if any)
+    if(move.caps[i]){
+      const [cr,cc] = move.caps[i];
+      board[cr][cc] = 0;
+      Sound.capture?.();
+    }
+
+    Sound.move?.();
+    render();
+    await sleep(stepMs);
+
+    r = nr; c = nc;
+  }
+
+  // crown at the end (American rules end the sequence)
+  if(move.crownAtEnd && willCrown(v, r)){
+    board[r][c] = promote(v);
+    Sound.crown?.();
+    render();
+    await sleep(120);
+  }
+}
+
+
+
+function pushHistory(){
+  history.push({board: copyBoard(board), turn, must: mustContinueFrom? {...mustContinueFrom}:null});
+  elUndo.disabled = history.length===0;
+}
+function undo(){
+  if(locked || history.length===0) return;
+
+  // Undo the most recent move (whoever moved last)
+  let state = history.pop();
+  board = state.board;
+  turn = state.turn;
+  mustContinueFrom = state.must;
+  selected = null; 
+  legalDest = [];
+
+  // If we're vs AI and the snapshot we restored is the AI's turn,
+  // pop one more so it's the human's turn again.
+  if(mode === 'SP' && turn === aiPlays && history.length > 0){
+    state = history.pop();
+    board = state.board;
+    turn = state.turn;
+    mustContinueFrom = state.must;
+  }
+
+  elUndo.disabled = history.length === 0;
+  Sound.undo(); /* 🔊 ADDED */
+  render();
+}
+
+/* ===============
+   Game Lifecycle
+   =============== */
+function newGame(){
+  hideGameOver();
+  locked=false;
+  history.length=0;
+  elUndo.disabled=true;
+  mustContinueFrom=null;
+  selected=null; legalDest=[];
+  turn=RED;
+  initBoard();
+  render();
+  Sound.start(); /* 🔊 ADDED */
+  if(mode==='SP' && aiPlays===RED){
+    setTimeout(aiMove, 200);
+  }
+}
+
+function setMode(next){
+  if(next===mode) return;
+  mode = next;
+  elModeSP.setAttribute('aria-pressed', mode==='SP' ? 'true':'false');
+  elModePVP.setAttribute('aria-pressed', mode==='PVP' ? 'true':'false');
+  toast(mode==='SP' ? 'Switched to Singleplayer. New game started.' : 'Switched to Two-Player. New game started.');
+  Sound.click(); /* 🔊 ADDED */
+  newGame();
+}
+
+/* 🔊 ADDED: sound toggle wiring */
+function updateSoundUI(){
+  const on = Sound.enabled;
+  elSnd.setAttribute('aria-pressed', on ? 'true' : 'false');
+  elSnd.textContent = on ? '🔊 Sound' : '🔇 Muted';
+}
+elSnd.addEventListener('click', ()=>{
+  Sound.resume();
+  Sound.toggle();
+  updateSoundUI();
+  if (Sound.enabled) Sound.click();
+});
+
+/* Wire up controls */
+elNew.addEventListener('click', ()=>{ Sound.click(); newGame(); });   /* 🔊 ADDED */
+elUndo.addEventListener('click', undo); // ✅ FIX: actually call undo()
+elModeSP.addEventListener('click', ()=> setMode('SP'));
+elModePVP.addEventListener('click', ()=> setMode('PVP'));
+elDepth.addEventListener('change', e=>{
+  aiDepth = +e.target.value;
+  if(mode==='SP') toast(`AI strength: ${e.target.options[e.target.selectedIndex].text}`);
+  Sound.click(); /* 🔊 ADDED */
+});
+
+/* Boot */
+aiDepth = +elDepth.value;
+newGame(); // render the board immediately on page load
+setMode('SP');
+updateSoundUI(); /* 🔊 ADDED */
+</script>
+</body>
+</html>

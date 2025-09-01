@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Lexica — Daily Word Guess</title>
+<!--
+  Lexica — a legal Wordle-like game (original branding + logic).
+  CHANGES in this build:
+  - Fixed to 5-letter words only (removed 4 & 6).
+  - Strict dictionary is ALWAYS ON. Every guess must be a real 5-letter word.
+  - Single-file, offline-friendly. No external assets.
+
+  🔧 To enable "all real words":
+  1) Replace the DICT5 array below with a complete 5-letter dictionary
+     (e.g., a public-domain list like ENABLE/SCOWL 5-letter words).
+  2) Keep only lowercase A–Z entries, 5 characters each, no punctuation.
+
+  The game will:
+  - Validate guesses against DICT5 (strict).
+  - Pick daily/practice answers from ANSWERS5 (by default it reuses DICT5,
+    but you may set ANSWERS5 to a curated subset if you want friendlier answers).
+-->
+<style>
+  :root{
+    color-scheme: dark light;
+  --bg:#0a1320;           /* darker page bg */
+  --panel:#0f172a;        /* panel/keys bg (slightly brighter than before) */
+  --ink:#f3f4f6;          /* main text brighter */
+  --muted:#cbd5e1;        /* muted text brighter */
+  --accent:#22d3ee;       /* brighter cyan for emphasis */
+  --stroke:#2a3a56;       /* stronger border contrast */
+  --correct:#22c55e;      /* green */
+  --present:#fbbf24;      /* yellow (brighter) */
+  --absent:#475569;       /* slate (brighter than before) */
+  }
+
+  /* NEW: clearer default key look */
+.key{                     /* ADDED */
+  background:#111827;     /* darker than panel for separation */
+  border:1px solid #3b4a65;
+  color:var(--ink);
+}
+
+/* NEW: make unused/absent keys readable */
+.key.k-a{                 /* ADDED */
+  background:var(--absent);
+  border-color:var(--absent);
+  color:var(--ink);
+}
+
+/* Optional: buttons more legible */
+.btn{                     /* CHANGED */
+  background:#1f2937;
+  border:1px solid #3b4a65;
+  color:var(--ink);
+}
+.btn.primary{             /* CHANGED */
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#06242a;          /* dark text on cyan for contrast */
+}
+
+/* Optional: pills more legible */
+.pill{                    /* CHANGED */
+  background:#111827;
+  border:1px solid #3b4a65;
+  color:var(--ink);
+}
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
+  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:14px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--stroke)}
+  header h1{margin:0;font-size:20px;letter-spacing:.8px}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{background:#0f172a;border:1px solid var(--stroke);padding:6px 10px;border-radius:999px;color:var(--ink);font-size:12px}
+  select,button,input[type=checkbox]{accent-color:var(--accent)}
+  button{cursor:pointer}
+  main{display:grid;justify-items:center;align-items:center;padding:6px}
+  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:8px;width:min(100vw,520px);aspect-ratio: 5 / 6}
+  .row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .tile{border:2px solid var(--stroke);display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:28px;text-transform:uppercase;background:var(--panel)}
+  .tile.filled{border-color:#475569}
+  .tile.reveal{transform:rotateX(0);animation:flip .55s ease forwards}
+  .tile.state-c{background:var(--correct);border-color:var(--correct)}
+  .tile.state-p{background:var(--present);border-color:var(--present)}
+  .tile.state-a{background:var(--absent);border-color:var(--absent)}
+  @keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+  .shake{animation:shake .45s linear}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:8px;width:min(100vw,540px);margin:6px auto 16px}
+  .keys{display:grid;grid-template-columns:repeat(10,1fr);gap:8px}
+  .keys.row2{grid-template-columns:repeat(9,1fr);margin:0 18px}
+  .keys.row3{grid-template-columns:repeat(7,1fr)}
+  .key{background:var(--panel);border:1px solid var(--stroke);border-radius:8px;padding:10px;font-weight:700;text-transform:uppercase;text-align:center}
+  .key.wide{grid-column:span 2}
+  .key.k-c{background:var(--correct);border-color:var(--correct)}
+  .key.k-p{background:var(--present);border-color:var(--present)}
+  .key.k-a{background:var(--absent);border-color:var(--absent)}
+  footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;border-top:1px solid var(--stroke);flex-wrap:wrap}
+  .status{font-size:13px;color:var(--muted)}
+  .btn{background:var(--panel);border:1px solid var(--stroke);padding:8px 10px;border-radius:10px}
+  .btn.primary{border-color:var(--accent)}
+  dialog{border:1px solid var(--stroke);background:var(--panel);color:var(--ink);border-radius:14px;padding:16px;max-width:min(90vw,520px)}
+  dialog::backdrop{background:rgba(0,0,0,.55)}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .close{background:transparent;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .stat{background:#0f172a;border:1px solid var(--stroke);border-radius:12px;padding:8px 10px;font-size:12px}
+  .sr{position:absolute;left:-10000px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>LEXICA</h1>
+    <div class="controls">
+      <!-- Length + Strict controls removed; fixed 5-letter, strict always on -->
+      <label class="pill"><input id="hard" type="checkbox"> Hard</label>
+      <button class="pill" id="helpBtn" title="How to play">?</button>
+      <label class="pill"><input id="sound" type="checkbox" checked> Sound</label> <!-- ADDED -->
+    </div>
+  </header>
+
+  <main>
+    <div id="board" class="board" aria-label="Guess grid" aria-live="polite"></div>
+    <div class="keyboard">
+      <div class="keys row1" id="row1"></div>
+      <div class="keys row2" id="row2"></div>
+      <div class="keys row3" id="row3"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="status" id="status">Make a guess.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="newBtn">Play Again</button>
+    </div>
+  </footer>
+</div>
+
+<dialog id="help">
+  <div class="modal-header">
+    <strong>How to play</strong>
+    <button class="close" aria-label="Close" onclick="help.close()">×</button>
+  </div>
+  <p>Guess the hidden 5-letter word in up to six tries. Each guess must be a real 5-letter word.</p>
+  <ul>
+    <li><b>Green</b> = right letter, right spot.</li>
+    <li><b>Yellow</b> = in the word, wrong spot.</li>
+    <li><b>Slate</b> = not in the word.</li>
+  </ul>
+  <p>Hard mode forces you to reuse revealed letters in the same spots on later guesses.</p>
+</dialog>
+<!-- ADDED: Start (home) screen -->
+<dialog id="start"> <!-- ADDED -->
+  <div class="modal-header"> <!-- ADDED -->
+    <strong>Lexica</strong> <!-- ADDED -->
+    <button class="close" aria-label="Close" onclick="start.close()">×</button> <!-- ADDED -->
+  </div> <!-- ADDED -->
+  <p>Guess the hidden 5-letter word in up to six tries.</p> <!-- ADDED -->
+  <div class="meta"> <!-- ADDED -->
+    <span class="stat">Strict dictionary</span> <!-- ADDED -->
+    <span class="stat">Hard mode optional</span> <!-- ADDED -->
+  </div> <!-- ADDED -->
+  <button class="btn primary" id="startBtn">Play</button> <!-- ADDED -->
+</dialog> <!-- ADDED -->
+
+<!-- ADDED: Game Over screen -->
+<dialog id="over"> <!-- ADDED -->
+  <div class="modal-header"> <!-- ADDED -->
+    <strong id="overTitle">Game Over</strong> <!-- ADDED -->
+    <button class="close" aria-label="Close" onclick="over.close()">×</button> <!-- ADDED -->
+  </div> <!-- ADDED -->
+  <p id="overMsg">You win!</p> <!-- ADDED -->
+  <p><small>Answer: <b id="overSecret">?????</b></small></p> <!-- ADDED -->
+  <div style="display:flex; gap:8px; flex-wrap:wrap"> <!-- ADDED -->
+    <button class="btn primary" id="againBtn">Play Again</button> <!-- ADDED -->
+  </div> <!-- ADDED -->
+</dialog> <!-- ADDED -->
+<script src="words5.js"></script>
+<script src="secrets5.js"></script>
+<script>
+(() => {
+  // ===== Utility: RNG seeded by date (for Daily mode) =====
+  function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+  function ymdKey(date=new Date()){
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`;
+  }
+
+  // ===== 🔒 Strict set + Answer bank =====
+  // Strict dictionary = all accepted guesses:
+
+  // For answers, you can either use the full dictionary (harder)…
+  // const ANSWERS5 = DICT5;
+  // …or a curated subset (friendlier). For now we use DICT5.
+  const ANSWERS5 = SECRET5;
+  const STRICT = new Set([...DICT5, ...ANSWERS5]); // ensures all secrets are "guessable"
+
+
+  // ===== DOM refs =====
+  const board = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const help = document.getElementById('help');
+  const hardChk = document.getElementById('hard');
+  const helpBtn = document.getElementById('helpBtn');
+  const newBtn = document.getElementById('newBtn');
+  const row1 = document.getElementById('row1');
+  const row2 = document.getElementById('row2');
+  const row3 = document.getElementById('row3');
+  // ADDED: start & game-over dialogs + controls
+  const start = document.getElementById('start');       // ADDED
+  const startBtn = document.getElementById('startBtn'); // ADDED
+  const over = document.getElementById('over');         // ADDED
+  const overTitle = document.getElementById('overTitle');     // ADDED
+  const overMsg = document.getElementById('overMsg');         // ADDED
+  const overSecret = document.getElementById('overSecret');   // ADDED
+  const againBtn = document.getElementById('againBtn');       // ADDED
+  const soundChk = document.getElementById('sound'); // ADDED
+
+  helpBtn.addEventListener('click', () => help.showModal());
+
+  // ===== Keyboard layout =====
+  const ROWS = [
+    Array.from('qwertyuiop'),
+    Array.from('asdfghjkl'),
+    ['enter', ...Array.from('zxcvbnm'), '←']
+  ];
+  function buildKeyboard(){
+    for (let el of [row1,row2,row3]) el.innerHTML='';
+    ROWS[0].forEach(k=>row1.appendChild(makeKey(k)));
+    ROWS[1].forEach(k=>row2.appendChild(makeKey(k)));
+    ROWS[2].forEach(k=>row3.appendChild(makeKey(k)));
+  }
+  function makeKey(k){
+  const b=document.createElement('button');
+  b.className='key'+((k==='enter'||k==='←')?' wide':'');
+  b.textContent=k;
+  b.dataset.key=k;
+  b.addEventListener('click',()=>{
+    AudioFX.start();             // ADDED
+    onKey(k);
+  });
+  return b;
+}
+
+
+  // ===== Game state (fixed to 5 columns) =====
+  const COLS = 5;
+  const FLIP_MS = 550;                       // ADDED: matches CSS flip duration (.55s)
+const STEP_MS = 80;                        // ADDED: per-tile stagger delay (80ms)
+const REVEAL_WAIT = FLIP_MS + (COLS-1)*STEP_MS + 50; // ADDED: total wait before showing overlay
+// ===== Sound engine (offline; no audio files) =====  // ADDED
+const AudioFX = (() => {                               // ADDED
+  let ctx = null;                                      // ADDED
+  const ensure = () => {                               // ADDED
+    if (!ctx) {                                        // ADDED
+      try { ctx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} // ADDED
+    }                                                  // ADDED
+    if (ctx && ctx.state === 'suspended') ctx.resume();// ADDED
+    return ctx;                                        // ADDED
+  };                                                   // ADDED
+
+  const enabled = () => soundChk?.checked && !!ctx;    // ADDED
+  const start = () => ensure();                        // ADDED
+
+  function beep(freq, dur=0.08, gain=0.03, type='sine', whenMs=0){ // ADDED
+    const c = ensure(); if (!enabled()) return;        // ADDED
+    const t0 = c.currentTime + whenMs/1000;            // ADDED
+    const o = c.createOscillator();                    // ADDED
+    const g = c.createGain();                          // ADDED
+    o.type = type; o.frequency.value = freq;           // ADDED
+    g.gain.setValueAtTime(0, t0);                      // ADDED
+    g.gain.linearRampToValueAtTime(gain, t0+0.005);    // ADDED
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);// ADDED
+    o.connect(g).connect(c.destination);               // ADDED
+    o.start(t0); o.stop(t0+dur+0.02);                  // ADDED
+  }                                                    // ADDED
+
+  // Per-event helpers                                     // ADDED
+  const key    = () => beep(520, 0.03, 0.02, 'triangle');   // ADDED
+  const back   = () => beep(260, 0.04, 0.02, 'sawtooth');   // ADDED
+  const enter  = () => beep(600, 0.06, 0.03, 'triangle');   // ADDED
+  const error  = () => beep(160, 0.20, 0.05, 'square');     // ADDED
+  const tile   = (state, i=0) => {                          // ADDED
+    const d = i * STEP_MS;                                  // ADDED
+    if (state==='c') beep(880, 0.09, 0.04, 'sine', d);      // ADDED
+    else if (state==='p') beep(660, 0.09, 0.035, 'sine', d);// ADDED
+    else beep(440, 0.07, 0.03, 'sine', d);                  // ADDED
+  };                                                        // ADDED
+  const success = () => [523.25,659.25,783.99].forEach((f,i)=>beep(f,0.12,0.05,'sine',i*120)); // ADDED
+  const fail    = () => [392,330,262].forEach((f,i)=>beep(f,0.14,0.05,'sine',i*140));          // ADDED
+
+  return { start, key, back, enter, error, tile, success, fail }; // ADDED
+})();                                                      // ADDED
+
+
+  let secret = '';
+  let guesses = [];
+  let current = '';
+  let finished = false;
+
+  // Persist/resume per settings + day
+  function storageKey(){
+    return `lexica:${COLS}`; // CHANGED
+  }
+  function save(){
+    try{
+      const data = {secret, guesses, current, finished, COLS, hard:hardChk.checked};
+      localStorage.setItem(storageKey(), JSON.stringify(data));
+    }catch(e){}
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(storageKey());
+      if(!raw) return false;
+      const data = JSON.parse(raw);
+      if(data && data.secret && data.COLS===COLS){
+        secret = data.secret; guesses = data.guesses||[]; current = data.current||''; finished=!!data.finished;
+        hardChk.checked=!!data.hard;
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+
+  // ===== Board build =====
+  function buildBoard(){
+    board.innerHTML='';
+    for(let r=0;r<6;r++){
+      const row=document.createElement('div');
+      row.className='row';
+      for(let c=0;c<COLS;c++){
+        const t=document.createElement('div');
+        t.className='tile';
+        row.appendChild(t);
+      }
+      board.appendChild(row);
+    }
+  }
+  function setStatus(msg, warn=false){
+    statusEl.textContent=msg;
+    statusEl.style.color = warn? 'var(--warn)' : 'var(--muted)';
+  }
+
+  function chooseSecret(){
+    const wordBank = ANSWERS5; // CHANGED
+    return wordBank[Math.floor(Math.random()*wordBank.length)]; // CHANGED
+  }
+
+  function startNew({fromOverlay=false}={}){ // CHANGED
+    buildBoard();
+    buildKeyboard();
+
+    secret = chooseSecret();
+    guesses = [];
+    current = '';
+    finished = false;
+
+    // Close overlays if we came from them // ADDED
+    if (fromOverlay) { // ADDED
+      try { over.close(); } catch(e){} // ADDED
+      try { start.close(); } catch(e){} // ADDED
+    } // ADDED
+
+    setStatus('Make a guess.');
+    repaint();
+    save();
+  }
+
+
+  // ===== Input handling =====
+  function onKey(k){
+  if(finished) return;
+  if(k==='enter'){ AudioFX.enter(); submit(); return; }       // CHANGED
+  if(k==='←' || k==='backspace'){ AudioFX.back(); backspace(); return; } // CHANGED
+
+  if(/^[a-zA-Z]$/.test(k)){
+    if(current.length<COLS){
+      current += k.toLowerCase();
+      AudioFX.key();                                          // ADDED
+      repaint(); save();
+    }
+    return;
+  }
+}
+
+  function backspace(){
+    if(current.length>0){ current=current.slice(0,-1); repaint(); save(); }
+  }
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ onKey('enter'); }
+    else if(e.key==='Backspace'){ onKey('←'); }
+    else if(/^[a-zA-Z]$/.test(e.key)){ onKey(e.key.toLowerCase()); }
+  });
+
+
+    // ADDED: Game Over overlay logic
+  function showGameOver(won){                                // CHANGED
+  try { start.close(); } catch(e){}                        // ADDED: ensure no other modal is open
+  try { help.close(); } catch(e){}                         // ADDED: close Help if user left it open
+  overTitle.textContent = won ? 'You Win!' : 'Game Over';
+  overMsg.textContent = won ? `Solved in ${guesses.length}/6` : 'Out of tries.';
+  overSecret.textContent = secret.toUpperCase();
+    won ? AudioFX.success() : AudioFX.fail();                   // ADDED
+  try { over.showModal(); } catch(e){                      // CHANGED: robust open
+    try { over.show(); } catch(e2){ over.setAttribute('open',''); }
+  }
+}
+
+
+  // ===== Guess submission (STRICT always on) =====
+  function submit(){
+    if(finished) return;
+    if(current.length!==COLS){ flashRow('Not enough letters.'); return; }
+
+    // STRICT: must be in dictionary
+    if(!STRICT.has(current)){
+      flashRow('Not in dictionary.');
+      return;
+    }
+
+    if(hardChk.checked && guesses.length>0){
+      // Enforce revealed greens stay, and revealed yellows must be included somewhere
+      const last = evaluate(guesses[guesses.length-1], secret);
+      for(let i=0;i<COLS;i++){
+        if(last[i].state==='c' && current[i]!==guesses[guesses.length-1][i]){
+          flashRow('Hard mode: keep green letters in place.');
+          return;
+        }
+      }
+      // Ensure all prior revealed letters appear (basic rule)
+      const needed = new Set();
+      last.forEach((x,i)=>{ if(x.state!=='a') needed.add(guesses[guesses.length-1][i]); });
+      for(const ch of needed){ if(!current.includes(ch)){ flashRow('Hard mode: reuse revealed letters.'); return; } }
+    }
+
+    guesses.push(current);
+    const evals = evaluate(guesses[guesses.length-1], secret);    // ADDED
+evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
+    current='';
+    repaint(true);
+
+    if(guesses[guesses.length-1]===secret){
+      finished = true;
+  setTimeout(()=>showGameOver(true), REVEAL_WAIT);   // CHANGED: wait for reveal
+    } else if(guesses.length===6){
+      finished = true;
+  setTimeout(()=>showGameOver(false), REVEAL_WAIT);  // CHANGED: wait for reveal
+    } else {
+      setStatus('Keep going…');
+    }
+    save();
+  }
+
+  function flashRow(msg){
+    const row = board.children[guesses.length];
+    row.classList.remove('shake'); void row.offsetWidth; // restart anim
+    row.classList.add('shake');
+    setStatus(msg, true);
+    AudioFX.error();                                            // ADDED
+  }
+
+  // ===== Evaluation (duplicate-aware) =====
+  function evaluate(guess, solution){
+    const res = Array(COLS).fill(null).map(()=>({ch:'',state:'a'}));
+    const sol = solution.split('');
+    const used = Array(COLS).fill(false);
+
+    // pass 1: correct spots
+    for(let i=0;i<COLS;i++){
+      res[i].ch = guess[i];
+      if(guess[i]===sol[i]){ res[i].state='c'; used[i]=true; }
+    }
+    // pass 2: presents
+    for(let i=0;i<COLS;i++){
+      if(res[i].state==='c') continue;
+      const ch = guess[i];
+      let idx = sol.findIndex((s,j)=>!used[j] && s===ch);
+      if(idx!==-1){ res[i].state='p'; used[idx]=true; }
+    }
+    return res;
+  }
+
+  function repaint(){
+    // Draw all rows
+    for(let r=0;r<6;r++){
+      const row = board.children[r];
+      const word = r < guesses.length ? guesses[r] : (r===guesses.length? current : '');
+      for(let c=0;c<COLS;c++){
+        const tile = row.children[c];
+        const ch = word[c] || '';
+        tile.textContent = ch || '';
+        tile.className = 'tile' + (ch?' filled':'');
+      }
+      if(r<guesses.length){
+        const evals = evaluate(guesses[r], secret);
+        evals.forEach((e,i)=>{
+          const tile=row.children[i];
+          tile.classList.add('reveal');
+          tile.style.animationDelay = `${i*80}ms`;
+          tile.classList.add(`state-${e.state}`);
+        });
+      }
+    }
+    // Update keyboard colors (best state per key: c > p > a)
+    const best = {};
+    const rank = s => s==='c'?3:s==='p'?2:s==='a'?1:0;
+    guesses.forEach(g=>{
+      const ev=evaluate(g,secret);
+      ev.forEach((e)=>{ const r=rank(e.state); if(!best[e.ch]||rank(best[e.ch])<r) best[e.ch]=e.state; });
+    });
+    document.querySelectorAll('.key').forEach(k=>{
+      const ch = k.dataset.key;
+      k.classList.remove('k-c','k-p','k-a');
+      if(/^[a-z]$/.test(ch) && best[ch]) k.classList.add('k-'+best[ch]);
+    });
+  }
+
+  
+
+  // ===== Buttons =====
+  newBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // CHANGED
+  hardChk.addEventListener('change', ()=>{ save(); setStatus('Hard mode '+(hardChk.checked?'on':'off')); });
+  startBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // ADDED
+  againBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // ADDED
+  // Kick audio on user actions (first time)                 // ADDED
+startBtn.addEventListener('click', () => AudioFX.start()); // ADDED
+againBtn.addEventListener('click', () => AudioFX.start()); // ADDED
+newBtn.addEventListener('click', () => AudioFX.start());   // ADDED
+document.addEventListener('keydown', () => AudioFX.start(), {once:true}); // ADDED
+
+
+  // ===== Init =====
+  buildKeyboard();
+  buildBoard();
+  startNew();                              // CHANGED: create a secret immediately so scoring works
+    try { start.showModal(); } catch(e){} // ADDED (show home screen on load)
+    // Restore preference on load                                // ADDED
+try { soundChk.checked = JSON.parse(localStorage.getItem('lexica:sound') ?? 'true'); } catch(e){}
+// Save when changed                                          // ADDED
+soundChk.addEventListener('change', ()=> localStorage.setItem('lexica:sound', JSON.stringify(soundChk.checked)));
+
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Minesweeper — Canvas + SFX & Music</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0f14;
+    --panel: #0e1522;
+    --ink: #e6edf3;
+    --muted: #9fb1c5;
+    --accent: #5eead4;
+    --danger: #fb7185;
+    --warn: #fbbf24;
+    --ok: #34d399;
+    --gridDark: #0c1220;
+    --gridLight: #122034;
+  }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+  #wrap { position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr auto; }
+  header { display:flex; gap:12px; align-items:center; padding:10px 14px; background:linear-gradient(180deg, #0d1422, #0b101a); border-bottom:1px solid #142236; }
+  header .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; display:flex; align-items:center; gap:8px; font-weight:700; }
+  header select, header button { background:#0f172a; color:var(--ink); border:1px solid #25324a; border-radius:10px; padding:6px 10px; font-weight:700; letter-spacing:.3px; }
+  header button:hover { border-color:#34507a; box-shadow:0 0 0 2px rgba(94,234,212,.15) inset; }
+  #game { display:block; width:min(96vw, 1200px); height: calc(min(96vw, 1200px) * 0.65); margin:18px auto; background: radial-gradient(1200px 800px at 20% 10%, #0a1322 0%, transparent 60%),
+           radial-gradient(900px 600px at 80% 0%, #0b1a2a 0%, transparent 60%),
+           linear-gradient(180deg, #0b1220, #0a0f18); border:1px solid #15243a; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04); }
+  footer { display:flex; justify-content:center; gap:12px; padding:8px 12px; color:var(--muted); font-size:12px; }
+  .sep { width:1px; height:20px; background:#1f2e45; }
+  .toggle { cursor:pointer; }
+  .led { width:8px; height:8px; border-radius:50%; box-shadow:0 0 8px currentColor; }
+  .led.on { color: var(--ok); background: var(--ok); }
+  .led.off { color: #334155; background:#334155; box-shadow:none; }
+  .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0f172a; border:1px solid #26334a; border-radius:6px; padding:2px 6px; }
+  .help { color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <span class="pill">⏱️ <span id="time">000</span></span>
+    <span class="pill">💣 <span id="mines">000</span></span>
+    <button id="reset">🙂 New Game (N)</button>
+    <select id="difficulty" title="Difficulty">
+      <option value="beginner">Beginner 9×9 (10)</option>
+      <option value="intermediate" selected>Intermediate 16×16 (40)</option>
+      <option value="expert">Expert 30×16 (99)</option>
+      <option value="custom">Custom…</option>
+    </select>
+    <span class="pill" id="customControls" style="display:none;">
+      W:<input id="cw" type="number" min="5" max="50" value="16" style="width:60px"> H:<input id="ch" type="number" min="5" max="30" value="16" style="width:60px"> M:<input id="cm" type="number" min="1" max="300" value="40" style="width:80px"> <button id="applyCustom">Apply</button>
+    </span>
+    <span class="sep"></span>
+    <button id="flagMode" title="Touch helper">🚩 Flag Mode: OFF</button>
+    <span class="sep"></span>
+    <button id="sfxBtn" class="toggle">🔊 SFX</button>
+    <span class="led on" id="sfxLed"></span>
+    <button id="musicBtn" class="toggle">🎵 Music</button>
+    <span class="led off" id="musicLed"></span>
+  </header>
+
+  <canvas id="game" width="1200" height="780"></canvas>
+
+  <footer>
+    <span class="help">Controls: <span class="kbd">Left Click</span>/<span class="kbd">Tap</span> reveal • <span class="kbd">Right Click</span>/<span class="kbd">Long‑press</span> flag • Toggle <b>🚩 Flag Mode</b> on touch for easier flagging.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  // ===== Util =====
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const choice = (arr) => arr[Math.floor(Math.random()*arr.length)];
+
+  // ===== Canvas + DPI scaling =====
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  function resizeCanvasForBoard(cols, rows) {
+    // Keep a nice aspect and fit within viewport width
+    const maxW = Math.min(window.innerWidth * 0.96, 1200);
+    // target tile size in CSS pixels
+    const tileCSS = clamp(Math.floor(maxW / (cols + 2)), 18, 40);
+    const boardW = tileCSS * cols;
+    const boardH = tileCSS * rows;
+    const cssW = boardW + tileCSS * 2; // padding sides
+    const cssH = boardH + tileCSS * 2 + 40; // a bit extra for top HUD spacing
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.floor(cssW * DPR);
+    canvas.height = Math.floor(cssH * DPR);
+    return { tile: tileCSS * DPR, pad: tileCSS * DPR };
+  }
+
+  // ===== Game State =====
+  const DIFFS = {
+    beginner: { cols:9, rows:9, mines:10 },
+    intermediate: { cols:16, rows:16, mines:40 },
+    expert: { cols:30, rows:16, mines:99 },
+  };
+
+  let state = {
+    cols: 16, rows: 16, mines: 40,
+    grid: [],
+    firstClickSafe: true,
+    started: false,
+    over: false,
+    win: false,
+    revealedCount: 0,
+    flagsPlaced: 0,
+    timer: 0,
+    timerId: null,
+    tile: 32 * DPR,
+    pad: 32 * DPR,
+    hover: { c:-1, r:-1 },
+    flagMode: false,
+  };
+
+  // Cell structure: { mine:boolean, adj:int, revealed:boolean, flagged:boolean, boom:boolean }
+
+  function initGrid(cols, rows) {
+    state.grid = new Array(rows);
+    for (let r=0; r<rows; r++) {
+      state.grid[r] = new Array(cols);
+      for (let c=0; c<cols; c++) {
+        state.grid[r][c] = { mine:false, adj:0, revealed:false, flagged:false, boom:false };
+      }
+    }
+    state.revealedCount = 0;
+    state.flagsPlaced = 0;
+    state.over = false;
+    state.win = false;
+    state.started = false;
+    state.timer = 0; updateTimer();
+    stopTimer();
+  }
+
+  function placeMines(exceptC, exceptR) {
+    // Place mines randomly, ensuring (exceptC, exceptR) is safe and its neighbors too for a nicer start
+    const forbidden = new Set();
+    forEachNbr(exceptC, exceptR, (nc, nr) => forbidden.add(nr+','+nc));
+    forbidden.add(exceptR+','+exceptC);
+
+    let placed = 0;
+    while (placed < state.mines) {
+      const c = Math.floor(Math.random()*state.cols);
+      const r = Math.floor(Math.random()*state.rows);
+      const key = r+','+c;
+      if (forbidden.has(key)) continue;
+      const cell = state.grid[r][c];
+      if (!cell.mine) {
+        cell.mine = true; placed++;
+      }
+    }
+    // Compute adjacencies
+    for (let r=0; r<state.rows; r++) {
+      for (let c=0; c<state.cols; c++) {
+        if (state.grid[r][c].mine) { state.grid[r][c].adj = -1; continue; }
+        let n=0; forEachNbr(c,r,(nc,nr)=>{ if (state.grid[nr][nc].mine) n++; });
+        state.grid[r][c].adj = n;
+      }
+    }
+  }
+
+  function forEachNbr(c, r, fn) {
+    for (let dr=-1; dr<=1; dr++) for (let dc=-1; dc<=1; dc++) {
+      if (dc===0 && dr===0) continue;
+      const nc = c+dc, nr = r+dr;
+      if (nc>=0 && nc<state.cols && nr>=0 && nr<state.rows) fn(nc,nr);
+    }
+  }
+
+  function reveal(c, r) {
+    if (state.over) return;
+    const cell = state.grid[r][c];
+    if (cell.revealed || cell.flagged) return;
+
+    if (!state.started) {
+      // First click: build board avoiding the cell & neighbors
+      placeMines(c, r);
+      startTimer();
+      state.started = true;
+      startMusicOnFirstInteraction();
+    }
+
+    cell.revealed = true;
+    state.revealedCount++;
+
+    if (cell.mine) {
+      cell.boom = true;
+      gameOver(false);
+      sfx('boom');
+      return;
+    }
+
+    sfx('reveal');
+    // flood if zero
+    if (cell.adj === 0) {
+      const q = [[c,r]];
+      while (q.length) {
+        const [cc, rr] = q.shift();
+        forEachNbr(cc, rr, (nc, nr) => {
+          const ncell = state.grid[nr][nc];
+          if (!ncell.revealed && !ncell.flagged && !ncell.mine) {
+            ncell.revealed = true; state.revealedCount++;
+            if (ncell.adj === 0) q.push([nc,nr]);
+          }
+        });
+      }
+    }
+
+    checkWin();
+  }
+
+  function toggleFlag(c, r) {
+    if (state.over) return;
+    const cell = state.grid[r][c];
+    if (cell.revealed) return;
+    cell.flagged = !cell.flagged;
+    state.flagsPlaced += cell.flagged ? 1 : -1;
+    sfx(cell.flagged ? 'flag' : 'unflag');
+    checkWin();
+  }
+
+  function chordReveal(c, r) {
+    // If the number equals flags around it, reveal all unflagged neighbors
+    const cell = state.grid[r][c];
+    if (!cell.revealed || cell.adj <= 0) return;
+    let flags = 0, hidden = [];
+    forEachNbr(c,r,(nc,nr)=>{
+      const n = state.grid[nr][nc];
+      if (n.flagged) flags++; else if (!n.revealed) hidden.push([nc,nr]);
+    });
+    if (flags === cell.adj) {
+      hidden.forEach(([nc,nr]) => reveal(nc,nr));
+    } else {
+      sfx('bump');
+    }
+  }
+
+  function checkWin() {
+    if (state.over) return;
+    const total = state.cols * state.rows;
+    if (state.revealedCount === total - state.mines) {
+      gameOver(true);
+      sfx('win');
+    }
+  }
+
+  function gameOver(win) {
+    state.over = true;
+    state.win = win;
+    stopTimer();
+    if (!win) {
+      // reveal all mines
+      for (let r=0; r<state.rows; r++) for (let c=0; c<state.cols; c++) {
+        const cell = state.grid[r][c];
+        if (cell.mine) cell.revealed = true;
+      }
+    }
+  }
+
+  // ===== Timer & HUD =====
+  const timeEl = document.getElementById('time');
+  const minesEl = document.getElementById('mines');
+  function startTimer() {
+    stopTimer();
+    state.timerId = setInterval(() => { state.timer++; updateTimer(); }, 1000);
+  }
+  function stopTimer() { if (state.timerId) { clearInterval(state.timerId); state.timerId=null; } }
+  function updateTimer() { timeEl.textContent = String(state.timer).padStart(3,'0'); }
+  function updateMinesLeft() {
+    const left = clamp(state.mines - state.flagsPlaced, -999, 999);
+    minesEl.textContent = String(left).padStart(3,'0');
+  }
+
+  // ===== Drawing =====
+  let COLORS = {
+    1: '#60a5fa', // blue
+    2: '#34d399', // green
+    3: '#f87171', // red
+    4: '#a78bfa', // purple
+    5: '#fbbf24', // amber
+    6: '#22d3ee', // cyan
+    7: '#e879f9', // fuschia
+    8: '#94a3b8', // slate
+  };
+
+  function draw() {
+    const { cols, rows, tile, pad } = state;
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+
+    // Board area origin
+    const ox = pad, oy = pad;
+    const w = cols*tile, h = rows*tile;
+
+    // Panel backdrop with subtle grid
+    ctx.save();
+    ctx.fillStyle = '#0a1322';
+    roundRect(ctx, ox-10*DPR, oy-10*DPR, w+20*DPR, h+20*DPR, 16*DPR); ctx.fill();
+    ctx.clip();
+    // Grid background
+    for (let r=0; r<rows; r++) {
+      for (let c=0; c<cols; c++) {
+        const x = ox + c*tile, y = oy + r*tile;
+        ctx.fillStyle = ( (c+r)&1 ) ? 'rgba(16,30,50,.95)' : 'rgba(14,22,38,.95)';
+        ctx.fillRect(x, y, tile, tile);
+      }
+    }
+
+    // Cells
+    for (let r=0; r<rows; r++) {
+      for (let c=0; c<cols; c++) {
+        const cell = state.grid[r][c];
+        const x = ox + c*tile, y = oy + r*tile;
+        const hovered = (c===state.hover.c && r===state.hover.r && !state.over);
+
+        if (!cell.revealed) {
+          // Covered tile
+          drawRaisedTile(x, y, tile, hovered);
+
+          if (cell.flagged) {
+            drawFlag(x, y, tile);
+          }
+        } else {
+          // Revealed tile
+          ctx.fillStyle = ( (c+r)&1 ) ? '#0f1d31' : '#0d1929';
+          ctx.fillRect(x, y, tile, tile);
+
+          if (cell.mine) {
+            drawMine(x, y, tile, cell.boom);
+          } else if (cell.adj > 0) {
+            drawNumber(x, y, tile, cell.adj);
+          }
+        }
+
+        // Cell borders
+        ctx.strokeStyle = 'rgba(20, 34, 54, .9)';
+        ctx.lineWidth = 1*DPR;
+        ctx.strokeRect(x+0.5*DPR, y+0.5*DPR, tile-1*DPR, tile-1*DPR);
+      }
+    }
+
+    ctx.restore();
+
+    // Game state banners
+    if (state.over) {
+      const msg = state.win ? 'YOU WIN! 🎉' : 'BOOM! GAME OVER 💥';
+      ctx.save();
+      ctx.fillStyle = state.win ? 'rgba(52, 211, 153, .18)' : 'rgba(251, 113, 133, .2)';
+      ctx.fillRect(ox, oy + h/2 - 40*DPR, w, 80*DPR);
+      ctx.font = `${Math.floor(28*DPR)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = state.win ? '#34d399' : '#fb7185';
+      ctx.fillText(msg, ox + w/2, oy + h/2);
+      ctx.restore();
+    }
+
+    updateMinesLeft();
+    requestAnimationFrame(draw);
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+function drawRaisedTile(x, y, s, hovered) {
+    const g1 = ctx.createLinearGradient(x, y, x, y+s);
+    // Brighter gradient colors for better visibility
+    g1.addColorStop(0, hovered ? '#1f3b5c' : '#1a3555');
+    g1.addColorStop(1, hovered ? '#15304a' : '#122a42');
+    ctx.fillStyle = g1; 
+    ctx.fillRect(x, y, s, s);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.beginPath();
+    ctx.moveTo(x, y+s); ctx.lineTo(x, y); ctx.lineTo(x+s, y);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.beginPath();
+    ctx.moveTo(x+s, y); ctx.lineTo(x+s, y+s); ctx.lineTo(x, y+s);
+    ctx.stroke();
+}
+
+
+  function drawFlag(x, y, s) {
+    ctx.save();
+    ctx.translate(x + s*0.5, y + s*0.65);
+    ctx.scale(s/40, s/40);
+    ctx.fillStyle = '#e11d48'; // red flag
+    ctx.strokeStyle = '#93a4b8';
+    ctx.lineWidth = 2*DPR;
+    ctx.beginPath();
+    ctx.moveTo(-2, 10); ctx.lineTo(-2, -12); ctx.lineTo(0, -12); ctx.lineTo(0, 10); ctx.closePath();
+    ctx.fillStyle = '#93a4b8'; ctx.fill();
+    ctx.fillStyle = '#e11d48';
+    ctx.beginPath();
+    ctx.moveTo(0, -12); ctx.lineTo(16, -8); ctx.lineTo(0, -2); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMine(x, y, s, boom) {
+    ctx.save();
+    ctx.translate(x + s/2, y + s/2);
+    ctx.fillStyle = boom ? '#fb7185' : '#93a4b8';
+    ctx.beginPath(); ctx.arc(0,0, s*0.22, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = boom ? '#fb7185' : '#93a4b8'; ctx.lineWidth = s*0.04;
+    for (let i=0;i<8;i++) { ctx.beginPath(); ctx.moveTo(0,0); const a=i*Math.PI/4; ctx.lineTo(Math.cos(a)*s*0.38, Math.sin(a)*s*0.38); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function drawNumber(x, y, s, n) {
+    ctx.save();
+    ctx.font = `${Math.floor(s*0.52)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS[n] || '#e5e7eb';
+    ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 4*DPR;
+    ctx.fillText(String(n), x + s/2, y + s/2 + 1*DPR);
+    ctx.restore();
+  }
+
+  // ===== Input =====
+  let mouseDown = false; let mouseBtn = 0;
+  let touchTimer = null; let touchFlagged = false;
+
+  function cellFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = ( (e.clientX ?? (e.touches && e.touches[0].clientX)) - rect.left ) * DPR;
+    const y = ( (e.clientY ?? (e.touches && e.touches[0].clientY)) - rect.top ) * DPR;
+    const c = Math.floor((x - state.pad)/state.tile);
+    const r = Math.floor((y - state.pad)/state.tile);
+    if (c<0||c>=state.cols||r<0||r>=state.rows) return null;
+    return { c, r };
+  }
+
+  canvas.addEventListener('mousemove', (e)=>{
+    const cell = cellFromEvent(e);
+    state.hover = cell || {c:-1,r:-1};
+  });
+
+  canvas.addEventListener('mousedown', (e)=>{
+    mouseDown = true; mouseBtn = e.button;
+    const cell = cellFromEvent(e); if (!cell) return;
+    if (e.button === 2) { // right
+      toggleFlag(cell.c, cell.r); updateMinesLeft();
+    }
+  });
+
+  canvas.addEventListener('mouseup', (e)=>{
+    if (!mouseDown) return; mouseDown = false;
+    const cell = cellFromEvent(e); if (!cell) return;
+    if (e.button === 0) {
+      if (state.flagMode) { toggleFlag(cell.c, cell.r); updateMinesLeft(); }
+      else {
+        const target = state.grid[cell.r][cell.c];
+        if (target.revealed && target.adj>0) chordReveal(cell.c, cell.r);
+        else reveal(cell.c, cell.r);
+      }
+    }
+  });
+
+  canvas.addEventListener('contextmenu', (e)=> e.preventDefault());
+
+  // Touch: short tap reveal / long-press flag (or Flag Mode toggles behavior)
+  canvas.addEventListener('touchstart', (e)=>{
+    const cell = cellFromEvent(e); if (!cell) return;
+    touchFlagged = false;
+    if (state.flagMode) {
+      toggleFlag(cell.c, cell.r); updateMinesLeft();
+      return;
+    }
+    touchTimer = setTimeout(() => {
+      toggleFlag(cell.c, cell.r); updateMinesLeft();
+      touchFlagged = true;
+    }, 400);
+  }, {passive:true});
+
+  canvas.addEventListener('touchend', (e)=>{
+    if (touchTimer) { clearTimeout(touchTimer); touchTimer=null; }
+    if (touchFlagged) return; // already flagged
+    const cell = cellFromEvent(e.changedTouches ? {clientX:e.changedTouches[0].clientX, clientY:e.changedTouches[0].clientY} : e); if (!cell) return;
+    const target = state.grid[cell.r][cell.c];
+    if (target.revealed && target.adj>0) chordReveal(cell.c, cell.r);
+    else reveal(cell.c, cell.r);
+  });
+
+  // Keyboard helpers
+  document.addEventListener('keydown', (e)=>{
+    if (e.key.toLowerCase()==='f') { state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); }
+    if (e.key==="n") { newGame(currentPreset); }
+  });
+
+  // ===== Audio: SFX + simple generative music =====
+  let audioCtx = null;
+  let sfxOn = true, musicOn = false;
+  const sfxLed = document.getElementById('sfxLed');
+  const musicLed = document.getElementById('musicLed');
+
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  function sfx(type) {
+    if (!sfxOn) return;
+    ensureAudio();
+    const t0 = audioCtx.currentTime;
+    const vol = audioCtx.createGain(); vol.gain.value = 0.06; vol.connect(audioCtx.destination);
+
+    function beep(freqA, freqB, dur=0.08, wave='square') {
+      const o = audioCtx.createOscillator(); o.type = wave; o.frequency.setValueAtTime(freqA, t0);
+      o.frequency.exponentialRampToValueAtTime(Math.max(1,freqB), t0+dur);
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(1, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+      o.connect(g).connect(vol); o.start(t0); o.stop(t0+dur);
+    }
+
+    function noise(dur=0.15, lp=800) {
+      const bufSize = Math.floor(audioCtx.sampleRate * dur);
+      const buffer = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<bufSize;i++) data[i] = Math.random()*2-1;
+      const src = audioCtx.createBufferSource(); src.buffer = buffer;
+      const biquad = audioCtx.createBiquadFilter(); biquad.type='lowpass'; biquad.frequency.value = lp;
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(1, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+      src.connect(biquad).connect(g).connect(vol);
+      src.start(t0); src.stop(t0+dur);
+    }
+
+    switch(type) {
+      case 'reveal': beep(600, 480, 0.05, 'square'); break;
+      case 'flag':   beep(360, 220, 0.08, 'square'); break;
+      case 'unflag': beep(180, 420, 0.08, 'square'); break;
+      case 'tick':   beep(880, 660, 0.04, 'triangle'); break;
+      case 'bump':   beep(220, 200, 0.05, 'sawtooth'); break;
+      case 'boom':   noise(0.28, 1400); beep(120, 60, 0.18, 'sawtooth'); break;
+      case 'win':    beep(660, 990, 0.12, 'triangle'); setTimeout(()=>beep(440, 880, 0.12, 'triangle'), 60); break;
+    }
+  }
+
+  // Minimal generative chiptune loop
+  let musicTimer = null;
+  function startMusic() {
+    if (musicTimer) return;
+    ensureAudio();
+    const tempo = 108; // BPM
+    const stepMs = (60/tempo) * 1000 / 2; // 8th notes
+    const scale = [0,2,3,5,7,10]; // minor-ish
+    let step = 0;
+
+    musicTimer = setInterval(() => {
+      if (!musicOn) return;
+      const root = [48, 43, 50, 45][Math.floor(step/16)%4]; // chord roots per bar
+      const note = root + choice(scale) + (Math.random()<0.3?12:24);
+      playNote(note, 0.09, 'square', 0.025);
+      if (step%2===0) playNote(root-12, 0.12, 'triangle', 0.02); // bass
+      if (step%2===0 && Math.random()<0.5) playHat();
+      step = (step+1)%64;
+    }, stepMs);
+  }
+  function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer=null; } }
+
+  function startMusicOnFirstInteraction() {
+    if (!musicOn) return; // only arm if music toggled on
+    startMusic();
+  }
+
+  function playNote(midi, dur=0.12, wave='square', vol=0.02) {
+    if (!audioCtx) return;
+    const freq = 440 * Math.pow(2, (midi-69)/12);
+    const t0 = audioCtx.currentTime;
+    const o = audioCtx.createOscillator(); o.type = wave; o.frequency.value = freq;
+    const g = audioCtx.createGain(); g.gain.value = vol; g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t0); o.stop(t0+dur);
+  }
+  function playHat() {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const buf = audioCtx.createBuffer(1, 2205, audioCtx.sampleRate); // ~50ms
+    const d = buf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
+    const src = audioCtx.createBufferSource(); src.buffer = buf;
+    const bp = audioCtx.createBiquadFilter(); bp.type='highpass'; bp.frequency.value=5000;
+    const g = audioCtx.createGain(); g.gain.value=0.02;
+    src.connect(bp).connect(g).connect(audioCtx.destination);
+    src.start(t0); src.stop(t0+0.05);
+  }
+
+  // UI audio toggles
+  const sfxBtn = document.getElementById('sfxBtn');
+  const musicBtn = document.getElementById('musicBtn');
+  sfxBtn.addEventListener('click', () => { sfxOn = !sfxOn; sfxLed.className = 'led ' + (sfxOn?'on':'off'); sfx('tick'); });
+  musicBtn.addEventListener('click', () => {
+    musicOn = !musicOn; musicLed.className = 'led ' + (musicOn?'on':'off'); sfx('tick');
+    ensureAudio();
+    if (musicOn) startMusic(); else stopMusic();
+  });
+
+  // ===== New Game / Difficulty =====
+  const resetBtn = document.getElementById('reset');
+  const diffSel = document.getElementById('difficulty');
+  const customCtrls = document.getElementById('customControls');
+  const cw = document.getElementById('cw');
+  const ch = document.getElementById('ch');
+  const cm = document.getElementById('cm');
+  const applyCustomBtn = document.getElementById('applyCustom');
+  const flagBtn = document.getElementById('flagMode');
+
+  let currentPreset = 'intermediate';
+
+  function newGame(presetOrCfg) {
+    let cfg = null;
+    if (typeof presetOrCfg === 'string') cfg = DIFFS[presetOrCfg] || DIFFS.intermediate;
+    else cfg = presetOrCfg;
+    state.cols = cfg.cols; state.rows = cfg.rows; state.mines = Math.min(cfg.mines, cfg.cols*cfg.rows-1);
+    const dims = resizeCanvasForBoard(state.cols, state.rows);
+    state.tile = dims.tile; state.pad = dims.pad;
+    initGrid(state.cols, state.rows);
+    updateMinesLeft();
+    draw();
+  }
+
+  resetBtn.addEventListener('click', ()=>{ sfx('tick'); newGame(currentPreset); });
+  diffSel.addEventListener('change', ()=>{
+    sfx('tick');
+    if (diffSel.value==='custom') customCtrls.style.display='inline-flex';
+    else { customCtrls.style.display='none'; currentPreset = diffSel.value; newGame(currentPreset); }
+  });
+  applyCustomBtn.addEventListener('click', ()=>{
+    const C = clamp(parseInt(cw.value||16), 5, 50);
+    const R = clamp(parseInt(ch.value||16), 5, 30);
+    const M = clamp(parseInt(cm.value||40), 1, Math.min(300, C*R-1));
+    newGame({cols:C, rows:R, mines:M});
+    currentPreset = 'custom';
+  });
+  function updateFlagButton(){ flagBtn.textContent = `🚩 Flag Mode: ${state.flagMode? 'ON':'OFF'}`; }
+  flagBtn.addEventListener('click', ()=>{ state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); });
+
+  // ===== Kick off =====
+  window.addEventListener('resize', ()=>{
+    const dims = resizeCanvasForBoard(state.cols, state.rows);
+    state.tile = dims.tile; state.pad = dims.pad;
+  });
+
+  newGame(currentPreset);
+  draw();
+
+})();
+</script>
+</body>
+</html>
