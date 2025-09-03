@@ -108,6 +108,8 @@
   const helpPlay = document.getElementById('helpPlay');
   const helpMute = document.getElementById('helpMute');
   let helpUp = true; // overlay visible initially
+  let helpMode = 'start';      // 'start' | 'pause'
+
 
   let audioCtx=null;
   let muted = false; // 🔊 global mute flag
@@ -160,6 +162,15 @@
       music.note++;
     }, music.tempo);
   }
+
+  function showHelp(mode){ // mode: 'start' | 'pause'
+  helpMode = mode;
+  helpUp = true;
+  if (helpEl) helpEl.style.display = 'flex';
+  if (helpPlay) helpPlay.textContent = (mode === 'pause') ? 'Resume' : 'Play';
+  if (mode === 'pause' && statusEl) statusEl.textContent = 'Paused — Press Space/Enter or Play';
+}
+
   function stopMusic(){ if(music.loop){ clearInterval(music.loop); } music.loop=null; music.on=false; }
 
   // Viewport-fit resize
@@ -239,6 +250,10 @@
     const cleared = clearLines();
     SFX.drop();
     if(cleared>0){
+      // Pick a message
+  const labels = ['','Nice!','Double!','Triple!','TETRIS!'];
+  const base = labels[cleared] || 'Great!';
+  triggerCongrats((tspin ? 'T-Spin ' : '') + base);
       SFX.clear();
       let pts = [0,100,300,500,800][cleared] * level;
       if(tspin){
@@ -425,11 +440,21 @@
   }
 
   function togglePause(){
-    if(gameOver) return;
-    running=!running;
-    statusEl.textContent = running? 'Press P to Pause': 'Paused — Press P';
-    if(running){ ensureAudio(); if(!muted) startMusic(); } else { stopMusic(); }
+  if(gameOver) return;
+  if(running){
+    running = false;
+    stopMusic();
+    showHelp('pause');                 // ⬅️ show instructions on pause
+  } else {
+    // If overlay is hidden (edge case), allow P to resume directly.
+    if (!helpUp){
+      running = true;
+      if (statusEl) statusEl.textContent = 'Press P to Pause';
+      ensureAudio(); if (!muted) startMusic();
+    }
   }
+}
+
 
   function tick(dt){
     if(!running||gameOver) return;
@@ -446,14 +471,20 @@
   requestAnimationFrame(loop);
 
   function onKey(e){
-    // 📖 HELP: while overlay is up, only Space/Enter starts the game
-    if (helpUp){
-      if (e.code === 'Space' || e.code === 'Enter'){
-        e.preventDefault();
-        dismissHelp(true);
-      }
-      return;
-    }
+// 📖 HELP: while overlay is up, only Space/Enter (and P if paused) dismiss it
+if (helpUp){
+  if (
+    e.code === 'Space' ||
+    e.code === 'Enter' ||
+    (helpMode === 'pause' && e.code === 'KeyP') // ⬅️ resume with P
+  ){
+    e.preventDefault();
+    dismissHelp(helpMode === 'pause' ? 'resume' : 'start');
+  }
+  return;
+}
+
+
 
     if(e.code==='Space'){ if(!running||gameOver){ newGame(); } else { hardDrop(); } }
     else if(e.code==='ArrowLeft' || e.code==='KeyA'){ e.preventDefault(); if(running) move(-1); }
@@ -487,15 +518,22 @@
   if (soundBtn) soundBtn.addEventListener('click', ()=> setMuted(!muted));
 
   // 📖 HELP wiring
-  function dismissHelp(start){
-    helpUp = false;
-    if (helpEl) helpEl.style.display = 'none';
-    if (start) newGame();
+  function dismissHelp(action){ // 'start' | 'resume'
+  helpUp = false;
+  if (helpEl) helpEl.style.display = 'none';
+  if (action === 'start'){
+    newGame();
+  } else if (action === 'resume'){
+    running = true;
+    if (statusEl) statusEl.textContent = 'Press P to Pause';
+    ensureAudio(); if (!muted) startMusic();
   }
-  if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(true));
+}
+
+if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
   if (helpMute) helpMute.addEventListener('click', ()=> setMuted(!muted));
-  if (helpEl)   helpEl.addEventListener('click', ()=> dismissHelp(true));
-  if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation()); // clicks inside card don't close
+if (helpEl)   helpEl.addEventListener('click',  ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
+if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation());
 
   updateSoundBtn();
 
