@@ -5,22 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Block Drop</title>
 <style>
-  html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-  canvas { display:block; margin:auto; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
-  .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:18px; align-items:center; font-weight:700; letter-spacing:.3px; }
+  html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; overflow:hidden; }
+  canvas { display:block; margin:0 auto; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+
+  .hud{
+    position:fixed; top:8px; left:50%; transform:translateX(-50%);
+    display:flex; gap:18px; align-items:center; font-weight:700; letter-spacing:.3px;
+    flex-wrap:nowrap; width:calc(100vw - 16px); justify-content:center;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+  }
+  .hud > *{ flex:0 0 auto; }
   .hud .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; display:flex; flex-direction:column; align-items:center; }
+
   .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
   .btn:active { transform:translateY(1px); }
   @media (min-width: 860px){ .btns { display:none; } }
   #holdCanvas, #nextCanvas { background:#0e1522; margin-top:4px; }
+
+  /* 📖 HELP overlay */
+  .overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(4,8,12,0.86);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .help-card {
+    background:#0e1522; border:1px solid #26334a; border-radius:16px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.55);
+    width:min(92vw, 760px); padding:20px 22px;
+  }
+  .help-card h2 { margin:0 0 8px 0; font-size:22px; }
+  .help-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+  @media (min-width:640px){ .help-grid{ grid-template-columns: 1fr 1fr; } }
+  .key { display:inline-block; padding:4px 8px; border-radius:8px; background:#111827; border:1px solid #2a344a; font-weight:700; margin:2px 6px 2px 0; }
+  .help-actions { display:flex; justify-content:center; gap:10px; margin-top:14px; }
 </style>
 </head>
 <body>
   <canvas id="game"></canvas>
+
+  <!-- 📖 HELP: Controls overlay shown on load -->
+  <div id="help" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div id="helpCard" class="help-card">
+      <h2 id="helpTitle">How to Play</h2>
+      <div class="help-grid">
+        <div>
+          <div><span class="key">←</span><span class="key">→</span> Move</div>
+          <div><span class="key">↓</span> / <span class="key">S</span> Soft Drop</div>
+          <div><span class="key">Space</span> Hard Drop &amp; Start</div>
+          <div><span class="key">P</span> Pause</div>
+        </div>
+        <div>
+          <div><span class="key">↑</span> / <span class="key">W</span> Rotate CW</div>
+          <div><span class="key">X</span> Rotate CW</div>
+          <div><span class="key">Z</span> Rotate CCW</div>
+          <div><span class="key">C</span> / <span class="key">Shift</span> Hold Piece</div>
+        </div>
+      </div>
+      <div class="help-actions">
+        <button id="helpPlay" class="btn" type="button">Play</button>
+        <button id="helpMute" class="btn" type="button">Sound: On</button>
+      </div>
+      <p style="opacity:.8; font-size:13px; text-align:center; margin-top:8px">Tip: mobile users can use the on-screen buttons at the bottom.</p>
+    </div>
+  </div>
+
   <div class="hud" aria-hidden="true">
     <div class="pill" id="score">Score: 0</div>
     <div class="pill" id="lines">Lines: 0</div>
+    <div class="pill" id="level">Level: 1</div>
     <div class="pill" id="best">Best: 0</div>
     <div class="pill" id="hold">
       Hold<canvas id="holdCanvas" width="64" height="64"></canvas>
@@ -28,7 +81,10 @@
     </div>
     <div class="pill" id="next">Next<canvas id="nextCanvas" width="64" height="64"></canvas></div>
     <div class="pill" id="status">Press Space to Start</div>
+    <button class="btn" id="resetBtn" type="button" aria-label="Reset game">Reset</button>
+    <button class="btn" id="soundBtn" type="button" aria-label="Toggle sound">Sound: On</button>
   </div>
+
   <div class="btns">
     <button class="btn" id="leftBtn">◀︎</button>
     <button class="btn" id="rotLBtn">⤺</button>
@@ -36,6 +92,7 @@
     <button class="btn" id="rotRBtn">⤼</button>
     <button class="btn" id="rightBtn">▶︎</button>
   </div>
+
 <script>
 (function(){
   const canvas = document.getElementById('game');
@@ -45,15 +102,38 @@
   const nextCanvas = document.getElementById('nextCanvas');
   const nextCtx = nextCanvas.getContext('2d');
 
+  // 📖 HELP refs
+  const helpEl   = document.getElementById('help');
+  const helpCard = document.getElementById('helpCard');
+  const helpPlay = document.getElementById('helpPlay');
+  const helpMute = document.getElementById('helpMute');
+  let helpUp = true; // overlay visible initially
+
   let audioCtx=null;
+  let muted = false; // 🔊 global mute flag
+
   function ensureAudio(){ try{ if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; audioCtx=new AC(); } if(audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} }
-  function sfx(freq=600,dur=0.06,type='square',gain=0.06){ try{ ensureAudio(); if(!audioCtx) return; const t=audioCtx.currentTime; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.setValueAtTime(freq,t); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(t+dur);}catch(_){}}
+  function sfx(freq=600,dur=0.06,type='square',gain=0.06){
+    if(muted) return;
+    try{
+      ensureAudio(); if(!audioCtx) return;
+      const t=audioCtx.currentTime;
+      const o=audioCtx.createOscillator();
+      const g=audioCtx.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(gain,t);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(); o.stop(t+dur);
+    }catch(_){}
+  }
   const SFX={ move:()=>sfx(520,0.05,'square',0.05), rotate:()=>sfx(740,0.06,'sine',0.06), drop:()=>sfx(280,0.07,'triangle',0.06), clear:()=>sfx(980,0.08,'sine',0.07) };
 
   const music={ on:false, loop:null, gain:null, note:0, bass:0, tempo:150 };
   const MELODY=[523.25,587.33,659.25,698.46,659.25,587.33,523.25,440.00,523.25,659.25,784.00,659.25,587.33,523.25,440.00,392.00];
   const BASS=[130.81,130.81,98.00,98.00,146.83,146.83,123.47,123.47];
   function startMusic(){
+    if(muted) return;
     ensureAudio(); if(!audioCtx) return;
     if(!music.gain){ music.gain=audioCtx.createGain(); music.gain.gain.value=0.16; music.gain.connect(audioCtx.destination); }
     if(music.on) return;
@@ -82,21 +162,22 @@
   }
   function stopMusic(){ if(music.loop){ clearInterval(music.loop); } music.loop=null; music.on=false; }
 
+  // Viewport-fit resize
   function resize(){
-    const pad = 12;
-    const availW = Math.max(320, window.innerWidth - pad*2);
-    const availH = Math.max(360, window.innerHeight - pad*2);
-    let cell = Math.floor(Math.min(availW/10, availH/20));
-    cell = Math.max(14, Math.min(cell, 40));
-    const w = cell*10;
-    const h = cell*20;
-    canvas.width = w; canvas.height = h;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let cell = Math.floor(Math.min(vw/10, vh/20));
+    if (cell < 6) cell = 6;
+    canvas.width = cell * 10;
+    canvas.height = cell * 20;
   }
   resize();
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', resize);
 
   const scoreEl = document.getElementById('score');
   const linesEl = document.getElementById('lines');
+  const levelEl = document.getElementById('level');
   const bestEl  = document.getElementById('best');
   const statusEl= document.getElementById('status');
 
@@ -145,7 +226,7 @@
 
   function spawnWithType(type){
     const piece = { x:3, y:-2, type, rot:0, shape: PIECES[type][0] };
-    if(collide(piece.x,piece.y,piece.shape)) { gameOver=true; running=false; statusEl.textContent='Game Over — Press R'; saveBest(); stopMusic(); return null; }
+    if(collide(piece.x,piece.y,piece.shape)) { gameOver=true; running=false; statusEl.textContent='Game Over — Click Reset'; saveBest(); stopMusic(); return null; }
     return piece;
   }
   function lock(){
@@ -166,7 +247,7 @@
       }
       score += pts;
       lines += cleared;
-      if(lines >= level*10) level++;
+      if (lines >= level * 10) level++;
       fallDelay = speedForLevel(level);
     } else if(tspin){
       score += 400 * level;
@@ -235,7 +316,7 @@
     if(cur.type!=='T' || !rotatedSinceMove) return false;
     const cx = cur.x + 1, cy = cur.y + 1;
     let c=0;
-    const corners = [[-1,-1],[1,-1],[-1,1],[1,1]];
+    const corners = [[-1,-1],[1,-1],[ -1,1],[1,1]];
     for(const [dx,dy] of corners){
       const x = cx+dx, y = cy+dy;
       if(x<0||x>=W||y>=H|| (y>=0 && board[y][x])) c++;
@@ -251,6 +332,7 @@
   function updateHUD(){
     scoreEl.textContent = 'Score: ' + score;
     linesEl.textContent = 'Lines: ' + lines;
+    if (levelEl) levelEl.textContent = 'Level: ' + level;
   }
 
   function saveBest(){ try{ if(score>best){ best=score; localStorage.setItem(HS_KEY,String(best)); bestEl.textContent='Best: '+best; } }catch(_){} }
@@ -261,6 +343,37 @@
     ctx.globalAlpha = alpha; ctx.fillStyle = COLORS[val]||'#fff';
     ctx.fillRect(px+1, py+1, Math.floor(cw-2), Math.floor(ch-2));
     ctx.globalAlpha = 1;
+  }
+
+  // --- Grid overlay ---
+  const GRID_COLOR = '#1a2742';
+  const GRID_ALPHA = 0.25;
+  function drawGrid(){
+    const cw = canvas.width / W, ch = canvas.height / H;
+    ctx.save();
+    ctx.globalAlpha = GRID_ALPHA;
+    ctx.fillStyle = GRID_COLOR;
+    for (let x = 1; x < W; x++) ctx.fillRect(Math.round(x*cw), 0, 1, canvas.height);
+    for (let y = 1; y < H; y++) ctx.fillRect(0, Math.round(y*ch), canvas.width, 1);
+    ctx.restore();
+  }
+
+  // Congrats toast
+  let congratsText = ''; let congratsTimer = 0;
+  function triggerCongrats(text){ congratsText = text; congratsTimer = 1100; }
+  function drawCongrats(){
+    if (congratsTimer <= 0) return;
+    const t = Math.max(0, Math.min(1, congratsTimer / 1100));
+    const y = canvas.height * 0.26 - (1 - t) * 10;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = '26px system-ui, sans-serif';
+    const padX = 14;
+    const w = ctx.measureText(congratsText).width + padX*2;
+    const x = canvas.width/2 - w/2;
+    ctx.globalAlpha = 0.55 * t; ctx.fillStyle = '#111827'; ctx.fillRect(x, y - 26, w, 36);
+    ctx.globalAlpha = 0.95 * t; ctx.fillStyle = '#e6edf3'; ctx.fillText(congratsText, canvas.width/2, y);
+    ctx.restore();
   }
 
   function draw(){
@@ -275,6 +388,9 @@
         const v=s[y][x]; if(!v) continue; const bx=cur.x+x, by=cur.y+y; if(by>=0) drawCell(bx,by,v,1);
       }
     }
+    drawGrid();
+    drawCongrats();
+
     if(gameOver){
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -284,12 +400,17 @@
       ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 16);
       ctx.font = '18px system-ui, sans-serif';
       ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
-      ctx.fillText('Press R or Space to restart', canvas.width/2, canvas.height/2 + 36);
+      ctx.fillText('Press Space or click Reset to restart', canvas.width/2, canvas.height/2 + 36);
     }
   }
 
   function updateGhost(){ let y = cur.y; while(!collide(cur.x, y+1, cur.shape)) y++; ghostY = y; }
-  function speedForLevel(l){ return Math.max(90, 1000 - (l-1)*80); }
+
+  // Exponential speed curve like modern Tetris; clamp at 60ms/step.
+  function speedForLevel(l){
+    const ms = Math.round(1000 * Math.pow(0.88, l - 1));
+    return Math.max(60, ms);
+  }
 
   let dropAcc=0; let fallDelay=speedForLevel(1);
   let running=false, gameOver=false;
@@ -300,17 +421,22 @@
     score=0; lines=0; level=1; fallDelay=speedForLevel(1); dropAcc=0; running=true; gameOver=false; statusEl.textContent='Press P to Pause';
     refillBag(); holdType=null; holdUsed=false; drawHold(); drawNext();
     spawn(); updateHUD();
-    ensureAudio(); startMusic();
+    ensureAudio(); if(!muted) startMusic(); else stopMusic();
   }
 
   function togglePause(){
     if(gameOver) return;
     running=!running;
     statusEl.textContent = running? 'Press P to Pause': 'Paused — Press P';
-    if(running){ ensureAudio(); startMusic(); } else { stopMusic(); }
+    if(running){ ensureAudio(); if(!muted) startMusic(); } else { stopMusic(); }
   }
 
-  function tick(dt){ if(!running||gameOver) return; dropAcc+=dt; if(dropAcc>=fallDelay){ dropAcc%=fallDelay; softDrop(); } }
+  function tick(dt){
+    if(!running||gameOver) return;
+    dropAcc += dt;
+    if (congratsTimer > 0) congratsTimer -= dt;
+    if(dropAcc>=fallDelay){ dropAcc%=fallDelay; softDrop(); }
+  }
 
   let last = performance.now();
   function loop(){
@@ -320,6 +446,15 @@
   requestAnimationFrame(loop);
 
   function onKey(e){
+    // 📖 HELP: while overlay is up, only Space/Enter starts the game
+    if (helpUp){
+      if (e.code === 'Space' || e.code === 'Enter'){
+        e.preventDefault();
+        dismissHelp(true);
+      }
+      return;
+    }
+
     if(e.code==='Space'){ if(!running||gameOver){ newGame(); } else { hardDrop(); } }
     else if(e.code==='ArrowLeft' || e.code==='KeyA'){ e.preventDefault(); if(running) move(-1); }
     else if(e.code==='ArrowRight'|| e.code==='KeyD'){ e.preventDefault(); if(running) move(1); }
@@ -329,16 +464,40 @@
     else if(e.code==='KeyX'){ e.preventDefault(); if(running) rotate(1); }
     else if(e.code==='KeyC' || e.code==='ShiftLeft' || e.code==='ShiftRight'){ e.preventDefault(); if(running) doHold(); }
     else if(e.code==='KeyP'){ togglePause(); }
-    else if(e.code==='KeyR'){ newGame(); }
   }
   window.addEventListener('keydown', onKey, {passive:false});
 
-  function bindBtn(id, fn){ const el=document.getElementById(id); el.addEventListener('click',()=>{ if(!running||gameOver){ newGame(); } else fn(); }); }
+  function bindBtn(id, fn){ const el=document.getElementById(id); if(!el) return; el.addEventListener('click',()=>{ if(!running||gameOver){ newGame(); } else fn(); }); }
   bindBtn('leftBtn', ()=>move(-1));
   bindBtn('rightBtn',()=>move(1));
   bindBtn('rotLBtn', ()=>rotate(-1));
   bindBtn('rotRBtn', ()=>rotate(1));
   bindBtn('hardBtn', ()=>hardDrop());
+
+  const resetBtn = document.getElementById('resetBtn');
+  if (resetBtn) resetBtn.addEventListener('click', () => newGame());
+
+  // 🔊 Sound toggle (HUD)
+  const soundBtn = document.getElementById('soundBtn');
+  function updateSoundBtn(){ if(soundBtn) soundBtn.textContent = muted ? 'Sound: Off' : 'Sound: On'; if(helpMute) helpMute.textContent = muted ? 'Sound: Off' : 'Sound: On'; }
+  function setMuted(m){
+    muted = m; updateSoundBtn();
+    if(muted){ stopMusic(); } else if(running && !gameOver){ ensureAudio(); startMusic(); }
+  }
+  if (soundBtn) soundBtn.addEventListener('click', ()=> setMuted(!muted));
+
+  // 📖 HELP wiring
+  function dismissHelp(start){
+    helpUp = false;
+    if (helpEl) helpEl.style.display = 'none';
+    if (start) newGame();
+  }
+  if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(true));
+  if (helpMute) helpMute.addEventListener('click', ()=> setMuted(!muted));
+  if (helpEl)   helpEl.addEventListener('click', ()=> dismissHelp(true));
+  if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation()); // clicks inside card don't close
+
+  updateSoundBtn();
 
   window.addEventListener('blur', ()=>{ if(running) togglePause(); });
   window.addEventListener('beforeunload', saveBest);
