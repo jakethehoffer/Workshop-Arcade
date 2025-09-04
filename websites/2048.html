@@ -89,7 +89,6 @@
       </div>
     </div>
 
-    <p style="opacity:.7;margin-top:10px">Vanilla HTML5 Canvas. Smooth slide + merge pop animations, elegant font, gradient background, responsive grid, fade-in overlays, and self-tests (console).</p>
   </div>
 
   <script>
@@ -142,6 +141,58 @@
   let idCounter = 1;
   const cell = (r,c)=>({r,c});
 
+  // --- Input queue so fast swipes/keys aren't dropped -------------------------
+const inputQ = [];
+const MAX_Q = 6;
+
+let lastInputTs = 0;
+
+// Effective animation times based on current "load".
+// Load = queued inputs + (recent keypress bonus).
+function effectiveSlideTime(){
+  const recent = (performance.now() - lastInputTs) < 180 ? 1 : 0;
+  const load = Math.min(inputQ.length + recent, 5);   // clamp
+  // Base = SLIDE_TIME; subtract ~24ms per unit of load, min 60ms
+  return Math.max(60, SLIDE_TIME - 24 * load);
+}
+
+function effectivePopTime(){
+  const recent = (performance.now() - lastInputTs) < 180 ? 1 : 0;
+  const load = Math.min(inputQ.length + recent, 5);
+  // Base = POP_TIME; subtract ~18ms per unit of load, min 70ms
+  return Math.max(70, POP_TIME - 18 * load);
+}
+
+
+function enqueue(dir){
+  // Ignore if we're in a blocked state
+  if (over || (won && !keepPlaying) || overlay.classList.contains('show')) return;
+
+  // Coalesce repeats: if the last queued direction equals this one, skip
+  if (inputQ.length && inputQ[inputQ.length - 1] === dir) return;
+
+  // Keep the queue short so it never feels "laggy"
+  if (inputQ.length >= MAX_Q) inputQ.shift();
+  inputQ.push(dir);
+    lastInputTs = performance.now();
+
+  pumpQueue();
+}
+
+function pumpQueue(){
+  if (moving || over || (won && !keepPlaying)) return;
+  const dir = inputQ.shift();
+  if (!dir) return;
+
+  // Try to execute immediately. If the move doesn't change the board (returns false),
+  // immediately try the next queued input so bursts still feel responsive.
+  const accepted = move(dir);
+  if (!accepted && inputQ.length) pumpQueue();
+}
+
+function clearQueue(){ inputQ.length = 0; }
+
+
   // Resize canvas to fit its container while keeping internal resolution crisp
   function fitCanvasToCSSSize() {
     const rect = canvas.getBoundingClientRect();
@@ -158,6 +209,7 @@
 
   // --- Game lifecycle --------------------------------------------------------
   function newGame(){
+      clearQueue();                      // <-- added
     board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
     tiles = [];
     score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null;
@@ -221,7 +273,7 @@
     const t = { id:idCounter++, value, r:spot.r, c:spot.c, fromR:spot.r, fromC:spot.c, toR:spot.r, toC:spot.c, scale: immediate?1:0.5, removing:false, mergedInto:false };
     tiles.push(t);
     board[spot.r][spot.c] = t.id;
-    if(!immediate) animatePop(t, POP_TIME); // spawn pop
+if(!immediate) animatePop(t, effectivePopTime());  // was POP_TIME
     return true;
   }
 
@@ -230,101 +282,120 @@
   // --- Movement & merging with animation ------------------------------------
   const DIRS = { left:{dr:0,dc:-1}, right:{dr:0,dc:1}, up:{dr:-1,dc:0}, down:{dr:1,dc:0} };
 
-  function move(dir){
-    if(over || (won && !keepPlaying) || moving) return false;
+function move(dir){
+  if(over || (won && !keepPlaying) || moving) return false;
 
-    lastState = snapshot();
-    undoBtn.disabled = false;
+  lastState = snapshot();
+  undoBtn.disabled = false;
 
-    const {dr,dc} = DIRS[dir];
-    const range = [...Array(SIZE).keys()];
-    const orderR = dr>0 ? [...range].reverse() : range; // iterate from far side
-    const orderC = dc>0 ? [...range].reverse() : range;
+  // Reset per-move flags/targets
+  tiles.forEach(t=>{
+    t.fromR = t.r; t.fromC = t.c;
+    t.toR   = t.r; t.toC   = t.c;
+    t.removing = false;
+    t.mergedInto = false; // this flag means "will double on commit"
+  });
 
-    let moved = false;
-    let gained = 0;
+  const isHoriz = (dir==='left'||dir==='right');
+  const forward = (dir==='left'||dir==='up'); // toward low index
+  let moved = false, gained = 0;
 
-    // Reset movement targets
-    tiles.forEach(t=>{ t.fromR = t.r; t.fromC = t.c; t.toR = t.r; t.toC = t.c; t.removing=false; t.mergedInto=false; });
-
-    // Process each cell in travel order, sliding and merging
-    for(const r of orderR){
-      for(const c of orderC){
-        const t = tileAt(r,c); if(!t) continue;
-        let nr = r, nc = c;
-        // Slide until boundary or obstacle
-        while(true){
-          const tr = nr + dr, tc = nc + dc;
-          if(tr<0||tr>=SIZE||tc<0||tc>=SIZE) break;
-          const other = tileAt(tr,tc);
-          if(!other){ nr=tr; nc=tc; continue; }
-          if(other.value===t.value && !other.mergedInto && !t.mergedInto){
-            // Merge candidate: mark destination as merge target
-            other.mergedInto = true; // temp flag to avoid double merge in this pass
-            nr = tr; nc = tc;
-          }
-          break;
-        }
-        if(nr!==r || nc!==c) moved = true;
-        // If merging into a tile of same value
-        const dest = tileAt(nr,nc);
-        if(dest && dest!==t && dest.value===t.value && dest.mergedInto){
-          // t moves onto dest and causes merge -> t disappears, dest doubles
-          t.toR = nr; t.toC = nc; t.removing = true; // this one will disappear
-          dest.toR = nr; dest.toC = nc; // stays put but will pop & double later
-          gained += dest.value * 2;
-        } else {
-          t.toR = nr; t.toC = nc;
-        }
-      }
-    }
-
-    // If nothing moved, cancel undo snapshot — and if *no* moves exist anywhere, trigger Game Over
-    if(!moved){
-      lastState = null;
-      undoBtn.disabled = true;
-      // Check global move availability when a move attempt results in no change
-      if(!canAnyMove()){
-        over = true;
-        showOverlay('Game Over','No moves left. Try again!', false);
-      }
-      return false;
-    }
-
-    // Animate: prepare board mapping for interpolation frame-by-frame
-    moving = true;
-    const start = performance.now();
-
-    function frame(){
-      const t = performance.now();
-      const p = Math.min(1, (t-start)/SLIDE_TIME);
-      draw(p); // p is progress 0..1 for slide tween
-      if(p<1){ requestAnimationFrame(frame); }
-      else {
-        // Commit movement: rebuild board with survivors at their destinations
-        board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
-
-        const survivors = [];
-        for(const tile of tiles){
-          if(tile.removing){ continue; }
-          if(tile.mergedInto){ tile.value *= 2; tile.mergedInto = false; animatePop(tile, POP_TIME); }
-          tile.r = tile.toR; tile.c = tile.toC; tile.fromR = tile.r; tile.fromC = tile.c;
-          survivors.push(tile);
-          board[tile.r][tile.c] = tile.id;
-        }
-        tiles = survivors;
-
-        score += gained; updateHUD();
-        checkEndStates();
-        if(!over) spawnRandomTile();
-
-        moving = false;
-        draw();
-      }
-    }
-    requestAnimationFrame(frame);
-    return true;
+  function place(tile, posIndex, fixedIndex){
+    if(isHoriz){ tile.toR = fixedIndex; tile.toC = posIndex; }
+    else       { tile.toR = posIndex;    tile.toC = fixedIndex; }
   }
+
+  function processLine(fixed){
+    const idxs = [...Array(SIZE).keys()];
+    const scan = forward ? idxs : idxs.slice().reverse();
+
+    // Gather tiles on this line in travel order
+    const line = [];
+    for(const varIdx of scan){
+      const r = isHoriz ? fixed : varIdx;
+      const c = isHoriz ? varIdx : fixed;
+      const t = tileAt(r,c);
+      if(t) line.push(t);
+    }
+
+    // Pack toward the wall, merging once per pair
+    let pos = forward ? 0 : SIZE-1;
+    const step = forward ? 1 : -1;
+
+    for(let i=0;i<line.length;i++){
+      const a = line[i];                 // front tile (closest to wall)
+      if(i+1<line.length && line[i+1].value === a.value){
+        const b = line[i+1];             // the tile behind a
+        // Result tile is the front one (a), placed at 'pos' and doubled
+        place(a, pos, fixed);
+        place(b, pos, fixed);
+        a.mergedInto = true;             // will double on commit
+        b.removing   = true;             // disappears on commit
+        gained += a.value * 2;
+        pos += step;
+        i++; // skip b (consumed in the merge)
+      } else {
+        place(a, pos, fixed);
+        pos += step;
+      }
+    }
+  }
+
+  if(isHoriz){
+    for(let r=0;r<SIZE;r++) processLine(r);
+  }else{
+    for(let c=0;c<SIZE;c++) processLine(c);
+  }
+
+  // Did anything actually move?
+  for(const t of tiles){
+    if(t.r!==t.toR || t.c!==t.toC){ moved = true; break; }
+  }
+
+  if(!moved){
+    lastState = null; undoBtn.disabled = true;
+    if(!canAnyMove()){
+      over = true; showOverlay('Game Over','No moves left. Try again!', false);
+    }
+    return false;
+  }
+
+  // Animate slide, then commit + spawn
+  moving = true;
+  const slideMs = effectiveSlideTime();          // ⬅️ use dynamic time
+  const start = performance.now();
+  function frame(){
+  const p = Math.min(1,(performance.now()-start)/slideMs);  // ⬅️ use slideMs
+    draw(p);
+    if(p<1){ requestAnimationFrame(frame); }
+    else{
+      board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+      const survivors=[];
+      for(const tile of tiles){
+        if(tile.removing) continue;
+        if(tile.mergedInto){ tile.value *= 2; tile.mergedInto=false; animatePop(tile, effectivePopTime()); }
+        tile.r = tile.toR; tile.c = tile.toC;
+        tile.fromR = tile.r; tile.fromC = tile.c;
+        survivors.push(tile);
+        board[tile.r][tile.c] = tile.id;
+      }
+      tiles = survivors;
+
+      score += gained; updateHUD();
+// Show win immediately if this move created the WIN_VALUE tile
+checkWinOnly && checkWinOnly();
+      if(!over) spawnRandomTile();
+if(!over) checkEndStates();
+
+      moving = false;
+      draw();
+      pumpQueue();   // ⬅️ run any buffered inputs now
+    }
+  }
+  requestAnimationFrame(frame);
+  return true;
+}
+
 
   function checkEndStates(){
     // Win if any tile >= WIN_VALUE
@@ -337,6 +408,14 @@
       if(!canAnyMove()) { over=true; showOverlay('Game Over','No moves left. Try again!', false); }
     }
   }
+  // --- Win-only check (used pre-spawn so we can check Game Over post-spawn)
+function checkWinOnly(){
+  if(!won){
+    for(const t of tiles){ if(t.value >= WIN_VALUE){ won = true; break; } }
+    if(won){ showOverlay('You Win!','Reached '+WIN_VALUE+'. Keep going?', true); }
+  }
+}
+
 
   function canAnyMove(){
     // If any adjacent equal or empty cell exists, a move is possible
@@ -444,6 +523,7 @@
 
   // --- Overlay controls ------------------------------------------------------
   function showOverlay(title, desc, canKeep){
+      clearQueue();                      // <-- added (optional but recommended)
     overlayTitle.textContent = title; overlayDesc.textContent = desc;
     // Show or hide the Keep Playing button depending on context
     keepBtn.style.display = canKeep ? '' : 'none';
@@ -474,7 +554,7 @@
       return;
     }
     const dir = DIR_KEYS[k];
-    if(dir){ e.preventDefault(); move(dir); }
+  if(dir){ e.preventDefault(); enqueue(dir); }  // ⬅️ was move(dir)
   }, {passive:false});
 
   // Touch swipe handling (simple threshold)
@@ -490,7 +570,7 @@
     const ax = Math.abs(dx), ay = Math.abs(dy); const TH = 24; // px threshold
     if(Math.max(ax,ay) > TH){
       const dir = (ax>ay) ? (dx<0?'left':'right') : (dy<0?'up':'down');
-      move(dir);
+    enqueue(dir);                                // ⬅️ was move(dir)
     }
     touchStart = null;
   }, {passive:true});

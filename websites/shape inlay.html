@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Shape Inlay — Conveyor Edition</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0b0f14;
+    --panel:#0e1522;
+    --ink:#e6edf3;
+    --muted:#94a3b8;
+    --accent:#5eead4;
+    --stroke:#223247;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
+  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto}
+  header{
+    padding:10px 16px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid #142238; background:linear-gradient(180deg,#142238,#0e1826);
+  }
+  .title{display:flex; align-items:center; gap:12px}
+  .light{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
+  .kbd{padding:1px 7px; border:1px solid var(--stroke); border-radius:6px; background:#0e1a2a; color:#cfe1f6; font-weight:700; font-size:12px}
+  main{padding:10px}
+  canvas{display:block; width:min(1280px, 100%); height:auto; margin:0 auto;
+    background:linear-gradient(#273043,#0b0f14); border:1px solid #132033; border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  footer{padding:10px 16px; color:var(--muted); font-size:14px; display:flex; gap:20px; flex-wrap:wrap; align-items:center; justify-content:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <span class="light"></span>
+      <div>
+        <div style="font-weight:900;letter-spacing:.3px">Shape Inlay — Conveyor Edition</div>
+        <div style="font-size:12px;color:var(--muted)">Pick pieces from the belt. Fill the silhouette.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;color:var(--muted)">
+      <span><span class="kbd">Click</span> pick up / place</span>
+      <span><span class="kbd">Click</span> trash to discard</span>
+      <span><span class="kbd">R</span>/<span class="kbd">Wheel</span> rotate</span>
+    </div>
+  </header>
+
+  <main>
+    <canvas id="game" width="1280" height="800"></canvas>
+  </main>
+
+  <footer>
+    Belt fills up? You lose. Pieces keep a fixed gap so they don’t bunch.
+  </footer>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  function fitCanvas(){
+    const r = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = Math.round(w*r); canvas.height = Math.round(h*r);
+    ctx.setTransform(r,0,0,r,0,0);
+  }
+  fitCanvas(); window.addEventListener('resize', fitCanvas, {passive:true});
+
+  // Layout
+  const LEFT_PANEL_W = 280, BELT_H = 130, PAD = 16;
+  const COLS = 24, ROWS = 16; let TILE = 32;
+
+  function getRects(){
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const boardWAvail = W - LEFT_PANEL_W - PAD*3;
+    const boardHAvail = H - BELT_H - PAD*3;
+    TILE = Math.floor(Math.min(boardWAvail / COLS, boardHAvail / ROWS));
+    const boardW = TILE*COLS, boardH = TILE*ROWS;
+    const boardX = LEFT_PANEL_W + PAD*2 + (boardWAvail-boardW)/2;
+    const boardY = PAD*1.5 + (boardHAvail-boardH)/2;
+
+    const lpX = PAD, lpY = PAD, lpW = LEFT_PANEL_W, lpH = boardH + (boardY - PAD*1.5)*2;
+
+    const beltX = PAD, beltW = W - PAD*2, beltH = BELT_H, beltY = H - PAD - beltH;
+
+    const chuteR = 58, chuteCX = lpX + lpW/2, chuteCY = lpY + lpH*0.63;
+
+    // inner belt rect (moving area)
+    const innerX = beltX+16, innerY = beltY+22, innerW = beltW-32, innerH = beltH-44;
+
+    return {boardX,boardY,boardW,boardH,lpX,lpY,lpW,lpH,beltX,beltY,beltW,beltH,chuteCX,chuteCY,chuteR,innerX,innerY,innerW,innerH};
+  }
+
+  // Silhouette
+  const SILHOUETTE_KIND = 'star';
+  function rotateCells(c){ const r=c.map(([x,y])=>[y,-x]); let minx=Math.min(...r.map(v=>v[0])),miny=Math.min(...r.map(v=>v[1])); return r.map(([x,y])=>[x-minx,y-miny]); }
+  function bbox(c){ let maxx=Math.max(...c.map(v=>v[0])), maxy=Math.max(...c.map(v=>v[1])); return {w:maxx+1,h:maxy+1}; }
+  function makeSilhouette(cols,rows,tile,kind){
+    function star(cx,cy,sp,or,ir){const pts=[];let rot=Math.PI/2*3,step=Math.PI/sp;for(let i=0;i<sp;i++){pts.push([cx+Math.cos(rot)*or,cy+Math.sin(rot)*or]);rot+=step;pts.push([cx+Math.cos(rot)*ir,cy+Math.sin(rot)*ir]);rot+=step;}return pts;}
+    function ship(cx,cy,w,h){return[[cx-w*.45,cy+h*.15],[cx-w*.35,cy+h*.05],[cx-w*.25,cy-h*.05],[cx+w*.15,cy-h*.15],[cx+w*.35,cy-h*.05],[cx+w*.45,cy+h*.10],[cx+w*.15,cy+h*.15]];}
+    function heart(cx,cy,w,h){return[[cx,cy+h*.35],[cx-w*.35,cy+h*.12],[cx-w*.45,cy-h*.1],[cx-w*.25,cy-h*.3],[cx,cy-h*.1],[cx+w*.25,cy-h*.3],[cx+w*.45,cy-h*.1],[cx+w*.35,cy+h*.12]];}
+    const ow=cols*tile, oh=rows*tile, off=document.createElement('canvas'); off.width=ow; off.height=oh; const ox=off.getContext('2d');
+    let pts; if(kind==='ship') pts=ship(ow/2,oh/2,Math.min(ow,oh)*.7,Math.min(ow,oh)*.35);
+    else if(kind==='heart') pts=heart(ow/2,oh/2,Math.min(ow,oh)*.68,Math.min(ow,oh)*.58);
+    else {const outer=Math.min(ow,oh)*.36, inner=outer*.44; pts=star(ow/2,oh/2,5,outer,inner);}
+    ox.fillStyle='#fff'; ox.beginPath(); ox.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ox.lineTo(pts[i][0],pts[i][1]); ox.closePath(); ox.fill();
+    const img=ox.getImageData(0,0,ow,oh).data, mask=Array.from({length:rows},()=>Array(cols).fill(false)); let count=0;
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){ const cx=x*tile+tile/2, cy=y*tile+tile/2; const i=((cy|0)*ow+(cx|0))*4+3; if(img[i]>0){mask[y][x]=true;count++;}}
+    return {mask,count};
+  }
+
+  // Pieces
+  const COLORS=['#60a5fa','#34d399','#fbbf24','#f472b6','#a78bfa','#22d3ee','#f87171','#cbd5e1'];
+  const SHAPES=[
+    {name:'I4',cells:[[0,0],[1,0],[2,0],[3,0]]},
+    {name:'L4',cells:[[0,0],[0,1],[0,2],[1,2]]},
+    {name:'T4',cells:[[0,0],[1,0],[2,0],[1,1]]},
+    {name:'S4',cells:[[1,0],[2,0],[0,1],[1,1]]},
+    {name:'Z4',cells:[[0,0],[1,0],[1,1],[2,1]]},
+    {name:'O4',cells:[[0,0],[1,0],[0,1],[1,1]]},
+    {name:'U5',cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]},
+    {name:'F5',cells:[[1,0],[0,1],[1,1],[1,2],[2,2]]},
+    {name:'L5',cells:[[0,0],[0,1],[0,2],[0,3],[1,3]]},
+    {name:'N5',cells:[[1,0],[1,1],[1,2],[0,2],[0,3]]},
+    {name:'T5',cells:[[0,0],[1,0],[2,0],[1,1],[1,2]]},
+    {name:'X5',cells:[[1,0],[0,1],[1,1],[2,1],[1,2]]},
+    {name:'Domino',cells:[[0,0],[1,0]]},
+    {name:'Tri',cells:[[0,0],[1,0],[0,1]]},
+  ];
+  function newPiece(){
+    const b=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+    const color=COLORS[Math.floor(Math.random()*COLORS.length)];
+    const p={name:b.name,color,cells:JSON.parse(JSON.stringify(b.cells)),rot:Math.floor(Math.random()*4),x:0,y:0,originX:0,originY:0};
+    for(let i=0;i<p.rot;i++) p.cells=rotateCells(p.cells);
+    const bb=bbox(p.cells); p.originX=Math.floor(bb.w/2); p.originY=Math.floor(bb.h/2);
+    return p;
+  }
+
+  // Game state
+  let boardMask,totalCells,filledCells,occupied,score=0,gameOver=false;
+  const MINI=22, BELT_GAP=18;
+  const BELT_SPEED_START=60; // slower
+  let beltSpeed=BELT_SPEED_START;
+  const beltPieces=[]; // {piece,x,y,w,h}
+  let spawnT=0, SPAWN_INTERVAL=2000; // slower stream
+
+  // Held (click-to-hold, no return to belt)
+  let held=null;
+
+  // Utils
+  function toBoardCoords(sx,sy){ const {boardX,boardY}=getRects(); return {x:sx-boardX,y:sy-boardY}; }
+  function screenToGrid(sx,sy){ const {boardX,boardY}=getRects(); return {x:Math.round((sx-boardX)/TILE), y:Math.round((sy-boardY)/TILE)}; }
+  function placeable(p){
+    for(const [dx,dy] of p.cells){
+      const gx=p.x+dx, gy=p.y+dy;
+      if(gx<0||gx>=COLS||gy<0||gy>=ROWS) return false;
+      if(!boardMask[gy][gx]) return false;
+      if(occupied[gy][gx]!==0) return false;
+    } return true;
+  }
+  function place(p){
+    let add=0;
+    for(const [dx,dy] of p.cells){ const gx=p.x+dx, gy=p.y+dy; occupied[gy][gx]=p.color; add++; }
+    filledCells += add; score += add*2; if(filledCells>=totalCells){ setTimeout(()=>alert('🎉 Filled! New puzzle starting.'),10); newGame(); }
+  }
+
+  // Input
+  const mouse={x:0,y:0};
+  canvas.addEventListener('mousemove',(e)=>{
+    const r=canvas.getBoundingClientRect(); mouse.x=e.clientX-r.left; mouse.y=e.clientY-r.top;
+    if(held){ const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY; }
+  });
+
+  // Click handler: pick from belt OR place/trash when holding
+  function processPrimaryClick(sx,sy){
+    if(gameOver){ newGame(); return; }
+
+    if(!held){
+      const idx=hitBeltPiece(sx,sy);
+      if(idx!=null){
+        const bp=beltPieces.splice(idx,1)[0];
+        held=detachToBoardPiece(bp.piece);
+        // snap to current cursor grid
+        const g=screenToGrid(sx,sy); held.x=g.x-held.originX; held.y=g.y-held.originY;
+      }
+      return;
+    }
+
+    // If we are holding a piece: trash or place
+    const {chuteCX,chuteCY,chuteR}=getRects();
+    const dx=sx-chuteCX, dy=sy-chuteCY;
+    if(dx*dx+dy*dy<=chuteR*chuteR){ score=Math.max(0,score-5); held=null; return; }
+
+    const g=screenToGrid(sx,sy); held.x=g.x-held.originX; held.y=g.y-held.originY;
+    if(placeable(held)){ place(held); held=null; }
+    // else: do nothing; keep holding (no return to belt)
+  }
+
+  canvas.addEventListener('click',(e)=>{ processPrimaryClick(e.offsetX,e.offsetY); });
+
+  // Touch: tap to pick/place/trash, move to preview
+  canvas.addEventListener('touchstart',(e)=>{
+    const t=e.changedTouches[0]; const r=canvas.getBoundingClientRect();
+    mouse.x=t.clientX-r.left; mouse.y=t.clientY-r.top;
+    if(held){ const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY; }
+  },{passive:true});
+  canvas.addEventListener('touchmove',(e)=>{
+    const t=e.changedTouches[0]; const r=canvas.getBoundingClientRect();
+    mouse.x=t.clientX-r.left; mouse.y=t.clientY-r.top;
+    if(held){ const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY; }
+  },{passive:true});
+  canvas.addEventListener('touchend',(e)=>{
+    const t=e.changedTouches[0]; const r=canvas.getBoundingClientRect();
+    const x=t.clientX-r.left, y=t.clientY-r.top;
+    processPrimaryClick(x,y);
+  },{passive:true});
+
+  canvas.addEventListener('wheel',(e)=>{ if(held){ rotateHeld(e.deltaY>0?1:-1); } e.preventDefault(); },{passive:false});
+  window.addEventListener('keydown',(e)=>{
+    if(gameOver && (e.key==='n'||e.key==='N')){ newGame(); return; }
+    if(e.key==='r'||e.key==='R'){ rotateHeld(1); }
+    else if(e.key==='ArrowLeft' && held){ held.x--; }
+    else if(e.key==='ArrowRight' && held){ held.x++; }
+    else if(e.key==='ArrowDown' && held){ held.y++; }
+    else if(e.key==='ArrowUp' && held){ held.y--; }
+    // ESC is intentionally disabled (no return to belt)
+  });
+
+  function rotateHeld(dir=1){
+    if(!held) return;
+    // rotate shape; keep it snapped under cursor/grid
+    held.cells=rotateCells(held.cells); held.rot=(held.rot+dir+4)%4;
+    const bb=bbox(held.cells); held.originX=Math.floor(bb.w/2); held.originY=Math.floor(bb.h/2);
+    const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY;
+  }
+
+  function beltPieceFor(p){ const bb=bbox(p.cells); return {piece:p,x:0,y:0,w:bb.w*MINI,h:bb.h*MINI}; }
+  function detachToBoardPiece(p){
+    const piece={name:p.name,color:p.color,cells:JSON.parse(JSON.stringify(p.cells)),
+      rot:p.rot,x:0,y:0,originX:p.originX,originY:p.originY};
+    const g=screenToGrid(mouse.x,mouse.y); piece.x=g.x-piece.originX; piece.y=g.y-piece.originY; return piece;
+  }
+  function hitBeltPiece(sx,sy){
+    const r=getRects(); if(!(sy>=r.innerY && sy<=r.innerY+r.innerH)) return null;
+    for(let i=beltPieces.length-1;i>=0;i--){
+      const b=beltPieces[i];
+      if(sx>=b.x-b.w/2 && sx<=b.x+b.w/2 && sy>=b.y-b.h/2 && sy<=b.y+b.h/2) return i;
+    } return null;
+  }
+
+  // New Game
+  function newGame(){
+    const s=makeSilhouette(COLS,ROWS,TILE||28,SILHOUETTE_KIND);
+    boardMask=s.mask; totalCells=s.count; filledCells=0;
+    occupied=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+    beltPieces.length=0; held=null; score=0; beltSpeed=BELT_SPEED_START; spawnT=0; gameOver=false;
+
+    // prime a few pieces (3)
+    for(let i=0;i<3;i++) spawnPiece(true);
+  }
+
+  // Rendering
+  function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+  function drawLeftPanel(r){
+    const {lpX,lpY,lpW,lpH,chuteCX,chuteCY,chuteR}=r;
+    const grad=ctx.createLinearGradient(lpX,lpY,lpX,lpY+lpH); grad.addColorStop(0,'#1a2c3f'); grad.addColorStop(1,'#0e1826');
+    ctx.fillStyle=grad; roundRect(ctx,lpX,lpY,lpW,lpH,18); ctx.fill();
+    ctx.strokeStyle='#223247'; ctx.lineWidth=2; roundRect(ctx,lpX,lpY,lpW,lpH,18); ctx.stroke();
+
+    ctx.fillStyle='#e9f0fb'; ctx.font='700 28px system-ui,-apple-system,Segoe UI'; ctx.fillText('Score', lpX+20, lpY+42);
+    ctx.fillStyle='#c6d4ea'; ctx.font='900 40px system-ui,-apple-system,Segoe UI'; ctx.fillText(String(score), lpX+20, lpY+88);
+
+    // badges
+    drawBadge(lpX+20,lpY+120,'TIME'); drawBadge(lpX+100,lpY+120,'BOOST'); drawBadge(lpX+200,lpY+120,'LUCK');
+
+    // trash chute
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.arc(chuteCX,chuteCY,chuteR,0,Math.PI*2); ctx.closePath();
+    ctx.fillStyle='#0c0f14'; ctx.fill(); ctx.lineWidth=8; ctx.strokeStyle='#7a8794'; ctx.stroke();
+    ctx.lineWidth=3; ctx.strokeStyle='#c7d2db'; ctx.stroke(); ctx.restore();
+
+    ctx.fillStyle='#93a4b8'; ctx.beginPath(); ctx.arc(lpX+24, lpY+20, 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lpX+48, lpY+20, 6, 0, Math.PI*2); ctx.fill();
+  }
+  function drawBadge(x,y,label){
+    ctx.save(); ctx.translate(x,y);
+    ctx.fillStyle='#1a2d44'; roundRect(ctx,-10,-6,72,34,8); ctx.fill(); ctx.strokeStyle='#2a3e5a'; ctx.stroke();
+    ctx.fillStyle='#cde7ff'; ctx.font='800 12px system-ui,-apple-system'; ctx.fillText(label,6,16);
+    ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(56,-6,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='800 12px system-ui'; ctx.fillText('0',53,-2); ctx.restore();
+  }
+  function drawBoard(r){
+    const {boardX,boardY,boardW,boardH}=r;
+    ctx.save(); const g=ctx.createLinearGradient(boardX,boardY,boardX+boardW,boardY+boardH);
+    g.addColorStop(0,'rgba(23,194,169,.92)'); g.addColorStop(1,'rgba(33,70,120,.92)');
+    ctx.fillStyle=g; roundRect(ctx,boardX-8,boardY-8,boardW+16,boardH+16,14); ctx.fill();
+
+    const bg=ctx.createLinearGradient(boardX,boardY,boardX,boardY+boardH);
+    bg.addColorStop(0,'#1aa7a6'); bg.addColorStop(1,'#1c2f55');
+    ctx.fillStyle=bg; roundRect(ctx,boardX,boardY,boardW,boardH,10); ctx.fill();
+
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+      const px=boardX+x*TILE, py=boardY+y*TILE;
+      ctx.fillStyle = boardMask[y][x] ? 'rgba(240,240,240,.26)' : 'rgba(0,0,0,.28)';
+      ctx.fillRect(px,py,TILE,TILE);
+      const occ=occupied[y][x];
+      if(occ){ ctx.fillStyle=occ; ctx.fillRect(px+1,py+1,TILE-2,TILE-2); ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1); }
+      else if(boardMask[y][x]){ ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1); }
+    }
+    ctx.restore();
+  }
+  function drawHeld(r){
+    if(!held) return; const {boardX,boardY}=r;
+    for(const [dx,dy] of held.cells){
+      const gx=(held.x+dx)*TILE, gy=(held.y+dy)*TILE;
+      ctx.fillStyle=held.color; ctx.fillRect(boardX+gx+1,boardY+gy+1,TILE-2,TILE-2);
+      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(boardX+gx+.5,boardY+gy+.5,TILE-1,TILE-1);
+    }
+    const ok=placeable(held), bb=bbox(held.cells);
+    ctx.strokeStyle=ok?'rgba(34,197,94,.75)':'rgba(239,68,68,.75)'; ctx.lineWidth=2;
+    ctx.strokeRect(boardX+held.x*TILE+.5,boardY+held.y*TILE+.5,bb.w*TILE-1,bb.h*TILE-1);
+  }
+  function drawBelt(r,dt){
+    // Housing
+    ctx.save();
+    ctx.fillStyle='#a4b1bd'; roundRect(ctx,r.beltX,r.beltY,r.beltW,r.beltH,14); ctx.fill();
+    ctx.strokeStyle='#6f7d89'; ctx.lineWidth=2; roundRect(ctx,r.beltX,r.beltY,r.beltW,r.beltH,14); ctx.stroke();
+    ctx.fillStyle='#1f252b'; roundRect(ctx,r.beltX+10,r.beltY+12,r.beltW-20,r.beltH-24,12); ctx.fill();
+    ctx.fillStyle='#303841'; roundRect(ctx,r.innerX,r.innerY,r.innerW,r.innerH,10); ctx.fill();
+
+    // Rollers
+    ctx.fillStyle='#c7d3dc';
+    ctx.beginPath(); ctx.roundRect(r.beltX-18,r.beltY+20,26,r.beltH-40,8); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(r.beltX+r.beltW-8,r.beltY+20,26,r.beltH-40,8); ctx.fill();
+
+    // Moving stripes
+    ctx.save(); ctx.beginPath(); ctx.roundRect(r.innerX,r.innerY,r.innerW,r.innerH,10); ctx.clip();
+    ctx.fillStyle='#3c454c';
+    beltOffset=(beltOffset + beltSpeed*dt) % 52;
+    for(let x=r.innerX-beltOffset; x<r.innerX+r.innerW+26; x+=52){ ctx.fillRect(x,r.innerY,26,r.innerH); }
+    ctx.restore();
+    ctx.restore();
+
+    // Movement with non-overlap/pile-up
+    beltPieces.sort((a,b)=>a.x-b.x); // left→right
+    for(let i=0;i<beltPieces.length;i++){
+      const bp=beltPieces[i];
+      let newX = bp.x - beltSpeed*dt;
+      const leftLimit = r.innerX + bp.w/2; // stop at left roller
+      if(newX < leftLimit) newX = leftLimit;
+      if(i>0){ // keep gap behind the piece ahead (to the left)
+        const ahead=beltPieces[i-1];
+        const minX = ahead.x + ahead.w/2 + BELT_GAP + bp.w/2;
+        if(newX < minX) newX = minX;
+      }
+      bp.x = newX; bp.y = r.innerY + r.innerH/2;
+    }
+
+    // Spawn stream
+    spawnT -= dt*1000;
+    if(spawnT <= 0 && !gameOver){
+      spawnT += SPAWN_INTERVAL;
+      spawnPiece(false);
+      // gentle speedup
+      beltSpeed = Math.min(120, beltSpeed + 0.5);
+    }
+
+    // Full-belt detection (length of pile ≥ inner width)
+    checkBeltFull();
+
+    // Draw pieces
+    for(const bp of beltPieces) drawMiniPiece(bp);
+  }
+  let beltOffset=0;
+
+  function totalBeltLength(){
+    if(beltPieces.length===0) return 0;
+    let sum = beltPieces.reduce((s,b)=>s + b.w, 0);
+    sum += BELT_GAP * (beltPieces.length-1);
+    return sum;
+  }
+  function checkBeltFull(){
+    const r=getRects();
+    if(totalBeltLength() >= r.innerW - 2){
+      // jammed!
+      gameOver = true;
+    }
+  }
+
+  function spawnPiece(initial=false){
+    const r=getRects();
+    const p = newPiece();
+    const bp = beltPieceFor(p);
+    const need = totalBeltLength() + (beltPieces.length>0 ? BELT_GAP : 0) + bp.w;
+    if(need > r.innerW - 2){ gameOver = true; return; } // no room: lose
+    bp.x = r.innerX + r.innerW - bp.w/2 - 2;
+    bp.y = r.innerY + r.innerH/2;
+    beltPieces.push(bp);
+    if(initial){ // nudge positions so initial pieces start spaced
+      beltPieces.sort((a,b)=>a.x-b.x);
+      for(let i=beltPieces.length-1;i>0;i--){
+        const right = beltPieces[i], left = beltPieces[i-1];
+        const minX = left.x + left.w/2 + BELT_GAP + right.w/2;
+        if(right.x < minX) right.x = minX;
+      }
+    }
+  }
+
+  function drawMiniPiece(bp){
+    const {x,y,w,h} = bp;
+    const bb=bbox(bp.piece.cells);
+    const ox=x - w/2, oy=y - h/2;
+    for(const [dx,dy] of bp.piece.cells){
+      ctx.fillStyle=bp.piece.color;
+      ctx.fillRect(ox + dx*MINI + 1, oy + dy*MINI + 1, MINI-2, MINI-2);
+      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(ox + dx*MINI + .5, oy + dy*MINI + .5, MINI-1, MINI-1);
+    }
+  }
+
+  function drawGameOverOverlay(){
+    const W=canvas.clientWidth, H=canvas.clientHeight;
+    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#eef3fb'; ctx.font='900 42px system-ui,-apple-system'; ctx.fillText('Belt Jammed!', 40, 90);
+    ctx.fillStyle='#cbd5e1'; ctx.font='700 18px system-ui,-apple-system';
+    ctx.fillText('The conveyor belt is full. Click to start a new puzzle.', 40, 122);
+  }
+
+  // Main loop
+  let last=performance.now();
+  function frame(now){
+    const dt=Math.min(0.05,(now-last)/1000); last=now;
+    const r=getRects();
+    ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+
+    drawLeftPanel(r);
+    drawBoard(r);
+    drawBelt(r,dt);
+    drawHeld(r);
+
+    if(gameOver){
+      drawGameOverOverlay();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Boot
+  if(!CanvasRenderingContext2D.prototype.roundRect){
+    CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){ roundRect(this,x,y,w,h,r); };
+  }
+  newGame();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
