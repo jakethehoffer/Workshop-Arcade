@@ -18,13 +18,47 @@
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
   #wrap{position:fixed;inset:0;display:grid;place-items:center;}
-  canvas{display:block;background:radial-gradient(1200px 800px at 20% 10%,#0a1322 0%,#0a111c 40%,#0b0f14 100%),
+  canvas{
+  position: absolute;
+  inset: 0;
+  width: 100vw;          /* fill window */
+  height: 100vh;         /* fill window */
+  display: block;
+  background:
+    radial-gradient(1200px 800px at 20% 10%,#0a1322 0%,#0a111c 40%,#0b0f14 100%),
     linear-gradient(180deg,#0e152280,#0e1522a0);
-    box-shadow:0 20px 60px rgba(0,0,0,.35), inset 0 0 40px #0006; border-radius:14px}
-  .hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;font-weight:700;letter-spacing:.3px;user-select:none}
+  box-shadow:0 20px 60px rgba(0,0,0,.35), inset 0 0 40px #0006;
+  border-radius:14px;
+}
+
+.hud{
+  position:fixed; top:10px; left:50%; transform:translateX(-50%);
+  display:flex; gap:12px; align-items:center;
+  font-weight:700; letter-spacing:.3px; user-select:none;
+  flex-wrap: nowrap;             /* NEW: keep everything on one row */
+}
   .pill{background:#111827;border:1px solid #26334a;padding:6px 10px;border-radius:12px;}
-  .btns{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center}
-  button{background:#111827;border:1px solid #26334a;color:var(--ink);padding:8px 12px;border-radius:12px;font-weight:700;cursor:pointer}
+.btns{
+  position: fixed;
+  top: 56px;              /* sits below the HUD */
+  left: 0;
+  right: 0;
+  transform: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;      /* force a single row */
+  overflow-x: auto;       /* if space is tight, scroll horizontally */
+  padding: 4px 10px;      /* room for scrollbar on some OSes */
+}
+
+button{
+  background:#111827; border:1px solid #26334a; color:var(--ink);
+  padding:8px 12px; border-radius:12px; font-weight:700; cursor:pointer;
+  white-space: nowrap;            /* NEW */
+}
+
   button:hover{border-color:#3a4d6d}
   .overlay{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none}
   .card{background:#0e1522e6;border:1px solid #26334a;padding:20px 22px;border-radius:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}
@@ -39,18 +73,17 @@
     <canvas id="game" width="900" height="600" aria-label="Brick Breaker game canvas"></canvas>
   </div>
 
-  <div class="hud" aria-live="polite">
-    <div class="pill">Score: <span id="score">0</span></div>
-    <div class="pill">Level: <span id="level">1</span></div>
-    <div class="pill">Lives: <span id="lives">3</span></div>
-  </div>
+<div class="hud" aria-live="polite">
+  <div class="pill">Score: <span id="score">0</span></div>
+  <div class="pill">Level: <span id="level">1</span></div>
+  <div class="pill">Lives: <span id="lives">3</span></div>
 
-  <div class="btns">
-    <button id="btnPause" title="P or Space">⏸️ Pause</button>
-    <button id="btnRestart" title="R">🔄 Restart</button>
-    <button id="btnMusic" title="M">🎵 Music: On</button>
-    <button id="btnSfx" title="V">🔊 SFX: On</button>
-  </div>
+  <button id="btnPause" title="P or Space">⏸️ Pause</button>
+  <button id="btnRestart" title="R">🔄 Restart</button>
+  <button id="btnMusic" title="M">🎵 Music: On</button>
+  <button id="btnSfx" title="V">🔊 SFX: On</button>
+</div>
+
 
   <div class="overlay">
     <div id="msgStart" class="card fade" role="dialog" aria-modal="true">
@@ -72,20 +105,67 @@
 
 <script>
 (() => {
+    let gameReady = false;
   // ===== Canvas & Rendering =====
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-  const css = { w: 900, h: 600 };
+
+  // logical canvas size tracks the window
+  const css = { w: window.innerWidth, h: window.innerHeight };
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  function resize() {
-    canvas.width = css.w * dpr;
+
+  function resize(){
+    const prevW = css.w, prevH = css.h;
+
+    // new logical size = window size
+    css.w = Math.max(320, window.innerWidth);
+    css.h = Math.max(240, window.innerHeight);
+
+    // retina-aware backing buffer & transform
+    canvas.width  = css.w * dpr;
     canvas.height = css.h * dpr;
-    canvas.style.width = css.w + 'px';
+    canvas.style.width  = css.w + 'px';
     canvas.style.height = css.h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // before the game is fully set up, skip rescaling entities
+    if (!gameReady) return;
+
+    // rescale positions so things stay on-screen
+    const sx = css.w / prevW;
+    const sy = css.h / prevH;
+    const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+    // paddle
+    const p = G.paddle;
+    p.x *= sx;
+    p.y  = css.h - 36;                 // keep near bottom
+    p.w  = clamp(p.w * sx, 60, 220);   // scale width a bit with screen
+
+    // balls
+    for (const b of G.balls){
+      if (G.waitingLaunch || b.stuck){
+        b.x = p.x; b.y = p.y - 14;
+      } else {
+        b.x *= sx; b.y *= sy;
+      }
+    }
+
+    // bricks (and moving-brick ranges)
+    for (const br of G.bricks){
+      br.x *= sx; br.y *= sy; br.w *= sx; br.h *= sy;
+      if (br.moving){ br.originX *= sx; br.range *= sx; }
+    }
+
+    // power-ups
+    for (const pu of G.powerups){
+      pu.x *= sx; pu.y *= sy; pu.w *= sx; pu.h *= sy;
+    }
   }
+
   resize();
   addEventListener('resize', resize);
+
 
   // ===== HUD =====
   const elScore = document.getElementById('score');
@@ -817,6 +897,8 @@
   window.runBrickBreakerTests = runTests;
 
   // ===== Start =====
+    gameReady = true;  // allow resize() to rescale entities
+  resize();          // ensure canvas matches the full window now
   restartGame();
 })();
 </script>
