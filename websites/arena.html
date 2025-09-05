@@ -7,10 +7,10 @@
   <style>
     html, body { height: 100%; margin: 0; background: #0b0f14; color: #e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
     #wrap { position: fixed; inset: 0; overflow: hidden; }
-    canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; }
-    .hud { position: fixed; top: 12px; left: 14px; font-weight: 700; letter-spacing: .5px; user-select: none; text-shadow: 0 2px 6px rgba(0,0,0,.45); display: flex; gap: 8px; align-items: center; } /* CHANGE: added align-items for button */
+canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; }
+.hud { position: fixed; top: 12px; left: 14px; font-weight: 700; letter-spacing: .5px; user-select: none; text-shadow: 0 2px 6px rgba(0,0,0,.45); display: flex; gap: 8px; align-items: center; z-index: 20; }
     .hud span { background: rgba(15,20,25,.5); padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(6px); }
-    .overlay { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.overlay { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: auto; z-index: 10; }
     .overlay[hidden] { display: none !important; }
     .card { pointer-events: auto; min-width: 260px; max-width: 92vw; padding: 18px 18px 14px; border-radius: 16px; background: rgba(10,12,16,.85); border: 1px solid rgba(255,255,255,.08); box-shadow: 0 10px 35px rgba(0,0,0,.45); text-align: center; }
     .card h1 { margin: 2px 0 8px; font-size: 22px; }
@@ -35,14 +35,15 @@
     <div class="hud" aria-live="polite">
       <span>Score: <strong id="score">0</strong></span>
       <span style="margin-left:8px;">Level: <strong id="level">1</strong></span>
+      <span style="margin-left:8px;">High: <strong id="high">0</strong></span>
       <button id="muteBtn" class="icon-btn" aria-label="Toggle sound" title="M to mute/unmute">🔊</button> <!-- CHANGE -->
     </div>
 
     <div class="overlay" id="menu" hidden>
       <div class="card">
         <h1>Canvas Arena</h1>
-        <p>Move with WASD / Arrow Keys. Avoid the red orbs.</p>
-        <button id="startBtn" aria-label="Play">Play (Enter/Space)</button>
+        <p>Move with WASD / Arrow Keys. Avoid the enemies and collect their dust particles once they expire.</p>
+<button id="startBtn" type="button" aria-label="Play">Play (Enter/Space)</button>
       </div>
     </div>
 
@@ -50,7 +51,8 @@
       <div class="card">
         <h1>Game Over</h1>
         <p id="finalScore">Score: 0</p>
-        <button id="restartBtn" aria-label="Restart">Restart (R)</button>
+        <p id="bestScore">Best: 0</p>
+<button id="restartBtn" type="button" aria-label="Restart">Restart (R)</button>
       </div>
     </div>
   </div>
@@ -60,10 +62,9 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    window.addEventListener('keydown', (e) => {
-      const keys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
-      if (keys.includes(e.key)) e.preventDefault();
-    }, { passive: false });
+
+
+
 
     const scoreEl = document.getElementById('score');
     const levelEl = document.getElementById('level');
@@ -73,6 +74,10 @@
     const restartBtn = document.getElementById('restartBtn');
     const startBtn = document.getElementById('startBtn');
     const muteBtn = document.getElementById('muteBtn'); // CHANGE
+    const highEl = document.getElementById('high');
+const bestEl = document.getElementById('bestScore');
+const HS_KEY = 'canvasArena:highscore:v1';
+
 
     // CHANGE: Minimal WebAudio manager (no external files)
     const Sound = (() => {
@@ -81,6 +86,9 @@
       let musicTimer = null;
       const BPM = 112; // mellow tempo
       const beatMs = 60000 / BPM;
+
+      
+
 
       function ensure() {
         if (started) return true;
@@ -201,6 +209,7 @@
       mode: 'menu',
       time: 0,
       score: 0,
+      high: 0,
       startSpeed: 260,
       player: { x: 0, y: 0, r: 14, speed: 260, flash: 0 },
       enemies: [],
@@ -224,6 +233,13 @@
       nukeFlash: 0
     };
 
+    // Load persisted high score
+try {
+  state.high = Number(localStorage.getItem(HS_KEY) || 0);
+} catch {}
+if (highEl) highEl.textContent = String(Math.floor(state.high));
+
+
     function xpNeeded(L) {
       return Math.round(state.xpBase * Math.pow(1.25, L - 1));
     }
@@ -246,8 +262,32 @@
     window.addEventListener('resize', resize);
 
     function hideOverlays() { menuEl.hidden = true; overEl.hidden = true; }
-    function showMenu() { menuEl.hidden = false; }
-    function showGameOver() { finalScoreEl.textContent = 'Score: ' + Math.floor(state.score); overEl.hidden = false; }
+function showMenu() {
+  overEl.hidden = true;
+  menuEl.hidden = false;
+  // Make sure the button is focusable and focused right away
+  startBtn.tabIndex = 0;
+  startBtn.focus({ preventScroll: true });
+}
+
+function showGameOver() {
+  const final = Math.floor(state.score);
+  finalScoreEl.textContent = 'Score: ' + final;
+
+  // ensure high is saved & HUD reflects it
+  if (final > state.high) {
+    state.high = final;
+    try { localStorage.setItem(HS_KEY, String(final)); } catch {}
+    if (highEl) highEl.textContent = String(final);
+  }
+
+  if (bestEl) {
+    const newTag = final === state.high ? ' (NEW!)' : '';
+    bestEl.textContent = 'Best: ' + state.high + newTag;
+  }
+
+  overEl.hidden = false;
+}
 
     function resetGame() {
       // CHANGE: start/resume audio on first interaction
@@ -281,27 +321,91 @@
       hideOverlays();
     }
 
+function startGameImmediate() {
+  if (state.mode === 'playing') return;
+
+  // (Don’t blur anything here; let the click finish cleanly.)
+  // (Don’t call preventDefault on the click either.)
+
+  Sound.ensure();
+  Sound.resumeIfSuspended();
+  Sound.startMusic();
+
+  // reset game state
+  state.mode = 'playing';
+  state.time = 0;
+  state.score = 0;
+  state.enemies.length = 0;
+  state.spawnTimer = 0;
+  state.spawnEvery = 2.0;
+  state.player.x = state.vw * 0.5;
+  state.player.y = state.vh * 0.5;
+  state.player.speed = state.startSpeed;
+  state.player.flash = 0;
+  state.shake = 0;
+  state.pendingOver = 0;
+  state.popups.length = 0;
+  state.popupTimer = 5;
+  state.gems.length = 0;
+  state.level = 1;
+  state.xp = 0;
+  state.xpToLevel = xpNeeded(1);
+  levelEl.textContent = '1';
+  state.levelFlash = 0;
+  state.levelTexts.length = 0;
+  state.invuln = 0;
+  state.nukeFlash = 0;
+  scoreEl.textContent = '0';
+  ctx.globalAlpha = 1;
+
+  hideOverlays();
+
+  // Optional: give a tiny instant wave without touching focus/DOM
+  for (let i = 0; i < 3; i++) spawnEnemy();
+}
+
+
+
     function lerp(a,b,t){return a + (b-a)*t}
     function baseEnemyHits() { return Math.floor(8 + Math.random()*7); }
 
-    function spawnEnemy() {
-      const baseR = 8 + Math.random()*8;
-      let x, y, type = 'basic';
-      const edge = Math.floor(Math.random()*4);
-      if (edge === 0) { x = Math.random()*state.vw; y = -baseR; }
-      else if (edge === 1) { x = state.vw + baseR; y = Math.random()*state.vh; }
-      else if (edge === 2) { x = Math.random()*state.vw; y = state.vh + baseR; }
-      else { x = -baseR; y = Math.random()*state.vh; }
-      const baseSpeed = 70 * 0.7 + Math.min(200, 12 * state.time) + Math.random()*40*0.7;
-      let speedMul = 1, rMul = 1, hitsMul = 1, color = '#ff4d6d';
-      if (state.time >= 60 && Math.random() < 0.15) { type = 'tank'; speedMul = 0.5; rMul = 5; hitsMul = 2; color = '#9b5de5'; }
-      else if (state.time >= 30 && Math.random() < 0.20) { type = 'fast'; speedMul = 1.2; rMul = 0.8; hitsMul = 1; color = '#ff944d'; }
-      const r = baseR * rMul;
-      const speed = baseSpeed * speedMul;
-      let hits = Math.max(1, Math.ceil(baseEnemyHits() * hitsMul));
-      if (type === 'fast' && hits > 1) hits -= 1;
-      state.enemies.push({ x, y, r, speed, vx:0, vy:0, lifeHits: hits, lifeTick: 0, type, color });
-    }
+    // --- REPLACE your spawnEnemy() with this level-based version ---
+function spawnEnemy() {
+  const baseR = 8 + Math.random()*8;
+
+  // spawn from a random edge
+  let x, y, type = 'basic';
+  const edge = Math.floor(Math.random()*4);
+  if (edge === 0) { x = Math.random()*state.vw; y = -baseR; }
+  else if (edge === 1) { x = state.vw + baseR; y = Math.random()*state.vh; }
+  else if (edge === 2) { x = Math.random()*state.vw; y = state.vh + baseR; }
+  else { x = -baseR; y = Math.random()*state.vh; }
+
+  // Baseline speed still ramps with time; type multipliers apply after
+  const baseSpeed = 70 * 0.7 + Math.min(200, 12 * state.time) + Math.random()*40*0.7;
+
+  // CHANGE: Level-gated spawn probabilities that grow with level
+  const L = state.level;
+  const tankChance = (L >= 3) ? Math.min(0.06 + 0.02*(L - 3), 0.35) : 0;       // starts 6% at L3, +2%/lvl, capped
+  const fastChance = (L >= 2) ? Math.min(0.12 + 0.03*(L - 2), 0.55 - tankChance) : 0; // starts 12% at L2, +3%/lvl, shares headroom
+  const roll = Math.random();
+
+  let speedMul = 1, rMul = 1, hitsMul = 1, color = '#ff4d6d';
+  if (roll < tankChance) {
+    type = 'tank'; speedMul = 0.5; rMul = 5; hitsMul = 2; color = '#9b5de5';
+  } else if (roll < tankChance + fastChance) {
+    type = 'fast'; speedMul = 1.2; rMul = 0.8; hitsMul = 1; color = '#ff944d';
+  }
+
+  const r = baseR * rMul;
+  const speed = baseSpeed * speedMul;
+
+  let hits = Math.max(1, Math.ceil(baseEnemyHits() * hitsMul));
+  if (type === 'fast' && hits > 1) hits -= 1;
+
+  state.enemies.push({ x, y, r, speed, vx:0, vy:0, lifeHits: hits, lifeTick: 0, type, color });
+}
+
 
     function spawnGem(x,y){ state.gems.push({ x, y, r: 6, life: 8, maxLife: 8 }); }
 
@@ -512,22 +616,33 @@
       'ArrowLeft': 'left', 'KeyA': 'left',
       'ArrowRight': 'right', 'KeyD': 'right',
     };
-    window.addEventListener('keydown', (e) => {
-      const k = keyMap[e.code]; if (k) state.input[k] = true;
-      const startKeys = (e.code === 'Enter' || e.code === 'Space');
-      if (state.mode === 'menu' && startKeys) { Sound.click(); resetGame(); }
-      if (state.mode === 'gameover' && (e.code === 'KeyR' || startKeys)) { Sound.click(); resetGame(); }
+window.addEventListener('keydown', (e) => {
+  const navKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+  if (navKeys.includes(e.key)) e.preventDefault();
 
-      // CHANGE: M to mute/unmute
-      if (e.code === 'KeyM') {
-        const isMuted = Sound.toggleMute();
-        muteBtn.textContent = isMuted ? '🔇' : '🔊';
-      }
-    });
+  const k = keyMap[e.code]; if (k) state.input[k] = true;
+
+  if (e.code === 'Enter' || e.code === 'Space') {
+    e.preventDefault();
+    if (state.mode === 'menu' || state.mode === 'gameover') startGameImmediate();
+  } else if (e.code === 'KeyR' && state.mode === 'gameover') {
+    e.preventDefault();
+    startGameImmediate();
+  }
+
+  if (e.code === 'KeyM') {
+    const isMuted = Sound.toggleMute();
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+  }
+}, { passive: false });
+
+
     window.addEventListener('keyup', (e) => { const k = keyMap[e.code]; if (k) state.input[k] = false; });
 
-    restartBtn.addEventListener('click', () => { Sound.click(); resetGame(); }); // CHANGE: click sfx
-    startBtn.addEventListener('click', () => { Sound.click(); resetGame(); });   // CHANGE
+
+  startBtn.addEventListener('click', () => startGameImmediate());
+restartBtn.addEventListener('click', () => startGameImmediate());
+
     muteBtn.addEventListener('click', () => { // CHANGE
       const isMuted = Sound.toggleMute();
       muteBtn.textContent = isMuted ? '🔇' : '🔊';
@@ -565,18 +680,26 @@
       if (state.levelFlash > 0) state.levelFlash = Math.max(0, state.levelFlash - dt);
       if (state.nukeFlash > 0) state.nukeFlash = Math.max(0, state.nukeFlash - dt);
 
-      state.score += dt * 10;
-      scoreEl.textContent = String(Math.floor(state.score));
+    state.score += dt * 10;
+const s = Math.floor(state.score);
+scoreEl.textContent = String(s);
+
+// bump & persist high
+if (s > state.high) {
+  state.high = s;
+  if (highEl) highEl.textContent = String(s);
+  try { localStorage.setItem(HS_KEY, String(s)); } catch {}
+}
+
 
       state.spawnTimer += dt;
-      const dynamic = state.spawnEvery - state.time * 0.004 - state.level * 0.02;
-      const target = Math.max(0.18, dynamic);
-      if (state.time >= 3) {
-        while (state.spawnTimer >= target) {
-          state.spawnTimer -= target;
-          spawnEnemy();
-        }
-      }
+const dynamic = state.spawnEvery - state.time * 0.004 - state.level * 0.02;
+const target = Math.max(0.18, dynamic);
+while (state.spawnTimer >= target) {
+  state.spawnTimer -= target;
+  spawnEnemy();
+}
+
 
       handleInput(dt);
       updateEnemies(dt);
@@ -592,33 +715,7 @@
     showMenu();
     requestAnimationFrame(frame);
 
-    function runTests() {
-      const results = [];
-      try {
-        results.push({name:'updateEnemies defined', pass: typeof updateEnemies === 'function'});
-        const origRand = Math.random;
-        const origHits = baseEnemyHits;
-        Math.random = () => 0;
-        baseEnemyHits = () => 5;
-        state.enemies.length = 0;
-        state.time = 35;
-        spawnEnemy();
-        const fast = state.enemies.pop();
-        const baseSpeed = 70 * 0.7 + Math.min(200, 12 * state.time) + 0*40*0.7;
-        const expectSpeed = baseSpeed * 1.2;
-        results.push({name:'Fast Runner speed 1.2x', pass: Math.abs(fast.speed - expectSpeed) < 1e-6});
-        results.push({name:'Fast Runner hits reduced by 1', pass: fast.lifeHits === 4});
-        baseEnemyHits = origHits;
-        Math.random = origRand;
-        state.enemies.length = 0;
-        updateEnemies(0); // should not throw
-        results.push({name:'updateEnemies no-throw', pass: true});
-      } catch (e) {
-        results.push({name:'tests crashed', pass:false, error:String(e)});
-      }
-      console.table(results);
-    }
-    runTests();
+
   })();
   </script>
 </body>
