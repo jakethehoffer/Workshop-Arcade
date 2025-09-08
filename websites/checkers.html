@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Checkers — Singleplayer & Two-Player</title>
+<title>Checkers</title>
 <style>
   :root{
     color-scheme: dark;
@@ -57,6 +57,7 @@
     border-radius:12px;cursor:pointer
   }
   .btn:disabled{opacity:.6;cursor:not-allowed}
+  [hidden]{ display:none !important; }
 
   /* 🔊 ADDED: pressed state outline for toggle-style buttons */
   .btn[aria-pressed="true"]{ outline:2px solid var(--ring) }
@@ -122,6 +123,29 @@
     border-radius:16px; padding:20px; text-align:center;
     box-shadow:0 20px 60px rgba(0,0,0,.6);
   }
+  /* Help modal */
+.modal{
+  position:fixed; inset:0; z-index:60;
+  background:rgba(6,10,18,.75);
+  display:none; align-items:center; justify-content:center;
+}
+.modal.show{ display:flex; }
+.modal-card{
+  width:min(96vw,720px);
+  background:#0e1524; border:1px solid var(--stroke);
+  border-radius:16px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.6);
+  max-height:85vh; overflow:auto;
+}
+.modal-card h2{ margin:0 0 8px; font-size:1.35rem; }
+.modal-card h3{ margin:14px 0 6px; font-size:1.05rem; }
+.modal-card p, .modal-card li{ color:var(--muted); line-height:1.55; }
+.kbd{
+  font: 500 0.9rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background:#0e1a30; border:1px solid var(--stroke);
+  padding:2px 6px; border-radius:6px;
+}
+.modal .go-actions{ margin-top:12px; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+
   .go-title{ font-size:1.4rem; margin:0 0 6px; }
   .go-sub{ color:var(--muted); margin:0 0 16px; }
   .go-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
@@ -170,29 +194,69 @@
         <button id="mode-sp" role="tab" aria-pressed="true">Singleplayer</button>
         <button id="mode-pvp" role="tab" aria-pressed="false">Two-Player</button>
       </div>
-      <label>AI strength:
-        <select id="aiDepth" class="select">
-          <option value="3">Weak</option>
-          <option value="5">Medium</option>
-          <option value="7" selected>Strong</option>
-        </select>
-      </label>
       <button id="newBtn" class="btn">New Game</button>
       <button id="undoBtn" class="btn">Undo</button>
       <button id="sndBtn" class="btn" aria-pressed="true">🔊 Sound</button> <!-- 🔊 ADDED -->
+      <button id="helpBtn" class="btn">❓ Help</button>
+      <label id="aiWrap">AI strength:
+  <select id="aiDepth" class="select">
+    <option value="3">Weak</option>
+    <option value="5">Medium</option>
+    <option value="7" selected>Strong</option>
+  </select>
+</label>
     </div>
   </header>
+  <div id="help" class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal-card" role="document">
+    <h2 id="helpTitle" class="go-title">How to Play Checkers</h2>
+    <p class="go-sub">Quick rules and site tips to get you moving.</p>
+
+    <h3>Objective</h3>
+    <p>Capture all of your opponent’s pieces, or leave them with no legal moves.</p>
+
+    <h3>Basics</h3>
+    <ul>
+      <li>Red moves first. Pieces move diagonally on the dark squares.</li>
+      <li>Men move forward only; kings (with a crown) move both forward and backward.</li>
+            <li>Reach the far row to become a king.</li>
+      <li>Captures are jumps: hop over an adjacent opponent piece to an empty square.</li>
+      <li>Multiple jumps are allowed. If a capture is available, you must capture.</li>
+    </ul>
+
+    <h3>Using this site</h3>
+    <ul>
+      <li><strong>Select &amp; Move:</strong> Click a piece, then click a highlighted square.</li>
+      <li><strong>Mandatory captures:</strong> Sources are outlined <span style="color:var(--warn)">gold</span>; landing squares glow <span style="color:var(--ok)">green</span>.</li>
+      <li><strong>Multi-jump:</strong> If more captures are possible, the same piece stays selected until you finish.</li>
+      <li><strong>Singleplayer:</strong> AI plays Black by default. Use “AI strength” to change depth.</li>
+      <li><strong>Two-Player:</strong> Both humans play on the same device; switching modes restarts cleanly.</li>
+      <li><strong>Undo:</strong> Reverts the last full turn (vs. AI it jumps back to your move).</li>
+      <li><strong>New Game:</strong> Resets the board. <strong>Sound</strong> toggles SFX.</li>
+    </ul>
+
+    <h3>Shortcuts</h3>
+    <ul>
+      <li><span class="kbd">H</span> — Open Help</li>
+      <li><span class="kbd">Esc</span> or <span class="kbd">H</span> — Close Help</li>
+    </ul>
+
+    <div class="go-actions">
+      <button id="helpClose" class="btn">Close</button>
+    </div>
+  </div>
+</div>
 
   <main>
     <div class="board-wrap">
       <div class="status">
-        <div class="pill" id="ruleHint">Mandatory captures. Multi-jumps allowed. Crowning ends the sequence.</div>
         <div class="turn pill"><span id="turnDot" class="dot red"></span><span id="turnText">Red to move</span></div>
       </div>
       <div id="board" class="board" aria-label="Checkers board"></div>
       <div id="toast" class="toast" style="display:none"></div>
     </div>
   </main>
+
 
   <div id="gameOver" class="gameover" role="dialog" aria-modal="true" aria-labelledby="goTitle">
   <div class="go-card">
@@ -235,11 +299,16 @@ const elNew     = document.getElementById('newBtn');
 const elModeSP  = document.getElementById('mode-sp');
 const elModePVP = document.getElementById('mode-pvp');
 const elDepth   = document.getElementById('aiDepth');
+const elAiWrap  = document.getElementById('aiWrap');   // ⬅️ add this
 const elSnd     = document.getElementById('sndBtn'); /* 🔊 ADDED */
 // Game over elements
 const elGameOver = document.getElementById('gameOver');
 const elGoWinner = document.getElementById('goWinner');
 const elGoPlay   = document.getElementById('goPlay');
+const elHelp     = document.getElementById('help');
+const elHelpBtn  = document.getElementById('helpBtn');
+const elHelpClose= document.getElementById('helpClose');
+
 
 /* ⏱️ Animation timing */
 const MOVE_STEP_MS = 420; // tweak 300–600 to taste
@@ -366,6 +435,27 @@ function updateTurnUI(){
   elTurnText.textContent = (turn===RED? 'Red':'Black') + ' to move';
   elTurnDot.className = 'dot ' + (turn===RED ? 'red' : 'black');
 }
+// === Help modal helpers (must exist before listeners) ===
+let helpWasLocked = null;
+
+function openHelp(){
+  if (!elHelp) return;
+  if (elHelp.classList.contains('show')) return;
+  helpWasLocked = locked;
+  locked = true;                         // pause board interactions
+  elHelp.classList.add('show');
+  Sound.click?.();
+  // focus the Close button for a11y
+  setTimeout(()=> elHelpClose?.focus({preventScroll:true}), 0);
+}
+
+function closeHelp(){
+  if (!elHelp) return;
+  elHelp.classList.remove('show');
+  if (helpWasLocked !== null) locked = helpWasLocked;
+  helpWasLocked = null;
+}
+
 
 function initBoard(){
   board = Array.from({length:SIZE}, (_,r)=> Array.from({length:SIZE}, (_,c)=> {
@@ -816,11 +906,20 @@ function newGame(){
   }
 }
 
+function updateAiVisibility(){
+  if (!elAiWrap) return;
+  const show = (mode === 'SP');
+  elAiWrap.hidden = !show;                       // removes from layout & tab order
+  elAiWrap.setAttribute('aria-hidden', (!show).toString());
+}
+
+
 function setMode(next){
   if(next===mode) return;
   mode = next;
   elModeSP.setAttribute('aria-pressed', mode==='SP' ? 'true':'false');
   elModePVP.setAttribute('aria-pressed', mode==='PVP' ? 'true':'false');
+    updateAiVisibility(); // ⬅️ add this line
   toast(mode==='SP' ? 'Switched to Singleplayer. New game started.' : 'Switched to Two-Player. New game started.');
   Sound.click(); /* 🔊 ADDED */
   newGame();
@@ -844,6 +943,37 @@ elNew.addEventListener('click', ()=>{ Sound.click(); newGame(); });   /* 🔊 AD
 elUndo.addEventListener('click', undo); // ✅ FIX: actually call undo()
 elModeSP.addEventListener('click', ()=> setMode('SP'));
 elModePVP.addEventListener('click', ()=> setMode('PVP'));
+elHelpBtn.addEventListener('click', openHelp);
+elHelpClose.addEventListener('click', closeHelp);
+// Click backdrop to close
+elHelp.addEventListener('click', (e)=>{
+  if(e.target === elHelp) closeHelp();
+});
+// Keyboard shortcuts: H / ? toggle, Esc closes
+document.addEventListener('keydown', (e)=>{
+  const key = e.key;
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable);
+
+  if (typing) return; // don't hijack typing
+
+  const isOpen = elHelp.classList.contains('show');
+
+  // Close when open: Esc, H
+  if (isOpen && (key === 'Escape' || key === 'h' || key === 'H')) {
+    e.preventDefault();
+    closeHelp();
+    return;
+  }
+
+  // Open when closed: H
+  if (!isOpen && (key === 'h' || key === 'H')) {
+    e.preventDefault();
+    openHelp();
+  }
+});
+
+
 elDepth.addEventListener('change', e=>{
   aiDepth = +e.target.value;
   if(mode==='SP') toast(`AI strength: ${e.target.options[e.target.selectedIndex].text}`);
@@ -855,6 +985,7 @@ aiDepth = +elDepth.value;
 newGame(); // render the board immediately on page load
 setMode('SP');
 updateSoundUI(); /* 🔊 ADDED */
+updateAiVisibility(); // ⬅️ safe extra call on boot
 </script>
 </body>
 </html>
