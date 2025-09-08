@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Brick Breaker — Canvas + SFX + Music + Power-ups + Moving Bricks</title>
+<title>Brick Breaker</title>
 <style>
   :root{
     color-scheme: dark;
@@ -18,11 +18,11 @@
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
   #wrap{position:fixed;inset:0;display:grid;place-items:center;}
-  canvas{
+#game{
   position: absolute;
   inset: 0;
-  width: 100vw;          /* fill window */
-  height: 100vh;         /* fill window */
+  width: 100vw;
+  height: 100vh;
   display: block;
   background:
     radial-gradient(1200px 800px at 20% 10%,#0a1322 0%,#0a111c 40%,#0b0f14 100%),
@@ -85,7 +85,21 @@ kbd{
 /* compact table for power-up legend */
 .powers{ margin:10px auto 0; border-collapse:separate; border-spacing:6px 4px }
 .powers td{ padding:0; vertical-align:middle }
-.powers td:first-child{ width:1%; white-space:nowrap }
+/* Mini canvases used in the legend */
+.powers canvas.pu-icon{
+  width:22px; height:22px;           /* CSS size */
+  display:inline-block; vertical-align:middle;
+  background:#0b1220; border:1px solid #26334a; border-radius:6px;
+}
+.powers canvas.pu-icon{
+  position: static;   /* override any global absolute positioning */
+  inset: auto;        /* reset */
+  width:22px; height:22px;
+  display:inline-block; vertical-align:middle;
+  background:#0b1220; border:1px solid #26334a; border-radius:6px;
+  box-shadow:none;    /* avoids the big canvas shadow */
+}
+.powers td:first-child{ width:28px; white-space:nowrap }
 /* Grid layout for the controls legend */
 .controls{
   margin:8px auto 0;
@@ -132,55 +146,58 @@ kbd{
 
   <div class="overlay">
 <div id="msgStart" class="card fade" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
-  <h1 id="howtoTitle">🧱 Brick Breaker</h1>
+  <p><b>Controls</b></p>
+  <div class="controls" role="list">
+    <div class="label">Move</div>
+    <div class="keys">
+      Trackpad <span class="sep">or</span> <kbd>←</kbd><kbd>→</kbd>
+      <span class="sep">or</span> <kbd>A</kbd><kbd>D</kbd>
+    </div>
 
-  <p><b>Goal:</b> Clear all bricks. Catch falling power-ups with your paddle.</p>
+    <div class="label">Launch / Release sticky</div>
+    <div class="keys"><kbd>Space</kbd> <span class="sep">or</span> Click</div>
 
-<p><b>Controls</b></p>
+    <div class="label">Pause / Resume</div>
+    <div class="keys"><kbd>P</kbd></div>
 
-<div class="controls" role="list">
-  <div class="label">Move</div>
-  <div class="keys">
-    Trackpad <span class="sep">or</span> <kbd>←</kbd><kbd>→</kbd>
-    <span class="sep">or</span> <kbd>A</kbd><kbd>D</kbd>
+    <div class="label">Restart</div>
+    <div class="keys"><kbd>R</kbd></div>
+
+    <div class="label">Music</div>
+    <div class="keys"><kbd>M</kbd></div>
+
+    <div class="label">SFX</div>
+    <div class="keys"><kbd>V</kbd></div>
+
+    <div class="label">Help</div>
+    <div class="keys"><kbd>H</kbd></div>
   </div>
 
-  <div class="label">Launch / Release sticky</div>
-  <div class="keys"><kbd>Space</kbd> <span class="sep">or</span> Click</div>
+<p><b>Power-ups</b></p>
+<table class="powers">
+  <tr><td><canvas class="pu-icon" data-type="MULTI"  width="24" height="24"></canvas></td><td><b>Multi-Ball</b> — splits the ball into three.</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="GUN"    width="24" height="24"></canvas></td><td><b>Gun</b> — auto-fires twin bullets for ~5s.</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="EXPAND" width="24" height="24"></canvas></td><td><b>Expand</b> — wider paddle for ~10s.</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="STICKY" width="24" height="24"></canvas></td><td><b>Sticky</b> — balls stick; press <kbd>Space</kbd> to release (~8s).</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="FIRE"   width="24" height="24"></canvas></td><td><b>Fire</b> — balls pierce bricks and deal extra damage (~8s).</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="SLOW"   width="24" height="24"></canvas></td><td><b>Slow</b> — slows gameplay (~8s).</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="SHIELD" width="24" height="24"></canvas></td><td><b>Shield</b> — saves falling balls by bouncing them back (~10s).</td></tr>
+  <tr><td><canvas class="pu-icon" data-type="LIFE"   width="24" height="24"></canvas></td><td><b>Life</b> — +1 extra life.</td></tr>
+</table>
 
-  <div class="label">Pause / Resume</div>
-  <div class="keys"><kbd>P</kbd></div>
+<p><b>Curses</b></p>
+<table class="powers">
+  <tr><td><canvas class="pu-icon" data-type="CURSE_SHRINK" width="24" height="24"></canvas></td><td><b>Shrink</b> — temporarily shrinks the paddle. <i>Raises RISK.</i></td></tr>
+  <tr><td><canvas class="pu-icon" data-type="CURSE_SPEED"  width="24" height="24"></canvas></td><td><b>Fast</b> — speeds up gameplay. <i>Raises RISK.</i></td></tr>
+</table>
 
-  <div class="label">Restart</div>
-  <div class="keys"><kbd>R</kbd></div>
+  <p><b>Combo</b> — Hit <b>2+</b> bricks in succession within <b>2s</b> to start a combo.</p>
 
-  <div class="label">Music</div>
-  <div class="keys"><kbd>M</kbd></div>
-
-  <div class="label">SFX</div>
-  <div class="keys"><kbd>V</kbd></div>
-
-  <div class="label">Help</div>
-  <div class="keys"><kbd>H</kbd></div>
-
-<div class="label">Next level (playtest)</div>
-<div class="keys"><kbd>T</kbd></div>
-
-</div>
-
-  <p><b>Power-ups</b></p>
-  <table class="powers">
-    <tr><td><span class="tag" style="background:#60a5fa">MB</span></td><td><b>Multi-Ball</b> — splits the ball into three.</td></tr>
-    <tr><td><span class="tag" style="background:#34d399">⟷</span></td><td><b>Expand</b> — wider paddle for ~10s.</td></tr>
-    <tr><td><span class="tag" style="background:#fbbf24">S</span></td><td><b>Sticky</b> — balls stick to the paddle; press <kbd>Space</kbd> to release (~8s).</td></tr>
-    <tr><td><span class="tag" style="background:#fb7185">F</span></td><td><b>Fire</b> — balls pierce bricks and deal extra damage (~8s).</td></tr>
-    <tr><td><span class="tag" style="background:#a78bfa">⏱</span></td><td><b>Slow</b> — slows gameplay (~8s).</td></tr>
-    <tr><td><span class="tag" style="background:#22d3ee">⚡</span></td><td><b>Fast</b> — speeds up gameplay (~8s).</td></tr>
-    <tr><td><span class="tag" style="background:#ef4444">♥</span></td><td><b>Life</b> — +1 extra life.</td></tr>
-  </table>
+  <p><b>Risk Multiplier</b> — Curses increase a <b>RISK</b> multiplier that multiplies all points while active.</p>
 
   <p style="margin-top:10px"><em>Tip:</em> Picking the same timed effect extends its duration.</p>
 </div>
+
 
     <div id="msgNext" class="card fade" hidden>
       <h1>✨ Level Cleared!</h1>
@@ -252,6 +269,7 @@ kbd{
     for (const pu of G.powerups){
       pu.x *= sx; pu.y *= sy; pu.w *= sx; pu.h *= sy;
     }
+    renderLegendIcons();
   }
 
   resize();
@@ -343,6 +361,77 @@ window.addEventListener('keydown', (e) => {
     osc.start(now);
     osc.stop(now + Math.max(attack, decay) + 0.02);
   }
+  function fireGuns(){
+  // two bullets from paddle edges
+  const p = G.paddle;
+  const y = p.y - p.h/2 - 2;
+  const off = Math.max(14, p.w*0.28);
+  const speed = 400; // px/s
+  G.bullets.push({ x: p.x - off, y, vy: -speed, w: 3, h: 10 });
+  G.bullets.push({ x: p.x + off, y, vy: -speed, w: 3, h: 10 });
+  if (SFX.shoot) SFX.shoot();
+}
+
+function updateGun(dt){
+  // only auto-fire while GUN effect is active, not waiting to launch
+  if (!G.effects.some(e=>e.type==='GUN')) return;
+  G.gunCooldown -= dt;
+  // ~8 rounds/sec → 0.125s
+  if (G.gunCooldown <= 0){
+    fireGuns();
+    G.gunCooldown = 1/GUN_RPS;
+  }
+}
+
+function updateBullets(dt){
+  for (let i=G.bullets.length-1; i>=0; i--){
+    const b = G.bullets[i];
+    b.y += b.vy * dt;
+    if (b.y + b.h < 0){ G.bullets.splice(i,1); continue; }
+
+    // collide with bricks
+    for (let j=0; j<G.bricks.length; j++){
+      const br = G.bricks[j];
+      if (br.hp <= 0) continue;
+      if (rectsOverlap(b.x - b.w/2, b.y - b.h/2, b.w, b.h, br.x, br.y, br.w, br.h)){
+        // mark hit point center for combo FX
+        const hx = Math.max(br.x, Math.min(b.x, br.x+br.w));
+        const hy = Math.max(br.y, Math.min(b.y, br.y+br.h));
+
+        if (SFX.hit) SFX.hit();
+
+        onBrickHit(hx, hy);      // keep combo rules consistent with ball hits
+
+        br.hp -= 1;              // bullet damage
+        if (br.hp > 0){
+          addScore(Math.round(20 * G.combo));
+          br.color = shade(br.color, -28);
+        } else {
+          addScore(Math.round(50 * G.combo));
+          maybeDropPower(br);
+          if (br.type === 'BOMB'){ explodeBrick(br); }
+        }
+
+        G.bullets.splice(i,1);
+        break;
+      }
+    }
+  }
+}
+
+function drawBullets(){
+  if (!G.bullets.length) return;
+  ctx.save();
+  ctx.fillStyle = '#e5e7eb';
+  ctx.shadowColor = '#93c5fd';
+  ctx.shadowBlur = 8;
+  for (const b of G.bullets){
+    roundRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h, 1.5);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 
   function noiseBurst({attack=0.005, decay=0.2, volume=0.6}){
     if (!sfxOn) return;
@@ -371,6 +460,8 @@ window.addEventListener('keydown', (e) => {
     start(){ playBeep({freq: 880, type:'square', decay:0.16}); },
     level(){ playBeep({freq: 660, type:'square', decay:0.12}); playBeep({freq:880,type:'square',decay:0.12}); },
     power(){ playBeep({freq: 980, type:'square', decay:0.12}); },
+    shoot(){ playBeep({freq:1100, type:'square', decay:0.06, volume:0.45}); },
+hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
     multiball(){ playBeep({freq: 740, type:'square', decay:0.12}); playBeep({freq: 920, type:'square', decay:0.12}); }
   };
 
@@ -433,13 +524,27 @@ window.addEventListener('keydown', (e) => {
   // ===== Game State =====
   const G = {
     running: true,
+    comboCount: 0,            // how many consecutive hits in current chain
+comboActive: false,       // only true once we reach 2+ hits in-window
+comboSparks: [],          // small celebration particles
+comboBanner: { t:0, dur:0 }, // animated center banner timer
+comboCount: 0,
+comboActive: false,
+comboSparks: [],
+comboBanner: { t:0, dur:0 },
+comboStops: [],
+comboColorIndex: 0,
     waitingLaunch: true,
+    bullets: [],          // ← NEW: active bullets
+gunCooldown: 0,       // ← NEW: autofire timer
+
     score: 0,
     level: 1,
     lives: 3,
     bricks: [],
     brickCols: 12,
     brickRows: 6,
+        explosions: [], // NEW: active explosion effects (rings + sparks)
     brickPadding: 6,
     brickTop: 80,
     brickHeight: 22,
@@ -452,7 +557,7 @@ window.addEventListener('keydown', (e) => {
     dropChance: 0.18,
     portals: [],
 riskMult: 1,
-
+shrinkDebt: 0,   // how many pixels CURSE_SHRINK has removed (to restore later)
     combo: 1,
 comboTime: 0
 
@@ -465,6 +570,7 @@ function openHelp(){
   G.running = false;
   btnPause.textContent = '▶️ Resume';
   cardStart.hidden = false;
+  renderLegendIcons();
 }
 
 function closeHelp(){
@@ -480,7 +586,22 @@ function closeHelp(){
 function toggleHelp(){ cardStart.hidden ? openHelp() : closeHelp(); }
 
 
-const EFFECT_DUR = { EXPAND: 10, STICKY: 8, FIRE: 8, SLOW: 8, FAST: 8, SHIELD: 10, CURSE_SHRINK: 10, CURSE_SPEED: 8 };
+const EFFECT_DUR = { EXPAND: 10, STICKY: 8, FIRE: 8, SLOW: 8, SHIELD: 10, CURSE_SHRINK: 10, CURSE_SPEED: 8, GUN: 5 };
+const EFFECT_LABEL = {
+  EXPAND: 'Expand',
+  STICKY: 'Sticky',
+  FIRE: 'Fire',
+  SLOW: 'Slow',
+  SHIELD: 'Shield',
+  CURSE_SHRINK: 'Shrink',
+  CURSE_SPEED: 'Fast',
+  GUN: 'Gun',                    // ← NEW
+};
+// Gun tuning
+const GUN_RPS = 2; // rounds per second (was effectively ~8 rps)
+
+
+
 const BASE_BALL_SPEED = 480; // was 380 — tweak to taste
 const LAUNCH_MIN = -Math.PI * 0.75;  // -135°, up-left
 const LAUNCH_MAX = -Math.PI * 0.25;  //  -45°, up-right
@@ -492,6 +613,8 @@ const DROP_MIN  = 0.14;  // don't go below 14%
 const COMBO_WINDOW = 2.0;   // seconds to keep chain alive
 const COMBO_STEP   = 0.25;  // how fast combo grows per brick
 const COMBO_MAX    = 5;     // cap
+const COMBO_PALETTE = ['#5eead4','#60a5fa','#a78bfa','#f472b6','#fb7185','#f59e0b','#84cc16','#22d3ee'];
+const COMBO_GRAD_MAX_STOPS = 6;  // keep it punchy & readable
 
 
 
@@ -499,7 +622,8 @@ const COMBO_MAX    = 5;     // cap
   function makeBall(x, y, angle=null, speed=BASE_BALL_SPEED){
     const r = 8;
     const a = angle ?? (-Math.PI/3 + (Math.random()*0.4 - 0.2));
-return { x, y, r, vx: Math.cos(a)*speed, vy: Math.sin(a)*speed, speed, fire:false, stuck:false, portalCooldown:0 };
+return { x, y, r,    px: x, py: y,                    // ← NEW: previous position
+ vx: Math.cos(a)*speed, vy: Math.sin(a)*speed, speed, fire:false, stuck:false, portalCooldown:0 };
   }
 
   // ===== Level Generator =====
@@ -764,13 +888,20 @@ G.portals = computePortals(G.bricks);
     const baseSpeed = BASE_BALL_SPEED + dif.ballSpeedAdd;
     G.balls = [makeBall(G.paddle.x, G.paddle.y - 14, -Math.PI/3, baseSpeed)];
     for (const b of G.balls){ b.vx = 0; b.vy = 0; }
-
+    G.explosions = []; // NEW: clear FX
     G.waitingLaunch = true; G.running = true;
     G.powerups = [];
     G.effects = []; // reset active effects
     G.speedMod = 1;
+    G.shrinkDebt = 0;
+    G.bullets = [];         // ← NEW
+    G.gunCooldown = 0;      // ← NEW
+    G.riskMult = 1;    // ← ensure no lingering risk badge
     cardNext.hidden = true;
     cardStart.hidden = true;
+    G.combo = 1; G.comboTime = 0; G.comboCount = 0; G.comboActive = false;
+G.comboSparks = []; G.comboBanner = { t:0, dur:0 };
+resetComboVisuals();
   }
 
 function rowColor(r,hp){
@@ -799,11 +930,42 @@ function addScore(points){
     saveHigh(highScore);
   }
 }
+function syncBallFlagsFromEffects(){
+  // Re-apply per-ball flags based on active effects (e.g., FIRE)
+  const fireOn = G.effects.some(e => e.type === 'FIRE');
+  for (const b of G.balls) b.fire = !!fireOn;
+}
+
+
+function onBrickHit(hitX, hitY){
+  // chain window
+  if (G.comboTime > 0) G.comboCount++;
+  else G.comboCount = 1;
+  G.comboTime = COMBO_WINDOW;
+
+  // activate only at the SECOND hit; each growth adds a new color stop
+  if (G.comboCount >= 2){
+    if (!G.comboActive){
+      G.comboActive = true;
+      G.combo = Math.min(COMBO_MAX, 1 + COMBO_STEP);
+      resetComboVisuals();
+      pushComboStop(nextComboColor());    // first color when combo turns on
+    } else {
+      G.combo = Math.min(COMBO_MAX, G.combo + COMBO_STEP);
+      pushComboStop(nextComboColor());    // add another color on every growth
+    }
+    triggerComboBanner();
+    spawnComboSparks(hitX, hitY);
+  }
+}
+
+
 
 
 
 function restartGame(){
   G.score=0; G.level=1; G.lives=3;
+    G.riskMult = 1;                  // ← reset risk multiplier on restart
   elScore.textContent=0; elLevel.textContent=1; elLives.textContent=3;
   if (elNewBest) elNewBest.hidden = true;
   if (elFinalBest) elFinalBest.textContent = highScore;
@@ -830,26 +992,6 @@ function restartGame(){
     if (e.key==='r'||e.key==='R') restartGame();
     if (e.key==='m'||e.key==='M') toggleMusic();
     if (e.key==='v'||e.key==='V') toggleSfx();
-if (e.key==='t'||e.key==='T') {
-  // Jump to beginning of next level for playtesting
-  const wasPaused = !G.running;
-
-  // Close any overlays so we can see the game
-  cardNext.hidden = true;
-  cardStart.hidden = true;
-  cardOver.hidden  = true;
-
-  // Advance a level and reset state (waitingLaunch = true)
-  resetLevel(true);
-
-  // Preserve paused state if it was paused before
-  if (wasPaused) {
-    G.running = false;
-    btnPause.textContent = '▶️ Resume';
-  } else {
-    btnPause.textContent = '⏸️ Pause';
-  }
-}
 if (e.key==='h' || e.key==='H') toggleHelp();
   });
 
@@ -904,13 +1046,28 @@ for (const b of G.balls){
     {type:'STICKY', color:'#fbbf24', label:'S', weight:2},
     {type:'FIRE', color:'#fb7185', label:'F', weight:1},
     {type:'SLOW', color:'#a78bfa', label:'⏱', weight:1},
-    {type:'FAST', color:'#22d3ee', label:'⚡', weight:1},
     {type:'LIFE', color:'#ef4444', label:'♥', weight:1},
     {type:'SHIELD', color:'#fde047', label:'⎽', weight:1},
     {type:'CURSE_SHRINK', color:'#f97316', label:'☠',  weight:1},  // smaller paddle, more points
-{type:'CURSE_SPEED',  color:'#ef4444', label:'⚠',  weight:1},  // faster game, more points
+{type:'CURSE_SPEED',  color:'#ef4444', label:'⚡',  weight:1},  // faster game, more points
+{type:'GUN', color:'#06b6d4', label:'G', weight:1},   // ← NEW
 
   ];
+
+  // Bright icon tints for the top-left effect badges
+const ICON_TINT = {
+  MULTI: '#60a5fa',
+  EXPAND: '#34d399',
+  STICKY: '#fbbf24',
+  FIRE: '#fb7185',
+  SLOW: '#a78bfa',
+  LIFE: '#ef4444',
+  SHIELD: '#fde047',
+  CURSE_SHRINK: '#f97316',
+  CURSE_SPEED: '#ef4444',
+  GUN:'#06b6d4'    
+};
+
 
   function pickPowerType(){
     const total = PU_TYPES.reduce((a,p)=>a+p.weight,0);
@@ -919,10 +1076,149 @@ for (const b of G.balls){
     return PU_TYPES[0];
   }
 
+  function triggerComboBanner(){
+  G.comboBanner.t = 0;
+  G.comboBanner.dur = 0.9; // banner animation window
+}
+
+function nextComboColor(){
+  const c = COMBO_PALETTE[G.comboColorIndex % COMBO_PALETTE.length];
+  G.comboColorIndex++;
+  return c;
+}
+function pushComboStop(color){
+  G.comboStops.push(color);
+  if (G.comboStops.length > COMBO_GRAD_MAX_STOPS) G.comboStops.shift();
+}
+function resetComboVisuals(){
+  G.comboStops = [];
+  G.comboColorIndex = 0;
+}
+
+
+function spawnComboSparks(x, y){
+  const N = 22;
+  for (let i=0;i<N;i++){
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 180 + Math.random()*220;
+    G.comboSparks.push({
+      x, y,
+      vx: Math.cos(ang)*spd,
+      vy: Math.sin(ang)*spd - 30,
+      r: 1.4 + Math.random()*2.0,
+      life: 0.45 + Math.random()*0.45,
+      hue: 165 + Math.random()*60, // teal→blue range
+      a: 1
+    });
+  }
+}
+
+function updateComboFX(dt){
+  // banner timer
+  if (G.comboBanner.dur > 0){
+    G.comboBanner.t += dt;
+    if (G.comboBanner.t >= G.comboBanner.dur){
+      G.comboBanner.t = G.comboBanner.dur;
+    }
+  }
+  // sparks
+  for (let i=G.comboSparks.length-1;i>=0;i--){
+    const s = G.comboSparks[i];
+    s.life -= dt;
+    if (s.life <= 0 || s.r <= 0.2){ G.comboSparks.splice(i,1); continue; }
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.vy += 600 * dt * 0.5;  // gravity
+    s.vx *= 0.985; s.vy *= 0.985;
+    s.r  *= 0.985;
+  }
+}
+
+function drawComboFX(){
+  // sparks under banner for extra “pop”
+  if (!G.comboSparks.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const s of G.comboSparks){
+    ctx.globalAlpha = Math.max(0, Math.min(1, s.life * 2));
+    ctx.fillStyle = `hsl(${s.hue} 90% 60%)`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawComboBanner(){
+  if (!G.comboActive || G.combo <= 1) return;
+
+  // fade/scale animation
+  const t = Math.min(G.comboBanner.t / Math.max(0.001, G.comboBanner.dur), 1);
+  const scale = 1 + 0.28 * (1 - t) + 0.06 * G.combo; // bigger at higher combo
+  const alpha = 0.92 * (1 - 0.7 * t);
+
+  const text = 'COMBO x' + (Math.round(G.combo * 100) / 100).toFixed(2);
+  ctx.save();
+  ctx.translate(css.w/2, 72);          // near top-center
+  ctx.scale(scale, scale);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 32px ui-sans-serif, system-ui';
+
+  // glow
+  ctx.shadowColor = '#5eead4';
+  ctx.shadowBlur = 28;
+
+  // gradient fill
+// gradient fill that accumulates stops as combo grows
+let grad = ctx.createLinearGradient(-120, 0, 120, 0);
+if (G.comboStops && G.comboStops.length){
+  const n = G.comboStops.length;
+  if (n === 1){
+    grad.addColorStop(0, G.comboStops[0]);
+    grad.addColorStop(1, G.comboStops[0]);
+  } else {
+    for (let i=0; i<n; i++){
+      grad.addColorStop(i/(n-1), G.comboStops[i]);
+    }
+  }
+} else {
+  // fallback (should rarely hit)
+  grad.addColorStop(0, '#5eead4');
+  grad.addColorStop(1, '#60a5fa');
+}
+ctx.fillStyle = grad;
+
+
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = grad;
+  ctx.fillText(text, 0, 0);
+
+  // crisp stroke
+  ctx.globalAlpha = Math.min(1, alpha + 0.2);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(11,15,20,.8)';
+  ctx.lineWidth = 4;
+  ctx.strokeText(text, 0, 0);
+
+  // time bar under text (shows remaining chain window)
+  const w = 160, h = 6, y = 26;
+  const pct = Math.max(0, Math.min(1, G.comboTime / COMBO_WINDOW));
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = 'rgba(17,24,39,.75)';
+  ctx.fillRect(-w/2, y, w, h);
+  ctx.fillStyle = '#5eead4';
+  ctx.fillRect(-w/2, y, w * pct, h);
+  ctx.strokeStyle = '#26334a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-w/2 + 0.5, y + 0.5, w - 1, h - 1);
+
+  ctx.restore();
+}
+
+
   function maybeDropPower(br){
     if (Math.random() < G.dropChance){
       const pt = pickPowerType();
-      G.powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 120, w: 22, h: 14, ...pt });
+      G.powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 120, w: 28, h: 18, ...pt });
     }
   }
 
@@ -952,14 +1248,22 @@ for (const b of G.balls){
         pushTimed('EXPAND', EFFECT_DUR.EXPAND);
         G.paddle.w = Math.min(200, G.paddle.w + 60);
         break;
+        case 'GUN':
+  pushTimed('GUN', EFFECT_DUR.GUN);
+  G.gunCooldown = 0;       // fire immediately
+  break;
+
       case 'SHIELD':
   pushTimed('SHIELD', EFFECT_DUR.SHIELD);
   break;
-  case 'CURSE_SHRINK':
+case 'CURSE_SHRINK': {
   pushTimed('CURSE_SHRINK', EFFECT_DUR.CURSE_SHRINK);
-  G.paddle.w = Math.max(60, G.paddle.w - 50);   // risky!
+  const minW = 60;
+  const shrinkBy = Math.min(50, Math.max(0, G.paddle.w - minW)); // respect min width
+  G.paddle.w -= shrinkBy;
+  G.shrinkDebt = (G.shrinkDebt || 0) + shrinkBy;                 // accumulate if stacked
   recalcRiskMult();
-  break;
+} break;
 case 'CURSE_SPEED':
   pushTimed('CURSE_SPEED', EFFECT_DUR.CURSE_SPEED);
   recalcSpeedMod();
@@ -978,10 +1282,6 @@ case 'CURSE_SPEED':
         pushTimed('SLOW', EFFECT_DUR.SLOW);
         G.speedMod = 0.8;
         break;
-      case 'FAST':
-        pushTimed('FAST', EFFECT_DUR.FAST);
-        G.speedMod = 1.2;
-        break;
       case 'LIFE':
         G.lives++; elLives.textContent = G.lives;
         break;
@@ -993,7 +1293,6 @@ case 'CURSE_SPEED':
   // Highest “speed-up” wins; SLOW always forces the slowest
   let mod = 1;
   if (G.effects.some(e=>e.type==='SLOW')) mod = 0.8;
-  if (G.effects.some(e=>e.type==='FAST')) mod = Math.max(mod, 1.2);
   if (G.effects.some(e=>e.type==='CURSE_SPEED')) mod = Math.max(mod, 1.35);
   G.speedMod = mod;
 }
@@ -1010,25 +1309,36 @@ function recalcRiskMult(){
     // Only called while running; clockDt is unscaled by speedMod
     for (let i=G.effects.length-1;i>=0;i--){
       G.effects[i].remaining -= clockDt;
-      if (G.effects[i].remaining <= 0){
-        const {type} = G.effects[i];
-        if (type==='EXPAND') G.paddle.w = Math.max(80, G.paddle.w - 60);
-        if (type==='FIRE') { for (const b of G.balls) b.fire=false; }
-        if (type==='SLOW' || type==='FAST') G.speedMod = 1;
-        G.effects.splice(i,1);
-        recalcSpeedMod();
-recalcRiskMult();
+    if (G.effects[i].remaining <= 0){
+  const {type} = G.effects[i];
+  if (type==='EXPAND') G.paddle.w = Math.max(80, G.paddle.w - 60);
+  if (type==='FIRE') { for (const b of G.balls) b.fire=false; }
+  if (type==='SLOW') G.speedMod = 1;
+  if (type==='CURSE_SHRINK'){                // <- add this
+    if (G.shrinkDebt){                       // add back exactly what we removed
+      G.paddle.w += G.shrinkDebt;
+      G.shrinkDebt = 0;
+    }
+  }
+  G.effects.splice(i,1);
+  recalcSpeedMod();
+  recalcRiskMult();
+}
 
-      }
     }
     // combo timer decay
-if (G.combo > 1){
+// combo chain decay (real time; pauses with game)
+if (G.comboTime > 0){
   G.comboTime -= clockDt;
   if (G.comboTime <= 0){
     G.combo = 1;
     G.comboTime = 0;
+    G.comboCount = 0;
+    G.comboActive = false;
+    resetComboVisuals();  // clear gradient history
   }
 }
+
 
   }
 
@@ -1109,7 +1419,8 @@ if (G.combo > 1){
       const b = G.balls[bi];
       if (G.waitingLaunch) continue;
       if (b.stuck) { b.x = p.x; b.y = p.y - 14; continue; }
-
+      
+  b.px = b.x; b.py = b.y;          // ← NEW: remember last position
       b.x += b.vx * dt; b.y += b.vy * dt;
 
       // Walls
@@ -1146,21 +1457,46 @@ if (G.lives <= 0){
           G.balls = [makeBall(p.x, p.y-14, -Math.PI/3, baseSpeed)];
           for (const bb of G.balls){ bb.vx=0; bb.vy=0; }
           G.waitingLaunch = true;
+              // Keep FIRE if its timer is still running
+    syncBallFlagsFromEffects();
+
         }
         continue;
       }
+// Paddle collision (TOP FACE ONLY)
+if (b.vy > 0){
+  const xL = p.x - p.w/2, xR = p.x + p.w/2;
+  const yTop = p.y - p.h/2;
 
-      // Paddle collision
-      if (circleRectOverlap(b.x, b.y, b.r, p.x - p.w/2, p.y - p.h/2, p.w, p.h) && b.vy>0){
-const hit = (b.x - p.x) / (p.w/2);
-const angle = (Math.PI/3) * hit; 
+  // Did the ball's bottom cross the paddle's top edge this frame?
+  const yPrev = b.py + b.r;
+  const yNow  = b.y  + b.r;
+
+  if (yPrev <= yTop && yNow >= yTop){
+    const denom = (yNow - yPrev);
+    if (denom > 0){
+      const t = (yTop - yPrev) / denom;               // 0..1 along the segment
+      const xCross = b.px + (b.x - b.px) * t;
+
+      if (xCross >= xL && xCross <= xR){
+        const hit = (xCross - p.x) / (p.w/2);
+        const angle = (Math.PI/3) * hit;
         const speed = Math.hypot(b.vx, b.vy) * 1.01;
+
         b.vx = Math.sin(angle) * speed;
         b.vy = -Math.abs(Math.cos(angle) * speed);
-        b.y = p.y - p.h/2 - b.r - 0.1;
-        if (G.effects.some(e=>e.type==='STICKY')){ b.stuck = true; b.vx = 0; b.vy = 0; }
+        b.y  = yTop - b.r - 0.1;
+
+        if (G.effects.some(e=>e.type==='STICKY')){
+          b.stuck = true; b.vx = 0; b.vy = 0;
+        }
         SFX.paddle();
       }
+    }
+  }
+}
+// (Note: side/bottom overlaps are intentionally ignored so the ball won't bounce up)
+
     }
 
     // Bricks collisions
@@ -1176,11 +1512,13 @@ const angle = (Math.PI/3) * hit;
             if (Math.abs(nx) > Math.abs(ny)) b.vx *= -1; else b.vy *= -1;
           }
           // damage
-          const dmg = b.fire ? 2 : 1;
-          br.hp -= dmg; SFX.brick();
-// grow combo & refresh window
-G.combo = Math.min(COMBO_MAX, G.combo + COMBO_STEP);
-G.comboTime = COMBO_WINDOW;
+      // damage
+const dmg = b.fire ? 2 : 1;
+br.hp -= dmg; SFX.brick();
+
+// combo logic now activates at 2+ successive hits within 2s
+onBrickHit(cx, cy);
+
 
 if (br.hp<=0){
     if (br.type === 'BOMB'){ explodeBrick(br); }
@@ -1214,9 +1552,14 @@ if (br.hp<=0){
       G.running = false; cardNext.hidden = false;
       setTimeout(()=>{ resetLevel(true); }, 900);
     }
-
+    updateExplosions(dt); // NEW: animate explosion FX
     // Effects tick with real-time, not speed-modified dt
     updateEffects(clockDt);
+    updateComboFX(clockDt);
+    // ... after ball/bricks collisions and power-up falls
+updateGun(dt);
+updateBullets(dt);
+
   }
 
   function circleRectOverlap(cx, cy, r, rx, ry, rw, rh){
@@ -1271,6 +1614,7 @@ if (br.hp<=0){
     // Fancy background grid
     drawBackdrop();
 drawPortals();
+drawBullets();
 
     // Bricks
     for (const br of G.bricks){ if (br.hp>0) drawBrick(br); }
@@ -1295,12 +1639,14 @@ if (G.effects.some(e=>e.type==='SHIELD')){
 
     // Power-ups
     for (const pu of G.powerups) drawPower(pu);
+    drawExplosions();
 
-    // If waiting to launch, hint arrow
-    if (G.waitingLaunch) drawLaunchHint();
 
     // Effect badges
     drawEffects();
+    drawComboFX();
+drawComboBanner();
+
   }
   function drawPortals(){
   for (let i=0;i<G.portals.length;i++){
@@ -1330,21 +1676,28 @@ function tryPortalTeleport(b, dt){
   for (let i=0;i<2;i++){
     const P = G.portals[i];
     if (circleRectOverlap(b.x, b.y, b.r, P.x, P.y, P.w, P.h)){
-      const Q = G.portals[1 - i];
+const Q = G.portals[1 - i];
 
-      // Exit with a slight rotation to avoid ping-ponging
-      const speed = Math.hypot(b.vx, b.vy) || b.speed;
-      const angIn = Math.atan2(b.vy, b.vx);
-      const exitBias = (i===0 ? +0.35 : -0.35); // A → B rotates CW, B → A CCW
-      const angOut = angIn + exitBias;
+// Preserve exact direction & speed
+const speed = Math.hypot(b.vx, b.vy) || b.speed;
+const angIn = Math.atan2(b.vy, b.vx);
+const angOut = angIn;
 
-      b.x  = Q.x + Q.w/2;
-      b.y  = Q.y + Q.h/2;
-      b.vx = Math.cos(angOut) * speed;
-      b.vy = Math.sin(angOut) * speed;
-      b.portalCooldown = 0.25;    // prevent immediate re-trigger
-      SFX.wall();
-      return;
+// Place the ball just *outside* the exit portal along its travel direction
+const cx = Q.x + Q.w/2;
+const cy = Q.y + Q.h/2;
+// push distance: just past the portal’s bounding rect + ball radius
+const push = Math.max(b.r + 2, Math.max(Q.w, Q.h) * 0.55);
+
+b.x  = cx + Math.cos(angOut) * push;
+b.y  = cy + Math.sin(angOut) * push;
+b.vx = Math.cos(angOut) * speed;
+b.vy = Math.sin(angOut) * speed;
+
+b.portalCooldown = 0.25; // still prevents immediate retrigger
+SFX.wall();
+return;
+
     }
   }
 }
@@ -1368,6 +1721,201 @@ function tryPortalTeleport(b, dt){
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
+
+  // --- UI helpers ---
+function roundRect(x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// Draw a crisp, vector icon for each power type at (cx,cy) with size s
+// Optional tintColor; pass a target 2D context `c` (defaults to main ctx).
+function drawPUIcon(type, cx, cy, s, tintColor=null, c=ctx){
+  c.save();
+  c.translate(cx, cy);
+
+  const base = tintColor || '#0b0f14';
+  c.fillStyle = base;
+  c.strokeStyle = base;
+  c.lineJoin = 'round';
+  c.lineCap  = 'round';
+  c.lineWidth = Math.max(1, s*0.12);
+
+  function rr(x, y, w, h, r){
+    c.beginPath();
+    c.moveTo(x+r, y);
+    c.lineTo(x+w-r, y);
+    c.quadraticCurveTo(x+w, y, x+w, y+r);
+    c.lineTo(x+w, y+h-r);
+    c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    c.lineTo(x+r, y+h);
+    c.quadraticCurveTo(x, y+h, x, y+h-r);
+    c.lineTo(x, y+r);
+    c.quadraticCurveTo(x, y, x+r, y);
+    c.closePath();
+  }
+
+  switch(type){
+    case 'MULTI': {
+      const r = s*0.22, d = s*0.36;
+      c.beginPath(); c.arc(-d*0.6, 0, r, 0, Math.PI*2); c.fill();
+      c.beginPath(); c.arc( d*0.6, 0, r, 0, Math.PI*2); c.fill();
+      c.beginPath(); c.arc( 0, -d*0.6, r, 0, Math.PI*2); c.fill();
+    } break;
+
+    case 'GUN': {
+      const bw = s*0.18, bh = s*0.52, gap = s*0.16, tip = s*0.14;
+      function bullet(dx){
+        c.save(); c.translate(dx, 0);
+        rr(-bw/2, -bh*0.20, bw, bh*0.75, bw*0.4); c.fill();
+        c.beginPath();
+        c.moveTo(-bw/2, -bh*0.20 - tip*0.2);
+        c.lineTo( bw/2, -bh*0.20 - tip*0.2);
+        c.lineTo( 0,     -bh*0.20 - tip*1.0);
+        c.closePath(); c.fill();
+        c.restore();
+      }
+      bullet(-gap*0.6); bullet(gap*0.6);
+    } break;
+
+    case 'EXPAND': {
+      const L = -s*0.5, R = s*0.5;
+      c.beginPath(); c.moveTo(L+s*0.18, 0); c.lineTo(R-s*0.18, 0); c.stroke();
+      c.beginPath(); c.moveTo(L, 0); c.lineTo(L+s*0.18, -s*0.18); c.lineTo(L+s*0.18, s*0.18); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(R, 0); c.lineTo(R-s*0.18, -s*0.18); c.lineTo(R-s*0.18, s*0.18); c.closePath(); c.fill();
+    } break;
+
+    case 'STICKY': {
+      const pw = s * 0.9, ph = s * 0.22;
+      c.fillRect(-pw/2, s*0.28 - ph/2, pw, ph);
+      c.beginPath(); c.arc(0, s*0.04, s*0.16, 0, Math.PI*2); c.fill();
+      c.lineWidth = Math.max(1, s*0.08);
+      c.beginPath();
+      c.moveTo(-s*0.12, s*0.12); c.lineTo(-s*0.22, s*0.23);
+      c.moveTo( s*0.12, s*0.12); c.lineTo( s*0.22, s*0.23);
+      c.stroke();
+    } break;
+
+    case 'FIRE': {
+      const tiny = s <= 14;
+      const g = c.createLinearGradient(0, s*0.55, 0, -s*0.65);
+      g.addColorStop(0.00, '#f97316'); g.addColorStop(1.00, '#ef4444');
+      c.fillStyle = g;
+      c.beginPath();
+      c.moveTo(-s*0.34,  s*0.34);
+      c.quadraticCurveTo(-s*0.46,  s*0.10, -s*0.28, -s*0.06);
+      c.quadraticCurveTo(-s*0.34, -s*0.26, -s*0.12, -s*0.34);
+      c.quadraticCurveTo(-s*0.04, -s*0.46,  s*0.02, -s*0.56);
+      c.quadraticCurveTo( s*0.20, -s*0.50,  s*0.12, -s*0.34);
+      c.quadraticCurveTo( s*0.30, -s*0.28,  s*0.30, -s*0.12);
+      c.quadraticCurveTo( s*0.30,  s*0.04,  s*0.12,  s*0.12);
+      c.quadraticCurveTo( s*0.26,  s*0.30,  0,       s*0.38);
+      c.quadraticCurveTo(-s*0.10,  s*0.42, -s*0.34,  s*0.34);
+      c.closePath(); c.fill();
+
+      if (!tiny) {
+        c.beginPath();
+        c.moveTo( s*0.02, -s*0.58);
+        c.quadraticCurveTo( s*0.14, -s*0.68,  s*0.20, -s*0.56);
+        c.quadraticCurveTo( s*0.10, -s*0.50,  s*0.02, -s*0.58);
+        c.closePath(); c.fill();
+      }
+
+      const inner = c.createLinearGradient(0, s*0.32, 0, -s*0.32);
+      inner.addColorStop(0.00, '#facc15'); inner.addColorStop(1.00, '#fde047');
+      c.fillStyle = inner;
+      c.beginPath();
+      c.moveTo(-s*0.12,  s*0.22);
+      c.quadraticCurveTo(-s*0.10,  s*0.06, -s*0.04, -s*0.04);
+      c.quadraticCurveTo( s*0.10,  s*0.00,  s*0.06,  s*0.18);
+      c.quadraticCurveTo( s*0.04,  s*0.28, -s*0.06,  s*0.30);
+      c.closePath(); c.fill();
+    } break;
+
+    case 'SLOW': {
+      c.beginPath(); c.arc(0, 0, s*0.42, 0, Math.PI*2); c.stroke();
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -s*0.26); c.stroke();
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(s*0.19, 0); c.stroke();
+    } break;
+
+    case 'LIFE': {
+      c.beginPath();
+      c.moveTo(0, s*0.42);
+      c.bezierCurveTo(-s*0.55, s*0.05, -s*0.45, -s*0.35, 0, -s*0.12);
+      c.bezierCurveTo( s*0.45, -s*0.35,  s*0.55, s*0.05, 0, s*0.42);
+      c.fill();
+    } break;
+
+    case 'SHIELD': {
+      c.lineWidth = Math.max(1, s*0.09);
+      c.beginPath();
+      c.moveTo(0, -s*0.48);
+      c.lineTo(s*0.46, -s*0.18);
+      c.lineTo(s*0.36, s*0.4);
+      c.lineTo(0, s*0.55);
+      c.lineTo(-s*0.36, s*0.4);
+      c.lineTo(-s*0.46, -s*0.18);
+      c.closePath();
+      c.stroke();
+    } break;
+
+    case 'CURSE_SHRINK': {
+      c.beginPath(); c.moveTo(-s*0.52, 0); c.lineTo(-s*0.16, 0); c.stroke();
+      c.beginPath(); c.moveTo(-s*0.20, -s*0.18); c.lineTo(-s*0.02, 0); c.lineTo(-s*0.20, s*0.18); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo( s*0.52, 0); c.lineTo( s*0.16, 0); c.stroke();
+      c.beginPath(); c.moveTo( s*0.20, -s*0.18); c.lineTo( s*0.02, 0); c.lineTo( s*0.20, s*0.18); c.closePath(); c.fill();
+    } break;
+
+    case 'CURSE_SPEED': {
+      c.lineWidth = Math.max(1, s*0.10);
+      const cy = s*0.14, R = s*0.45, a0 = Math.PI*0.8, a1 = Math.PI*0.2;
+      c.beginPath(); c.arc(0, cy, R, a0, a1, false); c.stroke();
+      c.lineWidth = Math.max(1, s*0.08);
+      for (let k=0;k<=4;k++){
+        const a = a0 + (a1 - a0) * (k/4);
+        const x1 = Math.cos(a) * (R*0.85), y1 = cy + Math.sin(a) * (R*0.85);
+        const x2 = Math.cos(a) * R,        y2 = cy + Math.sin(a) * R;
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+      }
+      c.lineWidth = Math.max(1, s*0.10);
+      const an = Math.PI*0.18;
+      c.beginPath(); c.moveTo(0, cy);
+      c.lineTo(Math.cos(an) * (R*0.78), cy + Math.sin(an) * (R*0.78));
+      c.stroke();
+      c.beginPath(); c.arc(0, cy, s*0.06, 0, Math.PI*2); c.fill();
+    } break;
+  }
+  c.restore();
+}
+
+
+// Render the legend's <canvas class="pu-icon"> using the same icon code
+function renderLegendIcons(){
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  document.querySelectorAll('canvas.pu-icon').forEach(el=>{
+    const size = 24;                          // logical size
+    el.width  = size * dpr;
+    el.height = size * dpr;
+    const c = el.getContext('2d');
+    c.setTransform(dpr,0,0,dpr,0,0);
+    c.clearRect(0,0,size,size);
+
+    const type = el.dataset.type;
+    const tint = (ICON_TINT && ICON_TINT[type]) ? ICON_TINT[type] : '#e6edf3';
+    drawPUIcon(type, size/2, size/2, size*0.8, tint, c);
+  });
+}
+
+
 
 function drawPaddle(p){
   const x = p.x - p.w/2, y = p.y - p.h/2;
@@ -1419,27 +1967,142 @@ function drawPaddle(p){
       ctx.fillRect(b.x-1, b.y+3, 2, 6); ctx.globalAlpha = 1;
     }
   }
-  function explodeBrick(center){
-  const R = Math.max(center.w, center.h) * 1.6; // radius
+function explodeBrick(center){
+  const Cx = center.x + center.w/2, Cy = center.y + center.h/2;
+  const R = Math.max(center.w, center.h) * 1.6; // damage radius
+
   for (const nb of G.bricks){
     if (nb === center || nb.hp <= 0) continue;
+
     const cx = nb.x + nb.w/2, cy = nb.y + nb.h/2;
-    const Cx = center.x + center.w/2, Cy = center.y + center.h/2;
     const d2 = (cx-Cx)*(cx-Cx) + (cy-Cy)*(cy-Cy);
     if (d2 <= R*R){
-      const before = nb.hp;
-      nb.hp -= 2; // blast damage
+      // ✅ Count toward combo BEFORE scoring/damage
+      onBrickHit(cx, cy);
+
+      // Apply blast damage
+      nb.hp -= 2;
+
       if (nb.hp > 0){
-        addScore(Math.round(12 * G.combo)); // chip score
+        addScore(Math.round(12 * G.combo));
         nb.color = shade(nb.color, -28);
       } else {
-        addScore(Math.round(40 * G.combo));  // kill score
+        addScore(Math.round(40 * G.combo));
         maybeDropPower(nb);
+
+        // (Optional) chain reactions for bombs:
+        if (nb.type === 'BOMB'){ explodeBrick(nb); }
       }
     }
   }
+
   if (SFX.boom) SFX.boom();
+  spawnExplosion(Cx, Cy); // visual FX
 }
+
+
+// --- Explosion FX (ring + sparks) ---
+function spawnExplosion(x, y){
+  const dur = 0.6 + Math.random()*0.15; // ring duration
+  const ring = { x, y, t:0, dur, r0:10, r1:110, done:false };
+
+  // build sparks (fast little glowing shards)
+  const sparks = [];
+  const N = 32;
+  for (let i=0;i<N;i++){
+    const ang = Math.random()*Math.PI*2;
+    const spd = 160 + Math.random()*260;
+    sparks.push({
+      x, y,
+      vx: Math.cos(ang)*spd,
+      vy: Math.sin(ang)*spd - 60, // slight upward bias
+      r: 1.5 + Math.random()*2.2,
+      life: 0.45 + Math.random()*0.45, // seconds
+      a: 1.0,
+      hue: 28 + Math.random()*20 // orange→pink range
+    });
+  }
+
+  G.explosions.push({ ring, sparks });
+}
+
+function easeOutCubic(p){ return 1 - Math.pow(1-p, 3); }
+
+function updateExplosions(dt){
+  for (let i=G.explosions.length-1;i>=0;i--){
+    const FX = G.explosions[i];
+
+    // ring
+    FX.ring.t += dt;
+    if (FX.ring.t >= FX.ring.dur) FX.ring.done = true;
+
+    // sparks
+    for (let j=FX.sparks.length-1;j>=0;j--){
+      const s = FX.sparks[j];
+      s.life -= dt;
+      if (s.life <= 0 || s.r <= 0.2){ FX.sparks.splice(j,1); continue; }
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vy += 600 * dt * 0.6;      // gravity
+      s.vx *= 0.985; s.vy *= 0.985; // air drag
+      s.r  *= 0.985;
+    }
+
+    if (FX.ring.done && FX.sparks.length===0){
+      G.explosions.splice(i,1);
+    }
+  }
+}
+
+function drawExplosions(){
+  for (const FX of G.explosions){
+    const { ring, sparks } = FX;
+
+    // central flash
+    {
+      const p = Math.min(1, ring.t / ring.dur);
+      const flashR = 34 * (1 - p);
+      if (flashR > 2){
+        const g = ctx.createRadialGradient(ring.x, ring.y, 0, ring.x, ring.y, flashR);
+        g.addColorStop(0, 'rgba(255,255,255,0.85)');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(ring.x, ring.y, flashR, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    // expanding ring
+    {
+      const p = Math.min(1, ring.t / ring.dur);
+      const rr = ring.r0 + (ring.r1 - ring.r0) * easeOutCubic(p);
+      const alpha = 1 - p;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, alpha*0.9);
+      ctx.shadowColor = 'rgba(251, 191, 36, 0.8)'; // amber glow
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = 6 * (1 - p) + 2;
+      // warm→hot stroke
+      const grad = ctx.createLinearGradient(ring.x-rr, ring.y-rr, ring.x+rr, ring.y+rr);
+      grad.addColorStop(0, 'rgba(251,191,36,1)');  // amber
+      grad.addColorStop(1, 'rgba(251,113,133,1)'); // pink
+      ctx.strokeStyle = grad;
+      ctx.beginPath(); ctx.arc(ring.x, ring.y, rr, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+
+    // sparks (additive)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const s of sparks){
+      const a = Math.max(0, Math.min(1, s.life * 2)); // fade as life runs out
+      ctx.globalAlpha = a;
+      ctx.fillStyle = `hsl(${s.hue} 90% 60%)`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 
 
   function drawBrick(br){
@@ -1479,59 +2142,90 @@ function drawPaddle(p){
       for (let i=0;i<br.hp;i++){ ctx.fillRect(px - i*(pipW+spacing), y+6, pipW, 4); }
     }
   }
+function drawPower(pu){
+  const x = pu.x - pu.w/2, y = pu.y - pu.h/2, w = pu.w, h = pu.h;
+  const r = Math.min(8, h*0.48);
 
-  function drawPower(pu){
-    const x = pu.x - pu.w/2, y = pu.y - pu.h/2;
-    ctx.fillStyle = pu.color; ctx.fillRect(x,y,pu.w,pu.h);
-    ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.strokeRect(x+0.5,y+0.5,pu.w-1,pu.h-1);
-    ctx.fillStyle = '#0b0f14'; ctx.font = '10px ui-sans-serif, system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(pu.label, pu.x, pu.y+0.5);
-  }
+  // 🔹 Use a complementary color for FIRE (cool blue); others use their defined color
+  const pillBase = (pu.type === 'FIRE') ? '#2563eb' /* blue-600 */ : pu.color;
 
-  function drawLaunchHint(){
-    const b = G.balls[0];
-    ctx.globalAlpha = 0.5; ctx.strokeStyle = '#5eead4'; ctx.setLineDash([5,4]);
-    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x, b.y-60); ctx.stroke();
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
-  }
+  // glossy pill body
+  const body = ctx.createLinearGradient(x, y, x, y+h);
+  body.addColorStop(0, shade(pillBase, 20));
+  body.addColorStop(1, shade(pillBase, -10));
+  ctx.fillStyle = body;
+  roundRect(x, y, w, h, r); ctx.fill();
 
-  function drawEffects(){
-    if (!G.effects.length) return;
-    ctx.save();
-    ctx.font = '12px ui-sans-serif, system-ui';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    let x = 12, y = 12;
-    // Show current risk multiplier
-if (G.riskMult > 1){
-  ctx.fillStyle = 'rgba(239, 68, 68, .16)'; // soft red panel
-  ctx.fillRect(x, y, 110, 20);
-  ctx.strokeStyle = '#b91c1c'; ctx.strokeRect(x+0.5, y+0.5, 109, 19);
-  ctx.fillStyle = '#fecaca';
-  ctx.fillText('RISK x' + G.riskMult.toFixed(2), x+6, y+4);
-  y += 24; // bump subsequent badges down
+  // border
+  ctx.strokeStyle = shade(pillBase, -40);
+  ctx.lineWidth = 1;
+  roundRect(x+0.5, y+0.5, w-1, h-1, r-0.5); ctx.stroke();
+
+  // top highlight
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#ffffff';
+  roundRect(x+2, y+2, w-4, Math.max(2, h*0.28), r*0.6); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // icon (now colored for FIRE via drawPUIcon)
+  const s = Math.min(w, h) * 0.8;
+  drawPUIcon(pu.type, pu.x, pu.y, s);
 }
 
-    // Show combo if active
-if (G.combo > 1){
-  ctx.fillStyle = 'rgba(17,24,39,.85)';
-  ctx.fillRect(12, 12, 120, 22);
-  ctx.strokeStyle = '#26334a'; ctx.strokeRect(12.5, 12.5, 119, 21);
-  ctx.fillStyle = '#e6edf3';
-  ctx.fillText('COMBO x' + (Math.round(G.combo*100)/100), 18, 16);
-  // bump y so effect badges stack below it
-  ctx.translate(0, 26);
+
+
+
+
+function drawEffects(){
+  // --- RISK badge (top-right) ---
+  ctx.save();
+  ctx.font = '12px ui-sans-serif, system-ui';
+  ctx.textBaseline = 'top';
+  if (G.riskMult > 1){
+    const w = 110, h = 20, pad = 12;
+    const rx = css.w - pad - w, ry = pad;
+    ctx.fillStyle = 'rgba(239, 68, 68, .16)';
+    ctx.fillRect(rx, ry, w, h);
+    ctx.strokeStyle = '#b91c1c';
+    ctx.strokeRect(rx + 0.5, ry + 0.5, w - 1, h - 1);
+    ctx.fillStyle = '#fecaca';
+    ctx.textAlign = 'left';
+    ctx.fillText('RISK x' + G.riskMult.toFixed(2), rx + 6, ry + 4);
+  }
+  ctx.restore();
+
+  // --- Power-up timers (top-left stack, now with icons) ---
+  ctx.save();
+  ctx.font = '12px ui-sans-serif, system-ui';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+
+  let x = 12, y = 12;
+  const ROW_W = 126, ROW_H = 20;
+
+  for (const e of G.effects){
+    const sec = Math.max(0, e.remaining);
+    const name = (EFFECT_LABEL && EFFECT_LABEL[e.type]) ? EFFECT_LABEL[e.type] : e.type;
+
+    // panel
+    ctx.fillStyle = 'rgba(17,24,39,.8)';
+    ctx.fillRect(x, y, ROW_W, ROW_H);
+    ctx.strokeStyle = '#26334a';
+    ctx.strokeRect(x + 0.5, y + 0.5, ROW_W - 1, ROW_H - 1);
+
+    // icon
+drawPUIcon(e.type, x + 12, y + 10, 11, ICON_TINT[e.type] || '#e6edf3');
+
+    // text
+    ctx.fillStyle = '#e6edf3';
+    ctx.fillText(name + ' ' + Math.ceil(sec) + 's', x + 24, y + 4);
+
+    y += ROW_H + 4;
+  }
+  ctx.restore();
 }
 
-    for (const e of G.effects){
-      const sec = Math.max(0, e.remaining);
-      const label = e.type + ' ' + Math.ceil(sec)+'s';
-      ctx.fillStyle = 'rgba(17,24,39,.8)'; ctx.fillRect(x,y,100,20);
-      ctx.strokeStyle = '#26334a'; ctx.strokeRect(x+0.5,y+0.5,99,19);
-      ctx.fillStyle = '#e6edf3'; ctx.fillText(label, x+6, y+4);
-      y += 24;
-    }
-    ctx.restore();
-  }
+
 
   // ===== Tests =====
   function runTests(){
@@ -1580,7 +2274,9 @@ if (G.combo > 1){
     gameReady = true;  // allow resize() to rescale entities
   resize();          // ensure canvas matches the full window now
   restartGame();
+  renderLegendIcons();
 })();
 </script>
 </body>
 </html>
+

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Canvas Arena</title>
+  <title>Arena</title>
   <style>
     html, body { height: 100%; margin: 0; background: #0b0f14; color: #e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
     #wrap { position: fixed; inset: 0; overflow: hidden; }
@@ -41,7 +41,7 @@ canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; display: blo
 
     <div class="overlay" id="menu" hidden>
       <div class="card">
-        <h1>Canvas Arena</h1>
+        <h1>Arena</h1>
         <p>Move with WASD / Arrow Keys. Avoid the enemies and collect their dust particles once they expire.</p>
 <button id="startBtn" type="button" aria-label="Play">Play (Enter/Space)</button>
       </div>
@@ -594,20 +594,23 @@ function spawnEnemy() {
       }
       ctx.restore();
       drawXPBar();
-      if (state.levelFlash > 0) {
-        const a = Math.max(0, state.levelFlash / 0.3);
-        ctx.globalAlpha = a;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0,0,state.vw,state.vh);
-        ctx.globalAlpha = 1;
-      }
-      if (state.nukeFlash > 0) {
-        const a = Math.max(0, state.nukeFlash / 0.3);
-        ctx.globalAlpha = a;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0,0,state.vw,state.vh);
-        ctx.globalAlpha = 1;
-      }
+if (state.levelFlash > 0) {
+  const t = Math.max(0, state.levelFlash / 0.3);
+  const a = 0.35 * t;            // cap brightness (was 1 * t)
+  ctx.globalAlpha = a;
+  ctx.fillStyle = '#e6f0ff';     // softer than pure white
+  ctx.fillRect(0,0,state.vw,state.vh);
+  ctx.globalAlpha = 1;
+}
+if (state.nukeFlash > 0) {
+  const t = Math.max(0, state.nukeFlash / 0.3);
+  const a = 0.25 * t;            // gentler than level flash
+  ctx.globalAlpha = a;
+  ctx.fillStyle = '#e6f0ff';
+  ctx.fillRect(0,0,state.vw,state.vh);
+  ctx.globalAlpha = 1;
+}
+
     }
 
     const keyMap = {
