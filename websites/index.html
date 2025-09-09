@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Workshop Arcade — Browser Games</title>
+  <meta name="description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2300e5c8'/%3E%3Cpath d='M35 40h10v20H35zm20 0h10v20H55z' fill='%230b0f14'/%3E%3C/svg%3E" />
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#0b0f14;          /* page background */
+      --panel:#0f1522;       /* surfaces */
+      --ink:#e6edf3;         /* text */
+      --muted:#9fb0c8;       /* secondary text */
+      --accent:#5eead4;      /* brand teal */
+      --ring:#7c9eff;        /* focus ring */
+      --card:#0c121e;        /* card bg */
+      --stroke:#16243a;      /* borders */
+      --chip:#0c1929;        /* filter chips */
+      --ok:#34d399;          /* green */
+      --warn:#f59e0b;        /* amber */
+      --danger:#fb7185;      /* pink/red */
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+      --grid-gap:16px;
+      --maxw:1200px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    a{color:inherit;text-decoration:none}
+    img{max-width:100%;display:block}
+
+    /* Layout */
+    .wrap{min-height:100%;display:grid;grid-template-rows:auto auto 1fr auto}
+    header{
+      position:sticky;top:0;z-index:50;background:linear-gradient(180deg, rgba(15,21,34,.9), rgba(15,21,34,.75));
+      backdrop-filter:saturate(120%) blur(8px);
+      border-bottom:1px solid var(--stroke);
+    }
+    .bar{max-width:var(--maxw);margin:auto;display:flex;gap:12px;align-items:center;padding:12px 16px}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.4px}
+    .logo .dot{width:14px;height:14px;border-radius:50%;background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2)}
+    .logo span{font-size:18px}
+
+    .search{position:relative;flex:1}
+    .search input{width:100%;background:var(--card);border:1px solid var(--stroke);color:var(--ink);
+      padding:12px 40px 12px 14px;border-radius:12px;outline:0;box-shadow:var(--shadow)}
+    .search input:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(124,158,255,.2), var(--shadow)}
+    .search .icon{position:absolute;right:12px;top:50%;translate:0 -50%;opacity:.7}
+
+    .filters{max-width:var(--maxw);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 8px}
+    .chip{background:var(--chip);border:1px solid var(--stroke);padding:8px 12px;border-radius:999px;
+      font-weight:600;color:var(--muted);cursor:pointer;user-select:none}
+    .chip[data-active="true"]{background:linear-gradient(180deg,#0c1d2d,#0b1726);color:var(--ink);border-color:#1f3350;box-shadow:0 0 0 2px rgba(94,234,212,.18) inset}
+
+    .controls{max-width:var(--maxw);margin:0 auto;padding:8px 16px 0;display:flex;gap:12px;align-items:center}
+    .select{margin-left:auto}
+    select{background:var(--card);border:1px solid var(--stroke);color:var(--ink);padding:10px 12px;border-radius:10px}
+
+    main{max-width:var(--maxw);margin:8px auto 24px;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--grid-gap)}
+    @media (max-width: 1100px){ .grid{grid-template-columns:repeat(3,1fr)} }
+    @media (max-width: 760px){ .grid{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width: 480px){ .grid{grid-template-columns:1fr} }
+
+    .card{position:relative;background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);
+      overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+    .thumb{aspect-ratio: 16/9; background:linear-gradient(180deg,#0e1a2b,#0b1220)}
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .meta{padding:12px 12px 14px;display:grid;gap:8px}
+    .title{font-weight:800;font-size:16px;letter-spacing:.2px}
+    .subtitle{font-size:12.5px;color:var(--muted);line-height:1.2}
+    .tags{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{font-size:11px;padding:4px 8px;border:1px solid var(--stroke);border-radius:999px;color:var(--muted)}
+    .row{display:flex;align-items:center;gap:10px}
+
+    .play{margin-left:auto;background:linear-gradient(180deg,#16e7c7,#13d1cb);border:none;color:#052329;
+      font-weight:800;padding:10px 12px;border-radius:10px;cursor:pointer}
+    .play:focus{outline:0;box-shadow:0 0 0 3px rgba(94,234,212,.35)}
+
+    footer{border-top:1px solid var(--stroke);background:#0a0f17;color:var(--muted)}
+    .foot{max-width:var(--maxw);margin:auto;padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+
+    /* Dialog (game player) */
+    dialog{border:none;border-radius:18px;background:#0a1020;box-shadow:0 18px 60px rgba(0,0,0,.6);width:min(1060px,94vw);padding:0}
+    dialog::backdrop{background:rgba(5,10,18,.75)}
+    .dlg-head{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,#0f182a,#0b1220)}
+    .dlg-title{font-weight:800}
+    .dlg-actions{margin-left:auto;display:flex;gap:8px}
+    .btn{background:#0f1625;border:1px solid var(--stroke);color:var(--ink);padding:8px 10px;border-radius:10px;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#16e7c7,#13d1cb);color:#052329;border:none;font-weight:800}
+    .frame-wrap{position:relative;aspect-ratio:16/9}
+    iframe{width:100%;height:100%;border:0;background:#000}
+
+    /* Empty state */
+    .empty{padding:40px;border:1px dashed var(--stroke);border-radius:14px;text-align:center;color:var(--muted)}
+
+    /* Focus outlines for accessibility */
+    .chip:focus-visible, .btn:focus-visible, .play:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <a class="logo" href="#" aria-label="Home">
+        <div class="dot" aria-hidden="true"></div>
+        <span>Playground</span>
+      </a>
+      <div class="search" role="search">
+        <input id="q" type="search" placeholder="Search games… (Ctrl+/)" autocomplete="off" />
+        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-3.8-3.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
+      <a class="btn" href="#" id="submitGameBtn" title="How to add your game">Submit a Game</a>
+    </div>
+    <div class="filters" id="filters" aria-label="Filters">
+      <!-- chips populated by JS -->
+    </div>
+    <div class="controls">
+      <small id="resultCount" aria-live="polite"></small>
+      <div class="select">
+        <label for="sort" class="sr" style="position:absolute;left:-9999px">Sort</label>
+        <select id="sort">
+          <option value="new">Newest</option>
+          <option value="az">A → Z</option>
+          <option value="pop">Most Popular</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
+    <template id="cardT">
+      <article class="card">
+        <div class="thumb"><img alt="" loading="lazy" /></div>
+        <div class="meta">
+          <div class="title"></div>
+          <div class="subtitle"></div>
+          <div class="row">
+            <div class="tags"></div>
+            <button class="play" type="button">Play</button>
+          </div>
+        </div>
+      </article>
+    </template>
+    <div id="empty" class="empty" hidden>No results. Try a different search or filter.</div>
+  </main>
+
+  <footer>
+    <div class="foot">
+      <div>© <span id="year"></span> Playground Games</div>
+      <div style="display:flex;gap:14px;align-items:center">
+        <a href="#" id="aboutLink">About</a>
+        <a href="#" id="contactLink">Contact</a>
+        <a href="#" id="rssLink">RSS</a>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- Player Dialog -->
+<dialog id="player">
+  <div class="dlg-head">
+    <div class="dlg-title" id="dlgTitle">Game</div>
+    <div class="dlg-actions">
+      <a id="openNewTab" class="btn" target="_blank" rel="noopener">Open in new tab</a>
+      <button id="closeDlg" class="btn primary" type="button">Close</button>
+    </div>
+  </div>
+  <div class="frame-wrap">
+    <iframe id="frame" title="Game" allow="autoplay; fullscreen; gamepad; xr-spatial-tracking"></iframe>
+  </div>
+</dialog>
+
+<script>
+// --- Minimal client-side catalog for your HTML5 games ---
+// This tries to fetch "/games/manifest.json". If not found, it falls back to SAMPLE_GAMES below.
+
+const SAMPLE_GAMES = [
+  {
+    id: "brick-breaker",
+    title: "Brick Breaker",
+    subtitle: "Break all the bricks. Power‑ups, portals, risk multipliers.",
+    tags: ["Arcade","Physics"],
+    slug: "brick-breaker",
+    url: "/games/brick-breaker/index.html",
+    cover: "/games/brick-breaker/cover.jpg",
+    addedAt: "2025-09-01",
+    popularity: 93
+  },
+  {
+    id: "checkers",
+    title: "Checkers+",
+    subtitle: "Play vs AI or a friend. Slick board, smooth moves.",
+    tags: ["Board","Strategy"],
+    slug: "checkers",
+    url: "/games/checkers/index.html",
+    cover: "/games/checkers/cover.jpg",
+    addedAt: "2025-09-05",
+    popularity: 81
+  },
+  {
+    id: "shape-inlay",
+    title: "Shape Inlay — Conveyor",
+    subtitle: "Snap shapes to fill the board. Conveyor chaos mode.",
+    tags: ["Puzzle"],
+    slug: "shape-inlay",
+    url: "/games/shape-inlay/index.html",
+    cover: "/games/shape-inlay/cover.jpg",
+    addedAt: "2025-09-07",
+    popularity: 77
+  }
+];
+
+const CATEGORIES = ["All","Arcade","Puzzle","Board","Strategy","Physics","Endless","Action"];
+
+const state = {
+  games: [],
+  filtered: [],
+  query: "",
+  category: "All",
+  sort: "new"
+};
+
+const els = {
+  grid: document.getElementById('grid'),
+  cardT: document.getElementById('cardT'),
+  q: document.getElementById('q'),
+  filters: document.getElementById('filters'),
+  sort: document.getElementById('sort'),
+  resultCount: document.getElementById('resultCount'),
+  player: document.getElementById('player'),
+  frame: document.getElementById('frame'),
+  dlgTitle: document.getElementById('dlgTitle'),
+  openNewTab: document.getElementById('openNewTab'),
+  empty: document.getElementById('empty')
+};
+
+// Build filter chips
+for(const name of CATEGORIES){
+  const chip = document.createElement('button');
+  chip.className = 'chip';
+  chip.textContent = name;
+  chip.setAttribute('data-active', name === state.category);
+  chip.addEventListener('click', ()=>{ state.category = name; update(); });
+  chip.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); chip.click(); }});
+  els.filters.appendChild(chip);
+}
+
+// Load games manifest (backend can generate this later)
+(async function load(){
+  try{
+    const res = await fetch('/games/manifest.json', {cache:'no-cache'});
+    if(!res.ok) throw new Error('no manifest');
+    const data = await res.json();
+    if(!Array.isArray(data)) throw new Error('bad manifest');
+    state.games = data;
+  }catch(err){
+    state.games = SAMPLE_GAMES;
+  }
+  update();
+})();
+
+// Search helpers
+els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim().toLowerCase(); update(); });
+window.addEventListener('keydown', (e)=>{ if((e.ctrlKey||e.metaKey) && e.key === '/'){ els.q.focus(); e.preventDefault(); }});
+els.sort.addEventListener('change', ()=>{ state.sort = els.sort.value; update(); });
+
+function update(){
+  // active chip UI
+  for(const chip of els.filters.children){
+    chip.setAttribute('data-active', chip.textContent === state.category);
+  }
+
+  const q = state.query;
+  const cat = state.category;
+  let list = [...state.games];
+  if(cat !== 'All') list = list.filter(g => (g.tags||[]).includes(cat));
+  if(q) list = list.filter(g => `${g.title} ${g.subtitle} ${(g.tags||[]).join(' ')}`.toLowerCase().includes(q));
+
+  // sort
+  if(state.sort === 'az') list.sort((a,b)=>a.title.localeCompare(b.title));
+  else if(state.sort === 'pop') list.sort((a,b)=>(b.popularity||0)-(a.popularity||0));
+  else list.sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
+
+  state.filtered = list;
+  render();
+}
+
+function render(){
+  els.grid.innerHTML = '';
+  els.grid.setAttribute('aria-busy','true');
+  const frag = document.createDocumentFragment();
+  for(const g of state.filtered){
+    const card = els.cardT.content.firstElementChild.cloneNode(true);
+    const img = card.querySelector('img');
+    img.alt = `${g.title} cover`;
+    img.src = g.cover || placeholderCover(g.title);
+    card.querySelector('.title').textContent = g.title;
+    card.querySelector('.subtitle').textContent = g.subtitle || '';
+
+    const tags = card.querySelector('.tags');
+    for(const t of (g.tags||[])){
+      const span = document.createElement('span');
+      span.className = 'tag'; span.textContent = t; tags.appendChild(span);
+    }
+
+    card.querySelector('.play').addEventListener('click', ()=> openPlayer(g));
+
+    // Allow open via clicking the thumbnail
+    card.querySelector('.thumb').addEventListener('click', ()=> openPlayer(g));
+
+    frag.appendChild(card);
+  }
+  els.grid.appendChild(frag);
+  els.grid.removeAttribute('aria-busy');
+
+  const n = state.filtered.length;
+  els.resultCount.textContent = `${n} game${n===1?'':'s'}`;
+  els.empty.hidden = n !== 0;
+}
+
+function placeholderCover(title){
+  const text = encodeURIComponent(title);
+  // Simple generated SVG cover (no network calls)
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop stop-color='%2316e7c7'/%3E%3Cstop offset='1' stop-color='%237c9eff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='640' height='360' fill='%230c121e'/%3E%3Crect x='16' y='16' width='608' height='328' rx='18' fill='url(%23g)' opacity='.15'/%3E%3Ctext x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial' font-size='34' fill='%23e6edf3' opacity='.95'%3E${text}%3C/text%3E%3C/svg%3E`;
+}
+
+// Dialog controls
+const dlg = els.player;
+const closeBtn = document.getElementById('closeDlg');
+closeBtn.addEventListener('click', ()=> dlg.close());
+window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && dlg.open) dlg.close(); });
+
+document.getElementById('year').textContent = new Date().getFullYear();
+
+function openPlayer(g){
+  els.dlgTitle.textContent = g.title;
+  els.frame.src = g.url; // e.g., /games/brick-breaker/index.html
+  els.openNewTab.href = g.url;
+  dlg.showModal();
+}
+
+// Simple hash deep-link: /#play=slug
+window.addEventListener('hashchange', syncHash);
+function syncHash(){
+  const m = location.hash.match(/play=([^&]+)/);
+  if(!m) return;
+  const slug = decodeURIComponent(m[1]);
+  const g = state.games.find(x => x.slug === slug);
+  if(g) openPlayer(g);
+}
+setTimeout(syncHash, 0);
+
+// "Submit a Game" placeholder (frontend only)
+document.getElementById('submitGameBtn').addEventListener('click', (e)=>{
+  e.preventDefault();
+  alert(`For now, add a folder under /games/your-slug with index.html and cover.jpg, then update /games/manifest.json.\n\nLater (backend): we'll build an authenticated submission flow.`);
+});
+</script>
+</body>
+</html>
