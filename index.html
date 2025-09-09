@@ -253,7 +253,8 @@ for(const name of CATEGORIES){
 // Load games manifest (backend can generate this later)
 (async function load(){
   try{
-    const res = await fetch('/games/manifest.json', {cache:'no-cache'});
+// was '/games/manifest.json'
+const res = await fetch('/websites/manifest.json', { cache: 'no-cache' });
     if(!res.ok) throw new Error('no manifest');
     const data = await res.json();
     if(!Array.isArray(data)) throw new Error('bad manifest');
