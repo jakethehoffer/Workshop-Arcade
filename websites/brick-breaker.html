@@ -555,6 +555,9 @@ gunCooldown: 0,       // ← NEW: autofire timer
     powerups: [],
     effects: [], // {type, remaining}
     dropChance: 0.18,
+    puCounts: Object.create(null),   // per-type spawn counts this level
+puCap: 2,                        // max spawns per type per level
+
     portals: [],
 riskMult: 1,
 shrinkDebt: 0,   // how many pixels CURSE_SHRINK has removed (to restore later)
@@ -608,11 +611,11 @@ const LAUNCH_MAX = -Math.PI * 0.25;  //  -45°, up-right
 const randLaunch = () => LAUNCH_MIN + Math.random() * (LAUNCH_MAX - LAUNCH_MIN);
 // Power-up drop tuning
 const DROP_L1   = 0.50;  // 50% per brick on Level 1 (was 0.18)
-const DROP_DECAY= 0.04;  // -4% per level
-const DROP_MIN  = 0.14;  // don't go below 14%
+const DROP_DECAY= 0.01;  // -4% per level
+const DROP_MIN  = 0.20;  // don't go below 14%
 const COMBO_WINDOW = 2.0;   // seconds to keep chain alive
 const COMBO_STEP   = 0.25;  // how fast combo grows per brick
-const COMBO_MAX    = 5;     // cap
+const COMBO_MAX    = 10;     // cap
 const COMBO_PALETTE = ['#5eead4','#60a5fa','#a78bfa','#f472b6','#fb7185','#f59e0b','#84cc16','#22d3ee'];
 const COMBO_GRAD_MAX_STOPS = 6;  // keep it punchy & readable
 
@@ -707,16 +710,28 @@ const PATTERNS = [
 ];
 
 
-  function difficultyFor(level){
-    // Scales every few levels; caps to keep fair
-    const rows = Math.min(10, 5 + Math.floor((level-1)/1));
-    const cols = Math.min(14, 10 + Math.floor((level-1)/2));
-    const hpBonus = Math.min(3, Math.floor((level-1)/3));
-    const ballSpeedAdd = Math.min(200, (level-1)*18);
-    const paddleShrink = Math.min(60, (level-1)*3);
-const dropChance = Math.max(DROP_MIN, DROP_L1 - (level-1)*DROP_DECAY);
-    return {rows, cols, hpBonus, ballSpeedAdd, paddleShrink, dropChance};
-  }
+function difficultyFor(level){
+  const rows = Math.min(10, 5 + Math.floor((level-1)/1));
+  const cols = Math.min(14, 10 + Math.floor((level-1)/2));
+  const ballSpeedAdd = Math.min(200, (level-1)*18);
+  const paddleShrink = Math.min(60, (level-1)*3);
+
+  // keep your existing drop curve
+  const dropChance = Math.max(DROP_MIN, DROP_L1 - (level-1)*DROP_DECAY);
+
+  // NEW: smooth reinforcement
+  // On average this adds +1 HP every ~4 levels, spread probabilistically
+  const hpFloat = (level-1) / 4;     // 0.0 → 0.75 by L4 (not a full +1 yet)
+  const hpBase  = Math.floor(hpFloat);
+  const hpFrac  = hpFloat - hpBase;  // 0..1 chance for one extra on *some* bricks
+
+  // Bias extra HP toward upper rows (harder shots)
+  // Also slowly widen the “reinforced share” as levels rise
+  const reinforceBias = Math.min(0.65, 0.18 + 0.06*(level-1)); // max ~65% of bricks *eligible*
+
+  return {rows, cols, ballSpeedAdd, paddleShrink, dropChance, hpBase, hpFrac, reinforceBias};
+}
+
 
 function addMovingToBricks(level, bricks, brickWidth){
   // Only add movers from Level 2+
@@ -831,10 +846,30 @@ function buildLevel(level){
       const x = 20 + c*(bw + G.brickPadding);
       const y = G.brickTop + r*(G.brickHeight + G.brickPadding);
 
-      // HP curve + pattern spice: top rows stronger; occasional “beefy” lanes
-      const baseHp = (r < 2 ? 2 : 1) + dif.hpBonus;
-      const extra = (comboMode==='AND' && (c%4===0)) ? 1 : 0;
-      const hp = Math.min(4, baseHp + extra);
+      // Base still rewards top rows
+const rowBase = (r < 2 ? 2 : 1);
+
+// Smooth reinforcement:
+// Everyone gets +hpBase.
+// A fraction get +1 more, weighted to upper rows and limited by reinforceBias.
+let hp = rowBase + dif.hpBase;
+
+// probability knob: top rows more likely to get the fractional +1
+const rowWeight = (G.brickRows <= 1) ? 1
+  : 1 - (r / Math.max(1, G.brickRows - 1));  // 1 at top row → 0 at bottom
+
+// Only a portion of bricks are even *eligible* to reinforce this level:
+const eligible = (Math.random() < dif.reinforceBias);
+
+// If eligible, apply the fractional chance:
+if (eligible && Math.random() < dif.hpFrac * rowWeight){
+  hp += 1;
+}
+
+// Keep your pattern “extra” (if you like that spice)
+const extra = (comboMode==='AND' && (c%4===0)) ? 1 : 0;
+hp = Math.min(4, hp + extra);
+
 
 // ~6% chance for a bomb (more likely in upper rows)
 const isBomb = (r < Math.floor(G.brickRows*0.6)) && Math.random() < 0.06;
@@ -855,8 +890,18 @@ bricks.push(brick);
         if (((r+c)&1)===0){ // checkerboard fallback
           const x = 20 + c*(bw + G.brickPadding);
           const y = G.brickTop + r*(G.brickHeight + G.brickPadding);
-          const baseHp = (r < 2 ? 2 : 1) + dif.hpBonus;
-          const hp = Math.min(4, baseHp);
+         // Same smooth reinforcement as above
+const rowBase = (r < 2 ? 2 : 1);
+let hp2 = rowBase + dif.hpBase;
+
+const rowWeight = (G.brickRows <= 1) ? 1
+  : 1 - (r / Math.max(1, G.brickRows - 1));
+const eligible = (Math.random() < dif.reinforceBias);
+if (eligible && Math.random() < dif.hpFrac * rowWeight){
+  hp2 += 1;
+}
+const hp = Math.min(4, hp2);
+
 // ~6% chance for a bomb (more likely in upper rows)
 const isBomb = (r < Math.floor(G.brickRows*0.6)) && Math.random() < 0.06;
 const brick = {
@@ -891,6 +936,13 @@ G.portals = computePortals(G.bricks);
     G.explosions = []; // NEW: clear FX
     G.waitingLaunch = true; G.running = true;
     G.powerups = [];
+    G.puCounts = Object.create(null);   // reset per-level spawn counts
+      G.puCap    = 2;
+
+    if (DEV_FORCE_PU){
+    G.dropChance = 1;  // always drop
+    G.puCap = 999;     // don't cap per-type
+  }
     G.effects = []; // reset active effects
     G.speedMod = 1;
     G.shrinkDebt = 0;
@@ -919,6 +971,10 @@ function rowColor(r,hp){
     r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
     return '#'+(r.toString(16).padStart(2,'0'))+(g.toString(16).padStart(2,'0'))+(b.toString(16).padStart(2,'0'));
   }
+  // --- Curses helpers ---
+function isCurse(t){ return t && t.startsWith('CURSE_'); }
+function lerp(a,b,p){ return a + (b-a)*p; }
+
 
 function addScore(points){
   const mult = (G && G.riskMult) ? G.riskMult : 1;
@@ -985,7 +1041,7 @@ function restartGame(){
     if (e.key===' '){
       const anyStuck = G.balls.some(b=>b.stuck);
       if (anyStuck){
-        for (const b of G.balls){ if (b.stuck){ b.stuck=false; if (b.vy===0) b.vy = -Math.abs(b.speed*0.9); } }
+        for (const b of G.balls){ if (b.stuck){ b.stuck=false; b.vx = 0; b.vy = -Math.abs(b.speed); } }
 } else if (G.waitingLaunch && cardStart.hidden) launchAllBalls();
     }
     if (e.key==='p'||e.key==='P') togglePause();
@@ -1029,14 +1085,20 @@ btnHelp.onclick = toggleHelp;
   function launchAllBalls(){
     if (!G.waitingLaunch) return;
     G.waitingLaunch = false;
+      const stickyActive = G.effects.some(e => e.type === 'STICKY');
 for (const b of G.balls){
-  const angle = randLaunch();                  // was: (-Math.PI/3) ± 0.2
-  b.vx = Math.cos(angle) * b.speed;
-  b.vy = Math.sin(angle) * b.speed;
-}
+    if (stickyActive){
+      b.vx = 0;                           // ← straight up if sticky is on
+      b.vy = -Math.abs(b.speed);
+    } else {
+      const angle = randLaunch();
+      b.vx = Math.cos(angle) * b.speed;
+      b.vy = Math.sin(angle) * b.speed;
+    }
+  }
 
-    SFX.start();
-    cardStart.hidden = true;
+  SFX.start();
+  cardStart.hidden = true;
   }
 
   // ===== Power-Ups =====
@@ -1054,6 +1116,14 @@ for (const b of G.balls){
 
   ];
 
+  // --- DEV TEST SWITCH (turn on/off) ---
+const DEV_FORCE_PU = false;                      // ← set to false when done
+const DEV_FORCE_TYPES = ['STICKY','MULTI'];     // what to force
+
+// quick lookup by type
+const PU_BY_TYPE = Object.fromEntries(PU_TYPES.map(p => [p.type, p]));
+
+
   // Bright icon tints for the top-left effect badges
 const ICON_TINT = {
   MULTI: '#60a5fa',
@@ -1069,12 +1139,21 @@ const ICON_TINT = {
 };
 
 
-  function pickPowerType(){
-    const total = PU_TYPES.reduce((a,p)=>a+p.weight,0);
-    let r = Math.random()*total;
-    for (const p of PU_TYPES){ if ((r-=p.weight) <= 0) return p; }
-    return PU_TYPES[0];
+function pickPowerType(){
+  const cap = G.puCap ?? 2;
+  // only types still under the cap are eligible; keep weights
+  const pool = PU_TYPES.filter(p => (G.puCounts[p.type] || 0) < cap);
+  if (!pool.length) return null;  // all types exhausted this level
+
+  const total = pool.reduce((a,p)=> a + p.weight, 0);
+  let r = Math.random() * total;
+  for (const p of pool){
+    r -= p.weight;
+    if (r <= 0) return p;
   }
+  return pool[0]; // fallback (shouldn’t hit)
+}
+
 
   function triggerComboBanner(){
   G.comboBanner.t = 0;
@@ -1214,36 +1293,81 @@ ctx.fillStyle = grad;
   ctx.restore();
 }
 
-
-  function maybeDropPower(br){
-    if (Math.random() < G.dropChance){
-      const pt = pickPowerType();
-      G.powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 120, w: 28, h: 18, ...pt });
+function maybeDropPower(br){
+  if (DEV_FORCE_PU){
+    // spawn all forced types, centered on the brick
+    for (const t of DEV_FORCE_TYPES){
+      const spec = PU_BY_TYPE[t];
+      if (!spec) continue;
+      G.powerups.push({
+        x: br.x + br.w/2,
+        y: br.y + br.h/2,
+        vy: 120, w: 28, h: 18,
+        type: t, color: spec.color, label: spec.label
+      });
+      // still increment counts so your HUD/tests stay honest
+      G.puCounts[t] = (G.puCounts[t] || 0) + 1;
     }
+    return;
   }
 
-  // --- effect helpers (timers now pause with the game) ---
-  function pushTimed(type, addSeconds){
-    const i = G.effects.findIndex(e=>e.type===type);
-    if (i>=0) {
-      G.effects[i].remaining += addSeconds; // extend
-    } else {
-      G.effects.push({type, remaining: addSeconds});
-    }
+  // --- normal behavior ---
+  if (Math.random() < G.dropChance){
+    const pt = pickPowerType();
+    if (!pt) return;
+    G.powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 120, w: 28, h: 18, ...pt });
+    G.puCounts[pt.type] = (G.puCounts[pt.type] || 0) + 1;
   }
+}
+
+
+// Add/extend a timed effect on the top-left badges list
+function pushTimed(type, seconds){
+  // If effect already active, extend time; otherwise add new timer
+  const e = G.effects.find(e => e.type === type);
+  if (e) {
+    e.remaining += seconds;
+  } else {
+    G.effects.push({ type, remaining: seconds });
+  }
+  // keep any per-ball flags in sync (e.g., FIRE on existing balls)
+  if (type === 'FIRE') syncBallFlagsFromEffects();
+  // re-evaluate speed/risk if these are involved
+  if (type === 'SLOW' || type === 'CURSE_SPEED') recalcSpeedMod();
+  if (type.startsWith('CURSE_')) recalcRiskMult();
+}
+
+
 
   function applyEffect(type){
     switch(type){
-      case 'MULTI': {
-        const clones = [];
-        for (const b of G.balls){
-          const ang = Math.atan2(b.vy,b.vx);
-          clones.push({ ...b, vx: Math.cos(ang+0.25)*b.speed, vy: Math.sin(ang+0.25)*b.speed, stuck:false });
-          clones.push({ ...b, vx: Math.cos(ang-0.25)*b.speed, vy: Math.sin(ang-0.25)*b.speed, stuck:false });
-        }
-        G.balls.push(...clones);
-        SFX.multiball();
-      } break;
+case 'MULTI': {
+  const clones = [];
+  const stickyActive = G.effects.some(e => e.type === 'STICKY');
+
+  for (const b of G.balls){
+    const ang = Math.atan2(b.vy, b.vx);
+
+    // If sticky is on and the source ball is parked, create parked clones too.
+    const makeStuck = stickyActive && (b.stuck || G.waitingLaunch);
+
+    if (makeStuck){
+      const baseA = { ...b, vx: 0, vy: 0, stuck: true, x: G.paddle.x, y: G.paddle.y - 14 };
+      const baseB = { ...b, vx: 0, vy: 0, stuck: true, x: G.paddle.x, y: G.paddle.y - 14 };
+      clones.push(baseA, baseB);
+    } else {
+      clones.push(
+        { ...b, vx: Math.cos(ang + 0.25) * b.speed, vy: Math.sin(ang + 0.25) * b.speed, stuck: false },
+        { ...b, vx: Math.cos(ang - 0.25) * b.speed, vy: Math.sin(ang - 0.25) * b.speed, stuck: false },
+      );
+    }
+  }
+
+  G.balls.push(...clones);
+  syncBallFlagsFromEffects();   // keep FIRE etc. in sync on new balls
+  SFX.multiball();
+} break;
+
       case 'EXPAND':
         pushTimed('EXPAND', EFFECT_DUR.EXPAND);
         G.paddle.w = Math.min(200, G.paddle.w + 60);
@@ -1539,6 +1663,14 @@ if (br.hp<=0){
     for (let i=G.powerups.length-1;i>=0;i--){
       const pu = G.powerups[i];
       pu.y += pu.vy * dt;
+
+      if (isCurse(pu.type)){
+    pu.fx = (pu.fx || 0) + dt;
+    pu.x += Math.sin(pu.fx * 13.5) * 22 * dt;  // horizontal wobble
+    pu.flick = 0.85 + Math.abs(Math.sin(pu.fx * 17)) * 0.15; // 0.85..1.0 alpha
+  } else {
+    pu.flick = 1;
+  }
       if (rectsOverlap(pu.x-pu.w/2, pu.y-pu.h/2, pu.w, pu.h, p.x-p.w/2, p.y-p.h/2, p.w, p.h)){
         applyEffect(pu.type);
         G.powerups.splice(i,1);
@@ -1902,7 +2034,7 @@ function drawPUIcon(type, cx, cy, s, tintColor=null, c=ctx){
 function renderLegendIcons(){
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   document.querySelectorAll('canvas.pu-icon').forEach(el=>{
-    const size = 24;                          // logical size
+    const size = 24;
     el.width  = size * dpr;
     el.height = size * dpr;
     const c = el.getContext('2d');
@@ -1910,10 +2042,31 @@ function renderLegendIcons(){
     c.clearRect(0,0,size,size);
 
     const type = el.dataset.type;
+    const cursed = isCurse(type);
+
+    // background plate (per-item, not CSS)
+    if (cursed){
+      // deep red tile w/ inner vignette
+      const g = c.createLinearGradient(0,0,0,size);
+      g.addColorStop(0,'#3f0d0d');
+      g.addColorStop(1,'#1f0a0a');
+      c.fillStyle = g;
+      c.strokeStyle = '#7f1d1d';
+      c.lineWidth = 1;
+      c.beginPath(); c.roundRect?.(1,1,size-2,size-2,6) || (c.rect(1,1,size-2,size-2)); c.fill(); c.stroke();
+    } else {
+      // subtle neutral
+      c.fillStyle = '#0b1220';
+      c.strokeStyle = '#26334a';
+      c.lineWidth = 1;
+      c.beginPath(); c.roundRect?.(1,1,size-2,size-2,6) || (c.rect(1,1,size-2,size-2)); c.fill(); c.stroke();
+    }
+
     const tint = (ICON_TINT && ICON_TINT[type]) ? ICON_TINT[type] : '#e6edf3';
-    drawPUIcon(type, size/2, size/2, size*0.8, tint, c);
+    drawPUIcon(type, size/2, size/2, size*0.8, cursed ? '#22d3ee' : tint, c);
   });
 }
+
 
 
 
@@ -2143,34 +2296,113 @@ function drawExplosions(){
     }
   }
 function drawPower(pu){
-  const x = pu.x - pu.w/2, y = pu.y - pu.h/2, w = pu.w, h = pu.h;
+  const x = pu.x, y = pu.y, w = pu.w, h = pu.h;
   const r = Math.min(8, h*0.48);
+  const cursed = isCurse(pu.type);
 
-  // 🔹 Use a complementary color for FIRE (cool blue); others use their defined color
-  const pillBase = (pu.type === 'FIRE') ? '#2563eb' /* blue-600 */ : pu.color;
+  ctx.save();
+  ctx.globalAlpha = (pu.flick==null ? 1 : pu.flick);
 
-  // glossy pill body
-  const body = ctx.createLinearGradient(x, y, x, y+h);
-  body.addColorStop(0, shade(pillBase, 20));
-  body.addColorStop(1, shade(pillBase, -10));
-  ctx.fillStyle = body;
-  roundRect(x, y, w, h, r); ctx.fill();
+  if (!cursed){
+    // (unchanged) glossy pill for normal power-ups
+    const pillBase = (pu.type === 'FIRE') ? '#2563eb' : pu.color; // FIRE = complementary blue
+    const body = ctx.createLinearGradient(x-w/2, y-h/2, x-w/2, y+h/2);
+    body.addColorStop(0, shade(pillBase, 20));
+    body.addColorStop(1, shade(pillBase, -10));
+    ctx.fillStyle = body;
+    roundRect(x - w/2, y - h/2, w, h, r); ctx.fill();
+    ctx.strokeStyle = shade(pillBase, -40);
+    ctx.lineWidth = 1;
+    roundRect(x - w/2 + 0.5, y - h/2 + 0.5, w - 1, h - 1, r - 0.5); ctx.stroke();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#ffffff';
+    roundRect(x - w/2 + 2, y - h/2 + 2, w - 4, Math.max(2, h*0.28), r*0.6); ctx.fill();
+    ctx.globalAlpha = (pu.flick==null ? 1 : pu.flick);
+    const s = Math.min(w, h) * 0.8;
+    drawPUIcon(pu.type, x, y, s);
+    ctx.restore();
+    return;
+  }
 
-  // border
-  ctx.strokeStyle = shade(pillBase, -40);
-  ctx.lineWidth = 1;
-  roundRect(x+0.5, y+0.5, w-1, h-1, r-0.5); ctx.stroke();
+  // --- CURSED LOOK ---
+  // spiky hex silhouette, void gradient, red/magenta aura, hairline cracks
+  const s = Math.min(w, h) * 0.88;
+  const a = (pu.fx || 0) * 0.8; // slight rotation drift
 
-  // top highlight
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = '#ffffff';
-  roundRect(x+2, y+2, w-4, Math.max(2, h*0.28), r*0.6); ctx.fill();
-  ctx.globalAlpha = 1;
+  ctx.translate(x, y);
+  ctx.rotate(Math.sin(a) * 0.08); // tiny wobble
+  const R = s * 0.58;
 
-  // icon (now colored for FIRE via drawPUIcon)
-  const s = Math.min(w, h) * 0.8;
-  drawPUIcon(pu.type, pu.x, pu.y, s);
+  // Outer glow (aura)
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.shadowColor = 'rgba(239,68,68,0.9)'; // red
+  ctx.shadowBlur = 16;
+  ctx.fillStyle = 'rgba(244,63,94,0.18)'; // hot pink wash
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 1.1, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // Spiky/jagged polygon (6 points with jitter)
+  function jaggyHex(rad, jitter){
+    ctx.beginPath();
+    for (let i=0;i<6;i++){
+      const th = i * Math.PI/3;
+      const jr = rad * (1 + (Math.sin((pu.fx||0)*9 + i*1.7) * 0.04) * jitter);
+      const px = Math.cos(th) * jr, py = Math.sin(th) * jr;
+      if (i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  // Fill: void gradient center → dark rim
+  const g = ctx.createRadialGradient(0,0, R*0.1, 0,0, R);
+  g.addColorStop(0.00, '#0b0d12');
+  g.addColorStop(0.55, '#111827');
+  g.addColorStop(1.00, '#1f2937');
+  ctx.fillStyle = g;
+  jaggyHex(R, 1); ctx.fill();
+
+  // Stroke: angry red
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ef4444';
+  jaggyHex(R, 1); ctx.stroke();
+
+  // “Cracks”
+  ctx.strokeStyle = 'rgba(239,68,68,0.55)';
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  const cracks = 4;
+  for (let i=0;i<cracks;i++){
+    const th = (i/CrEaTeNoise()) * Math.PI*2; // playful randomness
+    const r0 = R*0.15, r1 = R*0.8 * (0.8+0.2*Math.sin((pu.fx||0)*7+i));
+    ctx.moveTo(Math.cos(th)*r0, Math.sin(th)*r0);
+    ctx.lineTo(Math.cos(th)*r1, Math.sin(th)*r1);
+  }
+  ctx.stroke();
+
+  // Icon in toxic-cursed tint (cyan/teal for contrast against red shell)
+  const tint = '#22d3ee';
+  drawPUIcon(pu.type, 0, 0, s*0.75, tint);
+
+  ctx.restore();
+
+  // tiny falling ash sparks
+  if ((pu.fx||0) % 0.05 < 0.025){
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = '#fca5a5';
+    ctx.beginPath();
+    ctx.arc(x + (Math.random()*8-4), y + (Math.random()*8-4), 1 + Math.random()*0.8, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function CrEaTeNoise(){ return 2.4 + Math.sin((pu.fx||0)*5)*0.6; }
 }
+
 
 
 
@@ -2203,25 +2435,33 @@ function drawEffects(){
   let x = 12, y = 12;
   const ROW_W = 126, ROW_H = 20;
 
-  for (const e of G.effects){
-    const sec = Math.max(0, e.remaining);
-    const name = (EFFECT_LABEL && EFFECT_LABEL[e.type]) ? EFFECT_LABEL[e.type] : e.type;
+for (const e of G.effects){
+  const sec = Math.max(0, e.remaining);
+  const nameRaw = (EFFECT_LABEL && EFFECT_LABEL[e.type]) ? EFFECT_LABEL[e.type] : e.type;
+  const cursed = isCurse(e.type);
+  const name = cursed ? ('CURSE: ' + nameRaw) : nameRaw;
 
-    // panel
-    ctx.fillStyle = 'rgba(17,24,39,.8)';
-    ctx.fillRect(x, y, ROW_W, ROW_H);
+  // panel
+  if (cursed){
+    ctx.fillStyle = 'rgba(127,29,29,.85)';      // deep red
+    ctx.strokeStyle = '#7f1d1d';
+  } else {
+    ctx.fillStyle = 'rgba(17,24,39,.8)';        // normal
     ctx.strokeStyle = '#26334a';
-    ctx.strokeRect(x + 0.5, y + 0.5, ROW_W - 1, ROW_H - 1);
-
-    // icon
-drawPUIcon(e.type, x + 12, y + 10, 11, ICON_TINT[e.type] || '#e6edf3');
-
-    // text
-    ctx.fillStyle = '#e6edf3';
-    ctx.fillText(name + ' ' + Math.ceil(sec) + 's', x + 24, y + 4);
-
-    y += ROW_H + 4;
   }
+  ctx.fillRect(x, y, ROW_W, ROW_H);
+  ctx.strokeRect(x + 0.5, y + 0.5, ROW_W - 1, ROW_H - 1);
+
+  // icon
+  drawPUIcon(e.type, x + 12, y + 10, 11, ICON_TINT[e.type] || '#e6edf3');
+
+  // text
+  ctx.fillStyle = cursed ? '#fecaca' : '#e6edf3';
+  ctx.fillText(name + ' ' + Math.ceil(sec) + 's', x + 24, y + 4);
+
+  y += ROW_H + 4;
+}
+
   ctx.restore();
 }
 
