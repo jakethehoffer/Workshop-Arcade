@@ -23,32 +23,46 @@
     color: var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
   }
-  .wrap {
-    display: flex;
-    gap: 16px;
-    padding: 16px;
-    box-sizing: border-box;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-  .left { position: relative; }
-  canvas {
-    display: block;
-    background: #11161e;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-    border-radius: 12px;
-  }
-  .side {
-    width: 320px;
-    min-width: 280px;
-    background: var(--panel);
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+  /* Layout: fill the window with comfy padding */
+.wrap{
+  height:100vh;
+  padding:16px;
+  box-sizing:border-box;
+  display:flex;
+  gap:20px;
+
+  /* NEW: center the board + sidebar horizontally */
+  justify-content:center;
+  align-items:flex-start; /* keep them near the top, not vertically centered */
+}
+
+
+/* Keep the canvas block-sized so JS can control its pixel size */
+.left{ position:relative; display:flex; align-items:flex-start; }
+
+/* Visual polish stays the same */
+canvas{
+  display:block;
+  background:#11161e;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  border-radius:12px;
+}
+
+/* Make the side panel a touch wider so it scales with the board */
+.side{
+  width:360px;              /* was 320px */
+  min-width:340px;          /* was 280px */
+  background:var(--panel);
+  border-radius:12px;
+  padding:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  max-height:calc(100vh - 32px); /* avoid overflow; 32px = 2*16px wrap padding */
+  overflow:auto;
+}
+
   h2 {
     margin: 0;
     font-size: 18px;
@@ -77,7 +91,7 @@
     color: var(--text);
     padding: 8px 10px;
     border-radius: 8px;
-    cursor: pointer.
+    cursor: pointer;
   }
   button:hover { background: #1f293b; }
   button[disabled] { opacity: .6; cursor: not-allowed; }
@@ -131,7 +145,7 @@
         <button id="new">Restart Game</button>
         <button id="flip">Flip Board</button>
       </div>
-      <div class="tiny">Click a piece to see its legal moves. Click a destination to move. Pieces slide ✨</div>
+      <div class="tiny">Click a piece to see its legal moves and click a destination to move.</div>
       <h2>Move History</h2>
       <ol class="moves" id="moves"></ol>
     </aside>
@@ -155,8 +169,9 @@ const coordsEl = document.getElementById('coords');
 const vsComputerEl = document.getElementById('vsComputer');
 const depthEl = document.getElementById('depth');
 
-const SIZE = canvas.width;
-const SQ = SIZE / 8;
+let SIZE = 640;   // logical CSS pixels; JS will keep this in sync with the canvas
+let SQ   = SIZE / 8;
+
 
 // Board/UI colors
 const LIGHT = getComputedStyle(document.documentElement).getPropertyValue('--board-light').trim() || '#e6e1ce';
@@ -173,37 +188,39 @@ let aiThinking = false;
 // ---------- Coordinates overlay ----------
 function drawCoordsOverlay() {
   coordsEl.innerHTML = '';
+  const PAD = 6; // small inset so labels sit inside the corner
 
-  // Files (a–h): when flipped, 'a' appears on the right (board rotated)
+  // Files (a–h) along the bottom edge
   for (let f = 0; f < 8; f++) {
     const file = 'abcdefgh'[f];
     const span = document.createElement('div');
     span.textContent = file;
     span.className = 'coord-file';
-    const x = (!flipped ? f * SQ + 4 : SIZE - (f + 1) * SQ + 4);
+    const x = (!flipped ? f * SQ + PAD : SIZE - (f + 1) * SQ + PAD);
     span.style.left = x + 'px';
-    span.style.bottom = '0px';
+    span.style.bottom = PAD + 'px';  // was 0px; this lifts the letters onto the tiles
     coordsEl.appendChild(span);
   }
 
-  // Ranks (1–8): reversed visually when flipped so 8 is at the bottom
+  // Ranks (1–8) along the left edge
   for (let r = 0; r < 8; r++) {
     const span = document.createElement('div');
     span.className = 'coord-rank';
     let rank, y;
     if (!flipped) {
       rank = 8 - r;
-      y = r * SQ + 4;
+      y = r * SQ + PAD;
     } else {
-      rank = 8 - r;                 // bottom label starts at 8
-      y = SIZE - (r + 1) * SQ + 4;  // measure from bottom upward
+      rank = 8 - r;
+      y = SIZE - (r + 1) * SQ + PAD;
     }
     span.textContent = rank.toString();
-    span.style.left = '0px';
-    span.style.top = y + 'px';
+    span.style.left = PAD + 'px';   // was 0px; insets into the tile
+    span.style.top  = y + 'px';
     coordsEl.appendChild(span);
   }
 }
+
 
 // ---------- Game state ----------
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -272,6 +289,7 @@ function parseAlgebraic(a) {
   const rank = 8 - parseInt(a[1], 10);
   return {col: file, row: rank};
 }
+
 
 // ---------- Rendering ----------
 function drawBoard() {
@@ -458,18 +476,44 @@ newBtn.addEventListener('click', () => { if (!currentAnimation && !aiThinking) n
 undoBtn.addEventListener('click', () => {
   if (aiThinking || currentAnimation) return;
   if (stateHistory.length === 0) return;
-  const prev = stateHistory.pop();
-  state = prev;
-  if (moveHistory.length > 0) moveHistory.pop();
+
+  // Helper to pop one ply (one applied move)
+  function undoOnePly() {
+    if (stateHistory.length === 0) return false;
+    const prev = stateHistory.pop();
+    state = prev;
+    if (moveHistory.length > 0) moveHistory.pop();
+    return true;
+  }
+
+  if (vsComputer) {
+    // In vs Computer mode, undo TWO plies (AI + player) if possible.
+    // First ply (AI's move)
+    const did1 = undoOnePly();
+    // Second ply (player's move)
+    const did2 = undoOnePly();
+
+    if (!did1 && !did2) return;
+  } else {
+    // Two-player mode: undo a single ply
+    if (!undoOnePly()) return;
+  }
+
+  // Clear selections and reset end-state flags
   selected = null;
   legalMovesForSelected = [];
   state.gameOver = false;
   state.result = null;
+
+  // Update status line
   const inCheck = isKingInCheck(state, state.turn);
   statusEl.textContent = `${state.turn === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : '');
+
+  // Refresh move list & board
   renderMoveList();
   draw();
 });
+
 
 flipBtn.addEventListener('click', () => { if (!currentAnimation) { flipped = !flipped; draw(); } });
 
@@ -1032,6 +1076,35 @@ function startAnimation(animInfo, onDone) {
   };
   requestAnimationFrame(draw);
 }
+function resizeLayout(){
+  // Side panel width should match CSS (keep in sync with .side width/min-width)
+  const sideCSSWidth = 360;           // matches .side width
+  const gap = 20;                     // matches .wrap gap
+  const wrapPad = 32;                 // 16px left + 16px right
+
+  // Target board size = min(available height, available width next to the side)
+  const availH = window.innerHeight - wrapPad;                       // keep a top/bottom gutter
+  const availW = window.innerWidth - (sideCSSWidth + gap + wrapPad); // room left of panel
+
+  // Keep a little breathing room (12px border around board)
+  const boardSize = Math.max(480, Math.min(availH - 24, availW - 24)); // clamp to >=480px
+
+  // Update logical size used by all draw routines
+  SIZE = Math.floor(boardSize);
+  SQ   = SIZE / 8;
+
+  // Handle high-DPI so glyphs look crisp
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width  = `${SIZE}px`;
+  canvas.style.height = `${SIZE}px`;
+  canvas.width  = Math.round(SIZE * dpr);
+  canvas.height = Math.round(SIZE * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels, render in device pixels
+
+  draw();
+}
+window.addEventListener('resize', resizeLayout);
+
 
 // ---------- Init ----------
 let initialSet = false;
@@ -1043,7 +1116,8 @@ function initialSetup() {
 }
 initialSetup();
 newGame();
-draw();
+resizeLayout();  // sets SIZE/SQ and draws once responsively
+
 </script>
 </body>
 </html>
