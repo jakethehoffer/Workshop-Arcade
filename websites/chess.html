@@ -120,6 +120,57 @@ canvas{
     padding: 4px 6px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
+  /* === Game Over Overlay === */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: none;             /* toggled with .show */
+  place-items: center;
+  background: rgba(0,0,0,.55);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+.overlay.show { display: grid; }
+
+.go-card{
+  width: min(520px, 92vw);
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+}
+.go-title{
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  letter-spacing: .2px;
+}
+.go-sub{
+  margin: 0 0 14px 0;
+  font-size: 14px;
+  color: rgba(255,255,255,.85);
+}
+.go-actions{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.go-actions button{
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #1a2230;
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.go-actions button:hover{ background:#1f293b; }
+.go-note{
+  margin-top:10px;
+  font-size:12px;
+  opacity:.8;
+}
+
 </style>
 </head>
 <body>
@@ -132,12 +183,16 @@ canvas{
       <h2>Chess</h2>
       <div class="mode">
         <label><input type="checkbox" id="vsComputer"> Play vs Computer (You = White)</label>
-        <label>Depth
-          <select id="depth">
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-          </select>
-        </label>
+<label>Depth
+  <select id="depth">
+    <option value="1">1 (fastest)</option>
+    <option value="2">2</option>
+    <option value="3" selected>3 (default)</option>
+    <option value="4">4</option>
+    <option value="5">5 (slowest)</option>
+  </select>
+</label>
+
       </div>
       <div class="status" id="status">White to move.</div>
       <div class="controls">
@@ -150,6 +205,20 @@ canvas{
       <ol class="moves" id="moves"></ol>
     </aside>
   </div>
+  <!-- Game Over Overlay -->
+<!-- Game Over Overlay -->
+<div class="overlay" id="gameOver">
+  <div class="go-card">
+    <h3 class="go-title" id="goTitle">Game Over</h3>
+    <div class="go-actions">
+      <button id="goRematch">Play Again</button>
+      <button id="goReview">Review Board</button>
+    </div>
+    <div class="go-note">Tip: press <kbd>Enter</kbd> to play again, <kbd>Esc</kbd> to close.</div>
+  </div>
+</div>
+
+
 
 <script>
 /* ============================================================
@@ -168,6 +237,40 @@ const flipBtn = document.getElementById('flip');
 const coordsEl = document.getElementById('coords');
 const vsComputerEl = document.getElementById('vsComputer');
 const depthEl = document.getElementById('depth');
+// --- Game Over overlay elements ---
+const goEl     = document.getElementById('gameOver');
+const goTitle  = document.getElementById('goTitle');
+const goRematch= document.getElementById('goRematch');
+const goReview = document.getElementById('goReview');
+
+function showOverlay(title){
+  goTitle.textContent = title;
+  goEl.classList.add('show');
+}
+function hideOverlay(){ goEl.classList.remove('show'); }
+
+function buildSAN(){
+  let out = '';
+  for(let i=0;i<moveHistory.length;i+=2){
+    const n = (i/2)+1;
+    const w = moveHistory[i]   ? moveHistory[i].display   : '';
+    const b = moveHistory[i+1] ? moveHistory[i+1].display : '';
+    out += `${n}. ${w}${b? ' ' + b : ''} `;
+  }
+  return out.trim();
+}
+
+// Buttons
+goRematch.addEventListener('click', ()=>{ hideOverlay(); newGame(); draw(); });
+goReview .addEventListener('click', ()=>{ hideOverlay(); /* leave final board for study */ });
+
+// Keyboard shortcuts when overlay is open
+window.addEventListener('keydown', (e)=>{
+  if(!goEl.classList.contains('show')) return;
+  if(e.key === 'Enter'){ goRematch.click(); }
+  if(e.key === 'Escape'){ hideOverlay(); }
+});
+
 
 let SIZE = 640;   // logical CSS pixels; JS will keep this in sync with the canvas
 let SQ   = SIZE / 8;
@@ -236,6 +339,7 @@ let currentAnimation = null; // { pieces:[{piece,col0,row0,col1,row1}], start, d
 const ANIM_DURATION = 180; // ms
 
 function newGame() {
+  hideOverlay();
   state = loadFEN(START_FEN);
   selected = null;
   legalMovesForSelected = [];
@@ -471,9 +575,10 @@ function onClick(evt) {
   }
 }
 
-newBtn.addEventListener('click', () => { if (!currentAnimation && !aiThinking) newGame(); });
+newBtn.addEventListener('click', () => { if (!currentAnimation && !aiThinking) newGame(); hideOverlay();});
 
 undoBtn.addEventListener('click', () => {
+  hideOverlay();
   if (aiThinking || currentAnimation) return;
   if (stateHistory.length === 0) return;
 
@@ -851,7 +956,7 @@ function simulate(st, mv) {
 
 // After a move: check for checkmate/stalemate and update status
 function postMoveChecks() {
-  const side = state.turn;
+  const side = state.turn;                 // side to move now
   const legal = generateAllLegalMoves(side);
   const inCheck = isKingInCheck(state, side);
 
@@ -859,15 +964,33 @@ function postMoveChecks() {
     state.gameOver = true;
     if (inCheck) {
       state.result = (side === 'w') ? '0-1' : '1-0';
-      statusEl.textContent = `Checkmate! ${side === 'w' ? 'Black' : 'White'} wins. (${state.result})`;
+      const winnerColor = (side === 'w') ? 'Black' : 'White';
+
+      // Friendly titles for vs Computer
+      if (vsComputer) {
+        const youWin = (winnerColor === 'White'); // you are White vs Computer
+        const title = youWin ? 'Checkmate — You win!' : 'Checkmate — You lose';
+        const sub   = youWin ? 'Result: 1-0' : 'Result: 0-1';
+        statusEl.textContent = `${title} (${youWin ? '1-0' : '0-1'})`;
+        showOverlay(title);
+      } else {
+        const title = `Checkmate — ${winnerColor} wins`;
+        const sub   = `Result: ${state.result}`;
+        statusEl.textContent = `${title} (${state.result})`;
+        showOverlay(title);
+      }
     } else {
       state.result = '1/2-1/2';
-      statusEl.textContent = `Stalemate. (${state.result})`;
+      const title = 'Draw — Stalemate';
+      const sub   = 'Result: 1/2–1/2';
+      statusEl.textContent = `${title} (${state.result})`;
+      showOverlay(title);
     }
   } else {
     statusEl.textContent = `${side === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : '');
   }
 }
+
 
 // ---------- Move logging ----------
 function logMove(mv, captured) {
@@ -1028,7 +1151,7 @@ function thinkAndMoveAI() {
   statusEl.textContent = 'Computer thinking...';
   undoBtn.disabled = true;
 
-  const depth = parseInt(depthEl.value || '3', 10);
+const depth = Math.max(1, Math.min(6, parseInt(depthEl.value || '3', 10)));
 
   setTimeout(() => {
     stateHistory.push(cloneState(state));

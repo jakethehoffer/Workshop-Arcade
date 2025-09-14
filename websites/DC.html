@@ -40,6 +40,64 @@
   }
   button:disabled{opacity:.6; cursor:not-allowed}
   .pill{border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+  /* Prominent guesses-left counter */
+#guessesLeftPill{
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: clamp(16px, 1.8vw, 22px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border-width: 2px;
+  border-style: solid;
+  letter-spacing: .2px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.25) inset, 0 8px 20px rgba(0,0,0,.25);
+}
+#guessesLeftPill .label{ position: relative; z-index: 1; }
+#guessesLeftPill .big{ font-size: 1.35em; line-height: 1; margin-right: 4px; }
+
+/* background fill bar */
+#guessesLeftPill .bar{
+  content:"";
+  position:absolute; inset:0;
+  width: var(--fill, 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* color states */
+#guessesLeftPill.ok{
+  color:#bef264; border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.12);
+}
+#guessesLeftPill.ok .bar{
+  background: linear-gradient(90deg, rgba(34,197,94,.35), rgba(34,197,94,.15));
+}
+
+#guessesLeftPill.warn{
+  color:#fde68a; border-color: rgba(245,158,11,.55); background: rgba(245,158,11,.12);
+}
+#guessesLeftPill.warn .bar{
+  background: linear-gradient(90deg, rgba(245,158,11,.45), rgba(245,158,11,.18));
+}
+
+#guessesLeftPill.danger{
+  color:#fecaca; border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.12);
+}
+#guessesLeftPill.danger .bar{
+  background: linear-gradient(90deg, rgba(239,68,68,.55), rgba(239,68,68,.22));
+}
+
+/* pop the pill each time it changes */
+@keyframes bump{ 0%{transform:scale(1)} 35%{transform:scale(1.07)} 100%{transform:scale(1)} }
+#guessesLeftPill.bump{ animation: bump .28s ease; }
+
+@media (max-width: 840px){
+  #guessesLeftPill{ font-size: 20px; padding: 12px 18px; }
+}
+
   main{display:grid; grid-template-columns: 320px 1fr; gap:14px; padding:14px 16px}
   .panel{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:12px}
   .panel h2{margin:2px 0 10px 0; font-size:15px}
@@ -52,7 +110,21 @@
   .factsGrid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px}
   .fact{padding:8px 10px; border:1px solid rgba(255,255,255,.06); border-radius:10px; background:rgba(255,255,255,.02); font-size:13px}
   .fact b{display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px}
+  .tag.partial{
+  background: rgba(245,158,11,.12);   /* amber */
+  border-color: rgba(245,158,11,.45);
+  color:#fde68a;
+}
   .tag{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 8px; font-size:12px; border:1px solid rgba(255,255,255,.1)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  display:inline-flex;align-items:center;border-radius:999px;
+  padding:2px 8px;font-size:12px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04)
+}
+.chip.ok{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.45);color:#bef264}
+.chip.miss{opacity:.6}
+
   .tag.ok{background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color:#bef264}
   .tag.no{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color:#fecaca}
   .guessCard{border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02)}
@@ -87,13 +159,16 @@
   <header>
     <div>
       <h1>DC — Fact Match</h1>
-      <div class="sub">Guess the hidden character by comparing facts. Tap a character to see which facts match the target.</div>
+      <div class="sub">Guess the hidden character in 8 tries by comparing facts. Tap a character to see which facts match the target.</div>
     </div>
-    <div class="actions">
-      <span class="pill" id="guessesLeftPill">Guesses left: —</span>
-      <button id="newGameBtn">New Game</button>
-      <button id="sfxBtn" class="btn">🔊 SFX: On</button>
-    </div>
+<div class="actions">
+  <span class="pill" id="guessesLeftPill">Guesses left: —</span>
+  <button id="newGameBtn">New Game</button>
+  <button id="sfxBtn" class="btn">🔊 SFX: On</button>
+<button id="eligibleBtn" class="btn" title="Show only characters that match any matched facts">🔎 Match-Only: Off</button>
+<button id="helpBtn" class="btn" title="How to play & fact options">❓ Help</button>
+</div>
+
   </header>
 
   <main>
@@ -110,6 +185,7 @@
         <h2>Guesses</h2>
         <div class="legend">
           <span class="tag ok">Matches target</span>
+            <span class="tag partial">Partial overlap</span>
           <span class="tag no">Doesn't match</span>
         </div>
       </div>
@@ -152,6 +228,40 @@
     </div>
   </div>
 </div>
+
+<!-- Help Overlay -->
+<div class="winOverlay" id="help">
+  <div class="winPanel" style="max-height:min(80vh,680px); overflow:auto">
+    <h3>❓ How to Play</h3>
+    <div class="muted" style="margin-bottom:8px">
+      Guess the hidden character in 8 tries. Each guess compares facts:
+      <span class="tag ok">Exact</span> /
+      <span class="tag partial">Partial</span> /
+      <span class="tag no">No match</span>.
+    </div>
+
+    <div class="fact">
+      <b>Steps</b>
+      <ol style="margin:8px 0 0 18px; padding:0">
+        <li>Pick a character from the bank to see which facts match the target.</li>
+        <li>Use the search box to narrow by name.</li>
+        <li>Toggle <i>Match-Only</i> to show only characters that share your matched facts (Partial/Exact). “No match” is ignored in that mode.</li>
+        <li>Win by tapping the exact character.</li>
+      </ol>
+    </div>
+
+    <div class="sp"></div>
+    <h3>📚 Category Options</h3>
+    <div id="helpBody"></div>
+
+    <div class="sp"></div>
+    <div class="row">
+      <button id="helpCloseBtn">Close</button>
+      <span class="muted">Tip: Partial = some overlap; Exact = same set of values.</span>
+    </div>
+  </div>
+</div>
+
 
 <script>
 /* ---------------------------
@@ -217,71 +327,145 @@ document.addEventListener('DOMContentLoaded', function(){
       };
     })();
 
-    // Fact schema: replaced 'origin' with 'home'
+    // Fact schema (supports strings OR arrays)
     const FACT_KEYS = ['species','color','home','affiliation','role','type'];
     const FACT_LABEL = {
       species:'Species',
-      color:'Primary Color',
+      color:'Primary Color(s)',
       home:'Home Base / World',
-      affiliation:'Affiliation/Team',
+      affiliation:'Affiliation/Team(s)',
       role:'Role',
       type:'Power/Skill Type'
     };
 
-    // --- DC DATASET (refreshed) ---
+    // --- Helpers for multi-value matching & display ---
+    function valuesOverlap(a, b){
+      const A = Array.isArray(a) ? a : [a];
+      const B = Array.isArray(b) ? b : [b];
+      // strict label match; ensure your dataset strings are consistent
+      return A.some(x => B.indexOf(x) !== -1);
+    }
+    function displayValue(v){
+      return Array.isArray(v) ? v.join(', ') : v;
+    }
+    function toArr(v){ return Array.isArray(v) ? v : [v]; }
+function getMatches(a, b){
+  const A = toArr(a), B = toArr(b);
+  const matches = A.filter(x => B.indexOf(x) !== -1);
+  const overlap = matches.length > 0;
+
+  // Equal-as-sets (order-insensitive, works for scalar/array)
+  const equal = (A.length === B.length) &&
+                A.every(x => B.indexOf(x) !== -1) &&
+                B.every(x => A.indexOf(x) !== -1);
+
+  const state = equal ? 'exact' : (overlap ? 'partial' : 'none');
+  return { ok: overlap, state, matches }; // keep `ok` for your counters
+}
+
+
+
+    // --- DC DATASET (refreshed; multi-affiliations) ---
     // Affiliation: team/faction; Role: Hero | Villain | Antihero | Support
     const CHARACTER_FACTS = {
-      BATMAN: {display:'Batman (Bruce Wayne)', species:'Human', color:'Black', home:'Gotham City', affiliation:'Bat-Family', role:'Hero', type:'Detective'},
-      SUPERMAN: {display:'Superman (Clark Kent)', species:'Kryptonian', color:'Blue', home:'Metropolis', affiliation:'Justice League', role:'Hero', type:'Alien'},
-      WONDER_WOMAN: {display:'Wonder Woman (Diana Prince)', species:'Amazon', color:'Red', home:'Themyscira', affiliation:'Justice League', role:'Hero', type:'Godly'},
-      FLASH_BARRY: {display:'The Flash (Barry Allen)', species:'Human', color:'Red', home:'Central City', affiliation:'Justice League', role:'Hero', type:'Meta-human'},
-      AQUAMAN: {display:'Aquaman (Arthur Curry)', species:'Atlantean', color:'Orange', home:'Atlantis', affiliation:'Justice League', role:'Hero', type:'Meta-human'},
-      CYBORG: {display:'Cyborg (Victor Stone)', species:'Human', color:'Silver', home:'Jump City', affiliation:'Justice League', role:'Hero', type:'Tech'},
-      GREEN_LANTERN_HAL: {display:'Green Lantern (Hal Jordan)', species:'Human', color:'Green', home:'Coast City', affiliation:'Justice League', role:'Hero', type:'Cosmic'},
-      GREEN_ARROW: {display:'Green Arrow (Oliver Queen)', species:'Human', color:'Green', home:'Star City', affiliation:'Justice League', role:'Hero', type:'Tactician'},
-      MARTIAN_MANHUNTER: {display:'Martian Manhunter (J’onn J’onzz)', species:'Martian', color:'Green', home:'Mars', affiliation:'Justice League', role:'Hero', type:'Alien'},
-      SHAZAM: {display:'Shazam (Billy Batson)', species:'Human', color:'Red', home:'Fawcett City', affiliation:'Shazam Family', role:'Hero', type:'Magic'},
-      BATGIRL_BARBARA: {display:'Batgirl (Barbara Gordon)', species:'Human', color:'Purple', home:'Gotham City', affiliation:'Bat-Family', role:'Hero', type:'Detective'},
-      ROBIN_DICK: {display:'Robin (Dick Grayson)', species:'Human', color:'Red', home:'Gotham City', affiliation:'Bat-Family', role:'Hero', type:'Acrobat'},
-      NIGHTWING: {display:'Nightwing (Dick Grayson)', species:'Human', color:'Blue', home:'Blüdhaven', affiliation:'Teen Titans', role:'Hero', type:'Acrobat'},
-      SUPERGIRL: {display:'Supergirl (Kara Zor-El)', species:'Kryptonian', color:'Blue', home:'National City', affiliation:'Superman Family', role:'Hero', type:'Alien'},
-      ZATANNA: {display:'Zatanna Zatara', species:'Human', color:'Black', home:'Gotham City', affiliation:'Justice League Dark', role:'Hero', type:'Magic'},
-      CONSTANTINE: {display:'John Constantine', species:'Human', color:'Tan', home:'London', affiliation:'Justice League Dark', role:'Antihero', type:'Magic'},
-      DOCTOR_FATE: {display:'Doctor Fate (Kent Nelson)', species:'Human', color:'Gold', home:'Salem', affiliation:'Justice Society', role:'Hero', type:'Magic'},
-      HAWKMAN: {display:'Hawkman (Carter Hall)', species:'Human', color:'Gold', home:'Midway City', affiliation:'Justice Society', role:'Hero', type:'Warrior'},
-      HAWKGIRL: {display:'Hawkgirl (Shayera Hol)', species:'Thanagarian', color:'Green', home:'Thanagar', affiliation:'Justice League', role:'Hero', type:'Warrior'},
-      BLUE_BEETLE_JAIME: {display:'Blue Beetle (Jaime Reyes)', species:'Human', color:'Blue', home:'El Paso', affiliation:'Teen Titans', role:'Hero', type:'Tech'},
-      BLACK_CANARY: {display:'Black Canary (Dinah Lance)', species:'Human', color:'Black', home:'Star City', affiliation:'Justice League', role:'Hero', type:'Meta-human'},
-      RAVEN: {display:'Raven', species:'Demon-Human', color:'Purple', home:'Azarath', affiliation:'Teen Titans', role:'Hero', type:'Magic'},
-      STARFIRE: {display:'Starfire (Koriand’r)', species:'Tamaranean', color:'Orange', home:'Tamaran', affiliation:'Teen Titans', role:'Hero', type:'Alien'},
-      BEAST_BOY: {display:'Beast Boy', species:'Human', color:'Green', home:'Jump City', affiliation:'Teen Titans', role:'Hero', type:'Meta-human'},
+  BATMAN: {display:'Batman (Bruce Wayne)', species:'Human', color:'Black', home:'Gotham City', affiliation:['Bat-Family','Justice League'], role:'Hero', type:['Detective','Tactician']},
+  SUPERMAN: {display:'Superman (Clark Kent)', species:'Alien', color:['Blue','Red'], home:'Metropolis', affiliation:['Justice League','Superman Family'], role:'Hero', type:'Kryptonian'},
+  WONDER_WOMAN: {display:'Wonder Woman (Diana Prince)', species:'Amazon', color:['Red','Gold','Blue'], home:'Themyscira', affiliation:['Justice League'], role:'Hero', type:'Godly'},
+  FLASH_BARRY: {display:'The Flash (Barry Allen)', species:'Human', color:['Red','Yellow'], home:'Central City', affiliation:['Justice League'], role:'Hero', type:'Meta-human'},
+  AQUAMAN: {display:'Aquaman (Arthur Curry)', species:'Atlantean', color:['Orange','Green'], home:'Atlantis', affiliation:['Justice League'], role:'Hero', type:'Meta-human'},
+  CYBORG: {display:'Cyborg (Victor Stone)', species:'Human', color:'Silver', home:'Detroit', affiliation:['Justice League','Teen Titans'], role:'Hero', type:'Tech'},
+  GREEN_LANTERN_HAL: {display:'Green Lantern (Hal Jordan)', species:'Human', color:'Green', home:'Coast City', affiliation:['Justice League','Lanterns'], role:'Hero', type:'Cosmic'},
+  GREEN_ARROW: {display:'Green Arrow (Oliver Queen)', species:'Human', color:'Green', home:'Star City', affiliation:['Justice League','Team Arrow'], role:'Hero', type:['Marksman','Tactician']},
+  MARTIAN_MANHUNTER: {display:'Martian Manhunter (J’onn J’onzz)', species:'Alien', color:'Green', home:'Mars', affiliation:['Justice League'], role:'Hero', type:['Telepath','Shapeshifter']},
+  SHAZAM: {display:'Shazam (Billy Batson)', species:'Human', color:['Red','Gold'], home:'Fawcett City', affiliation:['Shazam Family','Justice League'], role:'Hero', type:'Magic'},
+  BATGIRL_BARBARA: {display:'Batgirl (Barbara Gordon)', species:'Human', color:['Purple','Yellow'], home:'Gotham City', affiliation:['Bat-Family','Birds of Prey'], role:'Hero', type:'Detective'},
+  ROBIN_DAMIAN: {display:'Robin (Damian Wayne)', species:'Human', color:['Red','Green'], home:'Gotham City', affiliation:['Bat-Family','Teen Titans','League of Assassins'], role:'Hero', type:'Tactician'},
+  NIGHTWING: {display:'Nightwing (Dick Grayson)', species:'Human', color:['Blue','Black'], home:['Blüdhaven','Gotham City'], affiliation:['Bat-Family','Teen Titans'], role:'Hero', type:'Acrobat'},
+  SUPERGIRL: {display:'Supergirl (Kara Zor-El)', species:'Alien', color:['Blue','Red'], home:'National City', affiliation:['Superman Family','Justice League'], role:'Hero', type:'Kryptonian'},
+  ZATANNA: {display:'Zatanna Zatara', species:'Human', color:['Black','White'], home:'Shadowcrest', affiliation:['Justice League Dark','Justice League'], role:'Hero', type:'Magic'},
+  CONSTANTINE: {display:'John Constantine', species:'Human', color:'Tan', home:'London', affiliation:['Justice League Dark'], role:'Antihero', type:'Magic'},
+  DOCTOR_FATE: {display:'Doctor Fate (Kent Nelson)', species:'Human', color:['Gold','Blue'], home:'Salem', affiliation:['Justice Society','Justice League Dark'], role:'Hero', type:'Magic'},
+  HAWKMAN: {display:'Hawkman (Carter Hall)', species:'Human', color:['Gold','Green'], home:'Midway City', affiliation:['Justice Society','Justice League'], role:'Hero', type:'Warrior'},
+  HAWKGIRL: {display:'Hawkgirl (Shayera Hol)', species:'Alien', color:['Gold','Green'], home:'Thanagar', affiliation:['Justice League','Justice Society'], role:'Hero', type:'Warrior'},
+  BLUE_BEETLE_JAIME: {display:'Blue Beetle (Jaime Reyes)', species:'Human', color:['Blue','Black'], home:'El Paso', affiliation:['Teen Titans'], role:'Hero', type:'Tech'},
+  BLACK_CANARY: {display:'Black Canary (Dinah Lance)', species:'Human', color:['Black','Yellow'], home:'Star City', affiliation:['Birds of Prey','Justice League'], role:'Hero', type:'Meta-human'},
+  RAVEN: {display:'Raven', species:'Demon-Human', color:['Purple','Black'], home:'Azarath', affiliation:['Teen Titans'], role:'Hero', type:'Magic'},
+  STARFIRE: {display:'Starfire (Koriand’r)', species:'Alien', color:['Orange','Purple'], home:'Tamaran', affiliation:['Teen Titans'], role:'Hero', type:'Energy'},
+  BEAST_BOY: {display:'Beast Boy (Garfield Logan)', species:'Human', color:'Green', home:'Jump City', affiliation:['Teen Titans'], role:'Hero', type:['Meta-human','Shapeshifter']},
 
-      JOKER: {display:'Joker', species:'Human', color:'Purple', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Chaos'},
-      HARLEY_QUINN: {display:'Harley Quinn', species:'Human', color:'Red', home:'Gotham City', affiliation:'Suicide Squad', role:'Antihero', type:'Acrobat'},
-      CATWOMAN: {display:'Catwoman (Selina Kyle)', species:'Human', color:'Black', home:'Gotham City', affiliation:'Gotham Rogues', role:'Antihero', type:'Thief'},
-      BANE: {display:'Bane', species:'Human', color:'Black', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Meta-human'},
-      RIDDLER: {display:'Riddler (Edward Nygma)', species:'Human', color:'Green', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Tactician'},
-      PENGUIN: {display:'Penguin (Oswald Cobblepot)', species:'Human', color:'Black', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Crime Lord'},
-      POISON_IVY: {display:'Poison Ivy (Pamela Isley)', species:'Human', color:'Green', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Meta-human'},
-      TWO_FACE: {display:'Two-Face (Harvey Dent)', species:'Human', color:'Black', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Tactician'},
-      SCARECROW: {display:'Scarecrow (Jonathan Crane)', species:'Human', color:'Brown', home:'Gotham City', affiliation:'Gotham Rogues', role:'Villain', type:'Chemist'},
+  JOKER: {display:'Joker', species:'Human', color:['Purple','Green'], home:'Gotham City', affiliation:['Batman Rogues','Injustice League'], role:'Villain', type:'Chaos'},
+  HARLEY_QUINN: {display:'Harley Quinn', species:'Human', color:['Red','Black'], home:'Gotham City', affiliation:['Suicide Squad','Batman Rogues'], role:'Antihero', type:'Acrobat'},
+  CATWOMAN: {display:'Catwoman (Selina Kyle)', species:'Human', color:'Black', home:'Gotham City', affiliation:['Batman Rogues','Bat-Family'], role:'Antihero', type:'Thief'},
+  BANE: {display:'Bane (Eduardo Dorrance)', species:'Human', color:'Black', home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Meta-human'},
+  RIDDLER: {display:'Riddler (Edward Nygma)', species:'Human', color:'Green', home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tactician'},
+  PENGUIN: {display:'Penguin (Oswald Cobblepot)', species:'Human', color:'Black', home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Crime Lord'},
+  POISON_IVY: {display:'Poison Ivy (Pamela Isley)', species:'Human', color:'Green', home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Meta-human'},
+  TWO_FACE: {display:'Two-Face (Harvey Dent)', species:'Human', color:['Black','White'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Crime Lord'},
+  SCARECROW: {display:'Scarecrow (Jonathan Crane)', species:'Human', color:'Brown', home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Chemist'},
 
-      LEX_LUTHOR: {display:'Lex Luthor', species:'Human', color:'Green', home:'Metropolis', affiliation:'Legion of Doom', role:'Villain', type:'Tech'},
-      DARKSEID: {display:'Darkseid', species:'New God', color:'Gray', home:'Apokolips', affiliation:'Apokolips', role:'Villain', type:'Godly'},
-      DOOMSDAY: {display:'Doomsday', species:'Kryptonian Construct', color:'Gray', home:'Krypton', affiliation:'Legion of Doom', role:'Villain', type:'Monster'},
-      BLACK_ADAM: {display:'Black Adam (Teth-Adam)', species:'Human', color:'Black', home:'Kahndaq', affiliation:'Kahndaq', role:'Antihero', type:'Magic'},
-      DEATHSTROKE: {display:'Deathstroke (Slade Wilson)', species:'Human', color:'Orange', home:'Global', affiliation:'League of Assassins', role:'Villain', type:'Tactician'},
-      REVERSE_FLASH: {display:'Reverse-Flash (Eobard Thawne)', species:'Human', color:'Yellow', home:'Central City', affiliation:'Rogues', role:'Villain', type:'Meta-human'},
-      SINESTRO: {display:'Sinestro', species:'Korugarian', color:'Yellow', home:'Korugar', affiliation:'Sinestro Corps', role:'Villain', type:'Cosmic'},
-      BRAINIAC: {display:'Brainiac', species:'Coluan', color:'Green', home:'Colu', affiliation:'Legion of Doom', role:'Villain', type:'Alien'},
-      CHEETAH: {display:'Cheetah (Barbara Minerva)', species:'Human', color:'Brown', home:'Washington, D.C.', affiliation:'Legion of Doom', role:'Villain', type:'Meta-human'},
-      BLACK_MANTA: {display:'Black Manta', species:'Human', color:'Black', home:'The Ocean', affiliation:'Legion of Doom', role:'Villain', type:'Tech'},
+  LEX_LUTHOR: {display:'Lex Luthor', species:'Human', color:['Green','Purple'], home:'Metropolis', affiliation:['Legion of Doom','Injustice League','Superman Rogues'], role:'Villain', type:'Tactician'},
+  DARKSEID: {display:'Darkseid', species:'New God', color:'Gray', home:'Apokolips', affiliation:['Apokolips'], role:'Villain', type:'Godly'},
+  DOOMSDAY: {display:'Doomsday', species:'Alien', color:'Gray', home:'Krypton', affiliation:['Injustice League','Superman Rogues'], role:'Villain', type:['Monster','Kryptonian']},
+  BLACK_ADAM: {display:'Black Adam (Teth-Adam)', species:'Human', color:['Black','Gold'], home:'Kahndaq', affiliation:['Justice Society'], role:'Antihero', type:'Magic'},
+  DEATHSTROKE: {display:'Deathstroke (Slade Wilson)', species:'Human', color:['Orange','Black'], home:'Unknown', affiliation:['League of Assassins'], role:'Villain', type:'Tactician'},
+  REVERSE_FLASH: {display:'Reverse-Flash (Eobard Thawne)', species:'Human', color:['Yellow','Red'], home:'Central City', affiliation:['Negative Speed Force','Flash Rogues'], role:'Villain', type:'Meta-human'},
+  SINESTRO: {display:'Sinestro', species:'Alien', color:['Yellow','Black'], home:'Korugar', affiliation:['Lanterns'], role:'Villain', type:'Cosmic'},
+  BRAINIAC: {display:'Brainiac', species:'Alien', color:['Green','Purple'], home:'Colu', affiliation:['Legion of Doom','Injustice League','Superman Rogues'], role:'Villain', type:['Tactician','Tech']},
+  CHEETAH: {display:'Cheetah (Barbara Minerva)', species:'Human', color:['Brown','Orange'], home:'Washington, D.C.', affiliation:['Legion of Doom','Injustice League'], role:'Villain', type:'Meta-human'},
+  BLACK_MANTA: {display:'Black Manta (David Hyde)', species:'Human', color:['Black','Red'], home:'Unknown', affiliation:['Legion of Doom','Injustice League'], role:'Villain', type:'Tech'},
 
-      PEACEMAKER: {display:'Peacemaker (Christopher Smith)', species:'Human', color:'Red', home:'Evergreen', affiliation:'Suicide Squad', role:'Antihero', type:'Soldier'},
-      RED_HOOD: {display:'Red Hood (Jason Todd)', species:'Human', color:'Red', home:'Gotham City', affiliation:'Bat-Family', role:'Antihero', type:'Marksman'},
-      SWAMP_THING: {display:'Swamp Thing', species:'Elemental', color:'Green', home:'Louisiana', affiliation:'Justice League Dark', role:'Hero', type:'Elemental'},
-      BLUE_BEETLE_TED: {display:'Blue Beetle (Ted Kord)', species:'Human', color:'Blue', home:'Hub City', affiliation:'Justice League', role:'Hero', type:'Tech'}
-    };
+  PEACEMAKER: {display:'Peacemaker (Christopher Smith)', species:'Human', color:['Red','Silver'], home:'Evergreen', affiliation:['Suicide Squad'], role:'Antihero', type:'Soldier'},
+  RED_HOOD: {display:'Red Hood (Jason Todd)', species:'Human', color:['Red','Black'], home:'Gotham City', affiliation:['Bat-Family'], role:'Antihero', type:'Marksman'},
+  SWAMP_THING: {display:'Swamp Thing', species:'Human', color:['Green','Brown'], home:'Louisiana', affiliation:['Justice League Dark'], role:'Hero', type:'Meta-Human'},
+  BLUE_BEETLE_TED: {display:'Blue Beetle (Ted Kord)', species:'Human', color:'Blue', home:'Hub City', affiliation:['Justice League'], role:'Hero', type:'Tech'},
+  /* --- Added heroes --- */
+  GREEN_LANTERN_JOHN: {display:'Green Lantern (John Stewart)', species:'Human', color:'Green', home:'Detroit', affiliation:['Justice League','Lanterns'], role:'Hero', type:'Cosmic'},
+  FLASH_WALLY: {display:'Kid Flash (Wally West)', species:'Human', color:['Red','Yellow'], home:'Keystone City', affiliation:['Justice League','Teen Titans'], role:'Hero', type:'Meta-human'},
+  ATOM_RAY: {display:'The Atom (Ray Palmer)', species:'Human', color:['Blue','Red'], home:'Ivy Town', affiliation:['Justice League'], role:'Hero', type:'Tech'},
+  FIRESTORM: {display:'Firestorm (Ronnie Raymond)', species:'Human', color:['Red','Yellow'], home:'Pittsburgh', affiliation:['Justice League'], role:'Hero', type:['Meta-human','Energy']},
+
+
+  ALFRED_PENNYWORTH: {display:'Alfred Pennyworth', species:'Human', color:['Black'], home:'Gotham City', affiliation:['Bat-Family'], role:'Support', type:'Tactician'},
+    JIM_GORDON: {display:'Commissioner James Gordon', species:'Human', color:['Brown'], home:'Gotham City', affiliation:['Bat-Family'], role:'Support', type:'Detective'},
+      PLASTIC_MAN: {display:'Plastic Man (Patrick O’Brian)', species:'Human', color:['Red','Yellow'], home:'Metropolis', affiliation:['Justice League'], role:'Hero', type:['Meta-human','Shapeshifter']},
+  BOOSTER_GOLD: {display:'Booster Gold (Michael Carter)', species:'Human', color:['Blue','Gold'], home:'Metropolis', affiliation:['Justice League'], role:'Hero', type:'Tech'},
+  RED_TORNADO: {display:'Red Tornado', species:'Android', color:['Red','Yellow'], home:'Metropolis', affiliation:['Justice League'], role:'Hero', type:'Tech'},
+  CAPTAIN_ATOM: {display:'Captain Atom (Nathaniel Adam)', species:'Human', color:['Silver','Red'], home:'Washington, D.C.', affiliation:['Justice League'], role:'Hero', type:['Cosmic','Energy']},
+  SUPERBOY_KON: {display:'Superboy (Kon-El)', species:'Alien', color:['Black','Red'], home:'Metropolis', affiliation:['Teen Titans','Superman Family'], role:'Hero', type:'Kryptonian'},
+  GREEN_LANTERN_GUY: {display:'Green Lantern (Guy Gardner)', species:'Human', color:['Green'], home:'Baltimore', affiliation:['Justice League','Lanterns'], role:'Hero', type:'Cosmic'},
+    SPECTRE: {display:'The Spectre (Jim Corrigan)', species:'Spirit', color:['Green','White'], home:'New York City', affiliation:['Justice Society'], role:'Hero', type:'Godly'},
+  ETRIGAN: {display:'Etrigan the Demon (Jason Blood)', species:'Demon', color:['Yellow','Red'], home:'Gotham City', affiliation:['Justice League Dark'], role:'Antihero', type:'Magic'},
+  DEADMAN: {display:'Deadman (Boston Brand)', species:'Spirit', color:['Red','White'], home:'Boston', affiliation:['Justice League Dark'], role:'Hero', type:'Magic'},
+  GENERAL_ZOD: {display:'General Zod', species:'Alien', color:['Black','Silver'], home:'Krypton', affiliation:['Injustice League','Superman Rogues'], role:'Villain', type:'Kryptonian'},
+  METALLO: {display:'Metallo (John Corben)', species:'Android', color:['Green','Silver'], home:'Metropolis', affiliation:['Legion of Doom','Injustice League','Superman Rogues'], role:'Villain', type:'Tech'},
+  PARASITE: {display:'Parasite (Rudy Jones)', species:'Human', color:['Purple'], home:'Metropolis', affiliation:['Injustice League','Superman Rogues'], role:'Villain', type:'Monster'},
+  ARES: {display:'Ares', species:'God', color:['Black','Blue'], home:'Olympus', affiliation:['Injustice League'], role:'Villain', type:'Godly'},
+  OCEAN_MASTER: {display:'Ocean Master (Orm Marius)', species:'Atlantean', color:['Purple','Silver'], home:'Atlantis', affiliation:['Injustice League'], role:'Villain', type:'Warrior'},
+  KING_SHARK: {display:'King Shark (Nanaue)', species:'Meta-human', color:['Gray','Blue'], home:'Midway City', affiliation:['Suicide Squad'], role:'Villain', type:'Monster'},
+  HUSH: {display:'Hush (Thomas Elliot)', species:'Human', color:['Gray'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tactician'},
+  CLAYFACE: {display:'Clayface (Basil Karlo)', species:'Human', color:['Brown'], home:'Gotham City', affiliation:['Batman Rogues','Suicide Squad'], role:'Villain', type:['Monster','Shapeshifter']},
+  MAN_BAT: {display:'Man-Bat (Kirk Langstrom)', species:'Human', color:['Brown'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Monster'},
+  HUGO_STRANGE: {display:'Hugo Strange', species:'Human', color:['Blue'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tactician'},
+  TALIA_AL_GHUL: {display:"Talia al Ghul", species:'Human', color:['Green','Black'], home:'Nanda Parbat', affiliation:['League of Assassins'], role:'Antihero', type:'Tactician'},
+   CAPTAIN_BOOMERANG: {display:'Captain Boomerang (Digger Harkness)', species:'Human', color:['Blue'], home:'Central City', affiliation:['Suicide Squad','Flash Rogues'], role:'Villain', type:'Marksman'},
+  MIRROR_MASTER: {display:'Mirror Master (Sam Scudder)', species:'Human', color:['Orange','Green'], home:'Central City', affiliation:['Flash Rogues'], role:'Villain', type:'Tech'},
+  HEAT_WAVE: {display:'Heat Wave (Mick Rory)', species:'Human', color:['Orange'], home:'Central City', affiliation:['Flash Rogues'], role:'Villain', type:'Tech'},
+  WEATHER_WIZARD: {display:'Weather Wizard (Mark Mardon)', species:'Human', color:['Green'], home:'Central City', affiliation:['Flash Rogues'], role:'Villain', type:'Meta-human'},
+  KILLER_FROST: {display:'Killer Frost (Caitlin Snow)', species:'Human', color:['Blue','White'], home:'Central City', affiliation:['Suicide Squad', 'Flash Rogues'], role:'Villain', type:'Meta-human'},
+    STEPPENWOLF: {display:'Steppenwolf', species:'New God', color:['Gray','Red'], home:'Apokolips', affiliation:['Apokolips'], role:'Villain', type:'Godly'},
+  ATROCITUS: {display:'Atrocitus', species:'Alien', color:['Red','Black'], home:'Ryut', affiliation:['Lanterns'], role:'Villain', type:'Cosmic'},
+
+  /* --- Added villains / antiheroes --- */
+  MR_FREEZE: {display:'Mr. Freeze (Victor Fries)', species:'Human', color:['Blue'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tech'},
+  KILLER_CROC: {display:'Killer Croc (Waylon Jones)', species:'Human', color:['Green'], home:'Gotham City', affiliation:['Batman Rogues','Suicide Squad'], role:'Villain', type:'Monster'},
+  SOLOMON_GRUNDY: {display:'Solomon Grundy', species:'Undead', color:['Gray'], home:'Slaughter Swamp', affiliation:['Injustice League'], role:'Villain', type:'Monster'},
+  CAPTAIN_COLD: {display:'Captain Cold (Leonard Snart)', species:'Human', color:['Blue'], home:'Central City', affiliation:['Flash Rogues'], role:'Villain', type:'Tech'},
+  DEADSHOT: {display:'Deadshot (Floyd Lawton)', species:'Human', color:['Red','Black'], home:'Gotham City', affiliation:['Suicide Squad'], role:'Villain', type:'Marksman'},
+  RA_S_AL_GHUL: {display:"Ra's al Ghul", species:'Human', color:['Green'], home:'Nanda Parbat', affiliation:['League of Assassins'], role:'Villain', type:'Tactician'},
+  GORILLA_GRODD: {display:'Gorilla Grodd', species:'Gorilla', color:['Brown'], home:'Gorilla City', affiliation:['Injustice League','Flash Rogues'], role:'Villain', type:['Meta-human','Telepath']},
+  ZOOM_HUNTER: {display:'Zoom (Hunter Zolomon)', species:'Human', color:['Yellow','Black'], home:'Keystone City', affiliation:['Negative Speed Force','Flash Rogues'], role:'Villain', type:'Meta-human'}
+};
+
 
     const BANK = Object.keys(CHARACTER_FACTS).map(k => ({ token: k, display: CHARACTER_FACTS[k].display }));
 
@@ -308,18 +492,164 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       return new RegExp('^' + rx + '$');
     }
-    function compareFacts(guessToken, targetToken){
-      const ga = CHARACTER_FACTS[guessToken];
-      const ta = CHARACTER_FACTS[targetToken];
-      const res = {};
-      for (let i=0;i<FACT_KEYS.length;i++){ const k=FACT_KEYS[i]; res[k] = (ga[k] === ta[k]); }
-      return res;
+
+    // --- Help modal logic ---
+const help         = byId('help');
+const helpBody     = byId('helpBody');
+const helpBtn      = byId('helpBtn');
+const helpCloseBtn = byId('helpCloseBtn');
+
+function uniqueValuesForKey(k){
+  const set = new Set();
+  Object.keys(CHARACTER_FACTS).forEach(tok => {
+    toArr(CHARACTER_FACTS[tok][k]).forEach(v => set.add(v));
+  });
+  // sort case-insensitively, stable
+  return Array.from(set).sort((a,b)=> (''+a).localeCompare(''+b));
+}
+
+function chipsHTML(arr){
+  return '<div class="chips" style="margin-top:6px">' +
+    arr.map(v => '<span class="chip">'+ v +'</span>').join('') +
+  '</div>';
+}
+
+function buildHelpContent(){
+  const groups = [
+    { key:'species',     label:'Species' },
+    { key:'home',        label:'Home Base / World' },
+    { key:'affiliation', label:'Affiliation / Team(s)' },
+    { key:'role',        label:'Role' },
+    { key:'type',        label:'Power / Skill Type' }
+  ];
+
+  const sections = groups.map(g => {
+    const vals = uniqueValuesForKey(g.key);
+    return (
+      '<div class="fact" style="margin-bottom:8px">' +
+        '<b>'+ g.label +'</b>' +
+        chipsHTML(vals) +
+      '</div>'
+    );
+  }).join('');
+
+  helpBody.innerHTML = sections;
+}
+
+function openHelp(){
+  buildHelpContent();          // build fresh in case the dataset changed
+  document.body.classList.add('modal-open');
+  help.classList.add('show');
+  SFX.ui();
+}
+
+function closeHelp(){
+  help.classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+
+helpBtn.addEventListener('click', openHelp);
+helpCloseBtn.addEventListener('click', closeHelp);
+// click outside panel closes
+help.addEventListener('click', function(e){
+  if (e.target === help) closeHelp();
+});
+// ESC to close
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && help.classList.contains('show')) closeHelp();
+});
+
+
+    let eligibleOnly = false;
+
+
+
+// Positive-only pruning:
+// If a guess shows PARTIAL or EXACT for a fact, we keep that/those value(s).
+// Characters that don't also match those value(s) get pruned.
+// (We ignore all "No match" info entirely.)
+function buildConstraintMaps(){
+  const dis = {};      // kept for compatibility, but we won't add to it
+  const reqHas = {};   // required values per fact (from PARTIAL or EXACT)
+  const reqExact = {}; // exact set per fact (from EXACT)
+  FACT_KEYS.forEach(k => { dis[k] = new Set(); reqHas[k] = new Set(); reqExact[k] = null; });
+
+  for (let i = 0; i < guesses.length; i++){
+    const entry = guesses[i];
+    const gf = CHARACTER_FACTS[entry.token];
+
+    FACT_KEYS.forEach(k => {
+      const det = entry.matches[k]; // { ok, state, matches:[] }
+      if (!det) return;
+
+      if (det.state === 'exact'){
+        // lock to the guess's full set for this fact
+        const exactSet = new Set(toArr(gf[k]));
+        if (!reqExact[k]) reqExact[k] = exactSet; // first exact takes precedence
+        // also treat exact values as required "has"
+        exactSet.forEach(v => reqHas[k].add(v));
+      } else if (det.state === 'partial'){
+        // require the overlapping values (chips that were green)
+        (det.matches || []).forEach(v => reqHas[k].add(v));
+      }
+      // state === 'none' -> do nothing (no negative pruning)
+    });
+  }
+
+  return { dis, reqHas, reqExact };
+}
+
+
+function isEligibleCharacterToken(token, cns){
+  const cf = CHARACTER_FACTS[token];
+
+  for (let i = 0; i < FACT_KEYS.length; i++){
+    const k = FACT_KEYS[i];
+    const vals = toArr(cf[k]);
+
+    // If any value is disallowed, reject
+    for (let j = 0; j < vals.length; j++){
+      if (cns.dis[k].has(vals[j])) return false;
     }
-    function isCorrectGuess(guessToken, targetToken){
-      const m = compareFacts(guessToken, targetToken);
-      for (let i=0;i<FACT_KEYS.length;i++){ if(!m[FACT_KEYS[i]]) return false; }
-      return true;
+
+    // If there is an exact-set requirement, enforce equality
+    const ex = cns.reqExact[k];
+    if (ex && ex.__contradiction) return false;
+    if (ex){
+      if (vals.length !== ex.size) return false;
+      for (let j = 0; j < vals.length; j++){
+        if (!ex.has(vals[j])) return false;
+      }
+      // No need to check reqHas if exact passed (exact implies has)
+      continue;
     }
+
+    // Otherwise, all required values for this fact must be present
+    for (const must of cns.reqHas[k]){
+      if (vals.indexOf(must) === -1) return false;
+    }
+  }
+
+  return true;
+}
+
+
+function compareFacts(guessToken, targetToken){
+  const ga = CHARACTER_FACTS[guessToken];
+  const ta = CHARACTER_FACTS[targetToken];
+  const res = {};
+  for (let i=0;i<FACT_KEYS.length;i++){
+    const k = FACT_KEYS[i];
+    res[k] = getMatches(ga[k], ta[k]); // { ok:boolean, matches:string[] }
+  }
+  return res;
+}
+
+function isCorrectGuess(guessToken, targetToken){
+  return guessToken === targetToken;
+}
+
+
 
     // DOM
     const bankList = byId('bankList');
@@ -328,19 +658,37 @@ document.addEventListener('DOMContentLoaded', function(){
     const sfxBtn = byId('sfxBtn');
     const guessesEl = byId('guesses');
 
-    function renderBank(){
-      const patt = (bankFilter.value||'').trim();
-      const rx = patt ? patternToRegex(patt) : null;
-      const items = BANK
-        .filter(c => !rx || rx.test(c.display.toUpperCase()) || rx.test(c.token))
-        .sort((a,b)=> a.display.localeCompare(b.display));
-      bankList.innerHTML = items.length
-        ? items.map(c => {
-            const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
-            return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
-          }).join('')
-        : '<div class="empty">No characters match your filter.</div>';
-    }
+function renderBank(){
+  const patt = (bankFilter.value||'').trim();
+  const rx = patt ? patternToRegex(patt) : null;
+
+  let items = BANK;
+
+  // Search filter
+  if (rx){
+    items = items.filter(c => rx.test(c.display.toUpperCase()) || rx.test(c.token));
+  }
+
+  // Eligible-only filter (now enforces both negative and positive constraints)
+  if (eligibleOnly && guesses.length){
+    const cns = buildConstraintMaps();
+    items = items.filter(c => isEligibleCharacterToken(c.token, cns));
+  }
+
+  items = items.sort((a,b)=> a.display.localeCompare(b.display));
+
+  bankList.innerHTML = items.length
+    ? items.map(c => {
+        const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
+        return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
+      }).join('')
+    : '<div class="empty">' + (eligibleOnly
+        ? 'No eligible characters remain with current constraints.'
+        : 'No characters match your filter.'
+      ) + '</div>';
+}
+
+
 
     // iOS audio unlock
     document.addEventListener('touchstart', function(){ SFX.resume(); }, { passive:true });
@@ -356,34 +704,54 @@ document.addEventListener('DOMContentLoaded', function(){
 
     bankFilter.addEventListener('input', renderBank);
 
-    function renderGuessCard(entry){
-      const cf = CHARACTER_FACTS[entry.token];
-      const matches = entry.matches;
-      let okCount = 0;
-      for (let i=0;i<FACT_KEYS.length;i++){ if (matches[FACT_KEYS[i]]) okCount++; }
-      const rows = FACT_KEYS.map(function(k){
-        const ok = !!matches[k];
-        const tagClass = ok ? 'ok' : 'no';
-        return (
-          '<div class="fact">' +
-            '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div class="row">' +
-              '<span>'+cf[k]+'</span>' +
-              '<span class="tag '+tagClass+'">'+(ok?'Match':'No match')+'</span>' +
-            '</div>' +
-          '</div>'
-        );
-      }).join('');
-      return (
-        '<div class="guessCard">' +
-          '<div class="row" style="margin-bottom:8px">' +
-            '<div style="font-weight:800">'+cf.display+'</div>' +
-            '<div class="pill">'+okCount+'/'+FACT_KEYS.length+' facts match</div>' +
-          '</div>' +
-          '<div class="factsGrid">'+rows+'</div>' +
-        '</div>'
-      );
+function renderGuessCard(entry){
+  const cf = CHARACTER_FACTS[entry.token];
+  const matches = entry.matches;
+  let okCount = 0;
+
+  const rows = FACT_KEYS.map(function(k){
+    const detail = matches[k]; // { ok, state, matches:[] }
+    const state = detail && detail.state ? detail.state : (detail && detail.ok ? 'partial' : 'none');
+    if (state !== 'none') okCount++; // count exact OR partial as a "match"
+
+    const tagClass = state === 'exact' ? 'ok' : state === 'partial' ? 'partial' : 'no';
+    const tagText  = state === 'exact' ? 'Exact' : state === 'partial' ? 'Partial' : 'No match';
+
+    // Build the left-side value display
+    const guessVal = cf[k];
+    let valueHTML;
+    if (Array.isArray(guessVal)) {
+      valueHTML = '<div class="chips">' + guessVal.map(function(v){
+        const isHit = detail.matches && detail.matches.indexOf(v) !== -1;
+        return '<span class="chip ' + (isHit ? 'ok' : 'miss') + '">' + v + '</span>';
+      }).join('') + '</div>';
+    } else {
+      valueHTML = '<span>' + guessVal + '</span>';
     }
+
+    return (
+      '<div class="fact">' +
+        '<b>' + FACT_LABEL[k] + '</b>' +
+        '<div class="row">' +
+          valueHTML +
+          '<span class="tag ' + tagClass + '">' + tagText + '</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  return (
+    '<div class="guessCard">' +
+      '<div class="row" style="margin-bottom:8px">' +
+        '<div style="font-weight:800">' + cf.display + '</div>' +
+        '<div class="pill">' + okCount + '/' + FACT_KEYS.length + ' facts match</div>' +
+      '</div>' +
+      '<div class="factsGrid">' + rows + '</div>' +
+    '</div>'
+  );
+}
+
+
 
     function renderGuesses(){
       guessesEl.innerHTML = guesses.length
@@ -391,7 +759,34 @@ document.addEventListener('DOMContentLoaded', function(){
         : '<div class="empty">No guesses yet. Pick a character from the left to compare their facts with the target.</div>';
     }
 
-    function updateGuessesPill(){ guessesLeftPill.textContent = 'Guesses left: ' + guessesLeft; }
+// accessibility: announce changes to screen readers
+guessesLeftPill.setAttribute('aria-live','polite');
+
+function updateGuessesPill(animate){
+  const pct = Math.max(0, Math.min(1, guessesLeft / MAX_GUESSES));
+  const state = (guessesLeft >= 6) ? 'ok' : (guessesLeft >= 3) ? 'warn' : 'danger';
+
+  // set classes for color state
+  guessesLeftPill.classList.remove('ok','warn','danger');
+  guessesLeftPill.classList.add(state);
+
+  // set the fill width
+  guessesLeftPill.style.setProperty('--fill', (pct*100) + '%');
+
+  // render big, explicit label
+  guessesLeftPill.innerHTML =
+    '<span class="label"><span class="big">' + guessesLeft +
+    '</span>/ ' + MAX_GUESSES + ' Guesses Left</span><i class="bar"></i>';
+
+  // pop animation on change
+  if (animate){
+    guessesLeftPill.classList.remove('bump');
+    // force reflow to restart the animation
+    void guessesLeftPill.offsetWidth;
+    guessesLeftPill.classList.add('bump');
+  }
+}
+
 
     // Game flow
     function resetGame(){
@@ -401,7 +796,7 @@ document.addEventListener('DOMContentLoaded', function(){
       over = false;
       renderBank();
       renderGuesses();
-      updateGuessesPill();
+updateGuessesPill(false);
     }
 
     function onGuess(token){
@@ -415,13 +810,12 @@ document.addEventListener('DOMContentLoaded', function(){
       if (isCorrectGuess(token, target)){
         games.played++; games.wins++;
         over = true;
-        SFX.correct();
         showWin(token);
         return;
       }
 
-      guessesLeft = Math.max(0, guessesLeft - 1);
-      updateGuessesPill();
+guessesLeft = Math.max(0, guessesLeft - 1);
+updateGuessesPill(true);
       SFX.wrong();
 
       if (guessesLeft === 0){
@@ -446,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return (
           '<div class="fact">' +
             '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div>'+cf[k]+'</div>' +
+            '<div>'+displayValue(cf[k])+'</div>' +
           '</div>'
         );
       }).join('');
@@ -477,7 +871,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return (
           '<div class="fact">' +
             '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div>'+cf[k]+'</div>' +
+            '<div>'+displayValue(cf[k])+'</div>' +
           '</div>'
         );
       }).join('');
@@ -495,7 +889,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // header controls
     byId('newGameBtn').addEventListener('click', function(){
-      games.played++;
       SFX.ui();
       win.classList.remove('show');
       lose.classList.remove('show');
@@ -510,6 +903,16 @@ document.addEventListener('DOMContentLoaded', function(){
       if (on) { SFX.resume(); SFX.ui(); }
     });
 
+const eligibleBtn = byId('eligibleBtn');
+eligibleBtn.addEventListener('click', function(){
+  eligibleOnly = !eligibleOnly;
+  eligibleBtn.textContent = eligibleOnly ? '🔎 Match-Only: On' : '🔎 Match-Only: Off';
+  SFX.ui();
+  renderBank();
+});
+
+
+
     // INIT
     resetGame();
     renderBank();
@@ -523,7 +926,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const assert = (name, cond) => { results.push({name, pass: !!cond}); if(!cond) console.error('[TEST FAIL]', name); };
         const same = (a,b) => JSON.stringify(a)===JSON.stringify(b);
         assert('dataset has at least 30', Object.keys(CHARACTER_FACTS).length >= 30);
-        assert('every entry has all facts', Object.keys(CHARACTER_FACTS).every(k => FACT_KEYS.every(f => CHARACTER_FACTS[k][f])));
+        assert('every entry has all facts', Object.keys(CHARACTER_FACTS).every(k => FACT_KEYS.every(f => CHARACTER_FACTS[k][f] !== undefined)));
         const tokens = Object.keys(CHARACTER_FACTS);
         const t0 = tokens[0], t1 = tokens[1];
         const m = compareFacts(t0, t1);
