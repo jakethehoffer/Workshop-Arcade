@@ -25,14 +25,11 @@
 <canvas id="game"></canvas>
 <script>
 /* =========================
-   Sky Hopper — Fullscreen Edition
-   Changes:
-   - True fullscreen with devicePixelRatio scaling & letterboxing.
-   - Virtual world units (360x640) so physics/UI feel consistent on any screen.
-   - Parallax sky, clouds, scrolling ground.
-   - Glossy pipes + caps.
-   - Bird sprite with wing animation, tilt based on velocity, occasional blink.
-   - Kept your audio, score/HS, difficulty ramp, controls.
+   Sky Hopper — Fullscreen Edition (dt-normalized)
+   Key change:
+   - All motion/physics/animations are scaled by dt60 = (seconds since last frame)*60,
+     so gameplay matches 60fps on any refresh rate.
+   - dt is clamped to avoid giant steps after tab sleep.
    ========================= */
 
 const canvas = document.getElementById("game");
@@ -62,8 +59,9 @@ resizeCanvas();
 
 /* ----- Game state (ported to world units) ----- */
 let frames = 0;
-const gravity = 0.25;
-const jump = 4.6;
+/* These are tuned for 60fps. We'll scale them by dt60 each frame. */
+const gravity = 0.25;   // vel += gravity * dt60
+const jump = 4.6;       // vel = -jump  (value is in "60fps vel units")
 let score = 0;
 let gameOver = false;
 let started = false;
@@ -137,7 +135,7 @@ const SFX = {
 };
 
 /* ----- Difficulty ramp (unchanged logic) ----- */
-const basePipeSpeed = 2.5;
+const basePipeSpeed = 2.5;      // world units per 60fps frame
 const rampPerSecond = 0.035;
 let speedMultiplier = 1;
 let firstPassTime = null;
@@ -199,9 +197,9 @@ function drawCloud(cx, cy, w) {
   ctx.ellipse(cx+w*0.25, cy+6, w*0.3, w*0.2, 0, 0, Math.PI*2);
   ctx.fill();
 }
-function updateAndDrawClouds(speed) {
+function updateAndDrawClouds(step) {
   for (const c of clouds) {
-    c.x -= speed * c.s * 0.3; // slow parallax
+    c.x -= step * c.s * 0.3; // slow parallax (step is already dt-scaled)
     if (c.x < -c.w) c.x = WORLD_W + c.w;
     drawCloud(c.x, c.y, c.w);
   }
@@ -227,8 +225,8 @@ function drawHills() {
   ctx.lineTo(WORLD_W,WORLD_H); ctx.lineTo(0,WORLD_H); ctx.closePath(); ctx.fill();
 }
 let groundOffset = 0;
-function drawGround(scrollSpeed) {
-  groundOffset = (groundOffset + scrollSpeed) % 48;
+function drawGround(step) {
+  groundOffset = (groundOffset + step) % 48;
   // grass top
   ctx.fillStyle = "#5aa353";
   ctx.fillRect(0, WORLD_H - groundH, WORLD_W, 14);
@@ -249,9 +247,9 @@ const bird = {
   y: WORLD_H * 0.5,
   width: 32,
   height: 24,
-  velocity: 0,
+  velocity: 0,      // "world units per 60fps-frame"
   wingPhase: 0,
-  blinkTimer: 0,
+  blinkTimer: 0,    // frames at 60fps
   draw() {
     const cx = this.x, cy = this.y;
     const tilt = Math.max(-0.6, Math.min(1.2, this.velocity * 0.06));
@@ -303,13 +301,14 @@ const bird = {
     ctx.restore();
   },
   flap() { this.velocity = -jump; this.wingPhase += 0.7; },
-  update() {
-    this.velocity += gravity;
-    this.y += this.velocity;
-    this.wingPhase += 0.25;
-    // occasional blink
+  update(dt60) {
+    this.velocity += gravity * dt60;     // accel scaled by dt
+    this.y += this.velocity * dt60;      // integrate position
+    this.wingPhase += 0.25 * dt60;       // animate at same real-time speed
+    // occasional blink (random chance per 60fps "frame step")
     if (Math.random() < 0.01 && this.blinkTimer <= 0) this.blinkTimer = 6;
-    if (this.blinkTimer > 0) this.blinkTimer--;
+    if (this.blinkTimer > 0) this.blinkTimer -= dt60;
+
     // ground collision
     if (this.y + this.height/2 >= WORLD_H - groundH) setGameOver();
     // ceiling clamp
@@ -360,10 +359,10 @@ function drawPipeRect(x, y, w, h) {
   ctx.strokeRect(x-6, y-10, w+12, 12);
 }
 
-function updatePipes(currentSpeed) {
+function updatePipes(step) {
   for (let i = 0; i < pipes.length; i++) {
     const p = pipes[i];
-    p.x -= currentSpeed;
+    p.x -= step; // step is already dt-scaled
     // collision
     const bx1 = bird.x - bird.width/2, bx2 = bird.x + bird.width/2;
     const px1 = p.x, px2 = p.x + pipeWidth;
@@ -422,20 +421,30 @@ function restartGame() {
   startMusic();
 }
 
-/* ----- Main loop ----- */
+/* ----- Main loop (dt-normalized) ----- */
+let lastTime = performance.now(); // for dt
 function loop() {
+  const now = performance.now();
+  // seconds since last frame
+  let dt = (now - lastTime) / 1000;
+  lastTime = now;
+  // clamp to avoid big jumps after tab sleep
+  if (dt > 0.1) dt = 0.1;
+  // normalize to 60fps "frame units"
+  const dt60 = dt * 60;
+
   // reset transform & clear whole canvas (also clears the letterbox)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  
-  const currentSpeed = basePipeSpeed * speedMultiplier;
-  const bgSpeed = gameOver ? 0 : currentSpeed;
+  // distance-per-frame-at-60fps, scaled by dt60 => distance this actual frame
+  const baseStepPerFrame = basePipeSpeed * speedMultiplier;
+  const scrollStep = (gameOver ? 0 : baseStepPerFrame) * dt60;
 
   withWorldTransform(() => {
     // Background layers
     drawSky();
-    updateAndDrawClouds(bgSpeed);   // ⬅️ use bgSpeed
+    updateAndDrawClouds(scrollStep);
     drawHills();
 
     // Start text
@@ -443,13 +452,13 @@ function loop() {
       drawText("Tap or press SPACE to start", WORLD_W/2, WORLD_H/2, 22);
     } else {
       if (!gameOver) {
-        bird.update();
-        spawnAccumulator += currentSpeed;
+        bird.update(dt60);
+        spawnAccumulator += scrollStep; // accumulate distance moved
         if (spawnAccumulator >= spawnSpacing) {
           spawnPipe();
           spawnAccumulator -= spawnSpacing;
         }
-        updatePipes(currentSpeed);
+        updatePipes(scrollStep);
       }
       drawPipes();
       // HUD
@@ -460,7 +469,7 @@ function loop() {
 
     // Bird & ground always on top
     bird.draw();
-    drawGround(bgSpeed);            // ⬅️ use bgSpeed
+    drawGround(scrollStep);
 
     // Game over overlay
     if (gameOver) {
