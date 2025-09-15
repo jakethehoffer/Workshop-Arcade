@@ -77,7 +77,7 @@
         <div class="action primary" id="startBtn">Start</div>
         <div class="action" id="howBtn">Platforms</div>
       </div>
-      <p id="how" style="display:none">Blue = moving. Green = spring boost. <span style="color:#fb7185">Red = breaks after one bounce.</span> Gray fades after you land. Wraps around on the sides.</p>
+      <p id="how" style="display:none">Blue = moving. Green = spring boost. <span style="color:#fb7185">Red = breaks after one bounce.</span> Gray fades after you land.</p>
     </div>
   </div>
 
@@ -317,6 +317,18 @@
   };
 
   // ===== Game constants =====
+  // --- Moving platform difficulty tuning ---
+const MOVE_X_START_MIN = 100;   // was ~40–90, now faster at spawn
+const MOVE_X_START_MAX = 150;
+const SPEED_RAMP_SCORE = 5000;  // lower = ramps sooner
+const SPEED_MULT_MAX   = 2.4;   // cap so it never gets absurd
+
+function speedMult(){
+  // grows with height/score; 1.0 at start, up to SPEED_MULT_MAX
+  const s = (state ? state.score : 0);
+  return 1 + Math.min(SPEED_MULT_MAX - 1, s / SPEED_RAMP_SCORE);
+}
+
   const GRAVITY = 2200;         // px/s^2
   const MOVE_ACC = 1800;        // less snappy (tuned)
   const MOVE_MAX = 360;         // slightly lower top speed
@@ -328,7 +340,7 @@
   const PLATFORM_W = 100, PLATFORM_H = 16;
 
   // (Kept for initial seeding variety)
-  const GAP_MIN = 110, GAP_MAX = 170;
+  const GAP_MIN = 110, GAP_MAX = 160;
 
   const WORLD_MARGIN = 24;      
   const CAM_ANCHOR_Y = Math.min(420, Math.max(260, H*0.45));
@@ -352,46 +364,68 @@
   let best = +localStorage.getItem('doodle_best') || 0;
   bestEl.textContent = best;
 
-  function reset() {
-    state = {
-      score: 0,
-      cameraY: 0,
-      player: {
-        x: W*0.5 - PLAYER_W*0.5,
-        y: H - 120,
-        vx: 0,
-        vy: 0,
-        w: PLAYER_W,
-        h: PLAYER_H,
-        alive: true,
-        canDouble: true
-      },
-      plats: [],
-      particles: []
-    };
+function reset() {
+  state = {
+    score: 0,
+    cameraY: 0,
+    player: {
+      x: W*0.5 - PLAYER_W*0.5,
+      y: H - 120,
+      vx: 0,
+      vy: 0,
+      w: PLAYER_W,
+      h: PLAYER_H,
+      alive: true,
+      canDouble: true
+    },
+    plats: [],
+    particles: [],
+    spawnGrace: 0.1,   // <= suppress death & snap to base for ~0.35s
+    spawnBase: null
+  };
 
-    // Seed platforms bottom -> up
-    let y = H - 40;
-    state.plats.push(makePlatform(W*0.5-PLATFORM_W, y, 'static', true));
-    y -= 90;
-    while (y > -H * 0.6) {
-      const type = pickType();
-      const x = rand(WORLD_MARGIN, W - WORLD_MARGIN - PLATFORM_W);
-      state.plats.push(makePlatform(x, y, type));
-      y -= rand(GAP_MIN, GAP_MAX);
-    }
+  // Seed a guaranteed wide static base
+  const baseY = Math.min(H - 40, H - PLATFORM_H - 8);
+  const baseX = clamp(W * 0.5 - PLATFORM_W * 0.8, WORLD_MARGIN, W - WORLD_MARGIN - PLATFORM_W * 1.6);
+  const base = makePlatform(baseX, baseY, 'static', true);
+  state.plats.push(base);
 
-    // Put player on lowest platform
-    const base = state.plats[0];
-    state.player.x = base.x + base.w/2 - state.player.w/2;
-    state.player.y = base.y - state.player.h;
-    state.player.vx = 0;
-    state.player.vy = JUMP_VY * 0.5; // slight starting hop
-    state.cameraY = 0;
-
-    // Prefill a safe ladder above
-    spawnIfNeeded(true);
+  // Build upward
+  let y = baseY - 90;
+  while (y > -H * 0.6) {
+    const type = pickType();
+    const p = placePlatform(y, type);
+    if (p) state.plats.push(p);
+    y -= rand(GAP_MIN, GAP_MAX);
   }
+
+  // Hard-place player on bottom platform
+  const bottom = getBottomPlatform();
+  if (bottom) {
+    state.spawnBase = bottom;
+    state.player.x = bottom.x + (bottom.w - state.player.w) / 2;
+    state.player.y = bottom.y - state.player.h - 0.01; // epsilon above
+  }
+
+  state.player.vx = 0;
+  state.player.vy = 0;       // start at rest; first bounce will happen naturally
+  state.player.canDouble = true;
+  state.cameraY = 0;
+
+  spawnIfNeeded(true);
+}
+
+
+function getBottomPlatform() {
+  let best = null;
+  for (const p of state.plats) {
+    if (!p.alive) continue;
+    if (!best || p.y > best.y) best = p;
+  }
+  return best;
+}
+
+
 
   function start(restarting=false) {
     hide(menu);
@@ -459,11 +493,53 @@
   function makePlatform(x, y, type='static', wide=false) {
     const w = wide ? PLATFORM_W*1.6 : PLATFORM_W;
     const p = { x, y, w, h:PLATFORM_H, type, vx:0, dir:1, alive:true, alpha:1, stepped:false, springStretch:0 };
-    if (type === 'moveX') {
-      p.vx = rand(40, 90) * (Math.random()<.5 ? -1 : 1);
-    }
+if (type === 'moveX') {
+  // keep direction separately; movement will use baseSpeed * speedMult()
+  p.baseSpeed = rand(MOVE_X_START_MIN, MOVE_X_START_MAX);
+  p.dir = Math.random() < .5 ? -1 : 1;
+}
+
     return p;
   }
+  // Find a non-overlapping position for a platform at y
+function placePlatform(y, type='static', wide=false) {
+  const w = wide ? PLATFORM_W*1.6 : PLATFORM_W;
+  const h = PLATFORM_H;
+  const padX = 4;   // a little horizontal breathing room
+  const padY = 2;   // a little vertical breathing room
+
+  // Try several random X positions at this Y
+  for (let tries = 0; tries < 28; tries++) {
+    const x = rand(WORLD_MARGIN, W - WORLD_MARGIN - w);
+    const ok = state.plats.every(p => {
+      if (!p.alive) return true;
+      // AABB overlap test with padding
+      const overlapX = (x < p.x + p.w - padX) && (x + w - padX > p.x);
+      const overlapY = (y < p.y + p.h - padY) && (y + h - padY > p.y);
+      return !(overlapX && overlapY);
+    });
+    if (ok) return makePlatform(x, y, type, wide);
+  }
+
+  // If it's too crowded at this Y, nudge upward a bit and retry
+  for (let bump = h + 8; bump <= (h + 8) * 3; bump += (h + 8)) {
+    const yy = y - bump;
+    for (let tries = 0; tries < 16; tries++) {
+      const x = rand(WORLD_MARGIN, W - WORLD_MARGIN - w);
+      const ok = state.plats.every(p => {
+        if (!p.alive) return true;
+        const overlapX = (x < p.x + p.w - padX) && (x + w - padX > p.x);
+        const overlapY = (yy < p.y + p.h - padY) && (yy + h - padY > p.y);
+        return !(overlapX && overlapY);
+      });
+      if (ok) return makePlatform(x, yy, type, wide);
+    }
+  }
+
+  // Give up silently (caller can skip adding)
+  return null;
+}
+
 
   // Safety-aware spawner
   function spawnIfNeeded(initial=false) {
@@ -474,24 +550,22 @@
     const targetTop = -H * LOOKAHEAD;
 
     while (minY > targetTop) {
-      const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
-      const y = minY - gap;
+  const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
+  const y = minY - gap;
 
-      const type = (initial && Math.random() < 0.5) ? 'static' : pickType();
-      const x = rand(WORLD_MARGIN, W - WORLD_MARGIN - PLATFORM_W);
-      state.plats.push(makePlatform(x, y, type));
+  const type = (initial && Math.random() < 0.5) ? 'static' : pickType();
 
-      if (Math.random() < SAFETY_CHANCE) {
-        const dx = (Math.random()<0.5 ? -1 : 1) * (W * 0.33);
-        let x2 = clamp(x + dx, WORLD_MARGIN, W - WORLD_MARGIN - PLATFORM_W);
-        if (Math.abs(x2 - x) < PLATFORM_W * 0.8) {
-          x2 = clamp(x2 + (dx > 0 ? PLATFORM_W*1.2 : -PLATFORM_W*1.2), WORLD_MARGIN, W - WORLD_MARGIN - PLATFORM_W);
-        }
-        state.plats.push(makePlatform(x2, y + rand(-8, 8), 'static'));
-      }
+  const main = placePlatform(y, type);
+  if (main) state.plats.push(main);
 
-      minY = y;
-    }
+  if (Math.random() < SAFETY_CHANCE) {
+    const buddy = placePlatform(y + rand(-8, 8), 'static');
+    if (buddy) state.plats.push(buddy);
+  }
+
+  minY = y;
+}
+
   }
 
   function addParticles(x,y,count=10, tone='bounce'){
@@ -553,11 +627,22 @@
     for (const pl of state.plats) {
       if (!pl.alive) continue;
 
-      if (pl.type === 'moveX') {
-        pl.x += pl.vx * dt;
-        if (pl.x < WORLD_MARGIN) { pl.x = WORLD_MARGIN; pl.vx *= -1; }
-        if (pl.x + pl.w > W - WORLD_MARGIN) { pl.x = W - WORLD_MARGIN - pl.w; pl.vx *= -1; }
-      }
+if (pl.type === 'moveX') {
+  // Fallback to old saves if any: derive a baseSpeed from existing vx
+  const base = pl.baseSpeed || Math.abs(pl.vx) || 160;
+  const v = base * speedMult();
+  pl.x += pl.dir * v * dt;
+
+  if (pl.x < WORLD_MARGIN) {
+    pl.x = WORLD_MARGIN;
+    pl.dir = 1;
+  }
+  if (pl.x + pl.w > W - WORLD_MARGIN) {
+    pl.x = W - WORLD_MARGIN - pl.w;
+    pl.dir = -1;
+  }
+}
+
 
       if (pl.type === 'vanish' && pl.stepped) {
         pl.alpha = Math.max(0, pl.alpha - dt * 2.5);
@@ -573,6 +658,18 @@
         pl.springStretch = Math.max(0, pl.springStretch - dt*4);
       }
     }
+    // --- Spawn grace: keep player snapped to base for first few frames ---
+if (state.spawnGrace > 0) {
+  state.spawnGrace -= dt;
+  const base = (state.spawnBase && state.spawnBase.alive) ? state.spawnBase : getBottomPlatform();
+  if (base) {
+    // Keep the player resting on top of the base, prevent slipping through
+    state.player.y = base.y - state.player.h - 0.01;
+    if (state.player.vy > 0) state.player.vy = 0;
+    state.player.canDouble = true;
+  }
+}
+
 
     // Collisions — only when falling
     if (P.vy > 0) {
@@ -660,7 +757,7 @@
     });
 
     // Death
-    if (P.y > H + 80) gameOver();
+if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
   }
 
   function draw() {
