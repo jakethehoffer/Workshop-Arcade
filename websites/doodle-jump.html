@@ -77,12 +77,13 @@
         <div class="action primary" id="startBtn">Start</div>
         <div class="action" id="howBtn">Platforms</div>
       </div>
-      <!-- CHANGED: explain new moving rain cloud -->
-      <p id="how" style="display:none">
-        Blue = moving. Green = spring boost.
+      <!-- CHANGED: explain moving variants + rain behavior (remove slippery mention) -->
+      <p id="how" style="display:none">Types unlock as you climb: <b>Blue → Green → Red → Clouds → Rain clouds</b>.<br>
+        Blue = moving. Green = spring boost. 
         <span style="color:#fb7185">Red = cracks — breaks on the <u>2nd</u> bounce (normal bounce both times), explodes.</span>
         <span style="color:#cbd5e1">Gray = cloud — softer bounce, resets double-jump, then fades.</span>
-        <span style="color:#a7d8ff">White-blue = <b>rain cloud</b> (moving) — soft bounce &amp; resets double-jump, <i>rains</i> onto level: wet platforms reduce jump height briefly; raindrops make you slippery for a moment.</span>
+        <span style="color:#a7d8ff">White-blue = <b>rain cloud</b> (moving) — soft bounce &amp; resets double-jump, <i>rains</i> onto level: wet platforms reduce jump height briefly. A raindrop hitting you gives a tiny downward nudge.</span><br>
+        <b>New:</b> moving <span style="color:#22c55e">green</span> and <span style="color:#fb7185">red</span> platforms behave like their static versions but slide left/right and speed up as you score more. Rain affects them the same as other non-cloud platforms.
       </p>
     </div>
   </div>
@@ -328,14 +329,16 @@
   const WORLD_MARGIN = 24;      
   const CAM_ANCHOR_Y = Math.min(420, Math.max(260, H*0.45));
 
-  // CHANGED: added cloudX (moving rain cloud)
+  // CHANGED: added cloudX (moving rain cloud) and moving red/green types
   const PLATFORM_TYPES = [
-    { k:'static',  weight: 52 },
-    { k:'moveX',   weight: 18 },
-    { k:'cloudX',  weight: 10 }, // NEW
-    { k:'break',   weight: 12 },
-    { k:'vanish',  weight: 6  },
-    { k:'spring',  weight: 4  },
+    { k:'static',      weight: 48 },
+    { k:'moveX',       weight: 16 },
+    { k:'cloudX',      weight: 10 },
+    { k:'break',       weight: 10 },
+    { k:'moveBreakX',  weight: 6  },  // NEW: moving red
+    { k:'spring',      weight: 4  },
+    { k:'moveSpringX', weight: 4  },  // NEW: moving green
+    { k:'vanish',      weight: 6  }
   ];
 
   // === Guaranteed path math ===
@@ -344,6 +347,19 @@
   const SAFE_GAP_MAX = Math.min(260, Math.floor(MAX_JUMP_HEIGHT * 0.85));
   const LOOKAHEAD    = 0.55;
   const SAFETY_CHANCE = 0.55;
+
+  // === Progressive unlock thresholds ===
+  // Types unlock one-at-a-time as the player climbs (score ≈ height gained)
+  const UNLOCK = { moveX: 1200, spring: 3000, break: 5500, vanish: 8500, cloudX: 12000 };
+  function isTypeUnlocked(type, score){
+    if (type === 'static') return true;
+    if (type === 'moveX') return score >= UNLOCK.moveX;
+    if (type === 'spring' || type === 'moveSpringX') return score >= UNLOCK.spring;
+    if (type === 'break'  || type === 'moveBreakX')  return score >= UNLOCK.break;
+    if (type === 'vanish') return score >= UNLOCK.vanish;
+    if (type === 'cloudX') return score >= UNLOCK.cloudX;
+    return false;
+  }
 
   // ===== State =====
   let state, running = false, paused = false, lastT = performance.now();
@@ -368,7 +384,10 @@
       particles: [],
       drops: [],       // NEW: raindrops
       spawnGrace: 0.1,
-      spawnBase: null
+      spawnBase: null,
+      // Progressive-intro helpers
+      forceType: null,
+      intro: { blue:false, green:false, red:false, cloud:false, rain:false }
     };
 
     // Seed a guaranteed wide static base
@@ -418,6 +437,8 @@
     music.stop(); music.start();
 
     reset();
+      scoreEl.textContent = '0'; // <-- add this line to reset HUD immediately
+
     paused = false;
     running = true;
     lastT = performance.now();
@@ -457,9 +478,11 @@
   const clamp = (v,min,max)=> Math.max(min, Math.min(max, v));
   function rand(a,b){ return a + Math.random()*(b-a); }
   function pickType() {
-    const total = PLATFORM_TYPES.reduce((s,o)=>s+o.weight, 0);
+    const s = Math.round(state ? state.score : 0);
+    const candidates = PLATFORM_TYPES.filter(o => isTypeUnlocked(o.k, s));
+    const total = candidates.reduce((sum,o)=>sum+o.weight, 0) || 1;
     let r = Math.random()*total;
-    for (const o of PLATFORM_TYPES) { if ((r -= o.weight) <= 0) return o.k; }
+    for (const o of candidates) { if ((r -= o.weight) <= 0) return o.k; }
     return 'static';
   }
 
@@ -474,13 +497,14 @@ const p = {
   wetCover:0    // horizontal coverage 0..1 (spreads as it fills)
 };
 
-    if (type === 'moveX' || type === 'cloudX') { // CHANGED
+    // CHANGED: moving types setup (blue, green, red, rain-cloud)
+    if (type === 'moveX' || type === 'cloudX' || type === 'moveBreakX' || type === 'moveSpringX') {
       p.baseSpeed = rand(MOVE_X_START_MIN, MOVE_X_START_MAX);
       p.dir = Math.random() < .5 ? -1 : 1;
     }
 
     // NEW — give cloud platforms a reusable set of round "puffs"
-    if (type === 'vanish' || type === 'cloudX') { // CHANGED
+    if (type === 'vanish' || type === 'cloudX') {
       const n = Math.max(4, Math.floor(w / 28));
       p.puffs = [];
       for (let i = 0; i < n; i++) {
@@ -545,13 +569,23 @@ if (type === 'cloudX') {
     while (minY > targetTop) {
       const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
       const y = minY - gap;
-      const type = (initial && Math.random() < 0.5) ? 'static' : pickType();
+
+      let type = (initial && Math.random() < 0.5) ? 'static' : pickType();
+      if (state.forceType) { type = state.forceType; state.forceType = null; }
+
       const main = placePlatform(y, type);
       if (main) state.plats.push(main);
-      if (Math.random() < SAFETY_CHANCE) {
+
+      // GUARANTEED PATH: always ensure at least one static platform at this row
+      if (!main || main.type !== 'static') {
+        const safety = placePlatform(y + rand(-8, 8), 'static');
+        if (safety) state.plats.push(safety);
+      } else if (Math.random() < SAFETY_CHANCE) {
+        // occasionally add an extra static buddy for comfort
         const buddy = placePlatform(y + rand(-8, 8), 'static');
         if (buddy) state.plats.push(buddy);
       }
+
       minY = y;
     }
   }
@@ -596,6 +630,26 @@ if (type === 'cloudX') {
     }
   }
 
+  // === Unlock announcement + first-example spawner ===
+  function handleUnlocks(){
+    const s = Math.round(state.score || 0);
+    if (!state.intro.blue && s >= UNLOCK.moveX) {
+      state.intro.blue = true; state.forceType = 'moveX'; toast('New: Blue moving platforms');
+    }
+    if (!state.intro.green && s >= UNLOCK.spring) {
+      state.intro.green = true; state.forceType = 'spring'; toast('New: Green spring platforms');
+    }
+    if (!state.intro.red && s >= UNLOCK.break) {
+      state.intro.red = true; state.forceType = 'break'; toast('New: Red cracking platforms');
+    }
+    if (!state.intro.cloud && s >= UNLOCK.vanish) {
+      state.intro.cloud = true; state.forceType = 'vanish'; toast('New: Fading cloud platforms');
+    }
+    if (!state.intro.rain && s >= UNLOCK.cloudX) {
+      state.intro.rain = true; state.forceType = 'cloudX'; toast('New: Rain clouds');
+    }
+  }
+
   // ===== Main loop =====
   function loop(t) {
     requestAnimationFrame(loop);
@@ -612,7 +666,7 @@ if (type === 'cloudX') {
   function update(dt) {
     const P = state.player;
 
-    // Horizontal input (CHANGED: scale by wet/slippery)
+    // Horizontal input
     const left  = keys.has('ArrowLeft') || keys.has('KeyA') || touchLeft;
     const right = keys.has('ArrowRight') || keys.has('KeyD') || touchRight;
 
@@ -644,40 +698,34 @@ const fric    = FRICTION;
     for (const pl of state.plats) {
       if (!pl.alive) continue;
 
-// CHANGED: moveX & cloudX share same motion logic, and we track current vx
-if (pl.type === 'moveX' || pl.type === 'cloudX') {
+// CHANGED: move motion logic shared by moveX, cloudX, moveBreakX, moveSpringX
+if (pl.type === 'moveX' || pl.type === 'cloudX' || pl.type === 'moveBreakX' || pl.type === 'moveSpringX') {
   const base = pl.baseSpeed || Math.abs(pl.vx) || 160;
   const v = base * speedMult();
-  pl.vx = pl.dir * v;           // <<< track horizontal velocity
+  pl.vx = pl.dir * v;           // track horizontal velocity
   pl.x += pl.vx * dt;
 
   if (pl.x < WORLD_MARGIN) {
     pl.x = WORLD_MARGIN;
     pl.dir = 1;
-    pl.vx = pl.dir * v;         // keep vx in sync after bounce
+    pl.vx = pl.dir * v;
   }
   if (pl.x + pl.w > W - WORLD_MARGIN) {
     pl.x = W - WORLD_MARGIN - pl.w;
     pl.dir = -1;
-    pl.vx = pl.dir * v;         // keep vx in sync after bounce
+    pl.vx = pl.dir * v;
   }
 }
 
-
-      if (pl.type === 'vanish' && pl.stepped) {
-        pl.alpha = Math.max(0, pl.alpha - dt * 2.5);
-        if (pl.alpha <= 0) pl.alive = false;
-      }
-
-      if (pl.type === 'break' && pl.crackShakeT > 0) {
+      if ((pl.type === 'break' || pl.type === 'moveBreakX') && pl.crackShakeT > 0) {
         pl.crackShakeT = Math.max(0, pl.crackShakeT - dt);
       }
 
-      if (pl.type === 'spring' && pl.springStretch > 0) {
+      if ((pl.type === 'spring' || pl.type === 'moveSpringX') && pl.springStretch > 0) {
         pl.springStretch = Math.max(0, pl.springStretch - dt*4);
       }
 
-// NEW: wet accumulation/drain + smoothing (non-cloud platforms visually “fill up”)
+// NEW: wet accumulation/drain + smoothing (non-cloud platforms visually “fill up”) 
 pl.wetFill = Math.max(0, (pl.wetFill || 0) - dt * 0.20);     // drains in ~5s
 const ease1 = Math.min(1, dt * 5.0);                          // ~0.2s time constant
 pl.wetVis  = (pl.wetVis  || 0) + ((pl.wetFill || 0) - (pl.wetVis || 0)) * ease1;
@@ -687,23 +735,21 @@ const targetCover = 0.15 + 0.85 * (pl.wetFill || 0);
 const ease2 = Math.min(1, dt * 2.5);
 pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
 
-      // NEW: rain emission for moving clouds
+      // Rain emission for moving clouds
       if (pl.type === 'cloudX') {
         pl.rainAcc += dt * pl.rainRate;
         const maxDrops = 600; // soft cap to avoid overload
         while (pl.rainAcc >= 1 && state.drops.length < maxDrops) {
           pl.rainAcc -= 1;
           const dx = rand(8, pl.w - 8);
-          // inside: if (pl.type === 'cloudX') { ... while (pl.rainAcc >= 1) { ... } }
-const drop = {
-  x: pl.x + dx,
-  y: pl.y - 2,
-  vx: pl.vx || 0,          // <<< inherit current cloud horizontal velocity
-  vy: rand(520, 680),
-  r: rand(1.2, 1.8),
-  alive: true
-};
-
+          const drop = {
+            x: pl.x + dx,
+            y: pl.y - 2,
+            vx: pl.vx || 0,          // inherit current cloud horizontal velocity
+            vy: rand(520, 680),
+            r: rand(1.2, 1.8),
+            alive: true
+          };
           state.drops.push(drop);
         }
       }
@@ -731,11 +777,11 @@ const drop = {
         if (!withinX) continue;
         if (prevBottom <= top && nextBottom >= top) {
 
-          // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet)
-          if (pl.type === 'break') {
+          // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet) — includes moving red
+          if (pl.type === 'break' || pl.type === 'moveBreakX') {
             P.y = pl.y - P.h;
-const wet = pl.wetVis || 0;                 // 0..1
-const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
+            const wet = pl.wetVis || 0;                 // 0..1
+            const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
             P.vy = Math.round(JUMP_VY * wetFactor);
             P.canDouble = true;
 
@@ -755,10 +801,11 @@ const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
             break;
           }
 
-          // Spring (CHANGED: respect wet)
-          if (pl.type === 'spring') {
+          // Spring (CHANGED: respect wet) — includes moving green
+          if (pl.type === 'spring' || pl.type === 'moveSpringX') {
             P.y = pl.y - P.h;
-            const wetFactor = (pl.wetT > 0) ? 0.92 : 1.0;
+            const wet = pl.wetVis || 0;
+            const wetFactor = 1 - 0.08 * wet;
             P.vy = Math.round(SPRING_VY * wetFactor);
             P.canDouble = true;
             pl.springStretch = .7;
@@ -778,7 +825,7 @@ const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
             break;
           }
 
-          // NEW: Moving rain cloud — soft bounce, no fade
+          // Moving rain cloud — soft bounce, no fade
           if (pl.type === 'cloudX') {
             P.y = pl.y - P.h;
             P.vy = Math.round(JUMP_VY * 0.80);
@@ -788,9 +835,10 @@ const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
             break;
           }
 
-          // Static & moveX (CHANGED: respect wet)
+          // Static & blue moving (generic) — respect wet
           P.y = pl.y - P.h;
-          const wetFactor = (pl.wetT > 0) ? 0.92 : 1.0;
+          const wet = pl.wetVis || 0;
+          const wetFactor = 1 - 0.08 * wet;
           P.vy = Math.round(JUMP_VY * wetFactor);
           P.canDouble = true;
           sound.beep(700, .05, 'sine', .08);
@@ -808,10 +856,13 @@ const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
       state.cameraY += dy;
       for (const pl of state.plats) pl.y += dy;
       for (const pa of state.particles) pa.y += dy;
-      for (const d of state.drops) d.y += dy; // NEW: move rain with camera
+      for (const d of state.drops) d.y += dy; // move rain with camera
       scoreEl.textContent = Math.round(state.score);
       if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03);
     }
+
+    // Check & announce unlocks after score updates
+    handleUnlocks();
 
     // Despawn & spawn
     state.plats = state.plats.filter(pl => pl.alive && pl.y < H + 60);
@@ -832,20 +883,18 @@ state.drops = state.drops.filter(d => {
   const prevX = d.x;
 
   // Move with initial horizontal velocity and constant downward speed
-  d.x += d.vx * dt;        // <<< add this
+  d.x += d.vx * dt;
   d.y += d.vy * dt;
 
-
   // Player hit: trigger once when the drop crosses the player's TOP edge
-if (!hit &&
-    d.x >= P.x && d.x <= P.x + P.w &&
-    prevY <= P.y && d.y >= P.y) {
-  P.vy += 120;                        // small downward nudge only
-  addParticles(d.x, P.y + 1, 6, 'splash');
-  sound.beep(2000, .015, 'sine', .03);
-  hit = true;
-}
-
+  if (!hit &&
+      d.x >= P.x && d.x <= P.x + P.w &&
+      prevY <= P.y && d.y >= P.y) {
+    P.vy += 120;                        // small downward nudge only
+    addParticles(d.x, P.y + 1, 6, 'splash');
+    sound.beep(2000, .015, 'sine', .03);
+    hit = true;
+  }
 
   // Platform hits: trigger when crossing a platform's TOP edge
   if (!hit) {
@@ -854,8 +903,8 @@ if (!hit &&
       if (pl.type === 'cloudX' || pl.type === 'vanish') continue; // skip clouds
       if (d.x >= pl.x && d.x <= pl.x + pl.w &&
           prevY <= pl.y && d.y >= pl.y) {
-// each hit adds ~22% wetness (clamped), will drain over time
-pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
+        // each hit adds ~22% wetness (clamped), will drain over time
+        pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
         addParticles(d.x, pl.y + 1, 6, 'splash');
         hit = true;
         break; // stop checking more platforms for this drop
@@ -870,16 +919,237 @@ pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
   return d.y < H + 40;
 });
 
-
-
-
     // Death
     if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
   }
+  // ===================== NEW BACKGROUND SYSTEM =====================
+// Phase 1: rolling hills only (no sky)
+// Phase 2: sky + sun slide in from the top; hills descend & fade out
+
+// When the sky starts revealing (use your cloud unlock for timing)
+const SKY_REVEAL_START = (typeof UNLOCK !== 'undefined' ? UNLOCK.vanish : 8500);
+// How long the reveal takes to go from no-sky → only-sky (in score units)
+const SKY_REVEAL_SPAN  = 3000;
+
+// tiny easing
+const easeInOut = t => t*t*(3 - 2*t);
+
+// deterministic pseudo-random (stable trees/flowers)
+function prand(seed){
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+function drawSkyBehindTopHill(topBand, k){
+  // Draw full sky, but we’ll clip the green later so this can be normal.
+  const sunY = lerp(-0.28 * H, H * 0.24, k);
+  const sunR = H * 0.46;
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#8fd3ff');
+  sky.addColorStop(1, '#e6f7ff');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sun glow
+  const rg = ctx.createRadialGradient(W*0.5, sunY, sunR*0.05, W*0.5, sunY, sunR);
+  rg.addColorStop(0.00, 'rgba(255,240,190,0.95)');
+  rg.addColorStop(0.50, 'rgba(255,240,190,0.35)');
+  rg.addColorStop(1.00, 'rgba(255,240,190,0.00)');
+  ctx.fillStyle = rg;
+  ctx.beginPath(); ctx.arc(W*0.5, sunY, sunR, 0, Math.PI*2); ctx.fill();
+
+  ctx.save();
+  ctx.globalAlpha = 0.25 * (1 - k*0.6);
+  for (let i=1; i<=3; i++){
+    ctx.beginPath();
+    ctx.arc(W*0.5, sunY, sunR * (0.55 + i*0.12), 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,240,190,0.6)';
+    ctx.lineWidth = 2; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+
+
+function drawBackground(){
+  const s = Math.round(state.score || 0);
+  const t = clamp((s - SKY_REVEAL_START) / Math.max(1, SKY_REVEAL_SPAN), 0, 1);
+  const k = easeInOut(t);
+
+  // Parallax disabled
+  const offFar = 0, offNear = 0;
+
+  // Hill bands (far → near). First entry is the TOP HILL we’ll use for the reveal edge.
+  const bands = [
+    // crest at 0.85 * W (right side)
+{ y: H-874, h:120, off: W * 0.5, top:'#8ccf6a', bot:'#5aa24a',
+  stripe:'#f3ea8a', density:18, trees:0, flowers:0 }, // TOP (right-crest)
+
+    { y: H-900, h:120, off:-offFar,          top:'#8ccf6a', bot:'#5aa24a', stripe:'#f3ea8a', density:18, trees:0, flowers:0 }, // TOP
+    { y: H-750, h:100, off:-W*0.10-offNear,  top:'#7ec45e', bot:'#4e9a40', stripe:'#e5ea84', density:20, trees:1, flowers:0 },
+    { y: H-600, h: 80, off:-offNear,         top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:0, flowers:1 },
+    { y: H-450, h: 80, off:-offNear,         top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:1, flowers:0 },
+    { y: H-300, h: 90, off: W*0.10-offNear,  top:'#6cb452', bot:'#3f8a36', stripe:'#d8e277', density:22, trees:0, flowers:1 },
+    { y: H-150, h: 80, off:-offNear,         top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:1, flowers:0 },
+  ];
+
+  // 1) Draw the sky first (full screen).
+  drawSkyBehindTopHill(bands[0], k);
+
+
+
+  // 3) Draw all hill bands on top (no clipping).
+  bands.forEach((b, i) => {
+    drawHillBand(b.off, b.y, b.h, b.top, b.bot, 1);
+    drawBandStripes(b.off, b.y, b.h, b.stripe, b.density, 1);
+    if (b.trees)   drawBandTrees(i*17 + 101, b.off, b.y, b.h, b.trees, 1);
+    if (b.flowers) drawBandFlowers(i*23 + 707, b.off, b.y, b.h, 10*b.flowers, 1);
+  });
+}
+
+
+
+// Draw a smooth ribbon hill using two quadratic curves
+function drawHillBand(xOff, y, h, colTop, colBot, a=1){
+  ctx.save();
+  ctx.globalAlpha = a;
+
+  const w = W * 1.2;
+  const x = xOff - 0.1 * W;   // allow overflow for curve
+
+  // body gradient
+  const g = ctx.createLinearGradient(0, y - h, 0, y + h * 0.6);
+  g.addColorStop(0, colTop);
+  g.addColorStop(1, colBot);
+  ctx.fillStyle = g;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + w*0.25, y - h,   x + w*0.5,  y);
+  ctx.quadraticCurveTo(x + w*0.75, y + h*0.25, x + w,   y);
+  ctx.lineTo(x + w, H); ctx.lineTo(x, H); ctx.closePath();
+  ctx.fill();
+
+  // crest rim light
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x + w*0.05, y - 0.5);
+  ctx.quadraticCurveTo(x + w*0.25, y - h*0.95, x + w*0.48, y - 0.5);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// diagonal farmland striping inside the band
+function drawBandStripes(xOff, y, h, col='rgba(255,255,255,0.12)', step=18, a=1){
+  ctx.save(); ctx.globalAlpha = 0.55 * a;
+
+  // clip to the hill area
+  const w = W * 1.2, x = xOff - 0.1 * W;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + w*0.25, y - h,   x + w*0.5,  y);
+  ctx.quadraticCurveTo(x + w*0.75, y + h*0.25, x + w,   y);
+  ctx.lineTo(x + w, H); ctx.lineTo(x, H); ctx.closePath();
+  ctx.clip();
+
+  // draw thin rotated rectangles as stripes
+  ctx.translate(0, y);
+  ctx.rotate(-0.28); // gentle diagonal
+  ctx.fillStyle = col;
+  const stripeH = 2, totalW = W * 2.2, baseY = -h*1.2;
+  for (let i = -totalW; i < totalW; i += step){
+ctx.fillRect(i, baseY, totalW * 2, stripeH);
+  }
+  ctx.restore();
+}
+
+// Little stylized trees on near bands
+function drawBandTrees(seedBase, xOff, y, h, clusters=1, a=1){
+  ctx.save(); ctx.globalAlpha = 0.95 * a;
+
+  const bandTop    = y - h * 0.15;
+  const bandBottom = y + h * 0.05;
+  const scaleBase  = 0.9 + (h/110) * 0.2;
+
+  for (let i=0;i<clusters;i++){
+    const r = prand(seedBase + i);
+    const rx = (i + 1) / (clusters + 1);                   // 0..1 across width
+    const px = xOff + rx * W;                              // world x
+    const py = lerp(bandTop, bandBottom, 0.25 + 0.5*r);    // sit on slope
+    const n  = 2 + Math.floor(prand(seedBase*7+i)*3);      // 2..4 trees
+
+    for (let j=0;j<n;j++){
+      const jr = prand(seedBase*19 + i*5 + j);
+      const tx = px + (j - (n-1)/2) * 16 + jr*6;
+      const ty = py + jr*8;
+      const sc = scaleBase * (0.85 + jr*0.3);
+
+      drawTree(tx, ty, sc);
+    }
+  }
+  ctx.restore();
+}
+
+function drawTree(x, y, s=1){
+  // shadow
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath(); ctx.ellipse(x, y+10*s, 10*s, 3.5*s, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#000'; ctx.fill();
+  ctx.restore();
+
+  // trunk
+  ctx.fillStyle = '#6b4423';
+  ctx.fillRect(x-2.2*s, y-8*s, 4.4*s, 12*s);
+
+  // canopy (two ellipses)
+  ctx.beginPath();
+  ctx.ellipse(x-6*s, y-12*s, 9*s, 12*s, 0, 0, Math.PI*2);
+  ctx.ellipse(x+5*s, y-13*s, 10*s, 11*s, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#2f7d3b'; ctx.fill();
+
+  // highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x+3*s, y-16*s, 9*s, -Math.PI*0.9, -Math.PI*0.5);
+  ctx.stroke();
+}
+
+// Tiny flowers in the closest bands
+function drawBandFlowers(seedBase, xOff, y, h, count=24, a=1){
+  ctx.save(); ctx.globalAlpha = 0.9 * a;
+
+  const top = y - h * 0.05, bot = y + h * 0.2;
+  for (let i=0;i<count;i++){
+    const r1 = prand(seedBase + i);
+    const r2 = prand(seedBase*3 + i*11);
+    const x  = xOff + r1 * W;
+    const y0 = lerp(top, bot, r2);
+
+    // petals
+    ctx.fillStyle = (i % 3 === 0) ? '#ffd7ea' : (i % 3 === 1 ? '#fff2aa' : '#c9f0ff');
+    for (let p=0;p<5;p++){
+      const ang = (p/5) * Math.PI*2;
+      ctx.beginPath();
+      ctx.ellipse(x + Math.cos(ang)*3.5, y0 + Math.sin(ang)*2.5, 2.6, 1.6, ang, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // center
+    ctx.beginPath(); ctx.arc(x, y0, 1.6, 0, Math.PI*2);
+    ctx.fillStyle = '#7a5b21'; ctx.fill();
+  }
+  ctx.restore();
+}
+// =================== END NEW BACKGROUND SYSTEM ===================
+
 
   function draw() {
     ctx.clearRect(0,0,W,H);
-    drawBackdrop();
+    drawBackground();
 
     // draw platforms
     for (const pl of state.plats) drawPlatform(pl);
@@ -910,19 +1180,21 @@ pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
       ctx.globalAlpha = 1;
     }
   }
+  // color + number interpolation
+function lerp(a,b,t){ return a + (b - a) * t; }
 
-  function drawBackdrop() {
-    const off = (state.cameraY * 0.05) % 40;
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = '#0c1624';
-    for (let y=-40;y<H+40;y+=40){
-      for (let x=0;x<W;x+=40){
-        ctx.fillRect(x + ((y%80)?0:20), y + off, 2, 2);
-      }
-    }
-    ctx.restore();
+
+
+function drawCloudBand(x, y, scale){
+  for (let i = 0; i < 4; i++){
+    const cx = x + i * 100 * scale;
+    ctx.beginPath();
+    ctx.ellipse(cx, y, 50 * scale, 16 * scale, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fill();
   }
+}
+
 
 // ===== CARTOON CLOUD (reference-style) =====
 // CHANGED: split into two palettes so rain clouds can be darker.
@@ -1029,7 +1301,7 @@ function drawCartoonCloudOnly(ctx, p, colors = CLOUD_PALE){
     const r = 6;
     ctx.save();
 
-    if (p.type === 'break' && p.crackShakeT > 0) {
+    if ((p.type === 'break' || p.type === 'moveBreakX') && p.crackShakeT > 0) {
       const s = p.crackShakeT * 2.2;
       ctx.translate((Math.random()-0.5)*s, (Math.random()-0.5)*s);
     }
@@ -1038,7 +1310,6 @@ function drawCartoonCloudOnly(ctx, p, colors = CLOUD_PALE){
 
 // Clouds (vanish & moving cloud)
 if (p.type === 'vanish' || p.type === 'cloudX') {
-  // CHANGED: darker palette for rain clouds
   const palette = (p.type === 'cloudX') ? CLOUD_RAIN : CLOUD_PALE;
   drawCartoonCloudOnly(ctx, p, palette);
   ctx.restore();
@@ -1049,8 +1320,8 @@ if (p.type === 'vanish' || p.type === 'cloudX') {
     // Base colors for other platform types
     let fill = '#22314c', stroke = '#2c4163';
     if (p.type === 'moveX') { fill = '#1e3a8a'; stroke = '#3556a8'; }
-    if (p.type === 'break') { fill = '#4c1d1d'; stroke = '#7f1d1d'; }
-    if (p.type === 'spring'){ fill = '#064e3b'; stroke = '#0f766e'; }
+    if (p.type === 'break' || p.type === 'moveBreakX') { fill = '#4c1d1d'; stroke = '#7f1d1d'; }
+    if (p.type === 'spring' || p.type === 'moveSpringX'){ fill = '#064e3b'; stroke = '#0f766e'; }
 
     // Body
     roundRect(ctx, p.x, p.y, p.w, p.h, r);
@@ -1061,9 +1332,6 @@ if (p.type === 'vanish' || p.type === 'cloudX') {
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 2;
     ctx.stroke();
-
-
-
 
 // NEW: smooth wet film that “fills up” (wider & stronger as wetness grows)
 if ((p.wetVis || 0) > 0.01) {
@@ -1091,11 +1359,10 @@ if ((p.wetVis || 0) > 0.01) {
   ctx.restore();
 }
 
-
-    // Spring decoration
-    if (p.type === 'spring') {
+    // Spring decoration (also for moving green)
+    if (p.type === 'spring' || p.type === 'moveSpringX') {
       const cx = p.x + p.w/2, cy = p.y - 4;
-      const stretch = 1 + p.springStretch*0.6;
+      const stretch = 1 + (p.springStretch||0)*0.6;
       ctx.beginPath();
       ctx.ellipse(cx, cy, 10, 6*stretch, 0, 0, Math.PI*2);
       ctx.fillStyle = '#5eead4'; ctx.globalAlpha = .9; ctx.fill(); ctx.globalAlpha = p.alpha;
@@ -1108,8 +1375,8 @@ if ((p.wetVis || 0) > 0.01) {
       ctx.strokeStyle = '#134e4a'; ctx.lineWidth = 1.5; ctx.stroke();
     }
 
-    // Break cracks (phase by hits)
-    if (p.type === 'break') {
+    // Break cracks (phase by hits) — also for moving red
+    if (p.type === 'break' || p.type === 'moveBreakX') {
       const deep = (p.hits >= 1);
       ctx.beginPath();
       ctx.moveTo(p.x + p.w*0.22, p.y + 1);
@@ -1166,14 +1433,7 @@ if ((p.wetVis || 0) > 0.01) {
     const x = P.x, y = P.y, w = P.w, h = P.h;
     const facing = (P.vx >= 0) ? 1 : -1;
 
-    // Shadow
-    const shadowY = Math.min(H - 12, y + h + 14);
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    ctx.beginPath();
-    ctx.ellipse(x + w/2, shadowY, 20, 6, 0, 0, Math.PI*2);
-    ctx.fillStyle = '#000'; ctx.fill();
-    ctx.restore();
+
 
     // Backpack
     ctx.fillStyle = '#1f2937';
