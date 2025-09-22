@@ -21,13 +21,18 @@
       radial-gradient(1200px 800px at 80% 0%, #0a1829 0%, transparent 60%),
       linear-gradient(180deg, #0b0f14, #0a1220 60%, #0b0f14); }
   canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
-  .hud { position:fixed; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:12px; align-items:center; font-weight:700; letter-spacing:.3px; user-select:none; }
+  /* background (cached) canvas lives underneath the game canvas */
+#bg { position:absolute; z-index: 0; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+/* optional but safe: ensure game canvas is above */
+#game { position:absolute; inset:0; z-index:1; }
+
+  .hud { position:fixed; top:10px; left:50%; z-index: 5; transform:translateX(-50%); display:flex; gap:12px; align-items:center; font-weight:700; letter-spacing:.3px; user-select:none; }
   .pill { background:#0f172a; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
   .pill b { color:var(--accent); }
   .btn { cursor:pointer; transition:.15s transform ease, .2s opacity; }
   .btn:active { transform:scale(.96); }
   .overlay {
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center; 
+    position:fixed; z-index: 4; inset:0; display:flex; align-items:center; justify-content:center; 
     background:linear-gradient(180deg, rgba(10,16,26,.60), rgba(10,16,26,.75));
     backdrop-filter: blur(4px);
   }
@@ -56,6 +61,7 @@
 </head>
 <body>
 <div id="wrap">
+  <canvas id="bg"></canvas>
   <canvas id="game"></canvas>
 
   <div class="hud" id="hud">
@@ -109,16 +115,65 @@
   // ===== Canvas & scaling =====
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
+  const bg = document.getElementById('bg');
+const bgCtx = bg.getContext('2d', { alpha: true });
+
+// --- offscreen hills texture (draw hills once, reuse every frame)
+let hillsTex = null, hillsCtx = null;
+let moonCraters = [];
+function buildMoonCraters(n = 14){
+  // random polar coords on the disk (angle + radius), plus a size factor
+  moonCraters = Array.from({length:n}, () => {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.18 + Math.random() * 0.70;   // how far from center
+    const s = 0.035 + Math.random() * 0.085; // relative crater size
+    const al= 0.28 + Math.random() * 0.25;   // darkness variance
+    return { a, r, s, al };
+  });
+}
+
+// --- day→night sky helpers
+let stars = [];                       // precomputed star field
+const STAR_COUNT = 140;               // small + fast
+// --- Day-sky decor (birds, planes only)
+let skyDecor = { flocks: [], planes: [] };
+let skySpawn = { flockT: 0, planeT: 0 };
+const irand = (a,b) => Math.floor(rand(a, b+1));
+
+
+
+// timings (in score units)
+const HILLS_REVEAL_SPAN = 3000;          // hills slide off during this
+const SUN_PATH_SPAN    = 18000;           // full L→apex→R travel
+
+
+
+
+let BG_DPR = 1; // render hills at lower res for speed; tweak 0.75–1.0 if needed
+const USE_BG_CACHE = true;
   let W = 0, H = 0, DPR = 1;
 
-  function resize() {
-    DPR = Math.min(2, window.devicePixelRatio || 1);
-    W = canvas.clientWidth = window.innerWidth;
-    H = canvas.clientHeight = window.innerHeight;
-    canvas.width  = Math.round(W * DPR);
-    canvas.height = Math.round(H * DPR);
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  }
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = canvas.clientWidth = window.innerWidth;
+  H = canvas.clientHeight = window.innerHeight;
+  canvas.width  = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  // background canvas at cheaper DPR
+  bg.width  = Math.round(W * BG_DPR);
+  bg.height = Math.round(H * BG_DPR);
+  bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
+
+  // rebuild static hills only when size changes
+  rebuildHillsOnce();
+  buildStars();
+  buildMoonCraters();
+
+
+}
+
   window.addEventListener('resize', resize, { passive:true });
   resize();
 
@@ -148,6 +203,27 @@
   // ===== Input =====
   const keys = new Set();
   window.addEventListener('keydown', (e) => {
+        // === DEV hotkeys ===
+    if (DEV_TOOLS) {
+      // Shift+T : prompt for target score
+      if (e.code === 'KeyT' && e.shiftKey) {
+        const s = prompt('Warp to score:', Math.round(state?.score||0));
+        if (s !== null && s !== '') warpToScore(+s);
+      }
+      // Alt+1..6 : quick warp to phase anchors
+      if (e.altKey) {
+        const p = devPresets();
+        if (e.code === 'Digit1') warpToScore(p.DAY_START);   // Alt+1 Day start
+        if (e.code === 'Digit2') warpToScore(p.SKY_START);   // Alt+2 Sky reveal start
+        if (e.code === 'Digit3') warpToScore(p.SUN_START);   // Alt+3 Sun rise
+        if (e.code === 'Digit4') warpToScore(p.SUN_END);     // Alt+4 Sunset (night begins)
+        if (e.code === 'Digit5') warpToScore(p.MOON_START);  // Alt+5 Moon rise
+        if (e.code === 'Digit6') warpToScore(p.MOON_END+5);  // Alt+6 Storm trigger
+      }
+      // Hold J to jetpack (continuous testing)
+      if (e.code === 'KeyJ') dev.jetpack = true;
+    }
+
     if (e.repeat) return;
 
     // Start with Space from menu
@@ -169,7 +245,13 @@
       }
     }
   });
-  window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('keyup', (e) => {
+  // keep existing behavior
+  keys.delete(e.code);
+
+  // DEV: release jetpack on key up
+  if (DEV_TOOLS && e.code === 'KeyJ') dev.jetpack = false;
+});
 
   // Touch zones (mobile left/right)
   let touchLeft = false, touchRight = false;
@@ -228,7 +310,38 @@
       o.connect(g).connect(this.sfxGain);
       o.start(t0);
       o.stop(t0 + time + 0.03);
-    }
+    },
+        thunder(volume=0.22) {
+      if (!this.ctx) return;
+      const t0 = this.ctx.currentTime;
+
+      // sharp crack (bandpassed noise)
+      const noiseDur = 0.18;
+      const bufferSize = Math.floor(this.ctx.sampleRate * noiseDur);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<bufferSize;i++) data[i] = Math.random()*2-1;
+      const noise = this.ctx.createBufferSource(); noise.buffer = buffer;
+      const bp = this.ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1200; bp.Q.value=0.8;
+      const g1 = this.ctx.createGain();
+      g1.gain.setValueAtTime(volume, t0);
+      g1.gain.exponentialRampToValueAtTime(0.0001, t0 + noiseDur);
+      noise.connect(bp).connect(g1).connect(this.sfxGain);
+      noise.start(t0);
+
+      // low rumble
+      const o1 = this.ctx.createOscillator(), o2 = this.ctx.createOscillator();
+      o1.type='sine'; o2.type='sine';
+      o1.frequency.setValueAtTime(60, t0 + 0.05);
+      o2.frequency.setValueAtTime(90, t0 + 0.05);
+      const g2 = this.ctx.createGain();
+      g2.gain.setValueAtTime(volume*0.9, t0 + 0.05);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.6);
+      o1.connect(g2); o2.connect(g2); g2.connect(this.sfxGain);
+      o1.start(t0 + 0.05); o2.start(t0 + 0.05);
+      o1.stop(t0 + 1.7); o2.stop(t0 + 1.7);
+    },
+
   };
 
   // Tiny step-sequenced background loop
@@ -303,6 +416,27 @@
   };
 
   // ===== Game constants =====
+    // === Dev / testing ===
+  const DEV_TOOLS = true;          // flip to false to disable
+  const JETPACK_ACCEL = -2600;     // upward accel while jetpack held
+
+  // === Storm phase (after the moon exits) ===
+  const STORM_DARK_A = 0.85;          // full blackout (no light)
+  const STORM_BRIGHT_A = 0.2;         // blackout alpha during afterglow (dim but visible)
+
+  // FEWER STRIKES: wider gaps between flashes
+  const STORM_FLASH_DUR = 0.16;        // bright flash length (keeps)
+  const STORM_FLASH_GAP_MIN = 3;     // fewer strikes -> larger gaps
+  const STORM_FLASH_GAP_MAX = 3.5;
+
+  // Darkness window target (time with no afterglow/flash at all)
+  const STORM_DARK_WINDOW_MIN = 0.15;   // 1–2s of true darkness
+  const STORM_DARK_WINDOW_MAX = 0.3;
+
+  const STORM_CLOUD_WEIGHT_MULT = 1.5; // (unchanged)
+  const STORM_RAIN_RATE_MULT = 1.5;    // (unchanged)
+
+
   // --- Moving platform difficulty tuning ---
   const MOVE_X_START_MIN = 100;
   const MOVE_X_START_MAX = 150;
@@ -351,18 +485,43 @@
   // === Progressive unlock thresholds ===
   // Types unlock one-at-a-time as the player climbs (score ≈ height gained)
   const UNLOCK = { moveX: 1200, spring: 3000, break: 5500, vanish: 8500, cloudX: 12000 };
-  function isTypeUnlocked(type, score){
-    if (type === 'static') return true;
-    if (type === 'moveX') return score >= UNLOCK.moveX;
-    if (type === 'spring' || type === 'moveSpringX') return score >= UNLOCK.spring;
-    if (type === 'break'  || type === 'moveBreakX')  return score >= UNLOCK.break;
-    if (type === 'vanish') return score >= UNLOCK.vanish;
-    if (type === 'cloudX') return score >= UNLOCK.cloudX;
-    return false;
+  // Night gating util: 0..1 where >0 means night has begun visually
+function nightFactorAtScore(score){
+  const tS = clamp((score - SUN_START_OFFSET) / SUN_PATH_SPAN, 0, 1);
+  const u  = easeInOut(tS);
+  return skyNightFactor(u); // uses your existing smoothstep(0.90, 0.98, u)
+}
+function isTypeUnlocked(type, score){
+  if (type === 'static') return true;
+  if (type === 'moveX') return score >= UNLOCK.moveX;
+  if (type === 'spring' || type === 'moveSpringX') return score >= UNLOCK.spring;
+  if (type === 'break'  || type === 'moveBreakX')  return score >= UNLOCK.break;
+  if (type === 'vanish') return score >= UNLOCK.vanish;
+
+  // Rain cloud (moving) — only once night has started
+  if (type === 'cloudX') {
+    const night = nightFactorAtScore(score);   // 0..1
+    return score >= UNLOCK.cloudX && night > 0.05; // tweak 0.05 if you want later/earlier appearance
   }
+  return false;
+}
+
 
   // ===== State =====
   let state, running = false, paused = false, lastT = performance.now();
+    // Dev state
+  let dev = { jetpack:false };
+
+    // Storm controller
+  let storm = {
+    active:false,
+    flashT:0,
+    nextFlashIn:0,
+    bolts:[],
+    afterglowT:0,      // time remaining of soft brightness
+    afterglowMax:0     // length of the current afterglow segment
+  };
+
   let best = +localStorage.getItem('doodle_best') || 0;
   bestEl.textContent = best;
 
@@ -370,16 +529,24 @@
     state = {
       score: 0,
       cameraY: 0,
-      player: {
-        x: W*0.5 - PLAYER_W*0.5,
-        y: H - 120,
-        vx: 0,
-        vy: 0,
-        w: PLAYER_W,
-        h: PLAYER_H,
-        alive: true,
-        canDouble: true,
-      },
+player: {
+  x: W*0.5 - PLAYER_W*0.5,
+  y: H - 120,
+  vx: 0,
+  vy: 0,
+  w: PLAYER_W,
+  h: PLAYER_H,
+  alive: true,
+  canDouble: true,
+
+  // NEW (slippery physics)
+  groundWet: 0,   // last wetness 0..1
+  slipT: 0,       // seconds of slipperiness left
+  driftVX: 0,     // passive drift target while slippery
+  lastFacing: 1   // +1 right, -1 left
+},
+
+
       plats: [],
       particles: [],
       drops: [],       // NEW: raindrops
@@ -389,6 +556,15 @@
       forceType: null,
       intro: { blue:false, green:false, red:false, cloud:false, rain:false }
     };
+        // reset storm
+        storm.active = false;
+    storm.flashT = 0;
+    storm.nextFlashIn = 0;
+    storm.bolts = [];
+    storm.afterglowT = 0;
+    storm.afterglowMax = 0;
+
+
 
     // Seed a guaranteed wide static base
     const baseY = Math.min(H - 40, H - PLATFORM_H - 8);
@@ -479,8 +655,22 @@
   function rand(a,b){ return a + Math.random()*(b-a); }
   function pickType() {
     const s = Math.round(state ? state.score : 0);
-    const candidates = PLATFORM_TYPES.filter(o => isTypeUnlocked(o.k, s));
+        // copy & (optionally) reweight during storm
+    const candidates = PLATFORM_TYPES
+      .filter(o => isTypeUnlocked(o.k, s))
+      .map(o => ({...o}));
+
+    // In storm: prefer moving rain clouds; tone down statics a bit
+    if (storm.active) {
+      for (const c of candidates) {
+        if (c.k === 'cloudX') c.weight *= STORM_CLOUD_WEIGHT_MULT;
+        if (c.k === 'static') c.weight *= 0.6;
+        if (c.k === 'moveX')  c.weight *= 0.8;
+      }
+    }
+
     const total = candidates.reduce((sum,o)=>sum+o.weight, 0) || 1;
+
     let r = Math.random()*total;
     for (const o of candidates) { if ((r -= o.weight) <= 0) return o.k; }
     return 'static';
@@ -503,18 +693,7 @@ const p = {
       p.dir = Math.random() < .5 ? -1 : 1;
     }
 
-    // NEW — give cloud platforms a reusable set of round "puffs"
-    if (type === 'vanish' || type === 'cloudX') {
-      const n = Math.max(4, Math.floor(w / 28));
-      p.puffs = [];
-      for (let i = 0; i < n; i++) {
-        const t = (n === 1) ? 0.5 : i / (n - 1);
-        const ox = 6 + t * (w - 12) + rand(-3, 3);
-        const oy = -4 - rand(0, 3);
-        const r  = rand(10, 14) * (0.9 + Math.sin(t*Math.PI)*0.25);
-        p.puffs.push({ ox, oy, r });
-      }
-    }
+
 
 // NEW: rain emitter for moving clouds
 if (type === 'cloudX') {
@@ -631,24 +810,75 @@ if (type === 'cloudX') {
   }
 
   // === Unlock announcement + first-example spawner ===
-  function handleUnlocks(){
-    const s = Math.round(state.score || 0);
-    if (!state.intro.blue && s >= UNLOCK.moveX) {
-      state.intro.blue = true; state.forceType = 'moveX'; toast('New: Blue moving platforms');
+function handleUnlocks(){
+  const s = Math.round(state?.score || 0);
+  if (!state.intro.blue  && s >= UNLOCK.moveX)   { state.intro.blue  = true; state.forceType = 'moveX';   toast('New: Blue moving platforms'); }
+  if (!state.intro.green && s >= UNLOCK.spring)  { state.intro.green = true; state.forceType = 'spring';  toast('New: Green spring platforms'); }
+  if (!state.intro.red   && s >= UNLOCK.break)   { state.intro.red   = true; state.forceType = 'break';   toast('New: Red cracking platforms'); }
+  if (!state.intro.cloud && s >= UNLOCK.vanish)  { state.intro.cloud = true; state.forceType = 'vanish';  toast('New: Fading cloud platforms'); }
+
+  // Only announce + force-spawn rain clouds after night begins
+  if (!state.intro.rain && s >= UNLOCK.cloudX) {
+    const night = nightFactorAtScore(s);
+    if (night > 0.05) {                      // same threshold as above
+      state.intro.rain = true;
+      state.forceType = 'cloudX';
+      toast('New: Rain clouds');
     }
-    if (!state.intro.green && s >= UNLOCK.spring) {
-      state.intro.green = true; state.forceType = 'spring'; toast('New: Green spring platforms');
-    }
-    if (!state.intro.red && s >= UNLOCK.break) {
-      state.intro.red = true; state.forceType = 'break'; toast('New: Red cracking platforms');
-    }
-    if (!state.intro.cloud && s >= UNLOCK.vanish) {
-      state.intro.cloud = true; state.forceType = 'vanish'; toast('New: Fading cloud platforms');
-    }
-    if (!state.intro.rain && s >= UNLOCK.cloudX) {
-      state.intro.rain = true; state.forceType = 'cloudX'; toast('New: Rain clouds');
-    }
+    // else: wait — this will auto-trigger as soon as night starts
   }
+}
+  // === DEV: warp to a specific score/phase ===
+  function warpToScore(targetScore){
+    if (!running || paused) return;
+    targetScore = Math.max(0, Math.floor(targetScore||0));
+    const cur = Math.round(state.score||0);
+    if (targetScore === cur) return;
+
+    // how much "climb" to fake
+    const dy = targetScore - cur;
+
+    // Advance score/camera and shift world down by dy (same as camera step does)
+    state.score = targetScore;
+    state.cameraY += dy;
+
+    for (const pl of state.plats) pl.y += dy;
+    for (const pa of state.particles) pa.y += dy;
+    for (const d of state.drops) d.y += dy;
+
+    // Make sure there’s enough future terrain
+    spawnIfNeeded(false);
+
+    // Put player safely on the lowest visible platform
+    const base = getBottomPlatform();
+    if (base) {
+      const P = state.player;
+      P.x = clamp(base.x + (base.w - P.w)/2, WORLD_MARGIN, W - WORLD_MARGIN - P.w);
+      P.y = base.y - P.h - 0.01;
+      P.vx = 0; P.vy = 0; P.canDouble = true;
+    }
+
+    // HUD
+    scoreEl.textContent = targetScore;
+
+    // unlock announcements that may have been skipped
+    handleUnlocks();
+  }
+
+    // === DEV: commonly-needed phase anchors (scores) ===
+  function devPresets(){
+    const DAY_START = 0;
+    const SKY_START = Math.max(0, (typeof SKY_REVEAL_START!=='undefined') ? SKY_REVEAL_START : 6000);
+    const SUN_START = Math.max(0, (typeof SUN_START_OFFSET!=='undefined') ? SUN_START_OFFSET : SKY_START);
+    const SUN_END   = SUN_START + (typeof SUN_PATH_SPAN!=='undefined' ? SUN_PATH_SPAN : 18000);
+    const MOON_START= Math.max(0, (typeof MOON_START_OFFSET!=='undefined') ? MOON_START_OFFSET : SUN_END*0.8);
+    const MOON_END  = MOON_START + (typeof MOON_PATH_SPAN!=='undefined' ? MOON_PATH_SPAN : 18000);
+    const STORM     = MOON_END + 5; // just after moon exits screen
+    return { DAY_START, SKY_START, SUN_START, SUN_END, MOON_START, MOON_END, STORM };
+  }
+
+
+
 
   // ===== Main loop =====
   function loop(t) {
@@ -665,29 +895,84 @@ if (type === 'cloudX') {
 
   function update(dt) {
     const P = state.player;
+        // Trigger storm once the moon has fully completed its path
+    {
+      const s = Math.round(state.score || 0);
+      const tMraw = clamp((s - MOON_START_OFFSET) / MOON_PATH_SPAN, 0, 1);
+      if (!storm.active && tMraw >= 1) beginStorm();
+      if (storm.active) updateStorm(dt);
+    }
+
 
     // Horizontal input
     const left  = keys.has('ArrowLeft') || keys.has('KeyA') || touchLeft;
     const right = keys.has('ArrowRight') || keys.has('KeyD') || touchRight;
 
 const moveAcc = MOVE_ACC;
-const fric    = FRICTION;
+
+// Dynamic friction: now can truly be 0 when slip=1
+let fric = FRICTION;
+if (state.player.slipT > 0) {
+  const slip = clamp(state.player.groundWet || 0, 0, 1);
+  const reduction = 1 - slip;        // you set this so 1..0 (0 = no friction)
+  fric = FRICTION * reduction;
+
+  // decay slipperiness (duration scales with wetness a bit)
+  const base = 0.8 + 0.6 * slip;     // ~0.8–1.4s
+  state.player.slipT = Math.max(0, state.player.slipT - dt / base);
+} else {
+  // when no longer slippery, kill drift target
+  if (state.player.driftVX !== 0) state.player.driftVX = 0;
+}
+
+
 
     let ax = 0;
     if (left)  ax -= moveAcc;
     if (right) ax += moveAcc;
     P.vx += ax * dt;
+    // NEW: passive drift if slippery and no input
+const inputActive = left || right;
+if (!inputActive && state.player.slipT > 0) {
+  const target = P.driftVX || (80 * (state.player.lastFacing || 1)); // fallback
+  // ease toward target so it ramps smoothly; stronger when friction is near 0
+  const ease = 2.5 + (fric < 0.01 ? 2.0 : 0.0); // faster converge when super slick
+  P.vx += (target - P.vx) * Math.min(1, dt * ease);
+
+  // ensure a small baseline drift so "always moving a little" is guaranteed
+  const minAbs = 40; // px/s
+  if (Math.abs(P.vx) < minAbs) P.vx = Math.sign(target || 1) * minAbs;
+}
+
 
     // Friction/air drag
-    P.vx *= (1 - fric);
+P.vx *= (1 - fric);
 
-    // Clamp speed
-    P.vx = clamp(P.vx, -MOVE_MAX, MOVE_MAX);
+// Optional: gentle clean-up when slipperiness just ended (trims lingering glide)
+if (state.player.slipT <= 0 && Math.abs(P.vx) > 0) {
+  P.vx *= (1 - Math.min(1, dt * 2.0)); // quick settle
+}
+
+// Clamp speed
+P.vx = clamp(P.vx, -MOVE_MAX, MOVE_MAX);
+
+// Track facing for drift defaults
+if (P.vx !== 0) state.player.lastFacing = (P.vx >= 0 ? 1 : -1);
+
 
     // Integrate
     const prevY = P.y;
     P.x += P.vx * dt;
     P.vy += GRAVITY * dt;
+        // === DEV jetpack ===
+    if (DEV_TOOLS && dev.jetpack) {
+      P.vy += JETPACK_ACCEL * dt;        // strong upward accel
+      // small bleed to keep it controllable
+      P.vx *= (1 - Math.min(1, dt * 1.5));
+      // faint exhaust
+      if (Math.random() < 0.6) addParticles(P.x + P.w/2, P.y + P.h, 3, 'spring');
+    }
+
     P.y += P.vy * dt;
 
     // Wrap around horizontally
@@ -737,7 +1022,8 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
 
       // Rain emission for moving clouds
       if (pl.type === 'cloudX') {
-        pl.rainAcc += dt * pl.rainRate;
+                const rate = pl.rainRate * (storm.active ? STORM_RAIN_RATE_MULT : 1);
+        pl.rainAcc += dt * rate;
         const maxDrops = 600; // soft cap to avoid overload
         while (pl.rainAcc >= 1 && state.drops.length < maxDrops) {
           pl.rainAcc -= 1;
@@ -780,9 +1066,34 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
           // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet) — includes moving red
           if (pl.type === 'break' || pl.type === 'moveBreakX') {
             P.y = pl.y - P.h;
-            const wet = pl.wetVis || 0;                 // 0..1
-            const wetFactor = 1 - 0.08 * wet;           // up to ~8% weaker at full wet
-            P.vy = Math.round(JUMP_VY * wetFactor);
+P.vy = Math.round(JUMP_VY);
+
+// NEW: if the platform is wet, apply slipperiness and seed drift
+if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
+  const wet = pl.wetVis || 0;
+  if (wet > 0.05) { // tiny threshold to ignore nearly dry
+    // store intensity and refresh the timer; more wet = longer + slicker
+    P.groundWet = wet;
+    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
+
+    // seed a passive drift direction/speed while slippery
+    const dir =
+      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
+       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
+        (P.lastFacing || 1)));
+
+    const minDrift = 60;                 // floor so it’s noticeable
+    const maxBonus = 140;                // up to ~200 px/s total
+    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
+    const target   = dir * (minDrift + maxBonus * wet) + carried;
+
+    const prev = P.driftVX || 0;
+    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
+  }
+}
+
+
+
             P.canDouble = true;
 
             pl.hits = (pl.hits || 0) + 1;
@@ -804,9 +1115,34 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
           // Spring (CHANGED: respect wet) — includes moving green
           if (pl.type === 'spring' || pl.type === 'moveSpringX') {
             P.y = pl.y - P.h;
-            const wet = pl.wetVis || 0;
-            const wetFactor = 1 - 0.08 * wet;
-            P.vy = Math.round(SPRING_VY * wetFactor);
+            P.vy = Math.round(SPRING_VY);
+            // NEW: if the platform is wet, apply slipperiness
+// NEW: if the platform is wet, apply slipperiness and seed drift
+if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
+  const wet = pl.wetVis || 0;
+  if (wet > 0.05) { // tiny threshold to ignore nearly dry
+    // store intensity and refresh the timer; more wet = longer + slicker
+    P.groundWet = wet;
+    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
+
+    // seed a passive drift direction/speed while slippery
+    const dir =
+      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
+       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
+        (P.lastFacing || 1)));
+
+    const minDrift = 60;                 // floor so it’s noticeable
+    const maxBonus = 140;                // up to ~200 px/s total
+    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
+    const target   = dir * (minDrift + maxBonus * wet) + carried;
+
+    const prev = P.driftVX || 0;
+    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
+  }
+}
+
+
+
             P.canDouble = true;
             pl.springStretch = .7;
             sound.beep(980, .08, 'triangle', .08);
@@ -818,8 +1154,33 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
           if (pl.type === 'vanish') {
             P.y = pl.y - P.h;
             P.vy = Math.round(JUMP_VY * 0.75);
+            // NEW: if the platform is wet, apply slipperiness
+// NEW: if the platform is wet, apply slipperiness and seed drift
+if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
+  const wet = pl.wetVis || 0;
+  if (wet > 0.05) { // tiny threshold to ignore nearly dry
+    // store intensity and refresh the timer; more wet = longer + slicker
+    P.groundWet = wet;
+    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
+
+    // seed a passive drift direction/speed while slippery
+    const dir =
+      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
+       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
+        (P.lastFacing || 1)));
+
+    const minDrift = 60;                 // floor so it’s noticeable
+    const maxBonus = 140;                // up to ~200 px/s total
+    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
+    const target   = dir * (minDrift + maxBonus * wet) + carried;
+
+    const prev = P.driftVX || 0;
+    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
+  }
+}
+
+
             P.canDouble = true;
-            if (!pl.stepped) pl.stepped = true;
             sound.beep(520, .05, 'sine', .05);
             addParticles(P.x + P.w/2, top, 16, 'vanish');
             break;
@@ -829,6 +1190,32 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
           if (pl.type === 'cloudX') {
             P.y = pl.y - P.h;
             P.vy = Math.round(JUMP_VY * 0.80);
+            // NEW: if the platform is wet, apply slipperiness
+// NEW: if the platform is wet, apply slipperiness and seed drift
+if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
+  const wet = pl.wetVis || 0;
+  if (wet > 0.05) { // tiny threshold to ignore nearly dry
+    // store intensity and refresh the timer; more wet = longer + slicker
+    P.groundWet = wet;
+    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
+
+    // seed a passive drift direction/speed while slippery
+    const dir =
+      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
+       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
+        (P.lastFacing || 1)));
+
+    const minDrift = 60;                 // floor so it’s noticeable
+    const maxBonus = 140;                // up to ~200 px/s total
+    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
+    const target   = dir * (minDrift + maxBonus * wet) + carried;
+
+    const prev = P.driftVX || 0;
+    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
+  }
+}
+
+
             P.canDouble = true;
             sound.beep(560, .05, 'sine', .06);
             addParticles(P.x + P.w/2, top, 12, 'vanish');
@@ -837,9 +1224,34 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
 
           // Static & blue moving (generic) — respect wet
           P.y = pl.y - P.h;
-          const wet = pl.wetVis || 0;
-          const wetFactor = 1 - 0.08 * wet;
-          P.vy = Math.round(JUMP_VY * wetFactor);
+   P.vy = Math.round(JUMP_VY);
+   // NEW: if the platform is wet, apply slipperiness
+// NEW: if the platform is wet, apply slipperiness and seed drift
+if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
+  const wet = pl.wetVis || 0;
+  if (wet > 0.05) { // tiny threshold to ignore nearly dry
+    // store intensity and refresh the timer; more wet = longer + slicker
+    P.groundWet = wet;
+    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
+
+    // seed a passive drift direction/speed while slippery
+    const dir =
+      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
+       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
+        (P.lastFacing || 1)));
+
+    const minDrift = 60;                 // floor so it’s noticeable
+    const maxBonus = 140;                // up to ~200 px/s total
+    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
+    const target   = dir * (minDrift + maxBonus * wet) + carried;
+
+    const prev = P.driftVX || 0;
+    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
+  }
+}
+
+
+
           P.canDouble = true;
           sound.beep(700, .05, 'sine', .08);
           addParticles(P.x+P.w/2, top, 10, 'bounce');
@@ -921,230 +1333,664 @@ state.drops = state.drops.filter(d => {
 
     // Death
     if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
+    updateSkyDecor(dt);
+
   }
   // ===================== NEW BACKGROUND SYSTEM =====================
 // Phase 1: rolling hills only (no sky)
 // Phase 2: sky + sun slide in from the top; hills descend & fade out
 
-// When the sky starts revealing (use your cloud unlock for timing)
-const SKY_REVEAL_START = (typeof UNLOCK !== 'undefined' ? UNLOCK.vanish : 8500);
-// How long the reveal takes to go from no-sky → only-sky (in score units)
-const SKY_REVEAL_SPAN  = 3000;
 
-// tiny easing
-const easeInOut = t => t*t*(3 - 2*t);
 
-// deterministic pseudo-random (stable trees/flowers)
-function prand(seed){
-  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-  return x - Math.floor(x);
-}
-function drawSkyBehindTopHill(topBand, k){
-  // Draw full sky, but we’ll clip the green later so this can be normal.
-  const sunY = lerp(-0.28 * H, H * 0.24, k);
-  const sunR = H * 0.46;
 
-  // Sky gradient
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#8fd3ff');
-  sky.addColorStop(1, '#e6f7ff');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H);
-
-  // Sun glow
-  const rg = ctx.createRadialGradient(W*0.5, sunY, sunR*0.05, W*0.5, sunY, sunR);
-  rg.addColorStop(0.00, 'rgba(255,240,190,0.95)');
-  rg.addColorStop(0.50, 'rgba(255,240,190,0.35)');
-  rg.addColorStop(1.00, 'rgba(255,240,190,0.00)');
-  ctx.fillStyle = rg;
-  ctx.beginPath(); ctx.arc(W*0.5, sunY, sunR, 0, Math.PI*2); ctx.fill();
-
-  ctx.save();
-  ctx.globalAlpha = 0.25 * (1 - k*0.6);
-  for (let i=1; i<=3; i++){
-    ctx.beginPath();
-    ctx.arc(W*0.5, sunY, sunR * (0.55 + i*0.12), 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,240,190,0.6)';
-    ctx.lineWidth = 2; ctx.stroke();
+function buildStars(){
+  // deterministic but simple
+  stars = [];
+  for (let i=0;i<STAR_COUNT;i++){
+    const x = Math.random() * W;
+    const y = Math.random() * H * 0.9;      // keep mostly above horizon
+    const r = Math.random() * 1.6 + 0.4;    // 0.4..2.0
+    const twinkle = Math.random() * Math.PI * 2;
+    stars.push({x,y,r,twinkle});
   }
-  ctx.restore();
+}
+const easeInOut = t => t*t*(3 - 2*t);
+const smoothstep = (a,b,x)=> {
+  const t = clamp((x - a) / (b - a), 0, 1);
+  return t*t*(3 - 2*t);
+};
+// Quadratic Bezier (for the sun path)
+function bezierQ(p0, p1, p2, t){
+  const u = 1 - t;
+  return { x: u*u*p0.x + 2*u*t*p1.x + t*t*p2.x,
+           y: u*u*p0.y + 2*u*t*p1.y + t*t*p2.y };
 }
 
 
 
-function drawBackground(){
-  const s = Math.round(state.score || 0);
-  const t = clamp((s - SKY_REVEAL_START) / Math.max(1, SKY_REVEAL_SPAN), 0, 1);
-  const k = easeInOut(t);
-
-  // Parallax disabled
-  const offFar = 0, offNear = 0;
-
-  // Hill bands (far → near). First entry is the TOP HILL we’ll use for the reveal edge.
-  const bands = [
-    // crest at 0.85 * W (right side)
-{ y: H-874, h:120, off: W * 0.5, top:'#8ccf6a', bot:'#5aa24a',
-  stripe:'#f3ea8a', density:18, trees:0, flowers:0 }, // TOP (right-crest)
-
-    { y: H-900, h:120, off:-offFar,          top:'#8ccf6a', bot:'#5aa24a', stripe:'#f3ea8a', density:18, trees:0, flowers:0 }, // TOP
-    { y: H-750, h:100, off:-W*0.10-offNear,  top:'#7ec45e', bot:'#4e9a40', stripe:'#e5ea84', density:20, trees:1, flowers:0 },
-    { y: H-600, h: 80, off:-offNear,         top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:0, flowers:1 },
-    { y: H-450, h: 80, off:-offNear,         top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:1, flowers:0 },
-    { y: H-300, h: 90, off: W*0.10-offNear,  top:'#6cb452', bot:'#3f8a36', stripe:'#d8e277', density:22, trees:0, flowers:1 },
-    { y: H-150, h: 80, off:-offNear,         top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:1, flowers:0 },
-  ];
-
-  // 1) Draw the sky first (full screen).
-  drawSkyBehindTopHill(bands[0], k);
 
 
 
-  // 3) Draw all hill bands on top (no clipping).
-  bands.forEach((b, i) => {
-    drawHillBand(b.off, b.y, b.h, b.top, b.bot, 1);
-    drawBandStripes(b.off, b.y, b.h, b.stripe, b.density, 1);
-    if (b.trees)   drawBandTrees(i*17 + 101, b.off, b.y, b.h, b.trees, 1);
-    if (b.flowers) drawBandFlowers(i*23 + 707, b.off, b.y, b.h, 10*b.flowers, 1);
+function skyNightFactor(u){          // 0..1 as sun approaches bottom-right
+  return smoothstep(0.90, 0.98, u);
+}
+
+// Draw only the gradient sky + optional stars. Return the night factor.
+function drawSkyBase(g, u){
+  const night = skyNightFactor(u);
+
+  // Subtle day gradient
+  const skyDay = g.createLinearGradient(0, 0, 0, H);
+  skyDay.addColorStop(0, '#6fa7cc');
+  skyDay.addColorStop(1, '#bed6ea');
+  g.fillStyle = skyDay;
+  g.fillRect(0, 0, W, H);
+
+  // Darken to night near the end of the path
+  if (night > 0){
+    g.save();
+    g.globalAlpha = 0.65 * night;
+    g.fillStyle = '#0b1530';
+    g.fillRect(0, 0, W, H);
+    g.restore();
+
+    // Stars fade in with night
+    const t = performance.now() * 0.001;
+    g.save();
+    g.fillStyle = '#dbeafe';
+    for (const s of stars){
+      const tw = 0.65 + 0.35 * Math.sin(t*1.7 + s.twinkle);
+      g.globalAlpha = (0.25 + 0.75*night) * tw;
+      g.beginPath(); g.arc(s.x, s.y, s.r, 0, Math.PI*2); g.fill();
+    }
+    g.restore();
+  }
+  return night;
+}
+
+function drawSun(g, u, night=0){
+  // Parabola endpoints just off the bottom corners, peak centered.
+  // Margin scales with the sun size so it really starts/ends off-screen.
+  const coreR = Math.max(28, Math.min(58, H*0.05));
+  const M = Math.max(40, coreR * 1.4);     // off-screen margin
+  const APEX_HEIGHT_FRAC = 0.18;            // 0.0 = at top edge, higher = lower peak
+
+  const start = { x: -M,   y: H + M };                     // just left/below
+  const apex  = { x: 0.5*W, y: H * APEX_HEIGHT_FRAC };     // centered peak
+  const end   = { x: W + M, y: H + M };                    // just right/below
+
+  const pos   = bezierQ(start, apex, end, u);
+
+  // --- the rest of your drawSun stays the same (uses coreR, pos, etc.) ---
+  const coronaR = coreR * 4.8;
+  const rayAlpha = 0.28 * (1 - 0.70*night);
+  const glowAlpha = 0.26 * (1 - 0.65*night);
+
+  const disk = g.createRadialGradient(pos.x, pos.y, coreR*0.2, pos.x, pos.y, coreR);
+  disk.addColorStop(0.00, '#fff5c7');
+  disk.addColorStop(0.55, '#ffe59a');
+  disk.addColorStop(1.00, '#ffd875');
+  g.save();
+  g.globalAlpha = 0.95 * (1 - 0.60*night);
+  g.fillStyle = disk;
+  g.beginPath(); g.arc(pos.x, pos.y, coreR, 0, Math.PI*2); g.fill();
+  g.restore();
+
+  const glow = g.createRadialGradient(pos.x, pos.y, coreR*0.9, pos.x, pos.y, coronaR);
+  glow.addColorStop(0.00, `rgba(255,240,190,${0.70*glowAlpha})`);
+  glow.addColorStop(0.45, `rgba(255,240,190,${0.28*glowAlpha})`);
+  glow.addColorStop(1.00, 'rgba(255,240,190,0)');
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(pos.x, pos.y, coronaR, 0, Math.PI*2); g.fill();
+
+  g.save();
+  g.translate(pos.x, pos.y);
+  const rays = 20;
+  const spin = u * Math.PI * 2;
+  for (let i = 0; i < rays; i++){
+    const a = spin + (i / rays) * Math.PI*2;
+    const len = coreR * (1.2 + 0.6 * Math.sin(i*1.3));
+    g.beginPath();
+    g.moveTo(Math.cos(a) * (coreR*0.95), Math.sin(a) * (coreR*0.95));
+    g.lineTo(Math.cos(a) * (coreR + len), Math.sin(a) * (coreR + len));
+    g.strokeStyle = `rgba(255,235,145,${rayAlpha})`;
+    g.lineWidth = 2.0;
+    g.lineCap = 'round';
+    g.stroke();
+  }
+  g.restore();
+}
+function drawMoon(g, v, night=1){
+  // v: 0..1 progress across the sky (left → right like the sun)
+  const coreR = Math.max(24, Math.min(54, H * 0.045));
+  const M = Math.max(36, coreR * 1.4);
+  const APEX_HEIGHT_FRAC = 0.20;
+
+  const start = { x: -M,    y: H + M };             // left/below
+  const apex  = { x: 0.5*W, y: H * APEX_HEIGHT_FRAC };
+  const end   = { x: W + M, y: H + M };             // right/below
+
+  const pos = bezierQ(start, apex, end, v);
+
+  // Base body (no phase shading)
+  const body = g.createRadialGradient(pos.x, pos.y, coreR*0.2, pos.x, pos.y, coreR);
+  body.addColorStop(0.00, '#f7fbff');
+  body.addColorStop(0.55, '#e6ecff');
+  body.addColorStop(1.00, '#cfd9fb');
+
+  g.save();
+  g.globalAlpha = 0.95 * (0.65 + 0.35*night);
+  g.fillStyle = body;
+  g.beginPath(); g.arc(pos.x, pos.y, coreR, 0, Math.PI*2); g.fill();
+
+  // Rim glow from a fixed light direction (upper-left)
+  const glowOffsetX = -coreR * 0.35;
+  const coronaR = coreR * 3.5;
+  const glow = g.createRadialGradient(pos.x + glowOffsetX, pos.y - coreR*0.1, coreR*0.7, pos.x, pos.y, coronaR);
+  glow.addColorStop(0.00, `rgba(220,230,255,0.40)`);
+  glow.addColorStop(0.50, `rgba(220,230,255,0.12)`);
+  glow.addColorStop(1.00, 'rgba(220,230,255,0)');
+  g.globalAlpha = 0.65 * (0.6 + 0.4*night);
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(pos.x, pos.y, coronaR, 0, Math.PI*2); g.fill();
+
+  // --- Craters (kept) ---
+  // Clip to lunar disk so nothing spills out.
+  g.save();
+  g.beginPath(); g.arc(pos.x, pos.y, coreR, 0, Math.PI*2); g.clip();
+
+  // Fixed light from upper-left: brighten rims on the lower-right side of each crater
+  const rimSign = +1;                 // push rim highlight to the light-opposite side
+  for (const c of moonCraters){
+    const cx = pos.x + Math.cos(c.a) * coreR * c.r;
+    const cy = pos.y + Math.sin(c.a) * coreR * c.r;
+    const r  = coreR * c.s;
+
+    // base crater depression (darker center)
+    const crater = g.createRadialGradient(cx, cy, r*0.25, cx, cy, r);
+    crater.addColorStop(0.00, `rgba(80,92,130,${0.35*c.al})`);
+    crater.addColorStop(0.65, `rgba(80,92,130,${0.18*c.al})`);
+    crater.addColorStop(1.00, 'rgba(80,92,130,0)');
+    g.globalAlpha = 0.9 * (0.5 + 0.5*night);
+    g.fillStyle = crater;
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI*2); g.fill();
+
+    // tiny lit rim on the side facing the light (upper-left light ⇒ rim on lower-right)
+    const rimDX = rimSign * r * 0.45;
+    g.globalAlpha = 0.75 * (0.4 + 0.6*night);
+    g.strokeStyle = 'rgba(240,245,255,0.55)';
+    g.lineWidth = Math.max(0.8, r * 0.35);
+    g.beginPath();
+    g.arc(cx + rimDX, cy + r*0.10, r*0.92, -0.2*Math.PI, 0.55*Math.PI);
+    g.stroke();
+  }
+  g.restore(); // crater clip
+  g.restore(); // moon group
+}
+
+
+
+// ======= SKY DECOR — spawn, update, draw =======
+function spawnFlock(){
+  const dirRight = Math.random() < 0.5;
+  const dir = dirRight ? 1 : -1;
+  skyDecor.flocks.push({
+    x: dirRight ? -60 : W + 60,
+    y: rand(H*0.12, H*0.40),
+    vx: dir * rand(40, 75),
+    n: irand(4, 7),
+    spread: rand(18, 30),
+    t: 0,
+    scale: rand(0.9, 1.4)
+  });
+}
+function spawnPlane(){
+  const dirRight = Math.random() < 0.5;
+  const dir = dirRight ? 1 : -1;
+  skyDecor.planes.push({
+    x: dirRight ? -160 : W + 160,
+    y: rand(H*0.10, H*0.28),
+    vx: dir * rand(120, 180),
+    t: 0,
+    phase: Math.random() * Math.PI * 2,
+    trail: [],
+    trailAcc: 0
+  });
+}
+
+function updateSkyDecor(dt){
+  const s = Math.round(state?.score || 0);
+
+  // compute sun progress u (0..1) same as drawBackground
+  const tS = clamp((s - SUN_START_OFFSET) / SUN_PATH_SPAN, 0, 1);
+  const u  = easeInOut(tS);
+
+  // Sky activity only after reveal begins; stop spawning just before night (u≈0.90)
+  const skyActive  = s >= SKY_REVEAL_START;
+  const allowSpawn = skyActive && u < 0.88; // stop a touch before night kicks in
+
+  if (!skyActive) return;
+
+  // timers
+  skySpawn.flockT += dt;
+  skySpawn.planeT += dt;
+
+  // spawn (conservative)
+  if (allowSpawn && skySpawn.flockT > rand(3.5, 6.5) && skyDecor.flocks.length < 3) {
+    spawnFlock(); skySpawn.flockT = 0;
+  }
+  if (allowSpawn && skySpawn.planeT > rand(18, 36) && skyDecor.planes.length < 1) {
+    spawnPlane(); skySpawn.planeT = 0;
+  }
+
+  // move + cull
+  skyDecor.flocks = skyDecor.flocks.filter(f => {
+    f.t += dt;
+    f.x += f.vx * dt;
+    f.y += Math.sin(f.t * 1.7) * 6 * dt;
+    return (f.vx > 0 ? f.x - f.spread*2 < W + 120 : f.x + f.spread*2 > -120);
+  });
+
+  skyDecor.planes = skyDecor.planes.filter(p => {
+    p.t += dt;
+    p.x += p.vx * dt;
+    p.y += Math.sin(p.t*0.5 + p.phase) * 4 * dt;
+
+    // contrail points
+    p.trailAcc += dt;
+    if (p.trailAcc > 0.04){
+      p.trailAcc = 0;
+      p.trail.push({ x:p.x-10*(p.vx>0?1:-1), y:p.y, a:1 });
+      if (p.trail.length > 80) p.trail.shift();
+    }
+    // fade trail points (age-based only; no night fade)
+    for (let i=0;i<p.trail.length;i++) p.trail[i].a *= (1 - dt*0.06);
+
+    return (p.vx > 0 ? p.x < W + 160 : p.x > -160);
   });
 }
 
 
-
-// Draw a smooth ribbon hill using two quadratic curves
-function drawHillBand(xOff, y, h, colTop, colBot, a=1){
-  ctx.save();
-  ctx.globalAlpha = a;
-
-  const w = W * 1.2;
-  const x = xOff - 0.1 * W;   // allow overflow for curve
-
-  // body gradient
-  const g = ctx.createLinearGradient(0, y - h, 0, y + h * 0.6);
-  g.addColorStop(0, colTop);
-  g.addColorStop(1, colBot);
-  ctx.fillStyle = g;
-
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.quadraticCurveTo(x + w*0.25, y - h,   x + w*0.5,  y);
-  ctx.quadraticCurveTo(x + w*0.75, y + h*0.25, x + w,   y);
-  ctx.lineTo(x + w, H); ctx.lineTo(x, H); ctx.closePath();
-  ctx.fill();
-
-  // crest rim light
-  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(x + w*0.05, y - 0.5);
-  ctx.quadraticCurveTo(x + w*0.25, y - h*0.95, x + w*0.48, y - 0.5);
-  ctx.stroke();
-
-  ctx.restore();
+// --- drawing helpers (BG canvas 'g')
+function drawBird(g, x, y, sc=1){
+  const wing = 3 + Math.sin(performance.now()*0.006 + x*0.03) * 2;
+  g.save();
+  g.translate(x, y);
+  g.scale(sc, sc);
+  g.lineWidth = 1.5;
+  g.strokeStyle = 'rgba(20,40,60,0.85)';
+  g.beginPath();
+  g.moveTo(-8, 0);
+  g.quadraticCurveTo(-2, -wing, 0, 0);
+  g.quadraticCurveTo( 2, -wing, 8, 0);
+  g.stroke();
+  g.restore();
 }
-
-// diagonal farmland striping inside the band
-function drawBandStripes(xOff, y, h, col='rgba(255,255,255,0.12)', step=18, a=1){
-  ctx.save(); ctx.globalAlpha = 0.55 * a;
-
-  // clip to the hill area
-  const w = W * 1.2, x = xOff - 0.1 * W;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.quadraticCurveTo(x + w*0.25, y - h,   x + w*0.5,  y);
-  ctx.quadraticCurveTo(x + w*0.75, y + h*0.25, x + w,   y);
-  ctx.lineTo(x + w, H); ctx.lineTo(x, H); ctx.closePath();
-  ctx.clip();
-
-  // draw thin rotated rectangles as stripes
-  ctx.translate(0, y);
-  ctx.rotate(-0.28); // gentle diagonal
-  ctx.fillStyle = col;
-  const stripeH = 2, totalW = W * 2.2, baseY = -h*1.2;
-  for (let i = -totalW; i < totalW; i += step){
-ctx.fillRect(i, baseY, totalW * 2, stripeH);
+function drawFlock(g, f){
+  for (let i=0;i<f.n;i++){
+    const px = f.x + (i - (f.n-1)/2) * f.spread;
+    const py = f.y + Math.sin((f.t*3) + i*0.6) * 4 - i*0.6;
+    drawBird(g, px, py, f.scale);
   }
-  ctx.restore();
+}
+function drawPlane(g, x, y){
+  g.save(); g.translate(x, y);
+  // contrail is drawn outside here; this just draws the body
+  g.fillStyle = '#e5eef9';
+  g.strokeStyle = '#c1d2ea';
+  g.lineWidth = 1;
+  roundRect(g, -14, -4, 28, 8, 3); g.fill(); g.stroke();
+  // wings
+  g.fillStyle = '#d7e6f7';
+  g.beginPath(); g.moveTo(-2,0); g.lineTo(10,6); g.lineTo(6,6); g.lineTo(-2,2); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-6,0); g.lineTo(-18,-6); g.lineTo(-14,-6); g.lineTo(-4,-2); g.closePath(); g.fill();
+  g.restore();
 }
 
-// Little stylized trees on near bands
-function drawBandTrees(seedBase, xOff, y, h, clusters=1, a=1){
-  ctx.save(); ctx.globalAlpha = 0.95 * a;
+function drawSkyDecor(g){
+  // contrails first (background)
+  for (const p of skyDecor.planes){
+    for (let i=1;i<p.trail.length;i++){
+      const p0 = p.trail[i-1], p1 = p.trail[i];
+      const segA = 0.65 * (i / p.trail.length) * (p1.a || 1);
+      if (segA < 0.02) continue;
+      g.globalAlpha = segA;
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(p0.x, p0.y);
+      g.lineTo(p1.x, p1.y);
+      g.stroke();
+    }
+  }
 
-  const bandTop    = y - h * 0.15;
+  // flocks + planes (full opacity)
+  g.globalAlpha = 1;
+  for (const f of skyDecor.flocks) drawFlock(g, f);
+  for (const p of skyDecor.planes) drawPlane(g, p.x, p.y);
+}
+
+function beginStorm(){
+  storm.active = true;
+  storm.flashT = 0;
+  storm.nextFlashIn = rand(0.2, 0.8); // first strike comes quick
+  storm.bolts = [];
+  toast('⚡ Storm incoming');
+}
+
+function updateStorm(dt){
+  storm.nextFlashIn -= dt;
+
+  // decay afterglow brightness
+  if (storm.afterglowT > 0) {
+    storm.afterglowT = Math.max(0, storm.afterglowT - dt);
+  }
+
+  if (storm.nextFlashIn <= 0){
+    triggerLightningFlash();
+
+    // Choose a big gap (fewer strikes)
+    const gap = rand(STORM_FLASH_GAP_MIN, STORM_FLASH_GAP_MAX);
+
+    // Reserve only 1–2s at the END of that gap for total darkness.
+    // The remainder becomes a visible AFTERGLOW.
+    const darkWin = rand(STORM_DARK_WINDOW_MIN, STORM_DARK_WINDOW_MAX);
+    const ag = Math.max(0, gap - darkWin);
+
+    storm.afterglowMax = ag;
+    storm.afterglowT   = ag;
+    storm.nextFlashIn  = gap;
+  }
+
+  if (storm.flashT > 0) storm.flashT = Math.max(0, storm.flashT - dt);
+}
+
+
+function triggerLightningFlash(){
+  storm.flashT = STORM_FLASH_DUR;
+  storm.bolts = buildLightningBolts();
+  sound.thunder(0.28);
+}
+
+function buildLightningBolts(){
+  const bolts = [];
+  const count = Math.floor(rand(1, 4)); // 1-3 bolts
+  for (let i=0;i<count;i++){
+    const x0 = rand(40, W-40);
+    let x = x0, y = -20;
+    const n = Math.floor(rand(6, 11));
+    const segs = [];
+    for (let s=0;s<n;s++){
+      const nx = clamp(x + rand(-28, 28), 20, W-20);
+      const ny = y + rand(H*0.08, H*0.18);
+      segs.push({x, y, nx, ny});
+      x = nx; y = ny;
+      if (y > H*0.82) break;
+    }
+    bolts.push(segs);
+  }
+  return bolts;
+}
+
+function drawLightning(g){
+  if (!storm.active || storm.flashT <= 0) return;
+  const k = storm.flashT / STORM_FLASH_DUR; // 1→0
+
+  // screen wash to simulate exposure
+  g.save();
+  g.globalAlpha = 0.65 * k;
+  g.fillStyle = '#e6f2ff';
+  g.fillRect(0,0,W,H);
+  g.restore();
+
+  // glow + core strokes
+  g.save();
+  // outer glow
+  g.globalAlpha = 0.35 * k;
+  g.strokeStyle = '#ffffff';
+  for (const segs of storm.bolts){
+    for (const s of segs){
+      g.beginPath(); g.moveTo(s.x, s.y); g.lineTo(s.nx, s.ny);
+      g.lineWidth = 8; g.stroke();
+    }
+  }
+  // core
+  g.globalAlpha = 1;
+  g.strokeStyle = '#ecf7ff';
+  for (const segs of storm.bolts){
+    for (const s of segs){
+      g.beginPath(); g.moveTo(s.x, s.y); g.lineTo(s.nx, s.ny);
+      g.lineWidth = 2.6; g.stroke();
+    }
+  }
+  g.restore();
+}
+
+function drawStormOverlay(g){
+  if (!storm.active) return;
+
+  // Base blackout alpha: fully dark
+  let a = STORM_DARK_A;
+
+  // During afterglow, ease the blackout alpha toward a brighter level
+  if (storm.afterglowT > 0 && storm.afterglowMax > 0) {
+    const f = storm.afterglowT / storm.afterglowMax;        // 1 → 0
+    const ease = f*f*(3 - 2*f);                              // smoothstep
+    const brightA = STORM_BRIGHT_A;                          // dim but playable
+    a = brightA + (STORM_DARK_A - brightA) * (1 - ease);     // starts bright, fades darker
+  }
+
+  // During the instantaneous flash, keep it very bright
+  if (storm.flashT > 0) a = Math.min(a, 0.15);
+
+  g.save();
+  g.globalAlpha = a;
+  g.fillStyle = '#000';
+  g.fillRect(0,0,W,H);
+  g.restore();
+}
+
+
+
+
+
+// Reveal timing
+const SKY_REVEAL_START = UNLOCK.vanish; // when the reveal begins
+
+// delay the sun until the hills are clearly moving
+const SUN_START_OFFSET = SKY_REVEAL_START-3000;
+
+// Sun spans its path once. Give the moon its own offset/span afterwards.
+const MOON_PATH_SPAN    = SUN_PATH_SPAN;                 // how long the moon travels
+const MOON_START_OFFSET = SUN_START_OFFSET + SUN_PATH_SPAN * 0.8; 
+// ↑ starts a bit before full night so it rises shortly after sunset
+// (Move this earlier/later to taste, or tie it to unlocks/screen height.)
+
+
+function drawBackground(){
+  const s  = Math.round(state?.score || 0);
+
+  // Hills slide progress
+  const tH = clamp((s - SKY_REVEAL_START) / HILLS_REVEAL_SPAN, 0, 1);
+  const kH = easeInOut(tH);
+
+  // Sun progress with delay
+  const tS = clamp((s - SUN_START_OFFSET) / SUN_PATH_SPAN, 0, 1);
+  const u  = easeInOut(tS);
+
+  // 1) Sky first
+  bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
+  bgCtx.clearRect(0, 0, W, H);
+  const night = drawSkyBase(bgCtx, u);
+
+  // 2) Sun (behind hills)
+  if (tS > 0){
+    drawSun(bgCtx, u, night);
+  }
+
+  // 2.5) Moon (behind hills): starts later, moves on its own path
+  const tM = clamp((s - MOON_START_OFFSET) / MOON_PATH_SPAN, 0, 1);
+  const v  = easeInOut(tM);
+  if (tM > 0){
+    drawMoon(bgCtx, v, night);
+  }
+
+  // 2.75) Day sky decor (birds/planes)
+  drawSkyDecor(bgCtx);
+
+  // 3) Hills on top (occlude horizon)
+  if (hillsTex){
+    const shiftY = kH * (H + 160);
+    bgCtx.drawImage(hillsTex, 0, shiftY);
+  }
+}
+
+
+
+
+
+function drawHillBandG(g, xOff, y, h, colTop, colBot, a=1, tight=1){
+  g.save(); g.globalAlpha = a;
+
+  const w  = W * 2.6;              // extra wide so it never ends on-screen
+  const cx = W * 0.5 + xOff;       // crest center
+  const x  = cx - w * 0.5;
+
+  const grad = g.createLinearGradient(0, y - h, 0, y + h * 0.6);
+  grad.addColorStop(0, colTop);
+  grad.addColorStop(1, colBot);
+  g.fillStyle = grad;
+
+  g.beginPath();
+  g.moveTo(x, y);
+  g.quadraticCurveTo(x + w*0.25, y - h * (1.0 * tight), x + w*0.5,  y);       // higher crest
+  g.quadraticCurveTo(x + w*0.75, y + h * (0.30 * tight), x + w,      y);       // deeper dip
+  g.lineTo(x + w, H); g.lineTo(x, H); g.closePath();
+  g.fill();
+
+  g.strokeStyle = 'rgba(255,255,255,0.14)';
+  g.lineWidth = 2.5;
+  g.beginPath();
+  g.moveTo(x + w*0.05, y - 0.5);
+  g.quadraticCurveTo(x + w*0.25, y - h * (0.95 * tight), x + w*0.48, y - 0.5);
+  g.stroke();
+  g.restore();
+}
+
+// =================== END NEW BACKGROUND SYSTEM ===================
+
+// simple lerp already exists in your file; reuse if present
+
+
+
+
+
+
+function drawTreeG(g, x, y, s=1){
+  g.save();
+  g.globalAlpha = 0.25;
+  g.beginPath(); g.ellipse(x, y+10*s, 10*s, 3.5*s, 0, 0, Math.PI*2);
+  g.fillStyle = '#000'; g.fill();
+  g.restore();
+
+  g.fillStyle = '#6b4423';
+  g.fillRect(x-2.2*s, y-8*s, 4.4*s, 12*s);
+
+  g.beginPath();
+  g.ellipse(x-6*s, y-12*s, 9*s, 12*s, 0, 0, Math.PI*2);
+  g.ellipse(x+5*s, y-13*s, 10*s, 11*s, 0, 0, Math.PI*2);
+  g.fillStyle = '#2f7d3b'; g.fill();
+
+  g.strokeStyle = 'rgba(255,255,255,0.25)';
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.arc(x+3*s, y-16*s, 9*s, -Math.PI*0.9, -Math.PI*0.5);
+  g.stroke();
+}
+
+function drawBandTreesG(g, seedBase, xOff, y, h, clusters=1, a=1){
+  g.save(); g.globalAlpha = 0.95 * a;
+  const bandTop = y - h * 0.15;
   const bandBottom = y + h * 0.05;
-  const scaleBase  = 0.9 + (h/110) * 0.2;
+  const scaleBase = 0.9 + (h/110) * 0.2;
 
   for (let i=0;i<clusters;i++){
-    const r = prand(seedBase + i);
-    const rx = (i + 1) / (clusters + 1);                   // 0..1 across width
-    const px = xOff + rx * W;                              // world x
-    const py = lerp(bandTop, bandBottom, 0.25 + 0.5*r);    // sit on slope
-    const n  = 2 + Math.floor(prand(seedBase*7+i)*3);      // 2..4 trees
-
+    const r = Math.sin((seedBase + i) * 12.9898 + 78.233) * 43758.5453 % 1;
+    const rx = (i + 1) / (clusters + 1);
+    const px = xOff + rx * W;
+    const py = (bandTop) + (bandBottom - bandTop) * (0.25 + 0.5*r);
+    const n  = 2 + Math.floor(((seedBase*7+i)*1.234 % 1) * 3);
     for (let j=0;j<n;j++){
-      const jr = prand(seedBase*19 + i*5 + j);
+      const jr = ((seedBase*19 + i*5 + j)*0.918 % 1);
       const tx = px + (j - (n-1)/2) * 16 + jr*6;
       const ty = py + jr*8;
       const sc = scaleBase * (0.85 + jr*0.3);
-
-      drawTree(tx, ty, sc);
+      drawTreeG(g, tx, ty, sc);
     }
   }
-  ctx.restore();
+  g.restore();
 }
 
-function drawTree(x, y, s=1){
-  // shadow
-  ctx.save();
-  ctx.globalAlpha = 0.25;
-  ctx.beginPath(); ctx.ellipse(x, y+10*s, 10*s, 3.5*s, 0, 0, Math.PI*2);
-  ctx.fillStyle = '#000'; ctx.fill();
-  ctx.restore();
-
-  // trunk
-  ctx.fillStyle = '#6b4423';
-  ctx.fillRect(x-2.2*s, y-8*s, 4.4*s, 12*s);
-
-  // canopy (two ellipses)
-  ctx.beginPath();
-  ctx.ellipse(x-6*s, y-12*s, 9*s, 12*s, 0, 0, Math.PI*2);
-  ctx.ellipse(x+5*s, y-13*s, 10*s, 11*s, 0, 0, Math.PI*2);
-  ctx.fillStyle = '#2f7d3b'; ctx.fill();
-
-  // highlight
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(x+3*s, y-16*s, 9*s, -Math.PI*0.9, -Math.PI*0.5);
-  ctx.stroke();
-}
-
-// Tiny flowers in the closest bands
-function drawBandFlowers(seedBase, xOff, y, h, count=24, a=1){
-  ctx.save(); ctx.globalAlpha = 0.9 * a;
-
+function drawBandFlowersG(g, seedBase, xOff, y, h, count=24, a=1){
+  g.save(); g.globalAlpha = 0.9 * a;
   const top = y - h * 0.05, bot = y + h * 0.2;
   for (let i=0;i<count;i++){
-    const r1 = prand(seedBase + i);
-    const r2 = prand(seedBase*3 + i*11);
-    const x  = xOff + r1 * W;
-    const y0 = lerp(top, bot, r2);
+    const r1 = ((seedBase + i)*0.733 % 1 + 1) % 1;
+    const r2 = ((seedBase*3 + i*11)*0.511 % 1 + 1) % 1;
+    const X  = xOff + r1 * W;
+    const Y  = top + (bot - top) * r2;
 
-    // petals
-    ctx.fillStyle = (i % 3 === 0) ? '#ffd7ea' : (i % 3 === 1 ? '#fff2aa' : '#c9f0ff');
+    g.fillStyle = (i % 3 === 0) ? '#ffd7ea' : (i % 3 === 1 ? '#fff2aa' : '#c9f0ff');
     for (let p=0;p<5;p++){
       const ang = (p/5) * Math.PI*2;
-      ctx.beginPath();
-      ctx.ellipse(x + Math.cos(ang)*3.5, y0 + Math.sin(ang)*2.5, 2.6, 1.6, ang, 0, Math.PI*2);
-      ctx.fill();
+      g.beginPath();
+      g.ellipse(X + Math.cos(ang)*3.5, Y + Math.sin(ang)*2.5, 2.6, 1.6, ang, 0, Math.PI*2);
+      g.fill();
     }
-    // center
-    ctx.beginPath(); ctx.arc(x, y0, 1.6, 0, Math.PI*2);
-    ctx.fillStyle = '#7a5b21'; ctx.fill();
+    g.beginPath(); g.arc(X, Y, 1.6, 0, Math.PI*2);
+    g.fillStyle = '#7a5b21'; g.fill();
   }
-  ctx.restore();
+  g.restore();
 }
-// =================== END NEW BACKGROUND SYSTEM ===================
+
+function rebuildHillsOnce(){
+  if (!USE_BG_CACHE) return;
+
+  // (Re)create offscreen hills texture at window size
+  hillsTex = document.createElement('canvas');
+  hillsTex.width  = Math.round(W * BG_DPR);
+  hillsTex.height = Math.round(H * BG_DPR);
+  hillsCtx = hillsTex.getContext('2d');
+  hillsCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
+
+  hillsCtx.clearRect(0, 0, W, H);
+
+  // ---- your staggered bands (keep your latest values) ----
+  const bands = [
+    { y: H-900, h:120, off:  W*0.50, top:'#8ccf6a', bot:'#5aa24a', stripe:'#f3ea8a', density:18, trees:0, flowers:0, tight:1.05 },
+    { y: H-750, h:105, off:  W*0.18, top:'#7ec45e', bot:'#4e9a40', stripe:'#e5ea84', density:20, trees:3, flowers:0, tight:1.00 },
+    { y: H-600, h: 92, off: -W*0.35, top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:0, flowers:1, tight:1.10 },
+    { y: H-450, h:110, off:  W*0.55, top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:3, flowers:0, tight:1.25 },
+    { y: H-300, h: 95, off: -W*0.10, top:'#6cb452', bot:'#3f8a36', stripe:'#d8e277', density:22, trees:0, flowers:1, tight:1.06 },
+    { y: H-150, h: 88, off:  W*0.42, top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:3, flowers:0, tight:1.08 },
+  ];
+
+  // Draw all hills onto the offscreen texture ONCE
+  bands.forEach((b, i) => {
+    drawHillBandG(hillsCtx, b.off, b.y, b.h, b.top, b.bot, 1, b.tight ?? 1);
+    // stripes optional:
+    // drawBandStripesG(hillsCtx, b.off, b.y, b.h, b.stripe, b.density, 1, b.tight ?? 1);
+    if (b.trees)   drawBandTreesG(hillsCtx, i*17 + 101, b.off, b.y, b.h, b.trees, 1);
+    if (b.flowers) drawBandFlowersG(hillsCtx, i*23 + 707, b.off, b.y, b.h, 10*b.flowers, 1);
+  });
+
+  // Make sure the bg canvas has the same transform
+  bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
+}
+
+
+
+
 
 
   function draw() {
@@ -1179,21 +2025,13 @@ function drawBandFlowers(seedBase, xOff, y, h, count=24, a=1){
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+        // Storm visuals (flash + blackout)
+    if (storm.active) {
+      drawLightning(ctx);   // bright momentary flash & bolts
+      drawStormOverlay(ctx); // persistent blackout (or dim during flash)
+    }
+
   }
-  // color + number interpolation
-function lerp(a,b,t){ return a + (b - a) * t; }
-
-
-
-function drawCloudBand(x, y, scale){
-  for (let i = 0; i < 4; i++){
-    const cx = x + i * 100 * scale;
-    ctx.beginPath();
-    ctx.ellipse(cx, y, 50 * scale, 16 * scale, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fill();
-  }
-}
 
 
 // ===== CARTOON CLOUD (reference-style) =====
