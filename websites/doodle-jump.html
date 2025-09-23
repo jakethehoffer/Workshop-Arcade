@@ -56,6 +56,38 @@
 
   @media (hover:hover) and (pointer:fine) {
     .zone { display:none; } /* hide zones on desktops (mouse/keyboard) */
+    .legend { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 2px }
+.tag { font-weight:700; padding:6px 10px; border-radius:10px; border:1px solid transparent; }
+.help-list { margin:8px 0 0; padding-left:0; list-style:none; }
+.help-list li { display:flex; align-items:flex-start; gap:8px; margin:6px 0; color:var(--muted); }
+.dot { width:12px; height:12px; border-radius:50%; margin-top:4px; flex:0 0 12px; }
+
+.tag-blue   { background:#0f1b3d; border-color:#2c4aa8; color:#93c5fd; }
+.tag-green  { background:#0b2a23; border-color:#0f766e; color:#5eead4; }
+.tag-red    { background:#2a0d0d; border-color:#7f1d1d; color:#fca5a5; }
+.tag-cloud  { background:#0e1b2e; border-color:#3a5f8f; color:#cfe9ff; }
+.tag-rain   { background:#0d1630; border-color:#516bcc; color:#9db8f5; }
+.tag-vanish { background:#0e1b2e; border-color:#6aa1f0; color:#a7d8ff; }
+.tag-static { background:#0f172a; border-color:#26334a; color:#cbd5e1; }
+
+.dot-blue   { background:#3556a8; }
+.dot-green  { background:#16a34a; }
+.dot-red    { background:#dc2626; }
+.dot-cloud  { background:#9ccffb; }
+.dot-rain   { background:#6b88f0; }
+.dot-vanish { background:#93c5fd; }
+.dot-static { background:#64748b; }
+
+.tag-jetpack { background:#08262b; border-color:#1f766b; color:#5eead4; }
+.tag-boots   { background:#0b2a23; border-color:#0f766e; color:#34d399; }
+.tag-shield  { background:#0d1630; border-color:#2f5fa8; color:#93c5fd; }
+.tag-slow    { background:#2a200a; border-color:#b18110; color:#fbbf24; }
+
+.dot-jetpack { background:#10b981; }
+.dot-boots   { background:#34d399; }
+.dot-shield  { background:#60a5fa; }
+.dot-slow    { background:#f59e0b; }
+
   }
 </style>
 </head>
@@ -67,6 +99,7 @@
   <div class="hud" id="hud">
     <div class="pill">Score: <b id="score">0</b></div>
     <div class="pill">Best: <b id="best">0</b></div>
+    <div class="pill" id="buff">No power-ups</div>
     <div class="pill btn" id="pause">⏸ Pause</div>
     <div class="pill btn" id="mute">🔊 Sound</div>
     <div class="pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause</div>
@@ -81,16 +114,10 @@
          On phones: tap/hold left or right side of the screen.</p>
       <div class="row">
         <div class="action primary" id="startBtn">Start</div>
-        <div class="action" id="howBtn">Platforms</div>
+  <div class="action" id="helpBtn">Help</div>
       </div>
       <!-- CHANGED: explain moving variants + rain behavior (remove slippery mention) -->
-      <p id="how" style="display:none">Types unlock as you climb: <b>Blue → Green → Red → Clouds → Rain clouds</b>.<br>
-        Blue = moving. Green = spring boost. 
-        <span style="color:#fb7185">Red = cracks — breaks on the <u>2nd</u> bounce (normal bounce both times), explodes.</span>
-        <span style="color:#cbd5e1">Gray = cloud — softer bounce, resets double-jump, then fades.</span>
-        <span style="color:#a7d8ff">White-blue = <b>rain cloud</b> (moving) — soft bounce &amp; resets double-jump, <i>rains</i> onto level: wet platforms reduce jump height briefly. A raindrop hitting you gives a tiny downward nudge.</span><br>
-        <b>New:</b> moving <span style="color:#22c55e">green</span> and <span style="color:#fb7185">red</span> platforms behave like their static versions but slide left/right and speed up as you score more. Rain affects them the same as other non-cloud platforms.
-      </p>
+      
     </div>
   </div>
 
@@ -100,9 +127,55 @@
       <p>Your score: <b id="finalScore">0</b> • Best: <b id="finalBest">0</b></p>
       <div class="row">
         <div class="action primary" id="restartBtn">Restart</div>
+          <div class="action" id="helpBtnOver">Help</div>
+
       </div>
     </div>
   </div>
+
+  <div class="overlay fade" id="helpPanel" style="display:none">
+  <div class="panel">
+    <h1>❓ Help</h1>
+    <p><b>Move:</b> A/← and D/→ • <b>Double-jump:</b> Space (mid-air) • <b>Pause:</b> P</p>
+
+    <h3 style="margin:12px 0 6px">Platforms</h3>
+    <div class="legend">
+      <span class="tag tag-blue">Blue • Moving</span>
+      <span class="tag tag-green">Green • Spring boost</span>
+      <span class="tag tag-red">Red • Cracks (breaks on 2nd bounce)</span>
+      <span class="tag tag-cloud">Cloud • Soft bounce</span>
+      <span class="tag tag-rain">Rain Cloud • Soft bounce + rain</span>
+      <span class="tag tag-static">Static • Normal</span>
+    </div>
+    <ul class="help-list">
+      <li><span class="dot dot-blue"></span>Blue platforms move horizontally.</li>
+      <li><span class="dot dot-green"></span>Green platforms launch you higher.</li>
+      <li><span class="dot dot-red"></span>Red platforms crack on first bounce and break on the second (normal bounce both times).</li>
+      <li><span class="dot dot-cloud"></span>Clouds give a softer, lower bounce.</li>
+      <li><span class="dot dot-rain"></span>Rain clouds drift and spawn raindrops. Drops make platforms slippery and lightly nudge the player down.</li>
+      <li><span class="dot dot-static"></span>Static platforms just sit there. Reliable.</li>
+    </ul>
+
+    <h3 style="margin:12px 0 6px">Power-ups</h3>
+    <div class="legend">
+      <span class="tag tag-jetpack">🚀 Jetpack</span>
+      <span class="tag tag-boots">👟 Jump Boots</span>
+      <span class="tag tag-shield">🛡️ Shield</span>
+      <span class="tag tag-slow">⏳ Slow-mo</span>
+    </div>
+    <ul class="help-list">
+      <li><span class="dot dot-jetpack"></span>Jetpack: rocket upward for a short duration.</li>
+      <li><span class="dot dot-boots"></span>Jump Boots: stronger bounces for a while.</li>
+      <li><span class="dot dot-shield"></span>Shield: one free rescue if you fall off-screen.</li>
+      <li><span class="dot dot-slow"></span>Slow-mo: world slows down (player physics unchanged).</li>
+    </ul>
+
+    <div class="row" style="margin-top:10px">
+      <div class="action" id="helpClose">Close</div>
+    </div>
+  </div>
+</div>
+
 
   <div class="touch-zone" aria-hidden="true">
     <div class="zone left" id="zoneLeft"></div>
@@ -113,6 +186,7 @@
 <script>
 (() => {
   // ===== Canvas & scaling =====
+  
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const bg = document.getElementById('bg');
@@ -178,6 +252,19 @@ function resize() {
   resize();
 
   // ===== HUD & UI =====
+  const buffEl = document.getElementById('buff');
+function updateBuffHUD(){
+  const P = state?.player;
+  if (!P) return;
+  const bits = [];
+  if (P.jetpackT > 0)   bits.push(`🚀 ${P.jetpackT.toFixed(1)}s`);
+  if (P.jumpBoostT > 0) bits.push(`👟 ${P.jumpBoostT.toFixed(1)}s`);
+  if (P.slowT > 0)      bits.push(`⏳ ${P.slowT.toFixed(1)}s`);
+  if (P.shield > 0)     bits.push(`🛡️ ready`);
+  buffEl.textContent = bits.length ? `Power-ups: ${bits.join(' • ')}` : 'No power-ups';
+}
+
+
   const scoreEl = document.getElementById('score');
   const bestEl  = document.getElementById('best');
   const pauseBtn = document.getElementById('pause');
@@ -186,11 +273,24 @@ function resize() {
   const gameover = document.getElementById('gameover');
   const finalScore = document.getElementById('finalScore');
   const finalBest = document.getElementById('finalBest');
+  const helpPanel = document.getElementById('helpPanel');
+const helpBtn = document.getElementById('helpBtn');
+const helpBtnOver = document.getElementById('helpBtnOver');
+const helpClose = document.getElementById('helpClose');
+
   document.getElementById('startBtn').onclick = start;
-  document.getElementById('howBtn').onclick = () => {
-    const el = document.getElementById('how');
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  };
+document.getElementById('startBtn').onclick = start;
+
+
+if (helpBtn) helpBtn.onclick = openHelp;
+if (helpBtnOver) helpBtnOver.onclick = openHelp;
+if (helpClose) helpClose.onclick = closeHelp;
+
+// Optional: Esc closes Help
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape' && helpPanel.style.display !== 'none') closeHelp();
+});
+
   document.getElementById('restartBtn').onclick = () => { hide(gameover); start(true); };
 
   pauseBtn.onclick = () => togglePause();
@@ -199,30 +299,15 @@ function resize() {
 
   function hide(el){ el.style.display = 'none'; }
   function show(el){ el.style.display = 'flex'; }
+  function openHelp(){ helpPanel.style.display = 'flex'; }
+function closeHelp(){ helpPanel.style.display = 'none'; }
+
 
   // ===== Input =====
   const keys = new Set();
   window.addEventListener('keydown', (e) => {
-        // === DEV hotkeys ===
-    if (DEV_TOOLS) {
-      // Shift+T : prompt for target score
-      if (e.code === 'KeyT' && e.shiftKey) {
-        const s = prompt('Warp to score:', Math.round(state?.score||0));
-        if (s !== null && s !== '') warpToScore(+s);
-      }
-      // Alt+1..6 : quick warp to phase anchors
-      if (e.altKey) {
-        const p = devPresets();
-        if (e.code === 'Digit1') warpToScore(p.DAY_START);   // Alt+1 Day start
-        if (e.code === 'Digit2') warpToScore(p.SKY_START);   // Alt+2 Sky reveal start
-        if (e.code === 'Digit3') warpToScore(p.SUN_START);   // Alt+3 Sun rise
-        if (e.code === 'Digit4') warpToScore(p.SUN_END);     // Alt+4 Sunset (night begins)
-        if (e.code === 'Digit5') warpToScore(p.MOON_START);  // Alt+5 Moon rise
-        if (e.code === 'Digit6') warpToScore(p.MOON_END+5);  // Alt+6 Storm trigger
-      }
-      // Hold J to jetpack (continuous testing)
-      if (e.code === 'KeyJ') dev.jetpack = true;
-    }
+
+
 
     if (e.repeat) return;
 
@@ -250,7 +335,6 @@ window.addEventListener('keyup', (e) => {
   keys.delete(e.code);
 
   // DEV: release jetpack on key up
-  if (DEV_TOOLS && e.code === 'KeyJ') dev.jetpack = false;
 });
 
   // Touch zones (mobile left/right)
@@ -417,11 +501,47 @@ window.addEventListener('keyup', (e) => {
 
   // ===== Game constants =====
     // === Dev / testing ===
-  const DEV_TOOLS = true;          // flip to false to disable
   const JETPACK_ACCEL = -2600;     // upward accel while jetpack held
 
+  // === POWERUPS: constants & helpers ===
+const POWERUP_SPAWN_CHANCE = 0.2;         // 14% chance to spawn on a new platform row
+const MAX_POWERUPS_ON_SCREEN = 4;
+const POWERUP_TYPES = ['jetpack','boots','shield','slow']; // simple, weighted in picker
+const DURATION = { jetpack: 2.8, boots: 8.0, slow: 5.5 };  // shield is one-shot
+const JUMP_BOOST_MULT = 1.35;
+
+// Visual sizes
+const PU_W = 24, PU_H = 22;
+
+// Pick a type with gentle bias toward fun stuff mid/late game
+function pickPowerupType(score=0){
+  // Start with base weights
+  let w = { jetpack: 1, boots: 1, shield: 1, slow: 1 };
+  if (score > 6000) w.slow += 0.6;
+  if (score > 9000) w.jetpack += 0.5;
+  if (storm.active) w.shield += 0.6;
+
+  const entries = Object.entries(w);
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  let r = Math.random()*total;
+  for (const [k,v] of entries){ if ((r -= v) <= 0) return k; }
+  return 'boots';
+}
+
+// Bounce helper so we don’t touch every collision site twice
+function bounceVy(baseVy){
+  const P = state.player;
+  const mult = (P.jumpBoostT>0) ? JUMP_BOOST_MULT : 1;
+  // NEW: flag a bounce and trigger a brief squash
+  P.justBounced = true;
+  P.squashT = 0.14; // ~140 ms
+  return Math.round(baseVy * mult);
+}
+
+
+
   // === Storm phase (after the moon exits) ===
-  const STORM_DARK_A = 0.85;          // full blackout (no light)
+  const STORM_DARK_A = 0.925;          // full blackout (no light)
   const STORM_BRIGHT_A = 0.2;         // blackout alpha during afterglow (dim but visible)
 
   // FEWER STRIKES: wider gaps between flashes
@@ -465,14 +585,14 @@ window.addEventListener('keyup', (e) => {
 
   // CHANGED: added cloudX (moving rain cloud) and moving red/green types
   const PLATFORM_TYPES = [
-    { k:'static',      weight: 48 },
-    { k:'moveX',       weight: 16 },
-    { k:'cloudX',      weight: 10 },
-    { k:'break',       weight: 10 },
-    { k:'moveBreakX',  weight: 6  },  // NEW: moving red
-    { k:'spring',      weight: 4  },
-    { k:'moveSpringX', weight: 4  },  // NEW: moving green
-    { k:'vanish',      weight: 6  }
+    { k:'static',      weight: 50 },
+    { k:'moveX',       weight: 20 },
+    { k:'cloudX',      weight: 8 },
+    { k:'break',       weight: 15 },
+    { k:'moveBreakX',  weight: 5  },  // NEW: moving red
+    { k:'spring',      weight: 10  },
+    { k:'moveSpringX', weight: 5  },  // NEW: moving green
+    { k:'vanish',      weight: 15 }
   ];
 
   // === Guaranteed path math ===
@@ -510,7 +630,6 @@ function isTypeUnlocked(type, score){
   // ===== State =====
   let state, running = false, paused = false, lastT = performance.now();
     // Dev state
-  let dev = { jetpack:false };
 
     // Storm controller
   let storm = {
@@ -529,6 +648,7 @@ function isTypeUnlocked(type, score){
     state = {
       score: 0,
       cameraY: 0,
+        powerups: [],   // === POWERUPS: world pickups ===
 player: {
   x: W*0.5 - PLAYER_W*0.5,
   y: H - 120,
@@ -538,12 +658,22 @@ player: {
   h: PLAYER_H,
   alive: true,
   canDouble: true,
+   jetpackT: 0,       // seconds left of jetpack
+  jumpBoostT: 0,     // seconds left of boots
+  slowT: 0,          // seconds left of slow-mo
+  shield: 0,          // 0/1 free rescue
 
   // NEW (slippery physics)
   groundWet: 0,   // last wetness 0..1
   slipT: 0,       // seconds of slipperiness left
   driftVX: 0,     // passive drift target while slippery
-  lastFacing: 1   // +1 right, -1 left
+  lastFacing: 1,   // +1 right, -1 left
+  animT: 0,          // running cycle time
+  blinkAcc: 0,       // timer to schedule next blink
+  blinkNext: 2.4,    // seconds until next blink
+  blinkT: 0,         // blink currently playing (sec, counts down)
+  squashT: 0,        // landing squash timer (sec)
+  justBounced: false // set on bounce this frame
 },
 
 
@@ -577,7 +707,10 @@ player: {
     while (y > -H * 0.6) {
       const type = pickType();
       const p = placePlatform(y, type);
-      if (p) state.plats.push(p);
+      if (p){ state.plats.push(p);
+          maybeSpawnPowerupAtPlatform(p);   // <-- add this line
+      }
+
       y -= rand(GAP_MIN, GAP_MAX);
     }
 
@@ -614,6 +747,8 @@ player: {
 
     reset();
       scoreEl.textContent = '0'; // <-- add this line to reset HUD immediately
+      updateBuffHUD();
+
 
     paused = false;
     running = true;
@@ -739,35 +874,70 @@ if (type === 'cloudX') {
   }
 
   // Safety-aware spawner
-  function spawnIfNeeded(initial=false) {
-    let minY = Infinity;
-    for (const p of state.plats) if (p.alive) minY = Math.min(minY, p.y);
-    if (!isFinite(minY)) minY = H;
-    const targetTop = -H * LOOKAHEAD;
+function spawnIfNeeded(initial=false) {
+  let minY = Infinity;
+  for (const p of state.plats) if (p.alive) minY = Math.min(minY, p.y);
+  if (!isFinite(minY)) minY = H;
+  const targetTop = -H * LOOKAHEAD;
 
-    while (minY > targetTop) {
-      const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
-      const y = minY - gap;
+  while (minY > targetTop) {
+    const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
+    const y = minY - gap;
 
-      let type = (initial && Math.random() < 0.5) ? 'static' : pickType();
-      if (state.forceType) { type = state.forceType; state.forceType = null; }
+    let type = (initial && Math.random() < 0.5) ? 'static' : pickType();
+    if (state.forceType) { type = state.forceType; state.forceType = null; }
 
-      const main = placePlatform(y, type);
-      if (main) state.plats.push(main);
+    const main = placePlatform(y, type);
+    if (main) state.plats.push(main);
 
-      // GUARANTEED PATH: always ensure at least one static platform at this row
-      if (!main || main.type !== 'static') {
-        const safety = placePlatform(y + rand(-8, 8), 'static');
-        if (safety) state.plats.push(safety);
-      } else if (Math.random() < SAFETY_CHANCE) {
-        // occasionally add an extra static buddy for comfort
-        const buddy = placePlatform(y + rand(-8, 8), 'static');
-        if (buddy) state.plats.push(buddy);
-      }
-
-      minY = y;
+    // GUARANTEED PATH: always ensure at least one static platform at this row
+    let safety = null; // <-- declare here
+    if (!main || main.type !== 'static') {
+      safety = placePlatform(y + rand(-8, 8), 'static');
+      if (safety) state.plats.push(safety);
+    } else if (Math.random() < SAFETY_CHANCE) {
+      const buddy = placePlatform(y + rand(-8, 8), 'static');
+      if (buddy) state.plats.push(buddy);
     }
+
+    // Powerups
+    if (main)   maybeSpawnPowerupAtPlatform(main);
+    if (safety) maybeSpawnPowerupAtPlatform(safety);
+
+    minY = y;
   }
+}
+
+
+  // === POWERUPS: spawn helpers ===
+function spawnPowerup(x, y, type, parent=null){
+  state.powerups.push({
+    x, y, w: PU_W, h: PU_H,
+    type, t: 0, bob: Math.random()*Math.PI*2,
+    parent,                        // platform reference (optional)
+    dx: parent ? (x - parent.x) : 0,
+    dy: parent ? (y - parent.y) : 0
+  });
+}
+
+
+// Toss a pickup above a platform occasionally (skip clouds)
+function maybeSpawnPowerupAtPlatform(pl){
+  if (!pl || !pl.alive) return;
+  if (pl.type === 'vanish') return;
+// NEW: only count items within ~1.5 screens above or currently below
+const nearCap = state.powerups.filter(it => it.y < H + 120 && it.y > -120).length;
+if (nearCap >= MAX_POWERUPS_ON_SCREEN) return;
+  if (Math.random() > POWERUP_SPAWN_CHANCE) return;
+
+const t = pickPowerupType(Math.round(state.score||0));
+const GAP_ABOVE = 6; // visual breathing room above the plank
+const px = pl.x + pl.w * 0.5 - PU_W * 0.5;
+const py = pl.y - PU_H - GAP_ABOVE;  // <— top of token above platform
+spawnPowerup(px, py, t, pl);
+
+}
+
 
   function addParticles(x,y,count=10, tone='bounce'){
     for (let i=0;i<count;i++){
@@ -815,7 +985,7 @@ function handleUnlocks(){
   if (!state.intro.blue  && s >= UNLOCK.moveX)   { state.intro.blue  = true; state.forceType = 'moveX';   toast('New: Blue moving platforms'); }
   if (!state.intro.green && s >= UNLOCK.spring)  { state.intro.green = true; state.forceType = 'spring';  toast('New: Green spring platforms'); }
   if (!state.intro.red   && s >= UNLOCK.break)   { state.intro.red   = true; state.forceType = 'break';   toast('New: Red cracking platforms'); }
-  if (!state.intro.cloud && s >= UNLOCK.vanish)  { state.intro.cloud = true; state.forceType = 'vanish';  toast('New: Fading cloud platforms'); }
+  if (!state.intro.cloud && s >= UNLOCK.vanish)  { state.intro.cloud = true; state.forceType = 'vanish';  toast('New: Cloud platforms'); }
 
   // Only announce + force-spawn rain clouds after night begins
   if (!state.intro.rain && s >= UNLOCK.cloudX) {
@@ -828,54 +998,8 @@ function handleUnlocks(){
     // else: wait — this will auto-trigger as soon as night starts
   }
 }
-  // === DEV: warp to a specific score/phase ===
-  function warpToScore(targetScore){
-    if (!running || paused) return;
-    targetScore = Math.max(0, Math.floor(targetScore||0));
-    const cur = Math.round(state.score||0);
-    if (targetScore === cur) return;
 
-    // how much "climb" to fake
-    const dy = targetScore - cur;
 
-    // Advance score/camera and shift world down by dy (same as camera step does)
-    state.score = targetScore;
-    state.cameraY += dy;
-
-    for (const pl of state.plats) pl.y += dy;
-    for (const pa of state.particles) pa.y += dy;
-    for (const d of state.drops) d.y += dy;
-
-    // Make sure there’s enough future terrain
-    spawnIfNeeded(false);
-
-    // Put player safely on the lowest visible platform
-    const base = getBottomPlatform();
-    if (base) {
-      const P = state.player;
-      P.x = clamp(base.x + (base.w - P.w)/2, WORLD_MARGIN, W - WORLD_MARGIN - P.w);
-      P.y = base.y - P.h - 0.01;
-      P.vx = 0; P.vy = 0; P.canDouble = true;
-    }
-
-    // HUD
-    scoreEl.textContent = targetScore;
-
-    // unlock announcements that may have been skipped
-    handleUnlocks();
-  }
-
-    // === DEV: commonly-needed phase anchors (scores) ===
-  function devPresets(){
-    const DAY_START = 0;
-    const SKY_START = Math.max(0, (typeof SKY_REVEAL_START!=='undefined') ? SKY_REVEAL_START : 6000);
-    const SUN_START = Math.max(0, (typeof SUN_START_OFFSET!=='undefined') ? SUN_START_OFFSET : SKY_START);
-    const SUN_END   = SUN_START + (typeof SUN_PATH_SPAN!=='undefined' ? SUN_PATH_SPAN : 18000);
-    const MOON_START= Math.max(0, (typeof MOON_START_OFFSET!=='undefined') ? MOON_START_OFFSET : SUN_END*0.8);
-    const MOON_END  = MOON_START + (typeof MOON_PATH_SPAN!=='undefined' ? MOON_PATH_SPAN : 18000);
-    const STORM     = MOON_END + 5; // just after moon exits screen
-    return { DAY_START, SKY_START, SUN_START, SUN_END, MOON_START, MOON_END, STORM };
-  }
 
 
 
@@ -895,6 +1019,35 @@ function handleUnlocks(){
 
   function update(dt) {
     const P = state.player;
+    // --- animation clocks (NEW) ---
+P.animT = (P.animT || 0) + dt * (1 + Math.min(1, Math.abs(P.vx)/MOVE_MAX));
+
+// landing squash decays
+if (P.squashT > 0) P.squashT = Math.max(0, P.squashT - dt);
+// reset; bounceVy() will set this true during collision phase
+P.justBounced = false;
+
+// blink scheduling
+P.blinkAcc = (P.blinkAcc || 0) + dt;
+if (P.blinkT > 0) {
+  P.blinkT = Math.max(0, P.blinkT - dt);
+} else if (P.blinkAcc > (P.blinkNext || 2.4)) {
+  P.blinkAcc = 0;
+  P.blinkNext = rand(2.2, 4.6); // next blink in 2.2–4.6s
+  P.blinkT = 0.12;              // quick close→open
+}
+
+    // === POWERUPS: effect ticking & timescale ===
+// Slow-mo should not affect the player; only the world.
+const worldScale = (P.slowT > 0) ? 0.6 : 1;
+
+if (P.jetpackT > 0)  P.jetpackT = Math.max(0, P.jetpackT - dt);
+if (P.jumpBoostT > 0) P.jumpBoostT = Math.max(0, P.jumpBoostT - dt);
+if (P.slowT > 0)     P.slowT = Math.max(0, P.slowT - dt);
+updateBuffHUD();
+
+
+
         // Trigger storm once the moon has fully completed its path
     {
       const s = Math.round(state.score || 0);
@@ -908,7 +1061,7 @@ function handleUnlocks(){
     const left  = keys.has('ArrowLeft') || keys.has('KeyA') || touchLeft;
     const right = keys.has('ArrowRight') || keys.has('KeyD') || touchRight;
 
-const moveAcc = MOVE_ACC;
+const moveAcc = MOVE_ACC;          // slow-mo reduces horizontal accel
 
 // Dynamic friction: now can truly be 0 when slip=1
 let fric = FRICTION;
@@ -963,15 +1116,14 @@ if (P.vx !== 0) state.player.lastFacing = (P.vx >= 0 ? 1 : -1);
     // Integrate
     const prevY = P.y;
     P.x += P.vx * dt;
-    P.vy += GRAVITY * dt;
-        // === DEV jetpack ===
-    if (DEV_TOOLS && dev.jetpack) {
-      P.vy += JETPACK_ACCEL * dt;        // strong upward accel
-      // small bleed to keep it controllable
-      P.vx *= (1 - Math.min(1, dt * 1.5));
-      // faint exhaust
-      if (Math.random() < 0.6) addParticles(P.x + P.w/2, P.y + P.h, 3, 'spring');
-    }
+const G = GRAVITY;                 // slow-mo reduces gravity pull
+P.vy += G * dt;
+    // === POWERUPS: jetpack thrust ===
+if (P.jetpackT > 0) {
+  P.vy += JETPACK_ACCEL * dt;                  // same accel as dev jetpack
+  if (Math.random() < 0.5) addParticles(P.x + P.w/2, P.y + P.h, 3, 'spring');
+}
+
 
     P.y += P.vy * dt;
 
@@ -986,7 +1138,7 @@ if (P.vx !== 0) state.player.lastFacing = (P.vx >= 0 ? 1 : -1);
 // CHANGED: move motion logic shared by moveX, cloudX, moveBreakX, moveSpringX
 if (pl.type === 'moveX' || pl.type === 'cloudX' || pl.type === 'moveBreakX' || pl.type === 'moveSpringX') {
   const base = pl.baseSpeed || Math.abs(pl.vx) || 160;
-  const v = base * speedMult();
+const v = base * speedMult() * worldScale;      // slow-mo impacts movers too
   pl.vx = pl.dir * v;           // track horizontal velocity
   pl.x += pl.vx * dt;
 
@@ -1023,7 +1175,7 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
       // Rain emission for moving clouds
       if (pl.type === 'cloudX') {
                 const rate = pl.rainRate * (storm.active ? STORM_RAIN_RATE_MULT : 1);
-        pl.rainAcc += dt * rate;
+        pl.rainAcc += dt * rate*worldScale;
         const maxDrops = 600; // soft cap to avoid overload
         while (pl.rainAcc >= 1 && state.drops.length < maxDrops) {
           pl.rainAcc -= 1;
@@ -1066,7 +1218,7 @@ pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
           // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet) — includes moving red
           if (pl.type === 'break' || pl.type === 'moveBreakX') {
             P.y = pl.y - P.h;
-P.vy = Math.round(JUMP_VY);
+P.vy = bounceVy(JUMP_VY);
 
 // NEW: if the platform is wet, apply slipperiness and seed drift
 if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
@@ -1115,7 +1267,7 @@ if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
           // Spring (CHANGED: respect wet) — includes moving green
           if (pl.type === 'spring' || pl.type === 'moveSpringX') {
             P.y = pl.y - P.h;
-            P.vy = Math.round(SPRING_VY);
+P.vy = bounceVy(SPRING_VY);
             // NEW: if the platform is wet, apply slipperiness
 // NEW: if the platform is wet, apply slipperiness and seed drift
 if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
@@ -1153,7 +1305,7 @@ if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
           // Vanish (cloud) — softer bounce, resets double-jump
           if (pl.type === 'vanish') {
             P.y = pl.y - P.h;
-            P.vy = Math.round(JUMP_VY * 0.75);
+P.vy = bounceVy(JUMP_VY * 0.75);
             // NEW: if the platform is wet, apply slipperiness
 // NEW: if the platform is wet, apply slipperiness and seed drift
 if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
@@ -1189,7 +1341,7 @@ if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
           // Moving rain cloud — soft bounce, no fade
           if (pl.type === 'cloudX') {
             P.y = pl.y - P.h;
-            P.vy = Math.round(JUMP_VY * 0.80);
+P.vy = bounceVy(JUMP_VY * 0.80);
             // NEW: if the platform is wet, apply slipperiness
 // NEW: if the platform is wet, apply slipperiness and seed drift
 if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
@@ -1224,7 +1376,7 @@ if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
 
           // Static & blue moving (generic) — respect wet
           P.y = pl.y - P.h;
-   P.vy = Math.round(JUMP_VY);
+P.vy = bounceVy(JUMP_VY);
    // NEW: if the platform is wet, apply slipperiness
 // NEW: if the platform is wet, apply slipperiness and seed drift
 if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
@@ -1269,6 +1421,8 @@ if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
       for (const pl of state.plats) pl.y += dy;
       for (const pa of state.particles) pa.y += dy;
       for (const d of state.drops) d.y += dy; // move rain with camera
+        for (const it of state.powerups)  it.y += dy;
+
       scoreEl.textContent = Math.round(state.score);
       if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03);
     }
@@ -1288,6 +1442,9 @@ if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
       p.vy += 1200*dt;
       return p.t < p.life;
     });
+// keep offscreen-above power-ups so they can scroll into view
+state.powerups = state.powerups.filter(it => it.y < H + 80);
+
 
 state.drops = state.drops.filter(d => {
   let hit = false;
@@ -1295,8 +1452,9 @@ state.drops = state.drops.filter(d => {
   const prevX = d.x;
 
   // Move with initial horizontal velocity and constant downward speed
-  d.x += d.vx * dt;
-  d.y += d.vy * dt;
+d.x += d.vx * dt * worldScale;
+d.y += d.vy * dt * worldScale;
+
 
   // Player hit: trigger once when the drop crosses the player's TOP edge
   if (!hit &&
@@ -1332,8 +1490,30 @@ state.drops = state.drops.filter(d => {
 });
 
     // Death
-    if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
+// if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
+if (state.spawnGrace <= 0 && P.y > H + 80) {
+  if (state.player.shield > 0) {
+    state.player.shield = 0;
+    // rescue: place on lowest platform and launch up
+    const base = getBottomPlatform();
+    if (base) {
+      P.x = clamp(base.x + (base.w - P.w)/2, WORLD_MARGIN, W - WORLD_MARGIN - P.w);
+      P.y = base.y - P.h - 0.01;
+      P.vx *= 0.2;
+      P.vy = bounceVy(SPRING_VY * 0.9);
+      addParticles(P.x+P.w/2, P.y+P.h, 28, 'spring');
+      sound.beep(820,.10,'triangle',.12);
+      setTimeout(()=>sound.beep(1200,.08,'sine',.10), 80);
+      updateBuffHUD();
+    }
+  } else {
+    gameOver();
+  }
+}
     updateSkyDecor(dt);
+    updatePowerups(dt);
+    updateBuffHUD();
+
 
   }
   // ===================== NEW BACKGROUND SYSTEM =====================
@@ -1987,6 +2167,124 @@ function rebuildHillsOnce(){
   // Make sure the bg canvas has the same transform
   bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
 }
+// === POWERUPS: update/draw ===
+function activatePowerup(type){
+  const P = state.player;
+  if (type === 'jetpack')  { P.jetpackT = DURATION.jetpack; sound.beep(1100,.12,'triangle',.12); }
+  if (type === 'boots')    { P.jumpBoostT = DURATION.boots; sound.beep(900,.10,'sine',.10); }
+  if (type === 'slow')     { P.slowT = DURATION.slow; sound.beep(600,.08,'square',.10); }
+  if (type === 'shield')   { P.shield = 1; sound.beep(500,.08,'sine',.10); setTimeout(()=>sound.beep(1000,.08,'sine',.10),80); }
+  updateBuffHUD();
+}
+
+// Simple AABB
+function aabb(ax,ay,aw,ah, bx,by,bw,bh){
+  return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
+}
+
+// Called from update()
+function updatePowerups(dt){
+  const P = state.player;
+  for (const it of state.powerups) { it.t += dt;
+    // Follow parent platform if we have one
+if (it.parent && it.parent.alive) {
+  it.x = it.parent.x + it.dx;
+  it.y = it.parent.y + it.dy;
+}
+
+   }
+
+  // collisions
+  let consumed = -1;
+  for (let i=0;i<state.powerups.length;i++){
+    const it = state.powerups[i];
+    if (aabb(P.x, P.y, P.w, P.h, it.x, it.y, it.w, it.h)){
+      activatePowerup(it.type);
+      addParticles(it.x + it.w/2, it.y + it.h/2, 16, 'spring');
+      consumed = i;
+      break;
+    }
+  }
+  if (consumed >= 0) state.powerups.splice(consumed, 1);
+}
+
+function drawPowerups(g){
+  for (const it of state.powerups){
+    const yBob = Math.sin(it.t*2 + it.bob) * 3;
+    g.save();
+    g.translate(it.x + it.w/2, it.y + it.h/2 + yBob);
+
+    // token base
+    g.globalAlpha = 0.95;
+    g.fillStyle = '#0f1c2d';
+    roundRect(g, -PU_W/2, -PU_H/2, PU_W, PU_H, 6); g.fill();
+    g.lineWidth = 1.5; g.strokeStyle = '#304b73'; g.stroke();
+
+    // icon
+    g.lineWidth = 2.0; g.lineCap = 'round'; g.lineJoin = 'round';
+    if (it.type === 'jetpack'){
+      g.strokeStyle = '#e5e7eb';
+      g.beginPath(); g.moveTo(-6,2); g.lineTo(6,2); g.stroke();
+      g.beginPath(); g.moveTo(-4,-6); g.lineTo(-4,2); g.moveTo(4,-6); g.lineTo(4,2); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.7)';
+      g.beginPath(); g.moveTo(-3,6); g.lineTo(-1,2); g.lineTo(1,6); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(3,6); g.lineTo(1,2); g.lineTo(-1,6); g.closePath(); g.fill();
+    } else if (it.type === 'boots'){
+      g.strokeStyle = '#5eead4';
+      g.beginPath(); g.moveTo(-6,3); g.lineTo(0,-5); g.lineTo(6,3); g.stroke();
+      g.beginPath(); g.moveTo(-6,6); g.lineTo(0,-2); g.lineTo(6,6); g.stroke();
+   } else if (it.type === 'shield') {
+  // Beveled kite shield icon (fills + outline + small highlight)
+  g.save();
+
+  // Outer silhouette
+  g.beginPath();
+  g.moveTo(0, -8);              // top
+  g.quadraticCurveTo(7, -6, 7, -1);
+  g.quadraticCurveTo(6,  5, 0,  8);   // bottom point
+  g.quadraticCurveTo(-6, 5, -7, -1);
+  g.quadraticCurveTo(-7,-6, 0, -8);
+  g.closePath();
+
+  // Fill gradient (light → mid blue)
+  const grad = g.createLinearGradient(0, -8, 0, 8);
+  grad.addColorStop(0, '#e9f3ff');
+  grad.addColorStop(1, '#7fb8ff');
+  g.fillStyle = grad;
+  g.fill();
+
+  // Outer border
+  g.lineWidth = 2;
+  g.strokeStyle = '#93c5fd';
+  g.stroke();
+
+  // Subtle central ridge highlight
+  g.beginPath();
+  g.moveTo(0, -4.5);
+  g.lineTo(0, 5.5);
+  g.strokeStyle = 'rgba(255,255,255,0.45)';
+  g.lineWidth = 1.1;
+  g.stroke();
+
+  // Top arc gloss
+  g.beginPath();
+  g.moveTo(-5.8, -4.8);
+  g.quadraticCurveTo(0, -7.6, 5.8, -4.8);
+  g.strokeStyle = 'rgba(255,255,255,0.75)';
+  g.lineWidth = 1.2;
+  g.stroke();
+
+  g.restore();
+}
+else if (it.type === 'slow'){
+      g.strokeStyle = '#fbbf24';
+      g.beginPath(); g.arc(0,0,7,0,Math.PI*2); g.moveTo(0,0); g.lineTo(0,-5); g.moveTo(0,0); g.lineTo(4,0); g.stroke();
+    }
+
+    g.restore();
+  }
+}
+
 
 
 
@@ -1999,6 +2297,8 @@ function rebuildHillsOnce(){
 
     // draw platforms
     for (const pl of state.plats) drawPlatform(pl);
+    drawPowerups(ctx);
+
 
     // draw rain (NEW: little streaks)
     for (const d of state.drops) {
@@ -2267,42 +2567,154 @@ if ((p.wetVis || 0) > 0.01) {
     ctx.closePath();
   }
 
-  function drawPlayer(P) {
-    const x = P.x, y = P.y, w = P.w, h = P.h;
-    const facing = (P.vx >= 0) ? 1 : -1;
+function drawPlayer(P) {
+  const facing = (P.vx >= 0) ? 1 : -1;
+  const cx = P.x + P.w/2, cy = P.y + P.h/2;
 
+  // motion pose
+  const speedRatio = Math.max(0, Math.min(1, Math.abs(P.vx)/MOVE_MAX));
+  const runFreq = 6 + 6*speedRatio;
+  const step  = Math.sin((P.animT||0) * runFreq);
+  const step2 = Math.sin((P.animT||0) * runFreq + Math.PI);
+  const tilt = Math.max(-1, Math.min(1, P.vx/MOVE_MAX)) * 0.22 + (P.vy < 0 ? -0.06 : 0.08);
 
+  // squash & stretch (from landings)
+  const k = Math.max(0, Math.min(1, (P.squashT||0) / 0.14));
+  const easeOut = k*k*(2 - k);
+  const sy = 1 - 0.25*easeOut;
+  const sx = 1 + 0.18*easeOut;
 
-    // Backpack
-    ctx.fillStyle = '#1f2937';
-    roundRect(ctx, x + (facing>0? 2 : w-12), y + 16, 10, 20, 4); ctx.fill();
-
-    // Body
-    roundRect(ctx, x, y, w, h, 10);
-    const g = ctx.createLinearGradient(x, y, x, y+h);
-    g.addColorStop(0, '#22d3ee'); g.addColorStop(1, '#0ea5e9');
-    ctx.fillStyle = g; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#155e75'; ctx.stroke();
-
-    // Belly shine
-    ctx.globalAlpha = .18;
-    ctx.fillStyle = '#fff';
-    roundRect(ctx, x+8, y+10, w-16, h-22, 10); ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // Eyes
-    ctx.fillStyle = '#0b0f14';
-    ctx.beginPath(); ctx.arc(x + w/2 + 8*facing, y + 18, 4, 0, Math.PI*2); ctx.fill();
-    // Mouth
-    ctx.beginPath(); ctx.arc(x + w/2 + 6*facing, y + 30, 8, .1*Math.PI, .9*Math.PI, false);
-    ctx.lineWidth = 2; ctx.strokeStyle='#0b0f14'; ctx.stroke();
-
-    // Ears/antenna
-    ctx.beginPath();
-    ctx.moveTo(x + (facing>0? w-6:6), y+8);
-    ctx.quadraticCurveTo(x + w/2, y-10, x + (facing>0? 6:w-6), y+8);
-    ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2; ctx.stroke();
+  // blink factor
+  let eyeOpen = 1;
+  if (P.blinkT > 0) {
+    const b = P.blinkT / 0.12;
+    const tri = 1 - Math.abs(b*2 - 1);
+    eyeOpen = Math.max(0.08, Math.min(1, 1 - tri*0.92));
   }
+
+  // --- NO ground shadow anymore ---
+
+  // body group
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(tilt);
+  ctx.scale(sx, sy);
+
+  const w = P.w, h = P.h;
+  const bx = -w*0.5, by = -h*0.5;
+
+  
+
+  // body capsule
+  roundRect(ctx, bx, by, w, h, 12);
+  const g = ctx.createLinearGradient(0, by, 0, by+h);
+  g.addColorStop(0.00, '#27d3ef');
+  g.addColorStop(0.55, '#16b5df');
+  g.addColorStop(1.00, '#0ea5e9');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = 2.2; ctx.strokeStyle = '#135f79'; ctx.stroke();
+
+  // chest sheen (kept)
+  ctx.globalAlpha = 0.16;
+  roundRect(ctx, bx+8, by+10, w-16, h-22, 10); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // --- REMOVED belt stripe (the “horizontal capsule” under lips) ---
+
+  // --- REMOVED arms (this was the little dark circle near the eye) ---
+
+  // legs/feet
+  const legAmp = 2 * speedRatio;
+  const footY = by + h - 6;
+  const footW = 12, footH = 6;
+  roundRect(ctx, -6 - footW, footY + step*legAmp, footW, footH, 3);
+  ctx.fillStyle = '#0c1220'; ctx.fill();
+  roundRect(ctx, 6, footY + step2*legAmp, footW, footH, 3);
+  ctx.fillStyle = '#0c1220'; ctx.fill();
+
+  if (P.jumpBoostT > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.65; ctx.fillStyle = '#34d399';
+    ctx.beginPath(); ctx.ellipse(-6 - footW/2, footY + step*legAmp + 2, 10, 3.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 6 + footW/2, footY + step2*legAmp + 2, 10, 3.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // face (eyes + mouth)
+  const headY = by + h*0.33;
+  const eyeCx = 2*facing;
+  const eyeCy = headY - 4;
+  const lookX = Math.max(-1, Math.min(1, P.vx/MOVE_MAX)) * 2.2;
+  const lookY = (P.vy < 0 ? -1.6 : 0.9);
+
+  function drawEye(px) {
+    ctx.save();
+    ctx.translate(px, eyeCy);
+    ctx.beginPath(); ctx.ellipse(0, 0, 6, 4, 0, 0, Math.PI*2); ctx.fillStyle = '#f2f7ff'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(lookX, lookY, 2.2, 2.2, 0, 0, Math.PI*2); ctx.fillStyle = '#0b0f14'; ctx.fill();
+    if (eyeOpen < 0.999) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.scale(1, eyeOpen);
+      ctx.fillStyle = '#0ea5e9';
+      ctx.fillRect(-7, -6, 14, 12);
+      ctx.restore();
+    }
+    // spec highlight
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(-1, -1.5, 0.9, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  drawEye(eyeCx - 7);
+  drawEye(eyeCx + 7);
+
+  // mouth
+  ctx.beginPath();
+  const mY = headY + 10;
+  const smile = 4;
+  ctx.moveTo(eyeCx - 6, mY);
+  ctx.quadraticCurveTo(eyeCx, mY + smile, eyeCx + 6, mY);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#0b0f14'; ctx.stroke();
+
+  // --- REMOVED antenna (the “unibrow”) ---
+
+  // jetpack flame (kept)
+  if (P.jetpackT > 0) {
+    ctx.save();
+    const flameY = by + h - 2;
+    const flick = 1 + Math.sin((P.animT||0)*20) * 0.12;
+    const flare = 16 * flick;
+    const gx = ctx.createLinearGradient(0, flameY, 0, flameY + flare);
+    gx.addColorStop(0, 'rgba(255,255,255,0.95)');
+    gx.addColorStop(0.4, 'rgba(125,249,255,0.85)');
+    gx.addColorStop(1, 'rgba(14,165,233,0)');
+    ctx.fillStyle = gx;
+    for (const dx of [-8, 8]) {
+      ctx.beginPath();
+      ctx.moveTo(dx, flameY);
+      ctx.quadraticCurveTo(dx + (facing>0?2:-2), flameY + flare*0.35, dx, flameY + flare);
+      ctx.quadraticCurveTo(dx - (facing>0?2:-2), flameY + flare*0.35, dx, flameY);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // shield ring (kept)
+  if (P.shield > 0){
+    const rx = w*0.65, ry = h*0.65;
+    ctx.save();
+    ctx.globalAlpha = 0.6; ctx.strokeStyle = 'rgba(10,16,26,0.9)'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore(); // end body
+}
+
+
 
   // ===== Toast helper =====
   let toastTimer = 0, toastText = '', toastAlpha = 0;
@@ -2312,23 +2724,40 @@ if ((p.wetVis || 0) > 0.01) {
     toastTimer = setTimeout(()=>toastAlpha=0, 1400);
     drawToast();
   }
-  function drawToast() {
-    if (!toastAlpha) return;
-    ctx.save();
-    ctx.globalAlpha = toastAlpha * .9;
-    const tw = Math.min(420, ctx.measureText ? (ctx.measureText(toastText).width + 40) : 220);
-    const x = (W - tw)/2, y = 18;
-    roundRect(ctx, x, y, tw, 40, 10);
-    ctx.fillStyle = '#0f172a'; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = '#233048'; ctx.stroke();
-    ctx.globalAlpha = toastAlpha;
-    ctx.fillStyle = '#e6edf3';
-    ctx.font = '600 16px system-ui, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(toastText, W/2, y+20);
-    ctx.restore();
-    requestAnimationFrame(drawToast);
-  }
+function drawToast() {
+  if (!toastAlpha) return;
+  ctx.save();
+  ctx.globalAlpha = toastAlpha * .9;
+
+  // Use the same font for measuring and drawing
+  const font = '600 16px system-ui, sans-serif';
+  ctx.font = font;
+
+  const sidePad = 20;                      // left/right padding
+  const maxW = Math.min(W - 24, 720);      // wider cap (up to near-full width)
+  const textW = ctx.measureText(toastText).width;
+  const tw = Math.min(maxW, textW + sidePad * 2); // widget width based on text
+
+  const x = (W - tw) / 2;
+
+  // keep your lowered Y logic from earlier reply:
+  const hudH = (document.getElementById('hud')?.clientHeight || 44);
+  const y = hudH + 16;
+
+  roundRect(ctx, x, y, tw, 40, 10);
+  ctx.fillStyle = '#0f172a'; ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = '#233048'; ctx.stroke();
+
+  ctx.globalAlpha = toastAlpha;
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = font;                          // ensure same font when drawing
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(toastText, W/2, y + 20);
+
+  ctx.restore();
+  requestAnimationFrame(drawToast);
+}
+
 
   // Start by clicking/tapping canvas or pressing Space
   canvas.addEventListener('pointerdown', () => { if (!running) start(); }, { passive:true });
