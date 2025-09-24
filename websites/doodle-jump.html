@@ -318,17 +318,25 @@ function closeHelp(){ helpPanel.style.display = 'none'; }
     if (['ArrowLeft','KeyA','ArrowRight','KeyD','Space'].includes(e.code)) e.preventDefault();
     keys.add(e.code);
 
-    // Double-jump trigger (Space in mid-air)
-    if (e.code === 'Space' && running && !paused) {
-      const P = state.player;
-      if (P.canDouble) {
-        // Apply shorter upward boost
-        P.vy = DOUBLE_JUMP_VY;
-        P.canDouble = false;
-        sound.beep(780, .07, 'triangle', .07);
-        addParticles(P.x + P.w/2, P.y + P.h, 10, 'spring');
-      }
-    }
+// Double-jump trigger (Space in mid-air)
+if (e.code === 'Space' && running && !paused) {
+  const P = state.player;
+
+  // NEW: don't allow double-jump while jetpack is active
+  if (P.jetpackT > 0) {
+    // Ignore Space so we don't consume canDouble during jetpack
+    return;
+  }
+
+  if (P.canDouble) {
+    // Apply shorter upward boost
+    P.vy = DOUBLE_JUMP_VY;
+    P.canDouble = false;
+    sound.beep(780, .07, 'triangle', .07);
+    addParticles(P.x + P.w/2, P.y + P.h, 10, 'spring');
+  }
+}
+
   });
 window.addEventListener('keyup', (e) => {
   // keep existing behavior
@@ -506,6 +514,8 @@ window.addEventListener('keyup', (e) => {
   // === POWERUPS: constants & helpers ===
 const POWERUP_SPAWN_CHANCE = 0.2;         // 14% chance to spawn on a new platform row
 const MAX_POWERUPS_ON_SCREEN = 4;
+// === POWERUPS: tuning ===
+const FORCE_POWERUP_AFTER_ROWS = 6;  // if no pickup in 6 new rows, force one
 const POWERUP_TYPES = ['jetpack','boots','shield','slow']; // simple, weighted in picker
 const DURATION = { jetpack: 2.8, boots: 8.0, slow: 5.5 };  // shield is one-shot
 const JUMP_BOOST_MULT = 1.35;
@@ -555,6 +565,132 @@ function bounceVy(baseVy){
 
   const STORM_CLOUD_WEIGHT_MULT = 1.5; // (unchanged)
   const STORM_RAIN_RATE_MULT = 1.5;    // (unchanged)
+
+  // === Space phase (after storm) ===
+const STORM_TOTAL_DURATION = 24; // seconds of storm before entering space
+
+let space = {
+  active: false,
+  planets: [],
+shooters: [],   // shooting stars
+  ufos: [],       // saucers
+  shooterT: 0,    // spawn timers
+  ufoT: 0};
+
+function beginSpace(){
+  space.active = true;
+  storm.active = false;
+  state.drops = []; // no more rain
+  // remove cloud platforms immediately
+  buildSpaceBackdrop();
+  toast('🪐 You reached space!');
+}
+
+function buildSpaceBackdrop(){
+  // generate planets once (start above screen and drop in)
+  const pal = [
+    ['#f4b27a','#e58d5b','#c96f3e'], // orange
+    ['#a7b2ff','#7a86f2','#5b66c9'], // blue
+    ['#f1f1f1','#cdd3d7','#9aa3a7'], // gray
+    ['#f7e07a','#e7c64f','#cbab2f']  // yellow
+  ];
+
+  space.planets = Array.from({length: 6}, () => {
+    const r = rand(40, 120);
+    const targetY = rand(60, H - 140);                 // final resting Y
+    const y0 = -r - rand(40, 160);                     // start above view
+    return {
+      x: rand(r, W - r),
+      r,
+      pal: pal[Math.floor(rand(0, pal.length))],
+      ring: Math.random() < 0.30,
+
+      // drop-in animation
+      y: y0,                 // current y (animated)
+      y0,                    // start y (above screen)
+      targetY,               // final y
+      t: 0,                  // elapsed time
+      delay: rand(0.0, 2.4), // stagger before each begins
+      dur: rand(4.5, 8.0),   // drop duration
+      a: 0                   // alpha fade-in (0→1)
+    };
+  });
+
+  // (optional) little comet reset
+}
+// ADD — Shooting star & UFO spawners
+function spawnShootingStar(){
+  const dirRight = Math.random() < 0.5;
+  const x = dirRight ? rand(-80, -20) : rand(W + 20, W + 80);
+  const y = rand(30, H * 0.45);
+  const speed = rand(380, 540);
+  const vx = dirRight ? speed : -speed;
+  const vy = rand(140, 220);
+  space.shooters.push({
+    x, y, vx, vy,
+    life: rand(1.2, 2.2),
+    age: 0,
+    len: rand(60, 110),            // tail length
+    a0: rand(0.65, 0.95)           // base brightness
+  });
+}
+
+function spawnUFO(){
+  const dirRight = Math.random() < 0.5;
+  const x = dirRight ? -60 : W + 60;
+  const y = rand(H*0.12, H*0.42);
+  const speed = rand(60, 120);
+  space.ufos.push({
+    x, y,
+    vx: dirRight ? speed : -speed,
+    t: 0,
+    phase: Math.random() * Math.PI * 2,
+    scale: rand(0.9, 1.25),
+    alive: true
+  });
+}
+
+function updateSpace(dt){
+  if (!space.active) return;
+
+  for (const p of space.planets){
+    p.t += dt;
+    // progress after per-planet delay
+    const k = clamp((p.t - p.delay) / p.dur, 0, 1);
+    // smooth ease-out (cubic): 0→1
+    const e = 1 - Math.pow(1 - k, 3);
+
+    // animate Y and alpha
+    p.y = p.y0 + (p.targetY - p.y0) * e;
+    p.a = 0.15 + 0.85 * e; // faint at start, fully visible at end
+  }
+    // ADD — spawn rates (feel free to tweak)
+  space.shooterT += dt;
+  space.ufoT += dt;
+  if (space.shooterT > rand(1.8, 3.6)) { spawnShootingStar(); space.shooterT = 0; }
+  if (space.ufoT > rand(6.0, 12.0))    { spawnUFO();         space.ufoT = 0; }
+
+  // ADD — update shooting stars
+  space.shooters = space.shooters.filter(s => {
+    s.age += dt;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    const off = (s.x < -120 || s.x > W + 120 || s.y > H + 80);
+    return s.age < s.life && !off;
+  });
+
+  // ADD — update UFOs (gentle bob + cull)
+  space.ufos = space.ufos.filter(u => {
+    u.t += dt;
+    u.x += u.vx * dt;
+    u.y += Math.sin(u.t * 2 + u.phase) * 0.6; // bob
+    return (u.vx > 0 ? u.x < W + 80 : u.x > -80);
+  });
+
+}
+
+
+
 
 
   // --- Moving platform difficulty tuning ---
@@ -638,7 +774,9 @@ function isTypeUnlocked(type, score){
     nextFlashIn:0,
     bolts:[],
     afterglowT:0,      // time remaining of soft brightness
-    afterglowMax:0     // length of the current afterglow segment
+    afterglowMax:0,     // length of the current afterglow segment
+      pendingSpace:false    // NEW: wait for max darkness to jump to space
+
   };
 
   let best = +localStorage.getItem('doodle_best') || 0;
@@ -649,6 +787,8 @@ function isTypeUnlocked(type, score){
       score: 0,
       cameraY: 0,
         powerups: [],   // === POWERUPS: world pickups ===
+          enemies: [],       // NEW: alien enemies
+
 player: {
   x: W*0.5 - PLAYER_W*0.5,
   y: H - 120,
@@ -664,9 +804,6 @@ player: {
   shield: 0,          // 0/1 free rescue
 
   // NEW (slippery physics)
-  groundWet: 0,   // last wetness 0..1
-  slipT: 0,       // seconds of slipperiness left
-  driftVX: 0,     // passive drift target while slippery
   lastFacing: 1,   // +1 right, -1 left
   animT: 0,          // running cycle time
   blinkAcc: 0,       // timer to schedule next blink
@@ -693,6 +830,17 @@ player: {
     storm.bolts = [];
     storm.afterglowT = 0;
     storm.afterglowMax = 0;
+    storm.pendingSpace = false;   // NEW
+
+    // ADD: ensure we return to the hills/day cycle (not space) on a new run
+space.active = false;
+space.planets.length = 0;  // clear any generated planets
+// ADD: clear flyers
+space.shooters.length = 0;
+space.ufos.length = 0;
+space.shooterT = 0;
+space.ufoT = 0;
+
 
 
 
@@ -788,28 +936,48 @@ player: {
   // ===== Helpers =====
   const clamp = (v,min,max)=> Math.max(min, Math.min(max, v));
   function rand(a,b){ return a + Math.random()*(b-a); }
-  function pickType() {
-    const s = Math.round(state ? state.score : 0);
-        // copy & (optionally) reweight during storm
-    const candidates = PLATFORM_TYPES
-      .filter(o => isTypeUnlocked(o.k, s))
-      .map(o => ({...o}));
+  function applySlipperyImpulse(P, pl) {
+  // Only solid platforms get slippery impulse (rain clouds/vanish do nothing)
+  if (pl.type === 'vanish' || pl.type === 'cloudX') return;
 
-    // In storm: prefer moving rain clouds; tone down statics a bit
-    if (storm.active) {
-      for (const c of candidates) {
-        if (c.k === 'cloudX') c.weight *= STORM_CLOUD_WEIGHT_MULT;
-        if (c.k === 'static') c.weight *= 0.6;
-        if (c.k === 'moveX')  c.weight *= 0.8;
-      }
+  const wet = pl.wetVis || 0;            // 0..1 visual wetness at impact
+  if (wet <= 0.05) return;
+
+  // Carry some platform motion + add one-time shove proportional to wetness
+  const carry = (pl.vx || 0) * 0.25 * wet;  // inherit a bit of moving platform
+  const baseImpulse = 220;                  // px/s at full wetness (tune)
+  const dir =
+    (Math.abs(P.vx) > 6 ? Math.sign(P.vx)
+     : (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx)
+     : (P.lastFacing || 1)));
+
+  P.vx += dir * baseImpulse * wet + carry;
+}
+
+function pickType() {
+  const s = Math.round(state ? state.score : 0);
+  // copy & (optionally) reweight during storm
+  let candidates = PLATFORM_TYPES              // <-- was const
+    .filter(o => isTypeUnlocked(o.k, s))
+    .map(o => ({...o}));
+
+  if (storm.active) {
+    for (const c of candidates) {
+      if (c.k === 'cloudX') c.weight *= STORM_CLOUD_WEIGHT_MULT;
+      if (c.k === 'static') c.weight *= 0.6;
+      if (c.k === 'moveX')  c.weight *= 0.8;
     }
-
-    const total = candidates.reduce((sum,o)=>sum+o.weight, 0) || 1;
-
-    let r = Math.random()*total;
-    for (const o of candidates) { if ((r -= o.weight) <= 0) return o.k; }
-    return 'static';
   }
+  if (space.active) {
+    candidates = candidates.filter(c => c.k !== 'cloudX' && c.k !== 'vanish');
+  }
+
+  const total = candidates.reduce((sum,o)=>sum+o.weight, 0) || 1;
+  let r = Math.random()*total;
+  for (const o of candidates) { if ((r -= o.weight) <= 0) return o.k; }
+  return 'static';
+}
+
 
   function makePlatform(x, y, type='static', wide=false) {
     const w = wide ? PLATFORM_W*1.6 : PLATFORM_W;
@@ -881,31 +1049,54 @@ function spawnIfNeeded(initial=false) {
   const targetTop = -H * LOOKAHEAD;
 
   while (minY > targetTop) {
-    const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
-    const y = minY - gap;
+  const gap = rand(SAFE_GAP_MIN, SAFE_GAP_MAX);
+  const y = minY - gap;
 
-    let type = (initial && Math.random() < 0.5) ? 'static' : pickType();
-    if (state.forceType) { type = state.forceType; state.forceType = null; }
+  let type = (initial && Math.random() < 0.5) ? 'static' : pickType();
+  if (state.forceType) { type = state.forceType; state.forceType = null; }
 
-    const main = placePlatform(y, type);
-    if (main) state.plats.push(main);
+  const main = placePlatform(y, type);
+  if (main) state.plats.push(main);
 
-    // GUARANTEED PATH: always ensure at least one static platform at this row
-    let safety = null; // <-- declare here
-    if (!main || main.type !== 'static') {
-      safety = placePlatform(y + rand(-8, 8), 'static');
-      if (safety) state.plats.push(safety);
-    } else if (Math.random() < SAFETY_CHANCE) {
-      const buddy = placePlatform(y + rand(-8, 8), 'static');
-      if (buddy) state.plats.push(buddy);
-    }
-
-    // Powerups
-    if (main)   maybeSpawnPowerupAtPlatform(main);
-    if (safety) maybeSpawnPowerupAtPlatform(safety);
-
-    minY = y;
+  // GUARANTEED PATH: always ensure at least one static platform at this row
+  let safety = null;
+  if (!main || main.type !== 'static') {
+    safety = placePlatform(y + rand(-8, 8), 'static');
+    if (safety) state.plats.push(safety);
+  } else if (Math.random() < SAFETY_CHANCE) {
+    const buddy = placePlatform(y + rand(-8, 8), 'static');
+    if (buddy) state.plats.push(buddy);
   }
+
+  // ---- POWER-UPS: spawn with drought protection ----
+  let spawnedOnRow = false;
+  if (main)   spawnedOnRow = maybeSpawnPowerupAtPlatform(main) || spawnedOnRow;
+  if (safety) spawnedOnRow = maybeSpawnPowerupAtPlatform(safety) || spawnedOnRow;
+
+  if (!spawnedOnRow) {
+    state.puDryRows = (state.puDryRows || 0) + 1;
+    if (state.puDryRows >= FORCE_POWERUP_AFTER_ROWS) {
+      // Force a spawn on a non-vanish platform if possible
+      const target = (main && main.type !== 'vanish') ? main : safety;
+      if (target) {
+        const ok = maybeSpawnPowerupAtPlatform(target, true);
+        if (ok) state.puDryRows = 0;
+      }
+    }
+  } else {
+    state.puDryRows = 0;
+  }
+  // -----------------------------------------------
+  // After power-up drought logic (keep your existing code)
+if (space.active) {
+  if (main)   maybeSpawnAlienAtPlatform(main);
+  if (safety) maybeSpawnAlienAtPlatform(safety);
+}
+
+
+  minY = y;
+}
+
 }
 
 
@@ -921,22 +1112,138 @@ function spawnPowerup(x, y, type, parent=null){
 }
 
 
-// Toss a pickup above a platform occasionally (skip clouds)
-function maybeSpawnPowerupAtPlatform(pl){
-  if (!pl || !pl.alive) return;
-  if (pl.type === 'vanish') return;
-// NEW: only count items within ~1.5 screens above or currently below
-const nearCap = state.powerups.filter(it => it.y < H + 120 && it.y > -120).length;
-if (nearCap >= MAX_POWERUPS_ON_SCREEN) return;
-  if (Math.random() > POWERUP_SPAWN_CHANCE) return;
+function maybeSpawnPowerupAtPlatform(pl, force=false){
+  if (!pl || !pl.alive) return false;
+  if (pl.type === 'vanish') return false;
 
-const t = pickPowerupType(Math.round(state.score||0));
-const GAP_ABOVE = 6; // visual breathing room above the plank
-const px = pl.x + pl.w * 0.5 - PU_W * 0.5;
-const py = pl.y - PU_H - GAP_ABOVE;  // <— top of token above platform
-spawnPowerup(px, py, t, pl);
+  // Count only on-screen (or nearly on-screen) pickups to avoid false caps
+  const onscreen = state.powerups.filter(it => it.y > -20 && it.y < H + 60).length;
+  if (!force && onscreen >= MAX_POWERUPS_ON_SCREEN) return false;
 
+  if (!force && Math.random() > POWERUP_SPAWN_CHANCE) return false;
+
+  const t = pickPowerupType(Math.round(state.score||0));
+  const GAP_ABOVE = 6;
+  const px = pl.x + pl.w * 0.5 - PU_W * 0.5;
+  const py = pl.y - PU_H - GAP_ABOVE;
+  spawnPowerup(px, py, t, pl);
+  return true;
 }
+
+// === ALIENS ===
+function maybeSpawnAlienAtPlatform(pl){
+  if (!space.active) return false;
+  if (!pl || !pl.alive) return false;
+  if (pl.type === 'vanish' || pl.type === 'cloudX') return false;
+  if (Math.random() > 0.22) return false; // 22% chance on a spawn row
+
+  const w = 28, h = 22;
+  const x = clamp(pl.x + rand(6, pl.w - w - 6), WORLD_MARGIN, W - WORLD_MARGIN - w);
+  const y = pl.y - h - 2;
+  state.enemies.push({
+    x, y, w, h,
+    vx: (Math.random()<0.5?-1:1) * rand(40, 80),
+    base: pl,
+    type: (Math.random()<0.5 ? 'stun' : 'lethal'),
+    alive: true,
+    t: 0
+  });
+  return true;
+}
+
+function updateEnemies(dt){
+  const P = state.player;
+
+  state.enemies = state.enemies.filter(e => e.alive && e.y < H + 80);
+  for (const e of state.enemies){
+    e.t += dt;
+
+    if (e.base && e.base.alive){
+      // patrol on platform
+      e.y = e.base.y - e.h - 2;
+      e.x += e.vx * dt;
+      const L = e.base.x + 4;
+      const R = e.base.x + e.base.w - e.w - 4;
+      if (e.x < L) { e.x = L; e.vx = Math.abs(e.vx); }
+      if (e.x > R) { e.x = R; e.vx = -Math.abs(e.vx); }
+    } else {
+      // base gone → fall
+      e.vy = (e.vy||0) + GRAVITY*dt;
+      e.y += e.vy*dt;
+    }
+
+    // player collision
+    const prevBottom = P.y + P.h - P.vy*dt;
+    const stomping = (P.vy > 0) && (prevBottom <= e.y) && (P.y + P.h >= e.y);
+
+    if (aabb(P.x,P.y,P.w,P.h, e.x,e.y,e.w,e.h)){
+      if (stomping){
+        // stomp: bounce & kill alien
+        P.y = e.y - P.h;
+        P.vy = bounceVy(JUMP_VY * 0.9);
+        P.canDouble = true;
+        e.alive = false;
+        addParticles(e.x+e.w/2, e.y+e.h/2, 26, 'breakExplode');
+        sound.beep(980,.06,'triangle',.1);
+      } else {
+        // hit from side/front
+        if (P.shield > 0) {
+          P.shield = 0;
+          e.alive = false;
+          addParticles(e.x+e.w/2, e.y+e.h/2, 18, 'breakExplode');
+          sound.beep(400,.08,'sawtooth',.12);
+          updateBuffHUD();
+        } else if (e.type === 'lethal') {
+          gameOver();
+          return;
+        } else {
+          // stun + knockback
+          P.stunT = 0.9;
+          const kb = 360;
+          P.vx += (P.x + P.w/2 < e.x + e.w/2 ? -kb : kb);
+          P.vy = -420;
+          sound.beep(260,.08,'square',.12);
+        }
+      }
+    }
+  }
+}
+
+function drawEnemies(g){
+  for (const e of state.enemies){
+    g.save();
+    g.translate(e.x + e.w/2, e.y + e.h/2);
+
+    // body
+    roundRect(g, -e.w/2, -e.h/2, e.w, e.h, 6);
+    g.fillStyle = (e.type === 'lethal') ? '#4c1d1d' : '#064e3b';
+    g.fill();
+    g.lineWidth = 2;
+    g.strokeStyle = (e.type === 'lethal') ? '#dc2626' : '#0f766e';
+    g.stroke();
+
+    // eye
+    g.beginPath(); g.ellipse(0, -3, 6, 4, 0, 0, Math.PI*2);
+    g.fillStyle = '#eef5ff'; g.fill();
+    g.beginPath(); g.arc(1.5, -3, 1.6, 0, Math.PI*2);
+    g.fillStyle = '#0b0f14'; g.fill();
+
+    // antennae
+    g.beginPath();
+    g.moveTo(-6,-8); g.lineTo(-10,-14);
+    g.moveTo( 6,-8); g.lineTo( 10,-14);
+    g.strokeStyle = g.strokeStyle; g.lineWidth = 2; g.stroke();
+
+    // feet
+    g.fillStyle = 'rgba(0,0,0,.55)';
+    roundRect(g, -e.w/2,  e.h/2 - 4, 8, 4, 2); g.fill();
+    roundRect(g,  e.w/2 - 8, e.h/2 - 4, 8, 4, 2); g.fill();
+
+    g.restore();
+  }
+}
+
+
 
 
   function addParticles(x,y,count=10, tone='bounce'){
@@ -1017,505 +1324,376 @@ function handleUnlocks(){
   }
   requestAnimationFrame(loop);
 
-  function update(dt) {
-    const P = state.player;
-    // --- animation clocks (NEW) ---
-P.animT = (P.animT || 0) + dt * (1 + Math.min(1, Math.abs(P.vx)/MOVE_MAX));
+function update(dt) {
+  const P = state.player;
 
-// landing squash decays
-if (P.squashT > 0) P.squashT = Math.max(0, P.squashT - dt);
-// reset; bounceVy() will set this true during collision phase
-P.justBounced = false;
+  // --- animation clocks (NEW) ---
+  P.animT = (P.animT || 0) + dt * (1 + Math.min(1, Math.abs(P.vx)/MOVE_MAX));
 
-// blink scheduling
-P.blinkAcc = (P.blinkAcc || 0) + dt;
-if (P.blinkT > 0) {
-  P.blinkT = Math.max(0, P.blinkT - dt);
-} else if (P.blinkAcc > (P.blinkNext || 2.4)) {
-  P.blinkAcc = 0;
-  P.blinkNext = rand(2.2, 4.6); // next blink in 2.2–4.6s
-  P.blinkT = 0.12;              // quick close→open
+  // landing squash decays
+  if (P.squashT > 0) P.squashT = Math.max(0, P.squashT - dt);
+  // reset; bounceVy() will set this true during collision phase
+  P.justBounced = false;
+
+  // blink scheduling
+  P.blinkAcc = (P.blinkAcc || 0) + dt;
+  if (P.blinkT > 0) {
+    P.blinkT = Math.max(0, P.blinkT - dt);
+  } else if (P.blinkAcc > (P.blinkNext || 2.4)) {
+    P.blinkAcc = 0;
+    P.blinkNext = rand(2.2, 4.6); // next blink in 2.2–4.6s
+    P.blinkT = 0.12;              // quick close→open
+  }
+
+  // === POWERUPS: effect ticking & timescale ===
+  // Slow-mo should not affect the player; only the world.
+  const worldScale = (P.slowT > 0) ? 0.6 : 1;
+
+  if (P.jetpackT > 0)  P.jetpackT = Math.max(0, P.jetpackT - dt);
+  if (P.jumpBoostT > 0) P.jumpBoostT = Math.max(0, P.jumpBoostT - dt);
+  if (P.slowT > 0)     P.slowT = Math.max(0, P.slowT - dt);
+  updateBuffHUD();
+
+  // Trigger storm once the moon has fully completed its path
+{
+  const s = Math.round(state.score || 0);
+  const tMraw     = clamp((s - MOON_START_OFFSET)  / MOON_PATH_SPAN,   0, 1);
+  const tStormRaw = clamp((s - STORM_START_OFFSET) / STORM_PATH_SPAN,  0, 1);
+
+  if (!storm.active && !space.active && tMraw >= 1) beginStorm();
+
+if (storm.active) {
+  updateStorm(dt);
+
+  // 1) When storm has traveled its full span (distance-based), arm the handoff…
+  if (!space.active && !storm.pendingSpace && tStormRaw >= 1) {
+    storm.pendingSpace = true;
+  }
+
+  // (Optional fallback) If you also want a minimum *time* in storm:
+  // if (!space.active && !storm.pendingSpace && storm.elapsed >= STORM_TOTAL_DURATION) {
+  //   storm.pendingSpace = true;
+  // }
+
+  // 2) …but only trigger the transition at maximum pitch black
+  if (storm.pendingSpace && isStormMaxDark()) {
+    beginSpace();
+    storm.pendingSpace = false;
+  }
 }
 
-    // === POWERUPS: effect ticking & timescale ===
-// Slow-mo should not affect the player; only the world.
-const worldScale = (P.slowT > 0) ? 0.6 : 1;
-
-if (P.jetpackT > 0)  P.jetpackT = Math.max(0, P.jetpackT - dt);
-if (P.jumpBoostT > 0) P.jumpBoostT = Math.max(0, P.jumpBoostT - dt);
-if (P.slowT > 0)     P.slowT = Math.max(0, P.slowT - dt);
-updateBuffHUD();
-
-
-
-        // Trigger storm once the moon has fully completed its path
-    {
-      const s = Math.round(state.score || 0);
-      const tMraw = clamp((s - MOON_START_OFFSET) / MOON_PATH_SPAN, 0, 1);
-      if (!storm.active && tMraw >= 1) beginStorm();
-      if (storm.active) updateStorm(dt);
-    }
-
-
-    // Horizontal input
-    const left  = keys.has('ArrowLeft') || keys.has('KeyA') || touchLeft;
-    const right = keys.has('ArrowRight') || keys.has('KeyD') || touchRight;
-
-const moveAcc = MOVE_ACC;          // slow-mo reduces horizontal accel
-
-// Dynamic friction: now can truly be 0 when slip=1
-let fric = FRICTION;
-if (state.player.slipT > 0) {
-  const slip = clamp(state.player.groundWet || 0, 0, 1);
-  const reduction = 1 - slip;        // you set this so 1..0 (0 = no friction)
-  fric = FRICTION * reduction;
-
-  // decay slipperiness (duration scales with wetness a bit)
-  const base = 0.8 + 0.6 * slip;     // ~0.8–1.4s
-  state.player.slipT = Math.max(0, state.player.slipT - dt / base);
-} else {
-  // when no longer slippery, kill drift target
-  if (state.player.driftVX !== 0) state.player.driftVX = 0;
 }
 
+if (space.active) updateSpace(dt);
 
 
-    let ax = 0;
+    if (space.active && state.drops.length) state.drops = [];
+
+
+  // ====== STUN handling (NEW) ======
+  // Tick down stun timer; while stunned the player cannot accelerate
+  P.stunT = Math.max(0, (P.stunT || 0) - dt);
+
+  // Horizontal input
+  const left  = keys.has('ArrowLeft') || keys.has('KeyA') || touchLeft;
+  const right = keys.has('ArrowRight') || keys.has('KeyD') || touchRight;
+
+  const moveAcc = MOVE_ACC;
+  const fric = FRICTION;   // base friction; stun changes how it's applied
+
+  let ax = 0;
+  if (P.stunT <= 0) {           // no steering while stunned
     if (left)  ax -= moveAcc;
     if (right) ax += moveAcc;
-    P.vx += ax * dt;
-    // NEW: passive drift if slippery and no input
-const inputActive = left || right;
-if (!inputActive && state.player.slipT > 0) {
-  const target = P.driftVX || (80 * (state.player.lastFacing || 1)); // fallback
-  // ease toward target so it ramps smoothly; stronger when friction is near 0
-  const ease = 2.5 + (fric < 0.01 ? 2.0 : 0.0); // faster converge when super slick
-  P.vx += (target - P.vx) * Math.min(1, dt * ease);
+  }
+  P.vx += ax * dt;
 
-  // ensure a small baseline drift so "always moving a little" is guaranteed
-  const minAbs = 40; // px/s
-  if (Math.abs(P.vx) < minAbs) P.vx = Math.sign(target || 1) * minAbs;
-}
+  // NEW: passive drift if slippery and no input
+  const inputActive = left || right;
 
+  // Friction/air drag
+  // While stunned, reduce effective friction so you slide a bit more
+  P.vx *= (1 - (P.stunT > 0 ? fric * 0.5 : fric));
 
-    // Friction/air drag
-P.vx *= (1 - fric);
+  // Clamp speed
+  P.vx = clamp(P.vx, -MOVE_MAX, MOVE_MAX);
 
-// Optional: gentle clean-up when slipperiness just ended (trims lingering glide)
-if (state.player.slipT <= 0 && Math.abs(P.vx) > 0) {
-  P.vx *= (1 - Math.min(1, dt * 2.0)); // quick settle
-}
+  // Track facing for drift defaults
+  if (P.vx !== 0) state.player.lastFacing = (P.vx >= 0 ? 1 : -1);
 
-// Clamp speed
-P.vx = clamp(P.vx, -MOVE_MAX, MOVE_MAX);
+  // Integrate
+  const prevY = P.y;
+  P.x += P.vx * dt;
+  const G = GRAVITY;                 // slow-mo does not change player gravity
+  P.vy += G * dt;
 
-// Track facing for drift defaults
-if (P.vx !== 0) state.player.lastFacing = (P.vx >= 0 ? 1 : -1);
+  // === POWERUPS: jetpack thrust ===
+  if (P.jetpackT > 0) {
+    P.vy += JETPACK_ACCEL * dt;
+    if (Math.random() < 0.5) addParticles(P.x + P.w/2, P.y + P.h, 3, 'spring');
+  }
 
+  P.y += P.vy * dt;
 
-    // Integrate
-    const prevY = P.y;
-    P.x += P.vx * dt;
-const G = GRAVITY;                 // slow-mo reduces gravity pull
-P.vy += G * dt;
-    // === POWERUPS: jetpack thrust ===
-if (P.jetpackT > 0) {
-  P.vy += JETPACK_ACCEL * dt;                  // same accel as dev jetpack
-  if (Math.random() < 0.5) addParticles(P.x + P.w/2, P.y + P.h, 3, 'spring');
-}
+  // Wrap around horizontally
+  if (P.x + P.w/2 < 0) P.x = W - P.w/2;
+  if (P.x + P.w/2 > W) P.x = -P.w/2;
 
+  // Platform updates
+  for (const pl of state.plats) {
+    if (!pl.alive) continue;
 
-    P.y += P.vy * dt;
+    // CHANGED: move motion logic shared by moveX, cloudX, moveBreakX, moveSpringX
+    if (pl.type === 'moveX' || pl.type === 'cloudX' || pl.type === 'moveBreakX' || pl.type === 'moveSpringX') {
+      const base = pl.baseSpeed || Math.abs(pl.vx) || 160;
+      const v = base * speedMult() * worldScale;      // slow-mo impacts movers too
+      pl.vx = pl.dir * v;           // track horizontal velocity
+      pl.x += pl.vx * dt;
 
-    // Wrap around horizontally
-    if (P.x + P.w/2 < 0) P.x = W - P.w/2;
-    if (P.x + P.w/2 > W) P.x = -P.w/2;
+      if (pl.x < WORLD_MARGIN) {
+        pl.x = WORLD_MARGIN;
+        pl.dir = 1;
+        pl.vx = pl.dir * v;
+      }
+      if (pl.x + pl.w > W - WORLD_MARGIN) {
+        pl.x = W - WORLD_MARGIN - pl.w;
+        pl.dir = -1;
+        pl.vx = pl.dir * v;
+      }
+    }
 
-    // Platform updates
+    if ((pl.type === 'break' || pl.type === 'moveBreakX') && pl.crackShakeT > 0) {
+      pl.crackShakeT = Math.max(0, pl.crackShakeT - dt);
+    }
+
+    if ((pl.type === 'spring' || pl.type === 'moveSpringX') && pl.springStretch > 0) {
+      pl.springStretch = Math.max(0, pl.springStretch - dt*4);
+    }
+
+    // NEW: wet accumulation/drain + smoothing (non-cloud platforms visually “fill up”) 
+    pl.wetFill = Math.max(0, (pl.wetFill || 0) - dt * 0.20);     // drains in ~5s
+    const ease1 = Math.min(1, dt * 5.0);                          // ~0.2s time constant
+    pl.wetVis  = (pl.wetVis  || 0) + ((pl.wetFill || 0) - (pl.wetVis || 0)) * ease1;
+
+    // coverage spreads across width as wetness increases
+    const targetCover = 0.15 + 0.85 * (pl.wetFill || 0);
+    const ease2 = Math.min(1, dt * 2.5);
+    pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
+
+    // Rain emission for moving clouds
+    if (pl.type === 'cloudX') {
+      const rate = pl.rainRate * (storm.active ? STORM_RAIN_RATE_MULT : 1);
+      pl.rainAcc += dt * rate * worldScale;
+      const maxDrops = 600; // soft cap to avoid overload
+      while (pl.rainAcc >= 1 && state.drops.length < maxDrops) {
+        pl.rainAcc -= 1;
+        const dx = rand(8, pl.w - 8);
+        const drop = {
+          x: pl.x + dx,
+          y: pl.y - 2,
+          vx: pl.vx || 0,          // inherit current cloud horizontal velocity
+          vy: rand(520, 680),
+          r: rand(1.2, 1.8),
+          alive: true
+        };
+        state.drops.push(drop);
+      }
+    }
+  }
+
+  // --- Spawn grace: keep player snapped to base for first few frames ---
+  if (state.spawnGrace > 0) {
+    state.spawnGrace -= dt;
+    const base = (state.spawnBase && state.spawnBase.alive) ? state.spawnBase : getBottomPlatform();
+    if (base) {
+      state.player.y = base.y - state.player.h - 0.01;
+      if (state.player.vy > 0) state.player.vy = 0;
+      state.player.canDouble = true;
+    }
+  }
+
+  // Collisions — only when falling
+  if (P.vy > 0) {
+    const prevBottom = prevY + P.h;
+    const nextBottom = P.y + P.h;
     for (const pl of state.plats) {
       if (!pl.alive) continue;
+      const top = pl.y;
+      const withinX = (P.x + P.w) > pl.x && (P.x) < (pl.x + pl.w);
+      if (!withinX) continue;
+      if (prevBottom <= top && nextBottom >= top) {
 
-// CHANGED: move motion logic shared by moveX, cloudX, moveBreakX, moveSpringX
-if (pl.type === 'moveX' || pl.type === 'cloudX' || pl.type === 'moveBreakX' || pl.type === 'moveSpringX') {
-  const base = pl.baseSpeed || Math.abs(pl.vx) || 160;
-const v = base * speedMult() * worldScale;      // slow-mo impacts movers too
-  pl.vx = pl.dir * v;           // track horizontal velocity
-  pl.x += pl.vx * dt;
-
-  if (pl.x < WORLD_MARGIN) {
-    pl.x = WORLD_MARGIN;
-    pl.dir = 1;
-    pl.vx = pl.dir * v;
-  }
-  if (pl.x + pl.w > W - WORLD_MARGIN) {
-    pl.x = W - WORLD_MARGIN - pl.w;
-    pl.dir = -1;
-    pl.vx = pl.dir * v;
-  }
-}
-
-      if ((pl.type === 'break' || pl.type === 'moveBreakX') && pl.crackShakeT > 0) {
-        pl.crackShakeT = Math.max(0, pl.crackShakeT - dt);
-      }
-
-      if ((pl.type === 'spring' || pl.type === 'moveSpringX') && pl.springStretch > 0) {
-        pl.springStretch = Math.max(0, pl.springStretch - dt*4);
-      }
-
-// NEW: wet accumulation/drain + smoothing (non-cloud platforms visually “fill up”) 
-pl.wetFill = Math.max(0, (pl.wetFill || 0) - dt * 0.20);     // drains in ~5s
-const ease1 = Math.min(1, dt * 5.0);                          // ~0.2s time constant
-pl.wetVis  = (pl.wetVis  || 0) + ((pl.wetFill || 0) - (pl.wetVis || 0)) * ease1;
-
-// coverage spreads across width as wetness increases
-const targetCover = 0.15 + 0.85 * (pl.wetFill || 0);
-const ease2 = Math.min(1, dt * 2.5);
-pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
-
-      // Rain emission for moving clouds
-      if (pl.type === 'cloudX') {
-                const rate = pl.rainRate * (storm.active ? STORM_RAIN_RATE_MULT : 1);
-        pl.rainAcc += dt * rate*worldScale;
-        const maxDrops = 600; // soft cap to avoid overload
-        while (pl.rainAcc >= 1 && state.drops.length < maxDrops) {
-          pl.rainAcc -= 1;
-          const dx = rand(8, pl.w - 8);
-          const drop = {
-            x: pl.x + dx,
-            y: pl.y - 2,
-            vx: pl.vx || 0,          // inherit current cloud horizontal velocity
-            vy: rand(520, 680),
-            r: rand(1.2, 1.8),
-            alive: true
-          };
-          state.drops.push(drop);
-        }
-      }
-    }
-
-    // --- Spawn grace: keep player snapped to base for first few frames ---
-    if (state.spawnGrace > 0) {
-      state.spawnGrace -= dt;
-      const base = (state.spawnBase && state.spawnBase.alive) ? state.spawnBase : getBottomPlatform();
-      if (base) {
-        state.player.y = base.y - state.player.h - 0.01;
-        if (state.player.vy > 0) state.player.vy = 0;
-        state.player.canDouble = true;
-      }
-    }
-
-    // Collisions — only when falling
-    if (P.vy > 0) {
-      const prevBottom = prevY + P.h;
-      const nextBottom = P.y + P.h;
-      for (const pl of state.plats) {
-        if (!pl.alive) continue;
-        const top = pl.y;
-        const withinX = (P.x + P.w) > pl.x && (P.x) < (pl.x + pl.w);
-        if (!withinX) continue;
-        if (prevBottom <= top && nextBottom >= top) {
-
-          // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet) — includes moving red
-          if (pl.type === 'break' || pl.type === 'moveBreakX') {
-            P.y = pl.y - P.h;
-P.vy = bounceVy(JUMP_VY);
-
-// NEW: if the platform is wet, apply slipperiness and seed drift
-if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
-  const wet = pl.wetVis || 0;
-  if (wet > 0.05) { // tiny threshold to ignore nearly dry
-    // store intensity and refresh the timer; more wet = longer + slicker
-    P.groundWet = wet;
-    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
-
-    // seed a passive drift direction/speed while slippery
-    const dir =
-      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
-       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
-        (P.lastFacing || 1)));
-
-    const minDrift = 60;                 // floor so it’s noticeable
-    const maxBonus = 140;                // up to ~200 px/s total
-    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
-    const target   = dir * (minDrift + maxBonus * wet) + carried;
-
-    const prev = P.driftVX || 0;
-    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
-  }
-}
-
-
-
-            P.canDouble = true;
-
-            pl.hits = (pl.hits || 0) + 1;
-            pl.crackShakeT = 0.18;
-
-            if (pl.hits === 1) {
-              sound.beep(260, .10, 'square', .10);
-              setTimeout(()=>sound.beep(210, .08, 'square', .09), 50);
-              addParticles(P.x + P.w/2, top + 2, 18, 'breakChip');
-            } else {
-              sound.beep(340, .10, 'sawtooth', .12);
-              setTimeout(()=>sound.beep(170, .16, 'sawtooth', .12), 60);
-              addParticles(pl.x + pl.w/2, pl.y + pl.h/2, 36, 'breakExplode');
-              pl.alive = false;
-            }
-            break;
-          }
-
-          // Spring (CHANGED: respect wet) — includes moving green
-          if (pl.type === 'spring' || pl.type === 'moveSpringX') {
-            P.y = pl.y - P.h;
-P.vy = bounceVy(SPRING_VY);
-            // NEW: if the platform is wet, apply slipperiness
-// NEW: if the platform is wet, apply slipperiness and seed drift
-if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
-  const wet = pl.wetVis || 0;
-  if (wet > 0.05) { // tiny threshold to ignore nearly dry
-    // store intensity and refresh the timer; more wet = longer + slicker
-    P.groundWet = wet;
-    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
-
-    // seed a passive drift direction/speed while slippery
-    const dir =
-      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
-       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
-        (P.lastFacing || 1)));
-
-    const minDrift = 60;                 // floor so it’s noticeable
-    const maxBonus = 140;                // up to ~200 px/s total
-    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
-    const target   = dir * (minDrift + maxBonus * wet) + carried;
-
-    const prev = P.driftVX || 0;
-    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
-  }
-}
-
-
-
-            P.canDouble = true;
-            pl.springStretch = .7;
-            sound.beep(980, .08, 'triangle', .08);
-            addParticles(P.x+P.w/2, top, 16, 'spring');
-            break;
-          }
-
-          // Vanish (cloud) — softer bounce, resets double-jump
-          if (pl.type === 'vanish') {
-            P.y = pl.y - P.h;
-P.vy = bounceVy(JUMP_VY * 0.75);
-            // NEW: if the platform is wet, apply slipperiness
-// NEW: if the platform is wet, apply slipperiness and seed drift
-if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
-  const wet = pl.wetVis || 0;
-  if (wet > 0.05) { // tiny threshold to ignore nearly dry
-    // store intensity and refresh the timer; more wet = longer + slicker
-    P.groundWet = wet;
-    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
-
-    // seed a passive drift direction/speed while slippery
-    const dir =
-      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
-       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
-        (P.lastFacing || 1)));
-
-    const minDrift = 60;                 // floor so it’s noticeable
-    const maxBonus = 140;                // up to ~200 px/s total
-    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
-    const target   = dir * (minDrift + maxBonus * wet) + carried;
-
-    const prev = P.driftVX || 0;
-    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
-  }
-}
-
-
-            P.canDouble = true;
-            sound.beep(520, .05, 'sine', .05);
-            addParticles(P.x + P.w/2, top, 16, 'vanish');
-            break;
-          }
-
-          // Moving rain cloud — soft bounce, no fade
-          if (pl.type === 'cloudX') {
-            P.y = pl.y - P.h;
-P.vy = bounceVy(JUMP_VY * 0.80);
-            // NEW: if the platform is wet, apply slipperiness
-// NEW: if the platform is wet, apply slipperiness and seed drift
-if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
-  const wet = pl.wetVis || 0;
-  if (wet > 0.05) { // tiny threshold to ignore nearly dry
-    // store intensity and refresh the timer; more wet = longer + slicker
-    P.groundWet = wet;
-    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
-
-    // seed a passive drift direction/speed while slippery
-    const dir =
-      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
-       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
-        (P.lastFacing || 1)));
-
-    const minDrift = 60;                 // floor so it’s noticeable
-    const maxBonus = 140;                // up to ~200 px/s total
-    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
-    const target   = dir * (minDrift + maxBonus * wet) + carried;
-
-    const prev = P.driftVX || 0;
-    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
-  }
-}
-
-
-            P.canDouble = true;
-            sound.beep(560, .05, 'sine', .06);
-            addParticles(P.x + P.w/2, top, 12, 'vanish');
-            break;
-          }
-
-          // Static & blue moving (generic) — respect wet
+        // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet) — includes moving red
+        if (pl.type === 'break' || pl.type === 'moveBreakX') {
           P.y = pl.y - P.h;
-P.vy = bounceVy(JUMP_VY);
-   // NEW: if the platform is wet, apply slipperiness
-// NEW: if the platform is wet, apply slipperiness and seed drift
-if (pl.type !== 'vanish' && pl.type !== 'cloudX') {
-  const wet = pl.wetVis || 0;
-  if (wet > 0.05) { // tiny threshold to ignore nearly dry
-    // store intensity and refresh the timer; more wet = longer + slicker
-    P.groundWet = wet;
-    P.slipT = Math.max(P.slipT, 0.9 * wet + 0.25); // ~0.25–1.15s
-
-    // seed a passive drift direction/speed while slippery
-    const dir =
-      (Math.abs(P.vx) > 6 ? Math.sign(P.vx) :
-       (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx) :
-        (P.lastFacing || 1)));
-
-    const minDrift = 60;                 // floor so it’s noticeable
-    const maxBonus = 140;                // up to ~200 px/s total
-    const carried  = (pl.vx || 0) * 0.20 * wet; // inherit a bit from moving platforms
-    const target   = dir * (minDrift + maxBonus * wet) + carried;
-
-    const prev = P.driftVX || 0;
-    P.driftVX = (Math.abs(target) > Math.abs(prev)) ? target : prev;
-  }
-}
-
-
-
+          P.vy = bounceVy(JUMP_VY);
+          applySlipperyImpulse(P, pl);
           P.canDouble = true;
-          sound.beep(700, .05, 'sine', .08);
-          addParticles(P.x+P.w/2, top, 10, 'bounce');
+
+          pl.hits = (pl.hits || 0) + 1;
+          pl.crackShakeT = 0.18;
+
+          if (pl.hits === 1) {
+            sound.beep(260, .10, 'square', .10);
+            setTimeout(()=>sound.beep(210, .08, 'square', .09), 50);
+            addParticles(P.x + P.w/2, top + 2, 18, 'breakChip');
+          } else {
+            sound.beep(340, .10, 'sawtooth', .12);
+            setTimeout(()=>sound.beep(170, .16, 'sawtooth', .12), 60);
+            addParticles(pl.x + pl.w/2, pl.y + pl.h/2, 36, 'breakExplode');
+            pl.alive = false;
+          }
           break;
         }
-      }
-    }
 
-    // Camera
-    if (P.y < CAM_ANCHOR_Y) {
-      const dy = CAM_ANCHOR_Y - P.y;
-      P.y = CAM_ANCHOR_Y;
-      state.score += dy;
-      state.cameraY += dy;
-      for (const pl of state.plats) pl.y += dy;
-      for (const pa of state.particles) pa.y += dy;
-      for (const d of state.drops) d.y += dy; // move rain with camera
-        for (const it of state.powerups)  it.y += dy;
+        // Spring (CHANGED: respect wet) — includes moving green
+        if (pl.type === 'spring' || pl.type === 'moveSpringX') {
+          P.y = pl.y - P.h;
+          P.vy = bounceVy(SPRING_VY);
+          applySlipperyImpulse(P, pl);
+          P.canDouble = true;
+          pl.springStretch = .7;
+          sound.beep(980, .08, 'triangle', .08);
+          addParticles(P.x+P.w/2, top, 16, 'spring');
+          break;
+        }
 
-      scoreEl.textContent = Math.round(state.score);
-      if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03);
-    }
+        // Vanish (cloud) — softer bounce, resets double-jump
+        if (pl.type === 'vanish') {
+          P.y = pl.y - P.h;
+          P.vy = bounceVy(JUMP_VY * 0.75);
+          applySlipperyImpulse(P, pl);
+          P.canDouble = true;
+          sound.beep(520, .05, 'sine', .05);
+          addParticles(P.x + P.w/2, top, 16, 'vanish');
+          break;
+        }
 
-    // Check & announce unlocks after score updates
-    handleUnlocks();
+        // Moving rain cloud — soft bounce, no fade
+        if (pl.type === 'cloudX') {
+          P.y = pl.y - P.h;
+          P.vy = bounceVy(JUMP_VY * 0.80);
+          applySlipperyImpulse(P, pl);
+          P.canDouble = true;
+          sound.beep(560, .05, 'sine', .06);
+          addParticles(P.x + P.w/2, top, 12, 'vanish');
+          break;
+        }
 
-    // Despawn & spawn
-    state.plats = state.plats.filter(pl => pl.alive && pl.y < H + 60);
-    spawnIfNeeded(false);
-
-    // Particles
-    state.particles = state.particles.filter(p => {
-      p.t += dt;
-      p.x += p.vx*dt;
-      p.y += p.vy*dt;
-      p.vy += 1200*dt;
-      return p.t < p.life;
-    });
-// keep offscreen-above power-ups so they can scroll into view
-state.powerups = state.powerups.filter(it => it.y < H + 80);
-
-
-state.drops = state.drops.filter(d => {
-  let hit = false;
-  const prevY = d.y;
-  const prevX = d.x;
-
-  // Move with initial horizontal velocity and constant downward speed
-d.x += d.vx * dt * worldScale;
-d.y += d.vy * dt * worldScale;
-
-
-  // Player hit: trigger once when the drop crosses the player's TOP edge
-  if (!hit &&
-      d.x >= P.x && d.x <= P.x + P.w &&
-      prevY <= P.y && d.y >= P.y) {
-    P.vy += 120;                        // small downward nudge only
-    addParticles(d.x, P.y + 1, 6, 'splash');
-    sound.beep(2000, .015, 'sine', .03);
-    hit = true;
-  }
-
-  // Platform hits: trigger when crossing a platform's TOP edge
-  if (!hit) {
-    for (const pl of state.plats) {
-      if (!pl.alive) continue;
-      if (pl.type === 'cloudX' || pl.type === 'vanish') continue; // skip clouds
-      if (d.x >= pl.x && d.x <= pl.x + pl.w &&
-          prevY <= pl.y && d.y >= pl.y) {
-        // each hit adds ~22% wetness (clamped), will drain over time
-        pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
-        addParticles(d.x, pl.y + 1, 6, 'splash');
-        hit = true;
-        break; // stop checking more platforms for this drop
+        // Static & blue moving (generic) — respect wet
+        P.y = pl.y - P.h;
+        P.vy = bounceVy(JUMP_VY);
+        applySlipperyImpulse(P, pl);
+        P.canDouble = true;
+        sound.beep(700, .05, 'sine', .08);
+        addParticles(P.x+P.w/2, top, 10, 'bounce');
+        break;
       }
     }
   }
 
-  // Despawn immediately if we hit something
-  if (hit) return false;
+  // Camera
+  if (P.y < CAM_ANCHOR_Y) {
+    const dy = CAM_ANCHOR_Y - P.y;
+    P.y = CAM_ANCHOR_Y;
+    state.score += dy;
+    state.cameraY += dy;
+    for (const pl of state.plats) pl.y += dy;
+    for (const pa of state.particles) pa.y += dy;
+    for (const d of state.drops) d.y += dy; // move rain with camera
+    for (const it of state.powerups)  it.y += dy;
 
-  // Otherwise keep the drop until it passes the bottom of the screen
-  return d.y < H + 40;
-});
-
-    // Death
-// if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
-if (state.spawnGrace <= 0 && P.y > H + 80) {
-  if (state.player.shield > 0) {
-    state.player.shield = 0;
-    // rescue: place on lowest platform and launch up
-    const base = getBottomPlatform();
-    if (base) {
-      P.x = clamp(base.x + (base.w - P.w)/2, WORLD_MARGIN, W - WORLD_MARGIN - P.w);
-      P.y = base.y - P.h - 0.01;
-      P.vx *= 0.2;
-      P.vy = bounceVy(SPRING_VY * 0.9);
-      addParticles(P.x+P.w/2, P.y+P.h, 28, 'spring');
-      sound.beep(820,.10,'triangle',.12);
-      setTimeout(()=>sound.beep(1200,.08,'sine',.10), 80);
-      updateBuffHUD();
-    }
-  } else {
-    gameOver();
+    scoreEl.textContent = Math.round(state.score);
+    if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03);
   }
+
+  // Check & announce unlocks after score updates
+  handleUnlocks();
+
+  // Despawn & spawn
+  state.plats = state.plats.filter(pl => pl.alive && pl.y < H + 60);
+  spawnIfNeeded(false);
+
+  // Particles
+  state.particles = state.particles.filter(p => {
+    p.t += dt;
+    p.x += p.vx*dt;
+    p.y += p.vy*dt;
+    p.vy += 1200*dt;
+    return p.t < p.life;
+  });
+  // keep offscreen-above power-ups so they can scroll into view
+  state.powerups = state.powerups.filter(it => it.y < H + 80);
+
+  state.drops = state.drops.filter(d => {
+    let hit = false;
+    const prevY = d.y;
+    const prevX = d.x;
+
+    // Move with initial horizontal velocity and constant downward speed
+    d.x += d.vx * dt * worldScale;
+    d.y += d.vy * dt * worldScale;
+
+    // Player hit: trigger once when the drop crosses the player's TOP edge
+    if (!hit &&
+        d.x >= P.x && d.x <= P.x + P.w &&
+        prevY <= P.y && d.y >= P.y) {
+      P.vy += 120;                        // small downward nudge only
+      addParticles(d.x, P.y + 1, 6, 'splash');
+      sound.beep(2000, .015, 'sine', .03);
+      hit = true;
+    }
+
+    // Platform hits: trigger when crossing a platform's TOP edge
+    if (!hit) {
+      for (const pl of state.plats) {
+        if (!pl.alive) continue;
+        if (pl.type === 'cloudX' || pl.type === 'vanish') continue; // skip clouds
+        if (d.x >= pl.x && d.x <= pl.x + pl.w &&
+            prevY <= pl.y && d.y >= pl.y) {
+          // each hit adds ~22% wetness (clamped), will drain over time
+          pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
+          addParticles(d.x, pl.y + 1, 6, 'splash');
+          hit = true;
+          break; // stop checking more platforms for this drop
+        }
+      }
+    }
+
+    // Despawn immediately if we hit something
+    if (hit) return false;
+
+    // Otherwise keep the drop until it passes the bottom of the screen
+    return d.y < H + 40;
+  });
+
+  // Death
+  // if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
+  if (state.spawnGrace <= 0 && P.y > H + 80) {
+    if (state.player.shield > 0) {
+      state.player.shield = 0;
+      // rescue: place on lowest platform and launch up
+      const base = getBottomPlatform();
+      if (base) {
+        P.x = clamp(base.x + (base.w - P.w)/2, WORLD_MARGIN, W - WORLD_MARGIN - P.w);
+        P.y = base.y - P.h - 0.01;
+        P.vx *= 0.2;
+        P.vy = bounceVy(SPRING_VY * 0.9);
+        addParticles(P.x+P.w/2, P.y+P.h, 28, 'spring');
+        sound.beep(820,.10,'triangle',.12);
+        setTimeout(()=>sound.beep(1200,.08,'sine',.10), 80);
+        updateBuffHUD();
+      }
+    } else {
+      gameOver();
+    }
+  }
+  updateEnemies(dt);   // ⬅️ NEW
+  updateSkyDecor(dt);
+  updatePowerups(dt);
+  updateBuffHUD();
 }
-    updateSkyDecor(dt);
-    updatePowerups(dt);
-    updateBuffHUD();
 
-
-  }
   // ===================== NEW BACKGROUND SYSTEM =====================
 // Phase 1: rolling hills only (no sky)
 // Phase 2: sky + sun slide in from the top; hills descend & fade out
@@ -1856,10 +2034,20 @@ function beginStorm(){
   storm.nextFlashIn = rand(0.2, 0.8); // first strike comes quick
   storm.bolts = [];
   toast('⚡ Storm incoming');
+    storm.elapsed = 0;              // NEW
+      storm.pendingSpace = false; // NEW
+
+
 }
+function isStormMaxDark(){
+  // Max darkness = no flash + no afterglow (blackout alpha = STORM_DARK_A)
+  return storm.active && storm.flashT <= 0 && storm.afterglowT <= 0;
+}
+
 
 function updateStorm(dt){
   storm.nextFlashIn -= dt;
+  storm.elapsed += dt;            // NEW
 
   // decay afterglow brightness
   if (storm.afterglowT > 0) {
@@ -1983,11 +2171,154 @@ const SUN_START_OFFSET = SKY_REVEAL_START-3000;
 // Sun spans its path once. Give the moon its own offset/span afterwards.
 const MOON_PATH_SPAN    = SUN_PATH_SPAN;                 // how long the moon travels
 const MOON_START_OFFSET = SUN_START_OFFSET + SUN_PATH_SPAN * 0.8; 
+// Storm spans a similar distance as day/night and starts right after the moon finishes
+const STORM_PATH_SPAN   = SUN_PATH_SPAN;
+const STORM_START_OFFSET = MOON_START_OFFSET + MOON_PATH_SPAN;
+
 // ↑ starts a bit before full night so it rises shortly after sunset
 // (Move this earlier/later to taste, or tie it to unlocks/screen height.)
+function drawPlanet(g,p){
+  const grd = g.createRadialGradient(p.x - p.r*0.35, p.y - p.r*0.4, p.r*0.35, p.x, p.y, p.r);
+  grd.addColorStop(0, p.pal[0]);
+  grd.addColorStop(0.6, p.pal[1]);
+  grd.addColorStop(1, p.pal[2]);
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(p.x, p.y, p.r, 0, Math.PI*2); g.fill();
+
+  if (p.ring) {
+    g.save();
+    g.translate(p.x, p.y);
+    g.rotate(-0.35);
+    g.globalAlpha = 0.7;
+    g.strokeStyle = 'rgba(230,240,255,.6)';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.ellipse(0, 0, p.r*1.4, p.r*0.55, 0, 0, Math.PI*2);
+    g.stroke();
+    g.restore();
+  }
+}
+// ADD — Draw a shooting star (tail + bright head)
+function drawShootingStarG(g, s){
+  const ax = s.x - s.vx * 0.18;          // tail anchor a bit behind
+  const ay = s.y - s.vy * 0.18;
+  const dx = s.x - ax;
+  const dy = s.y - ay;
+  const len = s.len;
+  const nx = s.x - (dx ? dx/Math.hypot(dx,dy) : 0) * len;
+  const ny = s.y - (dy ? dy/Math.hypot(dx,dy) : 0) * len;
+
+  const fade = 1 - (s.age / s.life);
+  const alpha = Math.max(0, Math.min(1, s.a0 * (0.4 + 0.6*fade)));
+
+  // tail
+  g.save();
+  g.globalAlpha = 0.7 * alpha;
+  g.strokeStyle = '#e6f1ff';
+  g.lineWidth = 2;
+  g.beginPath(); g.moveTo(nx, ny); g.lineTo(s.x, s.y); g.stroke();
+
+  // head
+  g.globalAlpha = alpha;
+  g.fillStyle = '#ffffff';
+  g.beginPath(); g.arc(s.x, s.y, 2.4, 0, Math.PI*2); g.fill();
+  g.restore();
+}
+
+// ADD — Draw a background UFO (simple saucer with dome + blinking lights)
+function drawUFOG(g, u){
+  g.save();
+  g.translate(u.x, u.y);
+  g.scale(u.scale, u.scale);
+
+  // shadow (subtle)
+  g.globalAlpha = 0.18;
+  g.fillStyle = '#000';
+  g.beginPath(); g.ellipse(0, 10, 18, 4, 0, 0, Math.PI*2); g.fill();
+  g.globalAlpha = 1;
+
+  // hull
+  g.fillStyle = '#b7c7db';
+  g.strokeStyle = '#8fa1b8';
+  g.lineWidth = 1.5;
+  g.beginPath(); g.ellipse(0, 0, 20, 7, 0, 0, Math.PI*2); g.fill(); g.stroke();
+
+  // rim
+  g.fillStyle = '#d9e4f1';
+  g.beginPath(); g.ellipse(0, 0, 22, 3.5, 0, 0, Math.PI*2); g.fill();
+
+  // dome
+  g.fillStyle = '#9fd4ff';
+  g.strokeStyle = '#6aa8d6';
+  g.beginPath(); g.ellipse(0, -6, 8, 5, 0, 0, Math.PI*2); g.fill(); g.stroke();
+
+  // blinking lights along rim
+  const blink = (Math.sin(u.t * 6 + u.phase) > 0) ? 1 : 0;
+  const lights = 5;
+  for (let i=0;i<lights;i++){
+    const a = (i / lights) * Math.PI * 2;
+    const lx = Math.cos(a) * 16;
+    const ly = Math.sin(a) * 3;
+    g.fillStyle = i % 2 === blink ? '#fef08a' : '#93c5fd';
+    g.beginPath(); g.arc(lx, ly, 1.6, 0, Math.PI*2); g.fill();
+  }
+
+  g.restore();
+}
+
+
+function drawSpaceBackground(g){
+  g.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
+  g.clearRect(0,0,W,H);
+
+  // deep space gradient
+  const sky = g.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0, '#04070c');
+  sky.addColorStop(1, '#0a0f1a');
+  g.fillStyle = sky; g.fillRect(0,0,W,H);
+
+  // brighter twinkling stars
+  const t = performance.now() * 0.001;
+  g.save();
+  for (const s of stars){
+    const tw = 0.75 + 0.45 * Math.sin(t*1.8 + s.twinkle);
+    g.globalAlpha = 0.35 * tw;
+    g.fillStyle = '#e6f1ff';
+    g.beginPath(); g.arc(s.x, s.y, s.r*1.1, 0, Math.PI*2); g.fill();
+  }
+  g.restore();
+
+  // planets
+// planets (fade in as they drop)
+for (const p of space.planets){
+  g.save();
+  g.globalAlpha = p.a ?? 1;
+  drawPlanet(g, p);
+  g.restore();
+}
+// planets (already drawn above)
+
+// ADD — shooting stars
+for (const s of space.shooters){
+  drawShootingStarG(g, s);
+}
+
+// ADD — UFOs
+for (const u of space.ufos){
+  drawUFOG(g, u);
+}
+
+
+
+}
+
 
 
 function drawBackground(){
+    if (space.active) {              // NEW: space overrides everything
+    drawSpaceBackground(bgCtx);
+    return;
+  }
   const s  = Math.round(state?.score || 0);
 
   // Hills slide progress
@@ -2325,11 +2656,14 @@ else if (it.type === 'slow'){
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+    drawEnemies(ctx);
+
         // Storm visuals (flash + blackout)
     if (storm.active) {
       drawLightning(ctx);   // bright momentary flash & bolts
       drawStormOverlay(ctx); // persistent blackout (or dim during flash)
     }
+    
 
   }
 
@@ -2677,7 +3011,6 @@ function drawPlayer(P) {
   ctx.quadraticCurveTo(eyeCx, mY + smile, eyeCx + 6, mY);
   ctx.lineWidth = 2; ctx.strokeStyle = '#0b0f14'; ctx.stroke();
 
-  // --- REMOVED antenna (the “unibrow”) ---
 
   // jetpack flame (kept)
   if (P.jetpackT > 0) {
