@@ -40,6 +40,7 @@
       <button id="muteBtn" class="icon-btn" aria-label="Toggle sound" title="M to mute/unmute">🔊</button>
       <!-- NEW: Pause/Resume button -->
       <button id="pauseBtn" class="icon-btn" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
+      <button id="helpBtn" class="icon-btn" aria-label="Help" title="Help (H)">❓</button>
     </div>
 
     <div class="overlay" id="menu" hidden>
@@ -55,7 +56,7 @@
         <h1>Game Over</h1>
         <p id="finalScore">Score: 0</p>
         <p id="bestScore">Best: 0</p>
-        <button id="restartBtn" type="button" aria-label="Restart">Restart (R)</button>
+        <button id="restartBtn" type="button" aria-label="Restart">Restart (R/Space/Enter)</button>
       </div>
     </div>
 
@@ -64,7 +65,35 @@
       <div class="card">
         <h1>Paused</h1>
         <p>Press P or Esc, or click Resume to continue.</p>
-        <button id="resumeBtn" type="button" aria-label="Resume">Resume (P)</button>
+        <button id="resumeBtn" type="button" aria-label="Resume">Resume (P/Esc)</button>
+      </div>
+    </div>
+
+    <!-- Help Menu -->
+    <div class="overlay" id="helpOverlay" hidden>
+      <div class="card">
+        <h1>❓ How to Play Arena</h1>
+        <p><b>Objective:</b> Survive as long as possible by avoiding enemies and collecting their dust particles!</p>
+        
+        <p><b>Controls:</b></p>
+        <ul style="text-align:left; margin:8px 0; padding-left:20px; line-height:1.8;">
+          <li><b>WASD</b> or <b>Arrow Keys</b> - Move your character</li>
+          <li><b>P</b> or <b>Esc</b> - Pause / Resume</li>
+          <li><b>M</b> - Toggle sound</li>
+          <li><b>Enter</b> or <b>Space</b> - Start game / Restart</li>
+        </ul>
+
+        <p><b>Gameplay:</b></p>
+        <ul style="text-align:left; margin:8px 0; padding-left:20px; line-height:1.8;">
+          <li>Enemies spawn and move toward you - avoid them!</li>
+          <li>When enemies expire, they drop dust particles</li>
+          <li>Collect the dust particles to increase your score and advance to the next level</li>
+          <li>Dust particles also provide temporary invulnerability</li>
+          <li>Advancing to the next level clears the arena of enemies</li>
+          <li>The game is over when you are hit by an enemy</li>
+        </ul>
+
+        <button type="button" id="helpClose" aria-label="Close">Close</button>
       </div>
     </div>
   </div>
@@ -650,6 +679,62 @@
     // NEW: pause/resume button handlers
     pauseBtn.addEventListener('click', togglePause);
     resumeBtn.addEventListener('click', resumeGame);
+
+    // Help menu
+    const helpBtn = document.getElementById('helpBtn');
+    const helpOverlay = document.getElementById('helpOverlay');
+    const helpClose = document.getElementById('helpClose');
+    const helpCard = helpOverlay ? helpOverlay.querySelector('.card') : null;
+
+    let wasPausedBeforeHelp = false;
+    function openHelp(){ 
+      if(helpOverlay) {
+        wasPausedBeforeHelp = (state.mode === 'paused');
+        if(state.mode === 'playing') {
+          pauseGame();
+        }
+        helpOverlay.hidden = false; 
+      }
+    }
+    function closeHelp(){ 
+      if(helpOverlay) {
+        helpOverlay.hidden = true;
+        if(!wasPausedBeforeHelp && state.mode === 'paused') {
+          resumeGame();
+        }
+        wasPausedBeforeHelp = false;
+      }
+    }
+    function toggleHelp(){
+      if(helpOverlay) {
+        if(helpOverlay.hidden) {
+          openHelp();
+        } else {
+          closeHelp();
+        }
+      }
+    }
+
+    if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); toggleHelp(); });
+    if(helpClose) helpClose.addEventListener('click', (e) => { e.preventDefault(); closeHelp(); });
+    if(helpOverlay) {
+      helpOverlay.addEventListener('click', (e) => {
+        if(e.target === helpOverlay) closeHelp();
+      });
+    }
+    if(helpCard) {
+      helpCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if(e.code === 'KeyH' && !e.repeat) {
+        toggleHelp();
+      }
+      if(e.code === 'Escape' && helpOverlay && !helpOverlay.hidden) {
+        closeHelp();
+      }
+    });
 
     let last = performance.now();
     function frame(now) {

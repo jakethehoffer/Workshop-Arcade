@@ -19,10 +19,55 @@
     display:block;
     background: linear-gradient(#70c5ce, #d0f4f7);
   }
+  .help-btn {
+    position:fixed; top:12px; right:12px; z-index:50;
+    background:rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.3);
+    color:#fff; padding:8px 12px; border-radius:10px; font-weight:700;
+    cursor:pointer; font-size:16px; backdrop-filter:blur(4px);
+  }
+  .help-btn:hover { background:rgba(0,0,0,0.7); }
+  .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.7); }
+  .overlay.show { display:grid; pointer-events:auto; }
+  .help-card { background:#faf8ef; border:2px solid #776e65; padding:24px 26px; border-radius:16px; max-width:min(92vw, 500px); box-shadow:0 10px 30px rgba(0,0,0,.5); pointer-events:auto; color:#776e65; }
+  .help-card h2 { margin:0 0 16px 0; font-size:24px; color:#776e65; }
+  .help-card p { margin:8px 0; line-height:1.6; }
+  .help-card .controls-grid { display:grid; grid-template-columns:1fr; gap:10px; margin:16px 0; }
+  .help-card .control-row { display:flex; align-items:center; gap:12px; }
+  .help-card kbd { background:#bbada0; border:1px solid #8f7a66; border-bottom-width:3px; padding:4px 10px; border-radius:8px; font-weight:700; font-family:inherit; display:inline-block; color:#f9f6f2; }
+  .help-card .btn-close { margin-top:16px; width:100%; background:#8f7a66; color:#fff; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; }
+  .help-card .btn-close:active { transform:translateY(1px); }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<button class="help-btn" id="helpBtn" title="Help (H)">❓ Help</button>
+
+<!-- Help Menu -->
+<div class="overlay" id="helpOverlay">
+  <div class="help-card">
+    <h2>❓ How to Play Sky Hopper</h2>
+    <p><b>Objective:</b> Guide the bird through the pipes by tapping/clicking to make it flap. Avoid hitting the pipes or the ground!</p>
+    
+    <div class="controls-grid">
+      <div class="control-row">
+        <span><kbd>Space</kbd> or <kbd>Click</kbd> or <kbd>Tap</kbd></span>
+        <span>Make the bird flap upward</span>
+      </div>
+    </div>
+
+    <p><b>Gameplay:</b></p>
+    <ul style="margin:8px 0; padding-left:20px; line-height:1.8;">
+      <li>Tap/click to make the bird flap and gain altitude</li>
+      <li>Navigate through the gaps between pipes</li>
+      <li>Each pipe you pass gives you 1 point</li>
+      <li>The game gets faster as you progress</li>
+      <li>Hit a pipe or the ground and it's game over!</li>
+    </ul>
+
+    <button class="btn-close" id="helpClose">Close</button>
+  </div>
+</div>
+
 <script>
 /* =========================
    Sky Hopper — Fullscreen Edition (dt-normalized)
@@ -70,68 +115,379 @@ let highScore = 0;
 try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
 let newBestThisRun = false;
 
-/* ----- Audio (your original) ----- */
+/* ----- Audio (enhanced music + SFX) ----- */
 let audioCtx = null;
-const MUSIC_NOTES = [523.25,587.33,659.25,587.33,523.25,392.00,440.00,392.00,523.25,659.25,783.99,659.25,587.33,523.25,440.00,392.00];
-const MUSIC_TEMPO_MS = 170;
-let music = { isOn: false, interval: null, gain: null, noteIndex: 0 };
+let masterGain = null;
+let musicGain = null;
+let sfxGain = null;
+let noiseBuffer = null;
+
+const MUSIC_TEMPO = 112;
+const MUSIC_STEP = 60 / MUSIC_TEMPO / 4; // 16th note
+const MUSIC_LOOKAHEAD = 0.18;
+const MUSIC_TIMER_MS = 25;
+const MUSIC_CHORDS = [
+  [60, 64, 67], // C
+  [57, 60, 64], // Am
+  [53, 57, 60], // F
+  [55, 59, 62]  // G
+];
+const ARP_PATTERN = [0, 1, 2, 1, 0, 2, 1, 2];
+let music = { isOn: false, timer: null, nextTime: 0, step: 0 };
+
 function ensureAudio() {
   if (!audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) audioCtx = new AC();
+    if (AC) {
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.9;
+
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -18;
+      compressor.knee.value = 10;
+      compressor.ratio.value = 3;
+      compressor.attack.value = 0.01;
+      compressor.release.value = 0.2;
+
+      masterGain.connect(compressor);
+      compressor.connect(audioCtx.destination);
+
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = 0.23;
+      musicGain.connect(masterGain);
+
+      sfxGain = audioCtx.createGain();
+      sfxGain.gain.value = 0.6;
+      sfxGain.connect(masterGain);
+    }
   }
 }
-function startMusic() {
-  ensureAudio();
-  if (!audioCtx || music.isOn) return;
-  if (!music.gain) {
-    music.gain = audioCtx.createGain();
-    music.gain.gain.value = 0.18;
-    music.gain.connect(audioCtx.destination);
+
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function getNoiseBuffer() {
+  if (!audioCtx) return null;
+  if (!noiseBuffer) {
+    noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   }
-  music.isOn = true;
-  music.interval = setInterval(() => {
-    if (!music.isOn || !audioCtx) return;
-    const freq = MUSIC_NOTES[music.noteIndex % MUSIC_NOTES.length];
-    music.noteIndex++;
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(freq, now);
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
-    osc.connect(g).connect(music.gain);
-    osc.start(now);
-    osc.stop(now + 0.16);
-  }, MUSIC_TEMPO_MS);
+  return noiseBuffer;
 }
-function stopMusic() {
-  if (music.interval) clearInterval(music.interval);
-  music.interval = null; music.isOn = false;
-}
-function resumeAudio() {
-  ensureAudio();
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-}
-function beep(freq=440, duration=0.08, type="sine", gain=0.04) {
+
+function playTone({
+  freq,
+  time,
+  duration,
+  type = "sine",
+  gain = 0.1,
+  detune = 0,
+  attack = 0.01,
+  filterFreq = 0,
+  target = null
+}) {
   if (!audioCtx) return;
-  const t0 = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const g = audioCtx.createGain();
   osc.type = type;
-  osc.frequency.setValueAtTime(freq, t0);
-  g.gain.setValueAtTime(gain, t0);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-  osc.connect(g).connect(audioCtx.destination);
-  osc.start(t0); osc.stop(t0 + duration);
+  osc.frequency.setValueAtTime(freq, time);
+  if (detune) osc.detune.setValueAtTime(detune, time);
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(gain, time + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+  let node = osc;
+  if (filterFreq) {
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(filterFreq, time);
+    node.connect(filter);
+    node = filter;
+  }
+  node.connect(g).connect(target || sfxGain);
+
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
 }
+
+function playSweep({
+  startFreq,
+  endFreq,
+  time,
+  duration,
+  type = "sine",
+  gain = 0.1,
+  attack = 0.01,
+  filterFreq = 0,
+  target = null
+}) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(startFreq, time);
+  osc.frequency.exponentialRampToValueAtTime(endFreq, time + duration);
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(gain, time + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+  let node = osc;
+  if (filterFreq) {
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(filterFreq, time);
+    node.connect(filter);
+    node = filter;
+  }
+  node.connect(g).connect(target || sfxGain);
+
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
+}
+
+function playNoise({
+  time,
+  duration,
+  gain = 0.05,
+  filterType = "highpass",
+  filterFreq = 2000,
+  target = null
+}) {
+  if (!audioCtx) return;
+  const buffer = getNoiseBuffer();
+  if (!buffer) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.frequency.setValueAtTime(filterFreq, time);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(gain, time + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  src.connect(filter).connect(g).connect(target || sfxGain);
+  src.start(time);
+  src.stop(time + duration + 0.05);
+}
+
+function playPad(chord, time) {
+  const duration = 0.8;
+  for (const note of chord) {
+    playTone({
+      freq: midiToFreq(note),
+      time,
+      duration,
+      type: "sawtooth",
+      gain: 0.03,
+      attack: 0.03,
+      filterFreq: 900,
+      target: musicGain
+    });
+  }
+}
+
+function playHat(time) {
+  playNoise({
+    time,
+    duration: 0.03,
+    gain: 0.03,
+    filterType: "highpass",
+    filterFreq: 6000,
+    target: musicGain
+  });
+}
+
+function playSnare(time) {
+  playNoise({
+    time,
+    duration: 0.08,
+    gain: 0.035,
+    filterType: "bandpass",
+    filterFreq: 1800,
+    target: musicGain
+  });
+}
+
+function scheduleMusicStep(time, step) {
+  const bar = Math.floor(step / 16);
+  const chord = MUSIC_CHORDS[bar % MUSIC_CHORDS.length];
+  const pos = step % 16;
+
+  if (pos === 0) playPad(chord, time);
+
+  if (pos === 0 || pos === 8) {
+    const bassMidi = (pos === 0 ? chord[0] : chord[2]) - 24;
+    playTone({
+      freq: midiToFreq(bassMidi),
+      time,
+      duration: 0.35,
+      type: "sine",
+      gain: 0.12,
+      filterFreq: 500,
+      target: musicGain
+    });
+  }
+
+  if (pos % 2 === 0) {
+    const arpIndex = ARP_PATTERN[(pos / 2) % ARP_PATTERN.length];
+    playTone({
+      freq: midiToFreq(chord[arpIndex] + 12),
+      time,
+      duration: 0.12,
+      type: "triangle",
+      gain: 0.08,
+      attack: 0.005,
+      filterFreq: 1800,
+      target: musicGain
+    });
+  }
+
+  if (pos % 4 === 2) playHat(time);
+  if (pos === 4 || pos === 12) playSnare(time + 0.005);
+}
+
+function startMusic() {
+  ensureAudio();
+  if (!audioCtx || music.isOn) return;
+  music.isOn = true;
+  music.step = 0;
+  music.nextTime = audioCtx.currentTime + 0.05;
+  music.timer = setInterval(() => {
+    if (!music.isOn || !audioCtx) return;
+    while (music.nextTime < audioCtx.currentTime + MUSIC_LOOKAHEAD) {
+      scheduleMusicStep(music.nextTime, music.step);
+      music.nextTime += MUSIC_STEP;
+      music.step = (music.step + 1) % (MUSIC_CHORDS.length * 16);
+    }
+  }, MUSIC_TIMER_MS);
+}
+
+function stopMusic() {
+  if (music.timer) clearInterval(music.timer);
+  music.timer = null;
+  music.isOn = false;
+}
+
+function resumeAudio() {
+  ensureAudio();
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+
 const SFX = {
-  flap(){ beep(600, 0.06, "square", 0.05); },
-  score(){ beep(900, 0.07, "triangle", 0.05); },
-  hit(){ beep(180, 0.12, "sine", 0.06); setTimeout(()=>beep(120, 0.12, "sine", 0.05), 30); },
-  newHigh(){ beep(900, 0.08, "triangle", 0.06); setTimeout(()=>beep(1200, 0.10, "triangle", 0.05), 70); }
+  flap() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    playSweep({
+      startFreq: 420,
+      endFreq: 760,
+      time: t,
+      duration: 0.09,
+      type: "triangle",
+      gain: 0.12,
+      filterFreq: 1800,
+      target: sfxGain
+    });
+    playNoise({
+      time: t,
+      duration: 0.06,
+      gain: 0.06,
+      filterType: "highpass",
+      filterFreq: 1200,
+      target: sfxGain
+    });
+  },
+  score() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    playTone({
+      freq: midiToFreq(84),
+      time: t,
+      duration: 0.09,
+      type: "triangle",
+      gain: 0.1,
+      target: sfxGain
+    });
+    playTone({
+      freq: midiToFreq(88),
+      time: t + 0.07,
+      duration: 0.1,
+      type: "triangle",
+      gain: 0.08,
+      target: sfxGain
+    });
+    playNoise({
+      time: t,
+      duration: 0.04,
+      gain: 0.03,
+      filterType: "highpass",
+      filterFreq: 5000,
+      target: sfxGain
+    });
+  },
+  hit() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    playSweep({
+      startFreq: 220,
+      endFreq: 90,
+      time: t,
+      duration: 0.2,
+      type: "sine",
+      gain: 0.2,
+      target: sfxGain
+    });
+    playNoise({
+      time: t,
+      duration: 0.16,
+      gain: 0.08,
+      filterType: "bandpass",
+      filterFreq: 900,
+      target: sfxGain
+    });
+  },
+  newHigh() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    playTone({
+      freq: midiToFreq(84),
+      time: t,
+      duration: 0.12,
+      type: "triangle",
+      gain: 0.12,
+      target: sfxGain
+    });
+    playTone({
+      freq: midiToFreq(88),
+      time: t + 0.09,
+      duration: 0.12,
+      type: "triangle",
+      gain: 0.1,
+      target: sfxGain
+    });
+    playTone({
+      freq: midiToFreq(91),
+      time: t + 0.18,
+      duration: 0.14,
+      type: "triangle",
+      gain: 0.09,
+      target: sfxGain
+    });
+    playNoise({
+      time: t + 0.05,
+      duration: 0.2,
+      gain: 0.05,
+      filterType: "highpass",
+      filterFreq: 4500,
+      target: sfxGain
+    });
+  }
 };
 
 /* ----- Difficulty ramp (unchanged logic) ----- */
@@ -432,6 +788,11 @@ function loop() {
   if (dt > 0.1) dt = 0.1;
   // normalize to 60fps "frame units"
   const dt60 = dt * 60;
+  
+  if(helpOpen) {
+    requestAnimationFrame(loop);
+    return;
+  }
 
   // reset transform & clear whole canvas (also clears the letterbox)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -494,9 +855,55 @@ function doFlapOrStart() {
   bird.flap();
   SFX.flap();
 }
-document.addEventListener("keydown", e => { if (e.code === "Space") doFlapOrStart(); });
+// Help menu - declare first so it can be used in keydown handler
+const helpBtn = document.getElementById('helpBtn');
+const helpOverlay = document.getElementById('helpOverlay');
+const helpClose = document.getElementById('helpClose');
+const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
+
+let wasStartedBeforeHelp = false;
+let helpOpen = false;
+function openHelp(){ 
+  if(helpOverlay) {
+    wasStartedBeforeHelp = started && !gameOver;
+    helpOpen = true;
+    helpOverlay.classList.add('show'); 
+  }
+}
+function closeHelp(){ 
+  if(helpOverlay) {
+    helpOpen = false;
+    helpOverlay.classList.remove('show');
+  }
+}
+
+document.addEventListener("keydown", e => { 
+  if (e.code === "Space") doFlapOrStart();
+  if (e.code === "KeyH" && !e.repeat) {
+    if(helpOverlay) {
+      if(helpOverlay.classList.contains('show')) closeHelp();
+      else openHelp();
+    }
+  }
+  if (e.code === "Escape") {
+    if(helpOverlay && helpOverlay.classList.contains('show')) closeHelp();
+  }
+});
 canvas.addEventListener("mousedown", doFlapOrStart);
 document.addEventListener("touchstart", (e) => { e.preventDefault(); doFlapOrStart(); }, { passive: false });
+
+if(helpBtn) helpBtn.onclick = (e) => { e.preventDefault(); openHelp(); };
+if(helpClose) helpClose.onclick = (e) => { e.preventDefault(); closeHelp(); };
+if(helpOverlay) {
+  helpOverlay.addEventListener('click', (e) => {
+    if(e.target === helpOverlay) closeHelp();
+  });
+}
+if(helpCard) {
+  helpCard.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
 
 /* ----- Page visibility (pause music) ----- */
 document.addEventListener("visibilitychange", () => {

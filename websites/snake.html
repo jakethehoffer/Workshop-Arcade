@@ -14,6 +14,15 @@
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
   .btn:active { transform:translateY(1px); }
   @media (min-width: 860px){ .btns { display:none; } }
+  .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.7); }
+  .overlay.show { display:grid; pointer-events:auto; }
+  .help-card { background:#0e1522; border:1px solid #26334a; padding:24px 26px; border-radius:16px; max-width:min(92vw, 500px); box-shadow:0 10px 30px rgba(0,0,0,.45); pointer-events:auto; }
+  .help-card h2 { margin:0 0 16px 0; font-size:24px; }
+  .help-card p { margin:8px 0; color:#b8c1cc; line-height:1.6; }
+  .help-card .controls-grid { display:grid; grid-template-columns: 1fr; gap:8px; margin:12px 0; }
+  .help-card .control-row { display:flex; align-items:center; gap:12px; }
+  .help-card kbd { background:#111827; border:1px solid #26334a; border-bottom-width:3px; padding:4px 10px; border-radius:8px; font-weight:700; font-family:inherit; display:inline-block; }
+  .help-card .btn-close { margin-top:16px; width:100%; }
 </style>
 </head>
 <body>
@@ -23,6 +32,7 @@
     <div class="pill" id="best">Best: 0</div>
     <div class="pill" id="status">Press Space to start</div>
     <div class="pill button" id="musicPill" title="Toggle music (M)">♪ Music: On</div>
+    <div class="pill button" id="helpBtn" title="Help (H)">❓ Help</div>
   </div>
   <div class="btns">
     <button class="btn" id="upBtn">⬆︎</button>
@@ -31,7 +41,41 @@
     <button class="btn" id="downBtn">⬇︎</button>
     <button class="btn" id="restartBtn">Restart</button>
     <button class="btn" id="musicToggle">Music: On</button>
+    <button class="btn" id="helpBtnMobile">Help</button>
   </div>
+
+  <!-- Help Menu -->
+  <div class="overlay" id="helpOverlay">
+    <div class="help-card">
+      <h2>❓ How to Play Snake</h2>
+      <p><b>Objective:</b> Control the snake to eat food and grow as long as possible. Avoid hitting the walls or your own tail!</p>
+      
+      <div class="controls-grid">
+        <div class="control-row">
+          <span><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></span>
+          <span>Move the snake</span>
+        </div>
+        <div class="control-row">
+          <span><kbd>Space</kbd></span>
+          <span>Start game / Pause / Restart after game over</span>
+        </div>
+        <div class="control-row">
+          <span><kbd>M</kbd></span>
+          <span>Toggle music</span>
+        </div>
+      </div>
+
+      <p><b>Tips:</b></p>
+      <ul style="margin:8px 0; padding-left:20px; color:#b8c1cc; line-height:1.8;">
+        <li>Each food eaten increases your score and makes the snake longer</li>
+        <li>Plan your path to avoid trapping yourself</li>
+        <li>On mobile, use the on-screen buttons or swipe on the canvas</li>
+      </ul>
+
+      <button class="btn btn-close" id="helpClose">Close</button>
+    </div>
+  </div>
+
 <script>
 (function(){
   const canvas = document.getElementById('game');
@@ -46,6 +90,11 @@
   const restartBtn=document.getElementById('restartBtn');
   const musicToggleBtn=document.getElementById('musicToggle');
   const musicPill=document.getElementById('musicPill');
+  const helpBtn=document.getElementById('helpBtn');
+  const helpBtnMobile=document.getElementById('helpBtnMobile');
+  const helpOverlay=document.getElementById('helpOverlay');
+  const helpClose=document.getElementById('helpClose');
+  const helpCard=helpOverlay ? helpOverlay.querySelector('.help-card') : null;
 
   let audioCtx=null;
   function ensureAC(){
@@ -448,6 +497,45 @@
   restartBtn.addEventListener('click', ()=>{ restart(); });
   musicToggleBtn.addEventListener('click', toggleMusic);
   musicPill.addEventListener('click', toggleMusic);
+
+  // Help menu
+  let wasRunningBeforeHelp = false;
+  function openHelp(){ 
+    wasRunningBeforeHelp = running && !gameOver;
+    if(wasRunningBeforeHelp) {
+      pause();
+    }
+    if(helpOverlay) helpOverlay.classList.add('show'); 
+  }
+  function closeHelp(){ 
+    if(helpOverlay) helpOverlay.classList.remove('show');
+    if(wasRunningBeforeHelp && !gameOver) {
+      start();
+    }
+    wasRunningBeforeHelp = false;
+  }
+  if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
+  if(helpBtnMobile) helpBtnMobile.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
+  if(helpClose) helpClose.addEventListener('click', (e) => { e.preventDefault(); closeHelp(); });
+  if(helpOverlay) {
+    helpOverlay.addEventListener('click', (e) => {
+      if(e.target === helpOverlay) closeHelp();
+    });
+  }
+  if(helpCard) {
+    helpCard.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+  window.addEventListener('keydown', (e) => {
+    if(e.code === 'KeyH' && !e.repeat) {
+      if(helpOverlay.classList.contains('show')) closeHelp();
+      else openHelp();
+    }
+    if(e.code === 'Escape' && helpOverlay.classList.contains('show')) {
+      closeHelp();
+    }
+  });
 
   let tsx=0, tsy=0, swiping=false;
   canvas.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; tsx=t.clientX; tsy=t.clientY; swiping=true; }, {passive:true});

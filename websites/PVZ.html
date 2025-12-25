@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Plants vs Zombies — Vanilla HTML5/Canvas</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0b0f14;         /* page */
+    --ink:#e6edf3;        /* text */
+    --accent:#86efac;     /* minty green */
+    --accent-2:#60a5fa;   /* blue */
+    --warn:#fbbf24;       /* amber */
+    --danger:#f87171;     /* red */
+    --panel:#0e1522;      /* UI panels */
+    --grid:#123;          /* grid lines */
+  }
+  html,body{ height:100%; margin:0; background:var(--bg); color:var(--ink);
+    font: 15px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  }
+  #wrap{ position:fixed; inset:0; display:grid; place-items:center; }
+  canvas{ width:min(100vw, 1100px); height:auto; image-rendering:pixelated; display:block; border:1px solid #1f2a3a; border-radius:14px; box-shadow: 0 10px 30px rgba(0,0,0,.35); background:#0a1320; }
+  #hint{ position:fixed; left:12px; bottom:12px; background:rgba(14,21,34,.85); border:1px solid #1f2a3a; border-radius:12px; padding:10px 12px; max-width: 520px; backdrop-filter: blur(10px); }
+  #hint b{ color:var(--accent); }
+  a.btn{ position:fixed; right:12px; bottom:12px; text-decoration:none; color:#0b0f14; background:var(--accent); padding:10px 12px; border-radius:10px; font-weight:700; border:1px solid #186a47; box-shadow:0 6px 18px rgba(134,239,172,.3); }
+  @media (max-width: 520px){ #hint{ max-width: 92vw; font-size: 13px; } }
+</style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game" width="1100" height="640"></canvas></div>
+  <div id="hint">💡 <b>How to play</b>: Pick a card at the top, then click a grass tile to plant. <b>Sun</b> is your money. <b>Sunflowers</b> generate sun, <b>Peashooters</b> attack, <b>Wall‑nuts</b> block. Each row has a one‑time lawnmower. Press <b>P</b> to pause. Right‑click or use the <b>Shovel</b> to remove a plant (no refund).
+  </div>
+  <a class="btn" href="#" id="resetBtn">New Game</a>
+<script>
+(() => {
+  /*** --------------------------------------------------------------
+   *  Plants vs Zombies — HTML5 Canvas (single‑file, no libraries)
+   *  Minimal but complete: grid placement, cards, sun economy,
+   *  sunflower income, peashooter bullets, wall‑nut tank, zombies,
+   *  chewing logic, lawnmowers, waves, pause, and game over.
+   *  --------------------------------------------------------------*/
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Layout
+  const GRID = { rows:5, cols:9, x: 180, y: 110, cw: 90, ch: 90 };
+  const TOPBAR = { x: 0, y: 0, h: 90 };
+
+  // Economy
+  const START_SUN = 100;
+
+  // Cards (shop)
+  const CARDS = [
+    { key:'peashooter', label:'Peashooter', cost:100, cooldown:5, color:'#60a5fa', info:'Shoots peas at zombies.' },
+    { key:'sunflower',  label:'Sunflower',  cost: 50, cooldown:5, color:'#fbbf24', info:'Generates sun income.' },
+    { key:'wallnut',    label:'Wall‑nut',   cost: 50, cooldown:8, color:'#86efac', info:'High HP blocker.' },
+    { key:'shovel',     label:'Shovel',     cost:  0, cooldown:0, color:'#e5e7eb', info:'Remove a plant.' }
+  ];
+
+  // Entities arrays
+  let plants = [];   // {type, row, col, hp, t, ...}
+  let bullets = [];  // {x,y,row,speed,damage,r}
+  let zombies = [];  // {x,y,row,speed,hp, chew, chewDps}
+  let mowers  = [];  // {row, x, y, active}
+
+  // Game state
+  let sun = START_SUN;
+  let selectedCard = 'peashooter';
+  let cardCooldowns = new Map();
+  let time = 0;         // seconds
+  let paused = false;
+  let over   = false;
+  let winText = '';
+
+  // Spawning
+  let spawnTimer = 0;
+  let spawnInterval = 6; // seconds, will ramp down slowly
+  let difficulty = 1;    // increases over time
+
+  // Utility
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand = (a,b)=>a+Math.random()*(b-a);
+
+  function reset() {
+    plants.length = 0; bullets.length = 0; zombies.length = 0; mowers.length = 0;
+    sun = START_SUN; selectedCard = 'peashooter'; cardCooldowns.clear();
+    time = 0; paused = false; over = false; winText = '';
+    spawnTimer = 0; spawnInterval = 6; difficulty = 1;
+    for (let r=0;r<GRID.rows;r++) {
+      mowers.push({ row:r, x: GRID.x - 40, y: GRID.y + r*GRID.ch + GRID.ch/2, active:false });
+    }
+  }
+
+  reset();
+
+  // ----- Plants -----
+  const PLANTS = {
+    peashooter: {
+      hp: 100,
+      fireRate: 1.4,   // seconds per shot
+      make(row,col){
+        return { type:'peashooter', row, col, hp:this.hp, t:0 };
+      },
+      update(p, dt){
+        p.t += dt;
+        if (p.t >= this.fireRate) {
+          // Is there a zombie in this row and to the right?
+          const zx = rightEdgeOfCell(p.col) + 4;
+          if (zombies.some(z=>z.row===p.row && z.x>zx)) {
+            p.t = 0;
+            bullets.push({ x: centerOfCell(p.col).x+8, y: centerOfCell(p.col).y-10, row:p.row, speed: 220, damage: 20, r: 5 });
+          }
+        }
+      },
+      draw(p){
+        const {x,y} = centerOfCell(p.col, p.row);
+        // stem
+        ctx.fillStyle = '#3fb950';
+        ctx.beginPath(); ctx.ellipse(x, y+18, 14, 18, 0, 0, Math.PI*2); ctx.fill();
+        // head
+        ctx.fillStyle = '#60a5fa';
+        ctx.beginPath(); ctx.ellipse(x, y, 20, 16, 0, 0, Math.PI*2); ctx.fill();
+        // eye
+        ctx.fillStyle = '#0b0f14'; ctx.beginPath(); ctx.arc(x+6, y-4, 3, 0, 2*Math.PI); ctx.fill();
+        // smile
+        ctx.strokeStyle = '#0b0f14'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x+2, y+4, 6, .1*Math.PI, .9*Math.PI); ctx.stroke();
+      }
+    },
+    sunflower: {
+      hp: 80,
+      payout: 25,
+      rate: 7.5,
+      make(row,col){ return { type:'sunflower', row, col, hp:this.hp, t:0, twinkle:0 }; },
+      update(p, dt){
+        p.t += dt; p.twinkle += dt;
+        if (p.t >= this.rate) { p.t = 0; sun += this.payout; popText(`+${this.payout}`, centerOfCell(p.col,p.row).x, centerOfCell(p.col,p.row).y-30, '#fbbf24'); }
+      },
+      draw(p){
+        const {x,y} = centerOfCell(p.col, p.row);
+        // petals
+        ctx.fillStyle = '#fbbf24';
+        for(let i=0;i<8;i++){
+          const a = i*(Math.PI/4) + Math.sin(p.twinkle*2)*0.05;
+          ctx.beginPath(); ctx.ellipse(x+Math.cos(a)*16, y+Math.sin(a)*12, 9,6, a, 0, Math.PI*2); ctx.fill();
+        }
+        // face
+        ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(x,y,12,0,2*Math.PI); ctx.fill();
+        ctx.fillStyle = '#0b0f14'; ctx.beginPath(); ctx.arc(x-4, y-3, 2, 0, 2*Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(x+4, y-3, 2, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#0b0f14'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y+2, 5, .1*Math.PI, .9*Math.PI); ctx.stroke();
+      }
+    },
+    wallnut: {
+      hp: 300,
+      make(row,col){ return { type:'wallnut', row, col, hp:this.hp, t:0 }; },
+      update(p, dt){ /* no-op */ },
+      draw(p){
+        const {x,y} = centerOfCell(p.col, p.row);
+        ctx.fillStyle = '#c4a484'; ctx.beginPath(); ctx.ellipse(x, y+4, 20, 24, 0, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#7c5f35'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x-8,y+10); ctx.lineTo(x+8,y+10); ctx.stroke();
+        ctx.fillStyle = '#0b0f14'; ctx.beginPath(); ctx.arc(x-5, y-2, 2, 0, 2*Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(x+5, y-2, 2, 0, 2*Math.PI); ctx.fill();
+      }
+    }
+  };
+
+  // Pop text (floating numbers etc.)
+  const popups = [];
+  function popText(text,x,y,color='#fff'){ popups.push({text,x,y,a:1,color,vy:-22}); }
+
+  // ----- Zombies -----
+  function spawnZombie() {
+    const row = Math.floor(rand(0, GRID.rows));
+    const y = GRID.y + row*GRID.ch + GRID.ch/2;
+    const speed = rand(10, 22) + difficulty*2; // px/s
+    const hp = 100 + Math.floor(difficulty*10);
+    zombies.push({ x: GRID.x + GRID.cols*GRID.cw + 40, y, row, speed, hp, chew:false, chewDps: 15 + difficulty*2 });
+  }
+
+  // ----- Geometry helpers -----
+  function cellAt(x,y){
+    const col = Math.floor((x - GRID.x) / GRID.cw);
+    const row = Math.floor((y - GRID.y) / GRID.ch);
+    if (row<0||row>=GRID.rows||col<0||col>=GRID.cols) return null;
+    return {row,col};
+  }
+  function centerOfCell(col,row){
+    if (typeof row === 'undefined') { row = col.row; col = col.col; }
+    return { x: GRID.x + col*GRID.cw + GRID.cw/2, y: GRID.y + row*GRID.ch + GRID.ch/2 };
+  }
+  function rightEdgeOfCell(col){ return GRID.x + (col+1)*GRID.cw; }
+  function rectOfCell(col,row){ return { x: GRID.x + col*GRID.cw, y: GRID.y + row*GRID.ch, w: GRID.cw, h: GRID.ch }; }
+
+  function plantAt(row,col){ return plants.find(p=>p.row===row && p.col===col); }
+
+  // ----- Input -----
+  const mouse = { x:0, y:0, down:false };
+  canvas.addEventListener('mousemove', e=>{
+    const r = canvas.getBoundingClientRect();
+    const sx = canvas.width / r.width;  // scale factors (because CSS scales canvas)
+    const sy = canvas.height / r.height;
+    mouse.x = (e.clientX - r.left) * sx;
+    mouse.y = (e.clientY - r.top)  * sy;
+  });
+  canvas.addEventListener('mousedown', e=>{ mouse.down = true; handleClick(e); });
+  canvas.addEventListener('mouseup',   e=>{ mouse.down = false; });
+  canvas.addEventListener('contextmenu', e=>{ e.preventDefault(); selectedCard = 'shovel'; });
+  canvas.addEventListener('touchstart', e=>{
+    if (!e.touches.length) return; const t = e.touches[0]; const r=canvas.getBoundingClientRect();
+    const sx = canvas.width / r.width; const sy= canvas.height / r.height;
+    mouse.x = (t.clientX - r.left) * sx; mouse.y = (t.clientY - r.top) * sy; handleClick(e);
+  }, {passive:true});
+
+  function cardBounds(i){
+    const w=160, h=66; const gap=10; const x = 16 + i*(w+gap); const y = 12; return {x,y,w,h};
+  }
+
+  function handleClick(e){
+    if (over) return;
+    // Click on cards?
+    for (let i=0;i<CARDS.length;i++){
+      const b = cardBounds(i);
+      if (mouse.x>=b.x && mouse.x<=b.x+b.w && mouse.y>=b.y && mouse.y<=b.y+b.h){
+        const c = CARDS[i];
+        if (c.key!=='shovel') selectedCard = c.key; else selectedCard = 'shovel';
+        return;
+      }
+    }
+
+    // Planting / Shovel in grid
+    const cell = cellAt(mouse.x, mouse.y);
+    if (!cell) return;
+
+    if (selectedCard==='shovel'){
+      const p = plantAt(cell.row, cell.col);
+      if (p){ plants = plants.filter(pp=>pp!==p); popText('Removed', mouse.x, mouse.y-8, '#e5e7eb'); }
+      return;
+    }
+
+    const card = CARDS.find(c=>c.key===selectedCard);
+    if (!card) return;
+    if ((cardCooldowns.get(card.key)||0) > 0) { popText('Cooling…', mouse.x, mouse.y-8, '#93c5fd'); return; }
+    if (sun < card.cost) { popText('Not enough sun', mouse.x, mouse.y-8, '#f87171'); return; }
+    if (plantAt(cell.row, cell.col)) { popText('Occupied', mouse.x, mouse.y-8, '#f87171'); return; }
+
+    // Place plant
+    sun -= card.cost;
+    const plantDef = PLANTS[card.key];
+    plants.push( plantDef.make(cell.row, cell.col) );
+    cardCooldowns.set(card.key, card.cooldown);
+  }
+
+  // Keyboard
+  window.addEventListener('keydown', e=>{
+    if (e.key==='p' || e.key==='P'){ paused = !paused; }
+    if (e.key==='1') selectedCard='peashooter';
+    if (e.key==='2') selectedCard='sunflower';
+    if (e.key==='3') selectedCard='wallnut';
+    if (e.key==='4') selectedCard='shovel';
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', (e)=>{ e.preventDefault(); reset(); });
+
+  // ----- Update -----
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.05, (now - last)/1000); // clamp dt
+    last = now;
+    if (!paused && !over) update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  function update(dt){
+    time += dt;
+
+    // Cooldowns
+    for (const c of CARDS){
+      if (!cardCooldowns.has(c.key)) continue; const v = cardCooldowns.get(c.key); if (v>0) cardCooldowns.set(c.key, Math.max(0, v-dt));
+    }
+
+    // Difficulty scaling
+    difficulty = 1 + Math.floor(time/30)*0.5; // bumps every 30s
+    spawnTimer += dt;
+    if (spawnTimer >= spawnInterval){
+      spawnTimer = 0;
+      spawnZombie();
+      spawnInterval = clamp(6 - time*0.02, 2.2, 6); // faster spawns over time
+    }
+
+    // Plants
+    for (const p of plants){
+      PLANTS[p.type].update(p, dt);
+    }
+
+    // Bullets
+    for (const b of bullets){ b.x += b.speed * dt; }
+    bullets = bullets.filter(b=>b.x < GRID.x + GRID.cols*GRID.cw + 30);
+
+    // Bullet ↔ zombie collisions
+    for (const b of bullets){
+      for (const z of zombies){
+        if (z.row !== b.row) continue;
+        if (Math.abs((z.x) - b.x) < 18){ // simple hit check
+          z.hp -= b.damage; b.x = 99999; // mark bullet for cull
+          popText('-'+b.damage, z.x, z.y-20, '#60a5fa');
+          break;
+        }
+      }
+    }
+
+    // Zombies
+    for (const z of zombies){
+      // check plant in this row ahead
+      const col = Math.floor((z.x - GRID.x)/GRID.cw);
+      let target = null;
+      if (col>=0 && col<GRID.cols){ target = plantAt(z.row, col); }
+      if (!target){ z.chew=false; z.x -= z.speed*dt; }
+      else {
+        // align test: if zombie's left edge reached target cell left+10, chew
+        const cellR = rectOfCell(target.col, target.row);
+        if (z.x <= cellR.x + cellR.w - 10){
+          z.chew = true; target.hp -= (z.chewDps*dt);
+          if (target.hp <= 0){ plants = plants.filter(p=>p!==target); z.chew=false; }
+        } else { z.x -= z.speed*dt; }
+      }
+
+      // Trigger lawn mower if zombie crosses into safe zone
+      const mower = mowers[z.row];
+      if (mower && !mower.active && z.x < GRID.x - 10){ mower.active = true; }
+    }
+
+    // Lawn mowers move and kill
+    for (const m of mowers){
+      if (m.active){ m.x += 520*dt; // fast
+        // kill zombies in row
+        for (const z of zombies){ if (z.row===m.row && Math.abs(z.x - m.x) < 30){ z.hp = -999; } }
+      }
+    }
+
+    // Cull dead zombies
+    zombies = zombies.filter(z=>z.hp>0 && z.x > -40);
+
+    // Game over if any zombie reaches house
+    for (const z of zombies){ if (z.x < GRID.x - 30 && !mowers[z.row]?.active){ over = true; winText = 'Zombies ate your brains!'; } }
+  }
+
+  // ----- Rendering -----
+  function render(){
+    // sky gradient
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, '#07121d'); g.addColorStop(1, '#102338');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    drawTopBar();
+    drawLawn();
+
+    // selection hover
+    const cell = cellAt(mouse.x, mouse.y);
+    if (cell){
+      const r = rectOfCell(cell.col, cell.row);
+      ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(r.x+1, r.y+1, r.w-2, r.h-2);
+    }
+
+    // plants
+    for (const p of plants){ PLANTS[p.type].draw(p); drawHealthBar(p); }
+
+    // bullets
+    for (const b of bullets){ ctx.fillStyle = '#9ae6b4'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 2*Math.PI); ctx.fill(); }
+
+    // zombies
+    for (const z of zombies){ drawZombie(z); }
+
+    // lawn mowers
+    for (const m of mowers){ drawMower(m); }
+
+    // popups
+    for (const p of popups){ p.y += p.vy*1/60; p.a -= 0.02; }
+    for (const p of popups){ ctx.globalAlpha = Math.max(0,p.a); ctx.fillStyle=p.color; ctx.font='12px ui-sans-serif'; ctx.fillText(p.text, p.x, p.y); ctx.globalAlpha=1; }
+    for (let i=popups.length-1;i>=0;i--){ if (popups[i].a<=0) popups.splice(i,1); }
+
+    // overlays
+    if (paused){ drawOverlay('Paused — press P to resume'); }
+    if (over){ drawOverlay(winText || 'Game Over'); }
+  }
+
+  function drawTopBar(){
+    // panel
+    ctx.fillStyle = '#0e1522'; ctx.fillRect(0,0,W,TOPBAR.h);
+    ctx.strokeStyle = '#162338'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, TOPBAR.h+0.5); ctx.lineTo(W, TOPBAR.h+0.5); ctx.stroke();
+
+    // Sun counter
+    ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(110, 46, 18, 0, 2*Math.PI); ctx.fill();
+    ctx.fillStyle = '#0b0f14'; ctx.font='bold 18px ui-sans-serif'; ctx.fillText('Sun', 140, 34);
+    ctx.fillStyle = '#e6edf3'; ctx.font='bold 22px ui-sans-serif'; ctx.fillText(String(Math.floor(sun)), 140, 58);
+
+    // Cards
+    for (let i=0;i<CARDS.length;i++){
+      const c = CARDS[i]; const b = cardBounds(i);
+      const isSel = selectedCard===c.key;
+      const cd = cardCooldowns.get(c.key)||0;
+      ctx.save();
+      // card bg
+      ctx.fillStyle = isSel ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.03)';
+      roundRect(ctx, b.x, b.y, b.w, b.h, 10); ctx.fill();
+      ctx.strokeStyle = isSel ? c.color : '#1f2a3a'; ctx.lineWidth= isSel?2:1; roundRect(ctx, b.x, b.y, b.w, b.h, 10); ctx.stroke();
+      // title + cost
+      ctx.fillStyle = c.color; ctx.font='bold 14px ui-sans-serif'; ctx.fillText(c.label, b.x+10, b.y+20);
+      ctx.fillStyle = '#e6edf3'; ctx.font='bold 16px ui-sans-serif'; ctx.fillText(c.cost?c.cost:'', b.x+b.w-40, b.y+b.h-12);
+      // mini icon
+      const cx = b.x+20, cy=b.y+b.h-22;
+      drawMini(c.key, cx, cy);
+      // cooldown overlay
+      if (cd>0){ ctx.fillStyle='rgba(0,0,0,.5)'; roundRect(ctx,b.x,b.y,b.w,b.h,10); ctx.fill(); ctx.fillStyle='#e5e7eb'; ctx.font='12px ui-sans-serif'; ctx.fillText('cooling', b.x+10, b.y+b.h/2+4); }
+      ctx.restore();
+    }
+  }
+
+  function drawMini(key, x, y){
+    ctx.save();
+    if (key==='peashooter'){ ctx.fillStyle='#60a5fa'; ctx.beginPath(); ctx.arc(x, y-6, 8, 0, 2*Math.PI); ctx.fill(); ctx.fillStyle='#3fb950'; ctx.fillRect(x-3, y, 6, 10); }
+    else if (key==='sunflower'){ ctx.fillStyle='#fbbf24'; ctx.beginPath(); ctx.arc(x, y-6, 8, 0, 2*Math.PI); ctx.fill(); }
+    else if (key==='wallnut'){ ctx.fillStyle='#c4a484'; ctx.beginPath(); ctx.arc(x, y-4, 9, 0, 2*Math.PI); ctx.fill(); }
+    else if (key==='shovel'){ ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x, y-8, 7, Math.PI*0.1, Math.PI*0.9); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y-1); ctx.lineTo(x, y+10); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function drawLawn(){
+    // light stripes
+    for (let r=0;r<GRID.rows;r++){
+      const shade = r%2? '#123a' : '#0d2a';
+      ctx.fillStyle = shade; ctx.fillRect(GRID.x-20, GRID.y + r*GRID.ch, GRID.cw*GRID.cols+40, GRID.ch);
+    }
+    // grid lines
+    ctx.strokeStyle = '#1f2a3a'; ctx.lineWidth = 1;
+    for (let c=0;c<=GRID.cols;c++){
+      ctx.beginPath(); ctx.moveTo(GRID.x + c*GRID.cw + 0.5, GRID.y+0.5); ctx.lineTo(GRID.x + c*GRID.cw + 0.5, GRID.y + GRID.rows*GRID.ch + 0.5); ctx.stroke();
+    }
+    for (let r=0;r<=GRID.rows;r++){
+      ctx.beginPath(); ctx.moveTo(GRID.x+0.5, GRID.y + r*GRID.ch + 0.5); ctx.lineTo(GRID.x + GRID.cols*GRID.cw + 0.5, GRID.y + r*GRID.ch + 0.5); ctx.stroke();
+    }
+
+    // house wall (left)
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, GRID.y, GRID.x-20, GRID.rows*GRID.ch);
+  }
+
+  function drawHealthBar(p){
+    const {x,y} = rectOfCell(p.col, p.row);
+    const def = PLANTS[p.type]; const hp = clamp(p.hp/def.hp,0,1);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(x+8, y+GRID.ch-10, GRID.cw-16, 6);
+    ctx.fillStyle = hp>0.5? '#22c55e' : hp>0.25? '#f59e0b' : '#ef4444';
+    ctx.fillRect(x+8, y+GRID.ch-10, (GRID.cw-16)*hp, 6);
+  }
+
+  function drawZombie(z){
+    // body
+    ctx.fillStyle = '#8b5cf6'; ctx.beginPath(); ctx.ellipse(z.x, z.y, 18, 26, 0, 0, Math.PI*2); ctx.fill();
+    // head
+    ctx.fillStyle = '#a3e635'; ctx.beginPath(); ctx.arc(z.x, z.y-24, 14, 0, 2*Math.PI); ctx.fill();
+    // eyes
+    ctx.fillStyle = '#0b0f14'; ctx.beginPath(); ctx.arc(z.x-5, z.y-26, 3, 0, 2*Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(z.x+5, z.y-25, 3, 0, 2*Math.PI); ctx.fill();
+    // mouth (chew)
+    ctx.strokeStyle = '#0b0f14'; ctx.lineWidth = 2; ctx.beginPath();
+    const open = z.chew ? 1 : 0;
+    ctx.arc(z.x, z.y-18, 6+open, 0.1*Math.PI, 0.9*Math.PI); ctx.stroke();
+  }
+
+  function drawMower(m){
+    // base
+    ctx.fillStyle = '#ef4444'; ctx.fillRect(m.x-16, m.y-10, 32, 20);
+    ctx.fillStyle = '#e5e7eb'; ctx.fillRect(m.x-12, m.y-18, 24, 8);
+    // wheels
+    ctx.fillStyle = '#0b0f14'; ctx.beginPath(); ctx.arc(m.x-10, m.y+12, 6, 0, 2*Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(m.x+10, m.y+12, 6, 0, 2*Math.PI); ctx.fill();
+  }
+
+  function drawOverlay(text){
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#e6edf3'; ctx.textAlign='center'; ctx.font='bold 40px ui-sans-serif'; ctx.fillText(text, W/2, H/2);
+    ctx.font='16px ui-sans-serif'; ctx.fillStyle='#93a4b8'; ctx.fillText('Click "New Game" to restart', W/2, H/2+28);
+    ctx.restore();
+  }
+
+  function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); }
+
+})();
+</script>
+</body>
+</html>

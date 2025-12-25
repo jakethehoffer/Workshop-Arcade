@@ -192,12 +192,14 @@ canvas{
     <option value="5">5 (slowest)</option>
   </select>
 </label>
+<label id="autoFlipWrap" style="display:none;"><input type="checkbox" id="autoFlip"> Auto-flip board</label>
 
       </div>
       <div class="status" id="status">White to move.</div>
       <div class="controls">
         <button id="undo">Undo</button>
         <button id="new">Restart Game</button>
+        <button id="helpBtn">❓ Help</button>
         <button id="flip">Flip Board</button>
       </div>
       <div class="tiny">Click a piece to see its legal moves and click a destination to move.</div>
@@ -206,7 +208,6 @@ canvas{
     </aside>
   </div>
   <!-- Game Over Overlay -->
-<!-- Game Over Overlay -->
 <div class="overlay" id="gameOver">
   <div class="go-card">
     <h3 class="go-title" id="goTitle">Game Over</h3>
@@ -215,6 +216,38 @@ canvas{
       <button id="goReview">Review Board</button>
     </div>
     <div class="go-note">Tip: press <kbd>Enter</kbd> to play again, <kbd>Esc</kbd> to close.</div>
+  </div>
+</div>
+
+<!-- Help Menu -->
+<div class="overlay" id="helpOverlay">
+  <div class="go-card">
+    <h3 class="go-title">❓ How to Play Chess</h3>
+    <div class="go-sub">
+      <p><b>Objective:</b> Checkmate your opponent's king by putting it in a position where it cannot escape capture!</p>
+      
+      <p><b>Controls:</b></p>
+      <ul style="text-align:left; margin:8px 0; padding-left:20px; line-height:1.8;">
+        <li><b>Click</b> a piece to select it and see its legal moves</li>
+        <li><b>Click</b> a highlighted square to move the piece there</li>
+        <li><b>Undo</b> - Take back the last move</li>
+        <li><b>Restart Game</b> - Start a new game</li>
+        <li><b>Flip Board</b> - Rotate the board view</li>
+      </ul>
+
+      <p><b>Gameplay:</b></p>
+      <ul style="text-align:left; margin:8px 0; padding-left:20px; line-height:1.8;">
+        <li>White moves first, then players alternate turns</li>
+        <li>Each piece moves in a specific way (see piece movement rules)</li>
+        <li>You can play against another player or against the computer</li>
+        <li>Adjust the AI depth to change difficulty (higher = stronger but slower)</li>
+        <li>Checkmate occurs when the king is in check and cannot escape</li>
+        <li>Stalemate occurs when a player has no legal moves but is not in check (draw)</li>
+      </ul>
+    </div>
+    <div class="go-actions">
+      <button id="helpClose">Close</button>
+    </div>
   </div>
 </div>
 
@@ -236,6 +269,8 @@ const undoBtn = document.getElementById('undo');
 const flipBtn = document.getElementById('flip');
 const coordsEl = document.getElementById('coords');
 const vsComputerEl = document.getElementById('vsComputer');
+const autoFlipEl = document.getElementById('autoFlip');
+const autoFlipWrap = document.getElementById('autoFlipWrap');
 const depthEl = document.getElementById('depth');
 // --- Game Over overlay elements ---
 const goEl     = document.getElementById('gameOver');
@@ -263,6 +298,48 @@ function buildSAN(){
 // Buttons
 goRematch.addEventListener('click', ()=>{ hideOverlay(); newGame(); draw(); });
 goReview .addEventListener('click', ()=>{ hideOverlay(); /* leave final board for study */ });
+
+// Help menu
+const helpBtn = document.getElementById('helpBtn');
+const helpOverlay = document.getElementById('helpOverlay');
+const helpClose = document.getElementById('helpClose');
+const helpCard = helpOverlay ? helpOverlay.querySelector('.go-card') : null;
+let helpOpen = false;
+
+function openHelp(){ 
+  if(helpOverlay) {
+    helpOpen = true;
+    helpOverlay.classList.add('show'); 
+  }
+}
+function closeHelp(){ 
+  if(helpOverlay) {
+    helpOpen = false;
+    helpOverlay.classList.remove('show'); 
+  }
+}
+
+if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
+if(helpClose) helpClose.addEventListener('click', (e) => { e.preventDefault(); closeHelp(); });
+if(helpOverlay) {
+  helpOverlay.addEventListener('click', (e) => {
+    if(e.target === helpOverlay) closeHelp();
+  });
+}
+if(helpCard) {
+  helpCard.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
+window.addEventListener('keydown', (e) => {
+  if(e.code === 'KeyH' && !e.repeat) {
+    if(helpOverlay && helpOverlay.classList.contains('show')) closeHelp();
+    else openHelp();
+  }
+  if(e.code === 'Escape' && helpOverlay && helpOverlay.classList.contains('show')) {
+    closeHelp();
+  }
+});
 
 // Keyboard shortcuts when overlay is open
 window.addEventListener('keydown', (e)=>{
@@ -339,6 +416,8 @@ let currentAnimation = null; // { pieces:[{piece,col0,row0,col1,row1}], start, d
 const ANIM_DURATION = 180; // ms
 
 function newGame() {
+  // Reset board orientation
+  flipped = false;
   hideOverlay();
   state = loadFEN(START_FEN);
   selected = null;
@@ -521,7 +600,10 @@ function draw() {
 }
 
 // ---------- Input handling ----------
-canvas.addEventListener('mousedown', onClick);
+canvas.addEventListener('mousedown', (e) => {
+  if(helpOpen) return;
+  onClick(e);
+});
 
 function onClick(evt) {
   if (state.gameOver || aiThinking || currentAnimation) return;
@@ -548,6 +630,10 @@ function onClick(evt) {
         postMoveChecks();
         selected = null;
         legalMovesForSelected = [];
+        // Auto-flip board in 2-player mode if enabled (applyMove already handles this, but we need to redraw)
+        if(!vsComputer && autoFlipEl && autoFlipEl.checked) {
+          flipped = (state.turn === 'b'); // Flip to show black on bottom when it's black's turn
+        }
         if (vsComputer && !state.gameOver && state.turn === 'b') {
           thinkAndMoveAI();
         } else {
@@ -625,6 +711,13 @@ flipBtn.addEventListener('click', () => { if (!currentAnimation) { flipped = !fl
 vsComputerEl.addEventListener('change', () => {
   if (currentAnimation) return;
   vsComputer = !!vsComputerEl.checked;
+  // Show/hide auto-flip toggle based on mode
+  if(autoFlipWrap) {
+    autoFlipWrap.style.display = vsComputer ? 'none' : 'block';
+  }
+  if(vsComputer && autoFlipEl) {
+    autoFlipEl.checked = false; // Disable auto-flip when switching to vs computer
+  }
   newGame(); // fresh start when changing mode
 });
 
@@ -638,6 +731,7 @@ function generateLegalMovesForSquare(col, row) {
   const legal = [];
   for (const mv of pseudo) {
     const after = simulate(state, mv);
+    if (!after) continue; // Safety check
     if (mv.castle) {
       const r = mv.toRow;
       const enemy = piece.color === 'w' ? 'b' : 'w';
@@ -648,7 +742,19 @@ function generateLegalMovesForSquare(col, row) {
       }
       if (!safe) continue;
     }
-    if (!isKingInCheck(after, piece.color)) legal.push(mv);
+    // Check if the move would leave the king in check
+    // For king moves, directly check if the destination square is attacked in the simulated state
+    // For other pieces, check if the king is in check after the move
+    if (piece.type === 'k') {
+      // For king moves, check if the destination square is attacked by enemy pieces
+      // The simulated state has the king at the destination, so we check if that square is attacked
+      const enemy = piece.color === 'w' ? 'b' : 'w';
+      if (isSquareAttackedBy(after, mv.toCol, mv.toRow, enemy)) continue;
+    } else {
+      // For other pieces, check if the king is in check after the move
+      if (isKingInCheck(after, piece.color)) continue;
+    }
+    legal.push(mv);
   }
   for (const mv of legal) mv.capture = isCaptureMove(state, mv);
   return legal;
@@ -776,14 +882,19 @@ function findKing(st, color) {
   return null;
 }
 
+/* FIXED: correct pawn attack direction so stalemates are detected */
 function isSquareAttackedBy(st, col, row, byColor) {
   const dir = byColor === 'w' ? -1 : 1;
+
+  // Pawns of byColor that attack (col,row) must sit on (col ± 1, row - dir)
   for (const dc of [-1,1]) {
-    const cc = col + dc, rr = row + dir;
+    const cc = col + dc;
+    const rr = row - dir;   // <-- was row + dir (wrong)
     if (!isInside(cc, rr)) continue;
     const p = st.board[rr][cc];
     if (p && p.color===byColor && p.type==='p') return true;
   }
+
   const kD = [[1,2],[2,1],[2,-1],[1,-2],[-1,-2],[-2,-1],[-2,1],[-1,2]];
   for (const [dx,dy] of kD) {
     const cc = col+dx, rr = row+dy;
@@ -918,8 +1029,10 @@ function updateCastlingRightsOnMove(st, mv, capturedPiece) {
 function simulate(st, mv) {
   const sim = cloneState(st);
   const fromPiece = sim.board[mv.fromRow][mv.fromCol];
+  if (!fromPiece) return sim; // Safety check
   const toPiece = sim.board[mv.toRow][mv.toCol];
 
+  // Move the piece to the destination
   sim.board[mv.toRow][mv.toCol] = {type: fromPiece.type, color: fromPiece.color};
   sim.board[mv.fromRow][mv.fromCol] = null;
 
@@ -963,6 +1076,7 @@ function postMoveChecks() {
   if (legal.length === 0) {
     state.gameOver = true;
     if (inCheck) {
+      // Checkmate
       state.result = (side === 'w') ? '0-1' : '1-0';
       const winnerColor = (side === 'w') ? 'Black' : 'White';
 
@@ -980,6 +1094,7 @@ function postMoveChecks() {
         showOverlay(title);
       }
     } else {
+      // Stalemate - no legal moves and not in check
       state.result = '1/2-1/2';
       const title = 'Draw — Stalemate';
       const sub   = 'Result: 1/2–1/2';
@@ -1162,6 +1277,10 @@ const depth = Math.max(1, Math.min(6, parseInt(depthEl.value || '3', 10)));
       postMoveChecks();
       aiThinking = false;
       undoBtn.disabled = false;
+      // Auto-flip back to white on bottom after AI move (if auto-flip is enabled, but shouldn't be in vs computer mode)
+      if(!vsComputer && autoFlipEl && autoFlipEl.checked) {
+        flipped = (state.turn === 'b');
+      }
       draw();
     });
   }, 0);
@@ -1236,6 +1355,10 @@ function initialSetup() {
   initialSet = true;
   vsComputer = false;
   vsComputerEl.checked = false;
+  // Show auto-flip toggle in 2-player mode
+  if(autoFlipWrap) {
+    autoFlipWrap.style.display = 'block';
+  }
 }
 initialSetup();
 newGame();

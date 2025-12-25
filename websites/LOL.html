@@ -40,6 +40,65 @@
   }
   button:disabled{opacity:.6; cursor:not-allowed}
   .pill{border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+
+  /* Prominent guesses-left counter */
+  #guessesLeftPill{
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 900;
+    font-size: clamp(16px, 1.8vw, 22px);
+    padding: 10px 16px;
+    border-radius: 12px;
+    border-width: 2px;
+    border-style: solid;
+    letter-spacing: .2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.25) inset, 0 8px 20px rgba(0,0,0,.25);
+  }
+  #guessesLeftPill .label{ position: relative; z-index: 1; }
+  #guessesLeftPill .big{ font-size: 1.35em; line-height: 1; margin-right: 4px; }
+
+  /* background fill bar */
+  #guessesLeftPill .bar{
+    content:"";
+    position:absolute; inset:0;
+    width: var(--fill, 100%);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* color states */
+  #guessesLeftPill.ok{
+    color:#bef264; border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.12);
+  }
+  #guessesLeftPill.ok .bar{
+    background: linear-gradient(90deg, rgba(34,197,94,.35), rgba(34,197,94,.15));
+  }
+
+  #guessesLeftPill.warn{
+    color:#fde68a; border-color: rgba(245,158,11,.55); background: rgba(245,158,11,.12);
+  }
+  #guessesLeftPill.warn .bar{
+    background: linear-gradient(90deg, rgba(245,158,11,.45), rgba(245,158,11,.18));
+  }
+
+  #guessesLeftPill.danger{
+    color:#fecaca; border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.12);
+  }
+  #guessesLeftPill.danger .bar{
+    background: linear-gradient(90deg, rgba(239,68,68,.55), rgba(239,68,68,.22));
+  }
+
+  /* pop the pill each time it changes */
+  @keyframes bump{ 0%{transform:scale(1)} 35%{transform:scale(1.07)} 100%{transform:scale(1)} }
+  #guessesLeftPill.bump{ animation: bump .28s ease; }
+
+  @media (max-width: 840px){
+    #guessesLeftPill{ font-size: 20px; padding: 12px 18px; }
+  }
+
   main{display:grid; grid-template-columns: 320px 1fr; gap:14px; padding:14px 16px}
   .panel{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:12px}
   .panel h2{margin:2px 0 10px 0; font-size:15px}
@@ -52,7 +111,21 @@
   .factsGrid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px}
   .fact{padding:8px 10px; border:1px solid rgba(255,255,255,.06); border-radius:10px; background:rgba(255,255,255,.02); font-size:13px}
   .fact b{display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px}
+  .tag.partial{
+    background: rgba(245,158,11,.12);
+    border-color: rgba(245,158,11,.45);
+    color:#fde68a;
+  }
   .tag{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 8px; font-size:12px; border:1px solid rgba(255,255,255,.1)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    display:inline-flex;align-items:center;border-radius:999px;
+    padding:2px 8px;font-size:12px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.04)
+  }
+  .chip.ok{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.45);color:#bef264}
+  .chip.miss{opacity:.6}
+
   .tag.ok{background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color:#bef264}
   .tag.no{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color:#fecaca}
   .guessCard{border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02)}
@@ -80,6 +153,19 @@
   }
 
   body.modal-open{ overflow: hidden; }
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--ink);
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.1);
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -91,8 +177,10 @@
     </div>
     <div class="actions">
       <span class="pill" id="guessesLeftPill">Guesses left: —</span>
-      <button id="newGameBtn">New Game</button>
-      <button id="sfxBtn" class="btn">🔊 SFX: On</button>
+      <button id="newGameBtn">New Game (N)</button>
+      <button id="sfxBtn" class="btn">🔊 SFX: On (S)</button>
+      <button id="eligibleBtn" class="btn" title="Show only characters that match any matched facts">🔎 Match-Only: Off (M)</button>
+      <button id="helpBtn" class="btn" title="How to play & fact options">❓ Help (H)</button>
     </div>
   </header>
 
@@ -110,6 +198,7 @@
         <h2>Guesses</h2>
         <div class="legend">
           <span class="tag ok">Matches target</span>
+          <span class="tag partial">Partial overlap</span>
           <span class="tag no">Doesn't match</span>
         </div>
       </div>
@@ -149,6 +238,52 @@
     <div class="row">
       <button id="playAgainBtnLose">Try Again</button>
       <span class="muted" id="statsLose"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Help Overlay -->
+<div class="winOverlay" id="help">
+  <div class="winPanel" style="max-height:min(80vh,680px); overflow:auto">
+    <h3>❓ How to Play</h3>
+    <div class="muted" style="margin-bottom:8px">
+      Guess the hidden champion in 8 tries. Each guess compares facts:
+      <span class="tag ok">Exact</span> /
+      <span class="tag partial">Partial</span> /
+      <span class="tag no">No match</span>.
+    </div>
+
+    <div class="fact">
+      <b>Steps</b>
+      <ol style="margin:8px 0 0 18px; padding:0">
+        <li>Pick a champion from the bank to see which facts match the target.</li>
+        <li>Use the search box to narrow by name.</li>
+        <li>Toggle <i>Match-Only</i> to show only champions that share your matched facts (Partial/Exact).</li>
+        <li>Win by tapping the exact champion.</li>
+      </ol>
+    </div>
+
+    <div class="sp"></div>
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="fact" style="margin-bottom:8px">
+      <b>Hotkeys</b>
+      <div style="margin-top:6px">
+        <div><kbd>N</kbd> - New Game</div>
+        <div><kbd>S</kbd> - Toggle SFX</div>
+        <div><kbd>M</kbd> - Toggle Match-Only Mode</div>
+        <div><kbd>H</kbd> - Toggle Help</div>
+        <div><kbd>Esc</kbd> - Close Help</div>
+      </div>
+    </div>
+
+    <div class="sp"></div>
+    <h3>📚 Category Options</h3>
+    <div id="helpBody"></div>
+
+    <div class="sp"></div>
+    <div class="row">
+      <button id="helpCloseBtn">Close</button>
+      <span class="muted">Tip: Partial = some overlap; Exact = same set of values.</span>
     </div>
   </div>
 </div>
@@ -218,13 +353,12 @@ document.addEventListener('DOMContentLoaded', function(){
     })();
 
     // --- Fact schema for LoL ---
-    // Six strong, broadly-applicable categories:
-    // - Region (Runeterra region)
-    // - Class  (Fighter, Assassin, Mage, Marksman, Tank, Support)
-    // - Resource (Mana, Energy, Fury, Ferocity, Manaless)
-    // - Range (Melee, Ranged)
-    // - Damage (AD, AP, Mixed)
-    // - Species (Human, Yordle, Vastaya, Undead, Ascended, Voidborn, Golem, Celestial, Iceborn, etc.)
+    // - region  (Runeterra region)
+    // - class   (Fighter, Assassin, Mage, Marksman, Tank, Support; may be array)
+    // - resource (Mana, Energy, Fury, Ferocity, Manaless, etc.)
+    // - range   (Melee, Ranged)
+    // - damage  (AD, AP, Mixed)
+    // - species (Human, Yordle, Vastaya, Voidborn, Undead, etc.)
     const FACT_KEYS = ['region','class','resource','range','damage','species'];
     const FACT_LABEL = {
       region:'Region',
@@ -235,109 +369,91 @@ document.addEventListener('DOMContentLoaded', function(){
       species:'Species'
     };
 
-    // --- Champion dataset (70+ popular champs) ---
-    const CHARACTER_FACTS = {
-      // Demacia
-      GAREN: {display:'Garen', region:'Demacia', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
-      LUX: {display:'Lux', region:'Demacia', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
-      JARVAN_IV: {display:'Jarvan IV', region:'Demacia', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      VAYNE: {display:'Vayne', region:'Demacia', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      FIORA: {display:'Fiora', region:'Demacia', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      GALIO: {display:'Galio', region:'Demacia', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Golem'},
+    // Dynamic champion dataset, filled from Riot Data Dragon
+    let CHARACTER_FACTS = {};
+    let BANK = [];
 
-      // Noxus
-      DARIUS: {display:'Darius', region:'Noxus', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      DRAVEN: {display:'Draven', region:'Noxus', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      KATARINA: {display:'Katarina', region:'Noxus', class:'Assassin', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
-      SWAIN: {display:'Swain', region:'Noxus', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
-      LEBLANC: {display:'LeBlanc', region:'Noxus', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
-      SION: {display:'Sion', region:'Noxus', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Undead'},
-      RIVEN: {display:'Riven', region:'Noxus', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
-      TALON: {display:'Talon', region:'Noxus', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      VLADIMIR: {display:'Vladimir', region:'Noxus', class:'Mage', resource:'Manaless', range:'Ranged', damage:'AP', species:'Human'},
+    /* ---------- Helpers to infer facts from Data Dragon ---------- */
 
-      // Ionia
-      AHRI: {display:'Ahri', region:'Ionia', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Vastaya'},
-      IRELIA: {display:'Irelia', region:'Ionia', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      YASUO: {display:'Yasuo', region:'Ionia', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
-      ZED: {display:'Zed', region:'Ionia', class:'Assassin', resource:'Energy', range:'Melee', damage:'AD', species:'Human'},
-      SHEN: {display:'Shen', region:'Ionia', class:'Tank', resource:'Energy', range:'Melee', damage:'AD', species:'Human'},
-      KENNEN: {display:'Kennen', region:'Ionia', class:'Mage', resource:'Energy', range:'Ranged', damage:'AP', species:'Yordle'},
-      AKALI: {display:'Akali', region:'Ionia', class:'Assassin', resource:'Energy', range:'Melee', damage:'AP', species:'Human'},
-      MASTER_YI: {display:'Master Yi', region:'Ionia', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+    function normalizeResource(partype){
+      if (!partype) return 'Manaless';
+      const p = partype.toLowerCase();
+      if (p.includes('mana')) return 'Mana';
+      if (p.includes('energy')) return 'Energy';
+      if (p.includes('fury')) return 'Fury';
+      if (p.includes('ferocity')) return 'Ferocity';
+      if (p.includes('heat')) return 'Heat';
+      if (p.includes('blood')) return 'Blood Well';
+      if (p.includes('shield')) return 'Shield';
+      if (p.includes('gnar')) return 'Rage';
+      return 'Manaless';
+    }
 
-      // Piltover
-      CAITLYN: {display:'Caitlyn', region:'Piltover', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      VI: {display:'Vi', region:'Piltover', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      EZREAL: {display:'Ezreal', region:'Piltover', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      JAYCE: {display:'Jayce', region:'Piltover', class:'Fighter', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      HEIMERDINGER: {display:'Heimerdinger', region:'Piltover', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Yordle'},
+    function inferRange(attackRange){
+      return attackRange >= 300 ? 'Ranged' : 'Melee';
+    }
 
-      // Zaun
-      JINX: {display:'Jinx', region:'Zaun', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      EKKO: {display:'Ekko', region:'Zaun', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      SINGED: {display:'Singed', region:'Zaun', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Human'},
-      TWITCH: {display:'Twitch', region:'Zaun', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Chemically-Altered'},
-      VIKTOR: {display:'Viktor', region:'Zaun', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Augmented'},
-      DR_MUNDO: {display:'Dr. Mundo', region:'Zaun', class:'Fighter', resource:'Manaless', range:'Melee', damage:'AD', species:'Chemically-Altered'},
+    function guessDamageFromTags(tags){
+      const set = new Set((tags || []).map(t => t.toLowerCase()));
 
-      // Freljord
-      ASHE: {display:'Ashe', region:'Freljord', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      SEJUANI: {display:'Sejuani', region:'Freljord', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Iceborn'},
-      ANIVIA: {display:'Anivia', region:'Freljord', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Spirit'},
-      LISSANDRA: {display:'Lissandra', region:'Freljord', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Iceborn'},
-      TRYNDAMERE: {display:'Tryndamere', region:'Freljord', class:'Fighter', resource:'Fury', range:'Melee', damage:'AD', species:'Human'},
-      BRAUM: {display:'Braum', region:'Freljord', class:'Support', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
+      if (set.has('mage')) {
+        if (set.has('assassin') || set.has('marksman') || set.has('fighter')) return 'Mixed';
+        return 'AP';
+      }
+      if (set.has('marksman') || set.has('assassin') || set.has('fighter')) {
+        return 'AD';
+      }
+      if (set.has('tank')) {
+        return 'AD';
+      }
+      if (set.has('support')) {
+        return 'AP';
+      }
+      return 'Mixed';
+    }
 
-      // Shurima
-      AZIR: {display:'Azir', region:'Shurima', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Ascended'},
-      XERATH: {display:'Xerath', region:'Shurima', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Ascended'},
-      RENEKTON: {display:'Renekton', region:'Shurima', class:'Fighter', resource:'Fury', range:'Melee', damage:'AD', species:'Ascended'},
-      NASUS: {display:'Nasus', region:'Shurima', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Ascended'},
-      SIVIR: {display:'Sivir', region:'Shurima', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+    function champToken(id){
+      return id.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+    }
 
-      // Bilgewater
-      MISS_FORTUNE: {display:'Miss Fortune', region:'Bilgewater', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-      GANGPLANK: {display:'Gangplank', region:'Bilgewater', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      PYKE: {display:'Pyke', region:'Bilgewater', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Undead'},
-      NAUTILUS: {display:'Nautilus', region:'Bilgewater', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Undead'},
-      TWISTED_FATE: {display:'Twisted Fate', region:'Bilgewater', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
+    async function loadChampionsFromDataDragon(){
+      // 1) latest patch
+      const versionsRes = await fetch('https://ddragon.leagueoflegends.com/api/versions.json');
+      const versions = await versionsRes.json();
+      const latest = versions[0];
 
-      // Shadow Isles
-      THRESH: {display:'Thresh', region:'Shadow Isles', class:'Support', resource:'Mana', range:'Ranged', damage:'AP', species:'Undead'},
-      HECARIM: {display:'Hecarim', region:'Shadow Isles', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Undead'},
-      KALISTA: {display:'Kalista', region:'Shadow Isles', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Undead'},
-      MAOKAI: {display:'Maokai', region:'Shadow Isles', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Treant'},
+      // 2) champion summary data
+      const champsRes = await fetch(
+        `https://ddragon.leagueoflegends.com/cdn/${latest}/data/en_US/champion.json`
+      );
+      const champsJson = await champsRes.json();
+      const champs = champsJson.data;
 
-      // Targon
-      LEONA: {display:'Leona', region:'Targon', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Aspect'},
-      DIANA: {display:'Diana', region:'Targon', class:'Assassin', resource:'Mana', range:'Melee', damage:'AP', species:'Aspect'},
-      PANTHEON: {display:'Pantheon', region:'Targon', class:'Fighter', resource:'Mana', range:'Melee', damage:'AD', species:'Aspect'},
-      TARIC: {display:'Taric', region:'Targon', class:'Support', resource:'Mana', range:'Melee', damage:'AP', species:'Aspect'},
-      AURELION_SOL: {display:'Aurelion Sol', region:'Targon', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Celestial'},
+      CHARACTER_FACTS = {};
 
-      // Ixtal
-      QIYANA: {display:'Qiyana', region:'Ixtal', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Human'},
-      NEEKO: {display:'Neeko', region:'Ixtal', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Vastaya'},
-      NIDALEE: {display:'Nidalee', region:'Ixtal', class:'Assassin', resource:'Mana', range:'Ranged', damage:'AP', species:'Vastaya'},
-      RENGAR: {display:'Rengar', region:'Ixtal', class:'Assassin', resource:'Ferocity', range:'Melee', damage:'AD', species:'Vastaya'},
+      for (const id in champs){
+        const ch = champs[id];
+        const stats = ch.stats || {};
+        const tags  = ch.tags || [];
 
-      // Bandle City
-      TEEMO: {display:'Teemo', region:'Bandle City', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Yordle'},
-      TRISTANA: {display:'Tristana', region:'Bandle City', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Yordle'},
-      POPPY: {display:'Poppy', region:'Bandle City', class:'Tank', resource:'Mana', range:'Melee', damage:'AD', species:'Yordle'},
-      VEIGAR: {display:'Veigar', region:'Bandle City', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Yordle'},
-      LULU: {display:'Lulu', region:'Bandle City', class:'Support', resource:'Mana', range:'Ranged', damage:'AP', species:'Yordle'},
+        const token = champToken(ch.id);
 
-      // Void
-      KASSADIN: {display:'Kassadin', region:'Void', class:'Assassin', resource:'Mana', range:'Melee', damage:'AP', species:'Human'},
-      KHAZIX: {display:"Kha'Zix", region:'Void', class:'Assassin', resource:'Mana', range:'Melee', damage:'AD', species:'Voidborn'},
-      CHOGATH: {display:"Cho'Gath", region:'Void', class:'Tank', resource:'Mana', range:'Melee', damage:'AP', species:'Voidborn'},
-      VELKOZ: {display:"Vel'Koz", region:'Void', class:'Mage', resource:'Mana', range:'Ranged', damage:'AP', species:'Voidborn'},
-      KAISA: {display:"Kai'Sa", region:'Void', class:'Marksman', resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-    };
+        CHARACTER_FACTS[token] = {
+          display: ch.name,
+          region: 'Unknown',
+          species: 'Unknown',
+          class: tags.length ? tags.slice() : ['Unknown'],
+          resource: normalizeResource(ch.partype),
+          range: inferRange(stats.attackrange || 125),
+          damage: guessDamageFromTags(tags)
+        };
+      }
 
-    const BANK = Object.keys(CHARACTER_FACTS).map(k => ({ token: k, display: CHARACTER_FACTS[k].display }));
+      BANK = Object.keys(CHARACTER_FACTS).map(k => ({
+        token: k,
+        display: CHARACTER_FACTS[k].display
+      }));
+    }
 
     // State
     let target = null;
@@ -349,6 +465,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // Utils
     const byId = id => document.getElementById(id);
     const choice = arr => arr[(Math.random()*arr.length)|0];
+
     function patternToRegex(pat) {
       if (!pat) return null;
       let raw = (pat + '').toUpperCase().trim();
@@ -362,17 +479,37 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       return new RegExp('^' + rx + '$');
     }
+
+    function displayValue(v){
+      return Array.isArray(v) ? v.join(', ') : v;
+    }
+    function toArr(v){ return Array.isArray(v) ? v : [v]; }
+
+    function getMatches(a, b){
+      const A = toArr(a), B = toArr(b);
+      const matches = A.filter(x => B.indexOf(x) !== -1);
+      const overlap = matches.length > 0;
+
+      const equal = (A.length === B.length) &&
+                    A.every(x => B.indexOf(x) !== -1) &&
+                    B.every(x => A.indexOf(x) !== -1);
+
+      const state = equal ? 'exact' : (overlap ? 'partial' : 'none');
+      return { ok: overlap, state, matches };
+    }
+
     function compareFacts(guessToken, targetToken){
       const ga = CHARACTER_FACTS[guessToken];
       const ta = CHARACTER_FACTS[targetToken];
       const res = {};
-      for (let i=0;i<FACT_KEYS.length;i++){ const k=FACT_KEYS[i]; res[k] = (ga[k] === ta[k]); }
+      for (let i=0;i<FACT_KEYS.length;i++){
+        const k = FACT_KEYS[i];
+        res[k] = getMatches(ga[k], ta[k]);
+      }
       return res;
     }
     function isCorrectGuess(guessToken, targetToken){
-      const m = compareFacts(guessToken, targetToken);
-      for (let i=0;i<FACT_KEYS.length;i++){ if(!m[FACT_KEYS[i]]) return false; }
-      return true;
+      return guessToken === targetToken;
     }
 
     // DOM
@@ -381,19 +518,180 @@ document.addEventListener('DOMContentLoaded', function(){
     const guessesLeftPill = byId('guessesLeftPill');
     const sfxBtn = byId('sfxBtn');
     const guessesEl = byId('guesses');
+    const eligibleBtn = byId('eligibleBtn');
+
+    const help         = byId('help');
+    const helpBody     = byId('helpBody');
+    const helpBtn      = byId('helpBtn');
+    const helpCloseBtn = byId('helpCloseBtn');
+
+    const win = byId('win');
+    const winName = byId('winName');
+    const winFacts = byId('winFacts');
+    const statsEl = byId('stats');
+    const playAgainBtn = byId('playAgainBtn');
+
+    const lose = byId('lose');
+    const loseName = byId('loseName');
+    const loseFacts = byId('loseFacts');
+    const statsLose = byId('statsLose');
+    const playAgainBtnLose = byId('playAgainBtnLose');
+
+    // --- Help modal logic ---
+    function uniqueValuesForKey(k){
+      const set = new Set();
+      Object.keys(CHARACTER_FACTS).forEach(tok => {
+        toArr(CHARACTER_FACTS[tok][k]).forEach(v => set.add(v));
+      });
+      return Array.from(set).sort((a,b)=> (''+a).localeCompare(''+b));
+    }
+
+    function chipsHTML(arr){
+      return '<div class="chips" style="margin-top:6px">' +
+        arr.map(v => '<span class="chip">'+ v +'</span>').join('') +
+      '</div>';
+    }
+
+    function buildHelpContent(){
+      if (!Object.keys(CHARACTER_FACTS).length){
+        helpBody.innerHTML = '<div class="fact"><b>Loading…</b><div>Champion data is still loading.</div></div>';
+        return;
+      }
+      const groups = [
+        { key:'region',  label:'Region' },
+        { key:'class',   label:'Class' },
+        { key:'resource',label:'Resource' },
+        { key:'range',   label:'Range' },
+        { key:'damage',  label:'Damage Type' },
+        { key:'species', label:'Species' }
+      ];
+
+      const sections = groups.map(g => {
+        const vals = uniqueValuesForKey(g.key);
+        return (
+          '<div class="fact" style="margin-bottom:8px">' +
+            '<b>'+ g.label +'</b>' +
+            chipsHTML(vals) +
+          '</div>'
+        );
+      }).join('');
+
+      helpBody.innerHTML = sections;
+    }
+
+    function openHelp(){
+      buildHelpContent();
+      document.body.classList.add('modal-open');
+      help.classList.add('show');
+      SFX.ui();
+    }
+
+    function closeHelp(){
+      help.classList.remove('show');
+      document.body.classList.remove('modal-open');
+    }
+
+    helpBtn.addEventListener('click', openHelp);
+    helpCloseBtn.addEventListener('click', closeHelp);
+    help.addEventListener('click', function(e){
+      if (e.target === help) closeHelp();
+    });
+
+    let eligibleOnly = false;
+
+    // Positive-only pruning (ignore "no match")
+    function buildConstraintMaps(){
+      const dis = {};
+      const reqHas = {};
+      const reqExact = {};
+      FACT_KEYS.forEach(k => { dis[k] = new Set(); reqHas[k] = new Set(); reqExact[k] = null; });
+
+      for (let i = 0; i < guesses.length; i++){
+        const entry = guesses[i];
+        const gf = CHARACTER_FACTS[entry.token];
+
+        FACT_KEYS.forEach(k => {
+          const det = entry.matches[k];
+          if (!det) return;
+
+          if (det.state === 'exact'){
+            const exactSet = new Set(toArr(gf[k]));
+            if (!reqExact[k]) reqExact[k] = exactSet;
+            exactSet.forEach(v => reqHas[k].add(v));
+          } else if (det.state === 'partial'){
+            (det.matches || []).forEach(v => reqHas[k].add(v));
+          }
+        });
+      }
+
+      return { dis, reqHas, reqExact };
+    }
+
+    function isEligibleCharacterToken(token, cns){
+      const cf = CHARACTER_FACTS[token];
+
+      for (let i = 0; i < FACT_KEYS.length; i++){
+        const k = FACT_KEYS[i];
+        const vals = toArr(cf[k]);
+
+        for (let j = 0; j < vals.length; j++){
+          if (cns.dis[k].has(vals[j])) return false;
+        }
+
+        const ex = cns.reqExact[k];
+        if (ex && ex.__contradiction) return false;
+        if (ex){
+          if (vals.length !== ex.size) return false;
+          for (let j = 0; j < vals.length; j++){
+            if (!ex.has(vals[j])) return false;
+          }
+          continue;
+        }
+
+        for (const must of cns.reqHas[k]){
+          if (vals.indexOf(must) === -1) return false;
+        }
+      }
+
+      return true;
+    }
+
+    function updateEligibleButtonText() {
+      eligibleBtn.textContent = eligibleOnly ? '🔎 Match-Only: On (M)' : '🔎 Match-Only: Off (M)';
+    }
+    eligibleBtn.addEventListener('click', function(){
+      eligibleOnly = !eligibleOnly;
+      updateEligibleButtonText();
+      SFX.ui();
+      renderBank();
+    });
 
     function renderBank(){
       const patt = (bankFilter.value||'').trim();
       const rx = patt ? patternToRegex(patt) : null;
-      const items = BANK
-        .filter(c => !rx || rx.test(c.display.toUpperCase()) || rx.test(c.token))
-        .sort((a,b)=> a.display.localeCompare(b.display));
+
+      let items = BANK.slice();
+
+      if (rx){
+        items = items.filter(c => rx.test(c.display.toUpperCase()) || rx.test(c.token));
+      }
+
+      if (eligibleOnly && guesses.length){
+        const cns = buildConstraintMaps();
+        items = items.filter(c => isEligibleCharacterToken(c.token, cns));
+      }
+
+      items = items.sort((a,b)=> a.display.localeCompare(b.display));
+
       bankList.innerHTML = items.length
         ? items.map(c => {
             const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
             return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
           }).join('')
-        : '<div class="empty">No champions match your filter.</div>';
+        : '<div class="empty">' + (eligibleOnly
+            ? 'No eligible champions remain with current constraints.'
+            : 'No champions match your filter.'
+          ) + '</div>';
     }
 
     // iOS audio unlock
@@ -414,27 +712,44 @@ document.addEventListener('DOMContentLoaded', function(){
       const cf = CHARACTER_FACTS[entry.token];
       const matches = entry.matches;
       let okCount = 0;
-      for (let i=0;i<FACT_KEYS.length;i++){ if (matches[FACT_KEYS[i]]) okCount++; }
+
       const rows = FACT_KEYS.map(function(k){
-        const ok = !!matches[k];
-        const tagClass = ok ? 'ok' : 'no';
+        const detail = matches[k];
+        const state = detail && detail.state ? detail.state : (detail && detail.ok ? 'partial' : 'none');
+        if (state !== 'none') okCount++;
+
+        const tagClass = state === 'exact' ? 'ok' : state === 'partial' ? 'partial' : 'no';
+        const tagText  = state === 'exact' ? 'Exact' : state === 'partial' ? 'Partial' : 'No match';
+
+        const guessVal = cf[k];
+        let valueHTML;
+        if (Array.isArray(guessVal)) {
+          valueHTML = '<div class="chips">' + guessVal.map(function(v){
+            const isHit = detail.matches && detail.matches.indexOf(v) !== -1;
+            return '<span class="chip ' + (isHit ? 'ok' : 'miss') + '">' + v + '</span>';
+          }).join('') + '</div>';
+        } else {
+          valueHTML = '<span>' + guessVal + '</span>';
+        }
+
         return (
           '<div class="fact">' +
-            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<b>' + FACT_LABEL[k] + '</b>' +
             '<div class="row">' +
-              '<span>'+cf[k]+'</span>' +
-              '<span class="tag '+tagClass+'">'+(ok?'Match':'No match')+'</span>' +
+              valueHTML +
+              '<span class="tag ' + tagClass + '">' + tagText + '</span>' +
             '</div>' +
           '</div>'
         );
       }).join('');
+
       return (
         '<div class="guessCard">' +
           '<div class="row" style="margin-bottom:8px">' +
-            '<div style="font-weight:800">'+cf.display+'</div>' +
-            '<div class="pill">'+okCount+'/'+FACT_KEYS.length+' facts match</div>' +
+            '<div style="font-weight:800">' + cf.display + '</div>' +
+            '<div class="pill">' + okCount + '/' + FACT_KEYS.length + ' facts match</div>' +
           '</div>' +
-          '<div class="factsGrid">'+rows+'</div>' +
+          '<div class="factsGrid">' + rows + '</div>' +
         '</div>'
       );
     }
@@ -445,21 +760,53 @@ document.addEventListener('DOMContentLoaded', function(){
         : '<div class="empty">No guesses yet. Pick a champion from the left to compare their facts with the target.</div>';
     }
 
-    function updateGuessesPill(){ guessesLeftPill.textContent = 'Guesses left: ' + guessesLeft; }
+    // accessibility: announce changes to screen readers
+    guessesLeftPill.setAttribute('aria-live','polite');
 
-    // Game flow
+    function updateGuessesPill(animate){
+      const pct = Math.max(0, Math.min(1, guessesLeft / MAX_GUESSES));
+      const state = (guessesLeft >= 6) ? 'ok' : (guessesLeft >= 3) ? 'warn' : 'danger';
+
+      guessesLeftPill.classList.remove('ok','warn','danger');
+      guessesLeftPill.classList.add(state);
+
+      guessesLeftPill.style.setProperty('--fill', (pct*100) + '%');
+
+      guessesLeftPill.innerHTML =
+        '<span class="label"><span class="big">' + guessesLeft +
+        '</span>/ ' + MAX_GUESSES + ' Guesses Left</span><i class="bar"></i>';
+
+      if (animate){
+        guessesLeftPill.classList.remove('bump');
+        void guessesLeftPill.offsetWidth;
+        guessesLeftPill.classList.add('bump');
+      }
+    }
+
     function resetGame(){
       guesses = [];
-      target = choice(BANK).token;
       guessesLeft = MAX_GUESSES;
       over = false;
+
+      if (!BANK.length){
+        target = null;
+        guessesEl.innerHTML = '<div class="empty">Champion data not loaded yet.</div>';
+        guessesLeftPill.textContent = 'Guesses left: —';
+        return;
+      }
+
+      target = choice(BANK).token;
       renderBank();
       renderGuesses();
-      updateGuessesPill();
+      updateGuessesPill(false);
     }
 
     function onGuess(token){
-      for (let i=0;i<guesses.length;i++){ if (guesses[i].token === token) return; }
+      if (!CHARACTER_FACTS[token] || over) return;
+
+      for (let i=0;i<guesses.length;i++){
+        if (guesses[i].token === token) return;
+      }
 
       const matches = compareFacts(token, target);
       guesses.unshift({ token: token, matches: matches });
@@ -475,7 +822,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       guessesLeft = Math.max(0, guessesLeft - 1);
-      updateGuessesPill();
+      updateGuessesPill(true);
       SFX.wrong();
 
       if (guessesLeft === 0){
@@ -486,13 +833,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
 
-    // WIN overlay
-    const win = byId('win');
-    const winName = byId('winName');
-    const winFacts = byId('winFacts');
-    const statsEl = byId('stats');
-    const playAgainBtn = byId('playAgainBtn');
-
     function showWin(token){
       const cf = CHARACTER_FACTS[token];
       winName.textContent = 'Target: ' + cf.display;
@@ -500,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return (
           '<div class="fact">' +
             '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div>'+cf[k]+'</div>' +
+            '<div>'+displayValue(cf[k])+'</div>' +
           '</div>'
         );
       }).join('');
@@ -517,24 +857,17 @@ document.addEventListener('DOMContentLoaded', function(){
       resetGame();
     });
 
-    // LOSE overlay
-    const lose = byId('lose');
-    const loseName = byId('loseName');
-    const loseFacts = byId('loseFacts');
-    const statsLose = byId('statsLose');
-    const playAgainBtnLose = byId('playAgainBtnLose');
-
     function showLoss(){
       const cf = CHARACTER_FACTS[target];
-      loseName.textContent = cf.display;
-      loseFacts.innerHTML = FACT_KEYS.map(function(k){
+      loseName.textContent = cf ? cf.display : '(Unknown)';
+      loseFacts.innerHTML = cf ? FACT_KEYS.map(function(k){
         return (
           '<div class="fact">' +
             '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div>'+cf[k]+'</div>' +
+            '<div>'+displayValue(cf[k])+'</div>' +
           '</div>'
         );
-      }).join('');
+      }).join('') : '';
       statsLose.textContent = 'Games: ' + games.played + ' • Wins: ' + games.wins;
       document.body.classList.add('modal-open');
       lose.classList.add('show');
@@ -549,7 +882,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // header controls
     byId('newGameBtn').addEventListener('click', function(){
-      games.played++;
       SFX.ui();
       win.classList.remove('show');
       lose.classList.remove('show');
@@ -557,27 +889,79 @@ document.addEventListener('DOMContentLoaded', function(){
       resetGame();
     });
 
-    // SFX toggle
+    // SFX toggle - track state
+    let sfxEnabled = true;
+    function updateSfxButtonText() {
+      sfxBtn.textContent = sfxEnabled ? '🔊 SFX: On (S)' : '🔇 SFX: Off (S)';
+    }
+    function toggleSfx() {
+      sfxEnabled = SFX.toggle();
+      updateSfxButtonText();
+      if (sfxEnabled) { SFX.resume(); SFX.ui(); }
+      return sfxEnabled;
+    }
     sfxBtn.addEventListener('click', function(){
-      const on = SFX.toggle();
-      sfxBtn.textContent = on ? '🔊 SFX: On' : '🔇 SFX: Off';
-      if (on) { SFX.resume(); SFX.ui(); }
+      toggleSfx();
+    });
+    updateSfxButtonText();
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e){
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Escape' && help.classList.contains('show')) {
+        closeHelp();
+        return;
+      }
+
+      if (help.classList.contains('show') && e.key !== 'H' && e.key !== 'h') return;
+
+      if ((e.key === 'N' || e.key === 'n') && !e.repeat) {
+        e.preventDefault();
+        SFX.ui();
+        win.classList.remove('show');
+        lose.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        resetGame();
+        return;
+      }
+
+      if ((e.key === 'S' || e.key === 's') && !e.repeat) {
+        e.preventDefault();
+        toggleSfx();
+        return;
+      }
+
+      if ((e.key === 'M' || e.key === 'm') && !e.repeat) {
+        e.preventDefault();
+        eligibleOnly = !eligibleOnly;
+        updateEligibleButtonText();
+        SFX.ui();
+        renderBank();
+        return;
+      }
+
+      if ((e.key === 'H' || e.key === 'h') && !e.repeat) {
+        e.preventDefault();
+        if (help.classList.contains('show')) {
+          closeHelp();
+        } else {
+          openHelp();
+        }
+        return;
+      }
     });
 
-    // INIT
-    resetGame();
-    renderBank();
-
-    // Smoke tests (desktop only)
-    (function runTests(){
+    function runTests(){
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isMobile) return;
       try{
         const results = [];
         const assert = (name, cond) => { results.push({name, pass: !!cond}); if(!cond) console.error('[TEST FAIL]', name); };
         const same = (a,b) => JSON.stringify(a)===JSON.stringify(b);
+
         assert('dataset has at least 30', Object.keys(CHARACTER_FACTS).length >= 30);
-        assert('every entry has all facts', Object.keys(CHARACTER_FACTS).every(k => FACT_KEYS.every(f => CHARACTER_FACTS[k][f])));
+        assert('every entry has all facts', Object.keys(CHARACTER_FACTS).every(k => FACT_KEYS.every(f => CHARACTER_FACTS[k][f] !== undefined)));
         const tokens = Object.keys(CHARACTER_FACTS);
         const t0 = tokens[0], t1 = tokens[1];
         const m = compareFacts(t0, t1);
@@ -588,7 +972,34 @@ document.addEventListener('DOMContentLoaded', function(){
       }catch(e){
         console.warn('[tests skipped]', e);
       }
-    })();
+    }
+
+    // INIT – load all champs, then start the game
+    loadChampionsFromDataDragon()
+      .then(() => {
+        resetGame();
+        renderBank();
+        updateEligibleButtonText();
+        runTests();
+      })
+      .catch(err => {
+        console.error('Failed to load champions from Data Dragon:', err);
+        // Minimal fallback if network fails
+        if (!Object.keys(CHARACTER_FACTS).length){
+          CHARACTER_FACTS = {
+            ASHE: {display:'Ashe', region:'Freljord', class:['Marksman'], resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
+            GAREN: {display:'Garen', region:'Demacia', class:['Fighter'], resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
+            LUX: {display:'Lux', region:'Demacia', class:['Mage'], resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
+            YASUO: {display:'Yasuo', region:'Ionia', class:['Fighter'], resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
+            JINX: {display:'Jinx', region:'Zaun', class:['Marksman'], resource:'Mana', range:'Ranged', damage:'AD', species:'Human'}
+          };
+          BANK = Object.keys(CHARACTER_FACTS).map(k => ({ token:k, display:CHARACTER_FACTS[k].display }));
+        }
+        resetGame();
+        renderBank();
+        updateEligibleButtonText();
+        runTests();
+      });
 
   })();
 });

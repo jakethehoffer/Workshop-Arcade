@@ -40,6 +40,64 @@
   }
   button:disabled{opacity:.6; cursor:not-allowed}
   .pill{border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+  /* Prominent guesses-left counter */
+#guessesLeftPill{
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: clamp(16px, 1.8vw, 22px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border-width: 2px;
+  border-style: solid;
+  letter-spacing: .2px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.25) inset, 0 8px 20px rgba(0,0,0,.25);
+}
+#guessesLeftPill .label{ position: relative; z-index: 1; }
+#guessesLeftPill .big{ font-size: 1.35em; line-height: 1; margin-right: 4px; }
+
+/* background fill bar */
+#guessesLeftPill .bar{
+  content:"";
+  position:absolute; inset:0;
+  width: var(--fill, 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* color states */
+#guessesLeftPill.ok{
+  color:#bef264; border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.12);
+}
+#guessesLeftPill.ok .bar{
+  background: linear-gradient(90deg, rgba(34,197,94,.35), rgba(34,197,94,.15));
+}
+
+#guessesLeftPill.warn{
+  color:#fde68a; border-color: rgba(245,158,11,.55); background: rgba(245,158,11,.12);
+}
+#guessesLeftPill.warn .bar{
+  background: linear-gradient(90deg, rgba(245,158,11,.45), rgba(245,158,11,.18));
+}
+
+#guessesLeftPill.danger{
+  color:#fecaca; border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.12);
+}
+#guessesLeftPill.danger .bar{
+  background: linear-gradient(90deg, rgba(239,68,68,.55), rgba(239,68,68,.22));
+}
+
+/* pop the pill each time it changes */
+@keyframes bump{ 0%{transform:scale(1)} 35%{transform:scale(1.07)} 100%{transform:scale(1)} }
+#guessesLeftPill.bump{ animation: bump .28s ease; }
+
+@media (max-width: 840px){
+  #guessesLeftPill{ font-size: 20px; padding: 12px 18px; }
+}
+
   main{display:grid; grid-template-columns: 320px 1fr; gap:14px; padding:14px 16px}
   .panel{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:12px}
   .panel h2{margin:2px 0 10px 0; font-size:15px}
@@ -54,7 +112,21 @@
   .factsGrid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px}
   .fact{padding:8px 10px; border:1px solid rgba(255,255,255,.06); border-radius:10px; background:rgba(255,255,255,.02); font-size:13px}
   .fact b{display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px}
+  .tag.partial{
+  background: rgba(245,158,11,.12);   /* amber */
+  border-color: rgba(245,158,11,.45);
+  color:#fde68a;
+}
   .tag{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 8px; font-size:12px; border:1px solid rgba(255,255,255,.1)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  display:inline-flex;align-items:center;border-radius:999px;
+  padding:2px 8px;font-size:12px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04)
+}
+.chip.ok{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.45);color:#bef264}
+.chip.miss{opacity:.6}
+
   .tag.ok{background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color:#bef264}
   .tag.no{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color:#fecaca}
   .guessCard{border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02)}
@@ -84,6 +156,19 @@
   }
 
   body.modal-open{ overflow: hidden; }
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--ink);
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.1);
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -95,8 +180,10 @@
     </div>
     <div class="actions">
       <span class="pill" id="guessesLeftPill">Guesses left: —</span>
-      <button id="newGameBtn">New Game</button>
-      <button id="sfxBtn" class="btn">🔊 SFX: On</button>
+      <button id="newGameBtn">New Game (N)</button>
+      <button id="sfxBtn" class="btn">🔊 SFX: On (S)</button>
+      <button id="eligibleBtn" class="btn" title="Show only characters that match any matched facts">🔎 Match-Only: Off (M)</button>
+      <button id="helpBtn" class="btn" title="How to play & fact options">❓ Help (H)</button>
     </div>
   </header>
 
@@ -114,6 +201,7 @@
         <h2>Guesses</h2>
         <div class="legend">
           <span class="tag ok">Matches target</span>
+            <span class="tag partial">Partial overlap</span>
           <span class="tag no">Doesn't match</span>
         </div>
       </div>
@@ -157,6 +245,52 @@
   </div>
 </div>
 
+<!-- Help Overlay -->
+<div class="winOverlay" id="help">
+  <div class="winPanel" style="max-height:min(80vh,680px); overflow:auto">
+    <h3>❓ How to Play</h3>
+    <div class="muted" style="margin-bottom:8px">
+      Guess the hidden character in 8 tries. Each guess compares facts:
+      <span class="tag ok">Exact</span> /
+      <span class="tag partial">Partial</span> /
+      <span class="tag no">No match</span>.
+    </div>
+
+    <div class="fact">
+      <b>Steps</b>
+      <ol style="margin:8px 0 0 18px; padding:0">
+        <li>Pick a character from the bank to see which facts match the target.</li>
+        <li>Use the search box to narrow by name.</li>
+        <li>Toggle <i>Match-Only</i> to show only characters that share your matched facts (Partial/Exact).</li>
+        <li>Win by tapping the exact character.</li>
+      </ol>
+    </div>
+
+    <div class="sp"></div>
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="fact" style="margin-bottom:8px">
+      <b>Hotkeys</b>
+      <div style="margin-top:6px">
+        <div><kbd>N</kbd> - New Game</div>
+        <div><kbd>S</kbd> - Toggle SFX</div>
+        <div><kbd>M</kbd> - Toggle Match-Only Mode</div>
+        <div><kbd>H</kbd> - Toggle Help</div>
+        <div><kbd>Esc</kbd> - Close Help</div>
+      </div>
+    </div>
+
+    <div class="sp"></div>
+    <h3>📚 Category Options</h3>
+    <div id="helpBody"></div>
+
+    <div class="sp"></div>
+    <div class="row">
+      <button id="helpCloseBtn">Close</button>
+      <span class="muted">Tip: Partial = some overlap; Exact = same set of values.</span>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ---------------------------
    Mobile-safe polyfills
@@ -181,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function(){
   (function(){
     'use strict';
 
-    const MAX_GUESSES = 6;
+    const MAX_GUESSES = 8;
 
     // SFX
     const SFX = (() => {
@@ -321,17 +455,37 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       return new RegExp('^' + rx + '$');
     }
+    // --- Helpers for multi-value matching & display ---
+    function displayValue(v){
+      return Array.isArray(v) ? v.join(', ') : v;
+    }
+    function toArr(v){ return Array.isArray(v) ? v : [v]; }
+    function getMatches(a, b){
+      const A = toArr(a), B = toArr(b);
+      const matches = A.filter(x => B.indexOf(x) !== -1);
+      const overlap = matches.length > 0;
+
+      // Equal-as-sets (order-insensitive, works for scalar/array)
+      const equal = (A.length === B.length) &&
+                    A.every(x => B.indexOf(x) !== -1) &&
+                    B.every(x => A.indexOf(x) !== -1);
+
+      const state = equal ? 'exact' : (overlap ? 'partial' : 'none');
+      return { ok: overlap, state, matches }; // keep `ok` for your counters
+    }
+
     function compareFacts(guessToken, targetToken){
       const ga = CHARACTER_FACTS[guessToken];
       const ta = CHARACTER_FACTS[targetToken];
       const res = {};
-      for (var i=0;i<FACT_KEYS.length;i++){ var k=FACT_KEYS[i]; res[k] = (ga[k] === ta[k]); }
+      for (let i=0;i<FACT_KEYS.length;i++){
+        const k = FACT_KEYS[i];
+        res[k] = getMatches(ga[k], ta[k]); // { ok:boolean, state, matches:string[] }
+      }
       return res;
     }
     function isCorrectGuess(guessToken, targetToken){
-      const m = compareFacts(guessToken, targetToken);
-      for (var i=0;i<FACT_KEYS.length;i++){ if(!m[FACT_KEYS[i]]) return false; }
-      return true;
+      return guessToken === targetToken;
     }
 
     // DOM
@@ -341,19 +495,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const sfxBtn = byId('sfxBtn');
     const guessesEl = byId('guesses');
 
-    function renderBank(){
-      const patt = (bankFilter.value||'').trim();
-      const rx = patt ? patternToRegex(patt) : null;
-      const items = BANK
-        .filter(c => !rx || rx.test(c.display.toUpperCase()) || rx.test(c.token))
-        .sort((a,b)=> a.display.localeCompare(b.display));
-      bankList.innerHTML = items.length
-        ? items.map(c => {
-            const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
-            return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
-          }).join('')
-        : '<div class="empty">No characters match your filter.</div>';
-    }
 
     // iOS audio unlock
     document.addEventListener('touchstart', function(){ SFX.resume(); }, { passive:true });
@@ -372,28 +513,46 @@ document.addEventListener('DOMContentLoaded', function(){
     function renderGuessCard(entry){
       const cf = CHARACTER_FACTS[entry.token];
       const matches = entry.matches;
-      var okCount = 0;
-      for (var i=0;i<FACT_KEYS.length;i++){ if (matches[FACT_KEYS[i]]) okCount++; }
+      let okCount = 0;
+
       const rows = FACT_KEYS.map(function(k){
-        const ok = !!matches[k];
-        const tagClass = ok ? 'ok' : 'no';
+        const detail = matches[k]; // { ok, state, matches:[] }
+        const state = detail && detail.state ? detail.state : (detail && detail.ok ? 'partial' : 'none');
+        if (state !== 'none') okCount++; // count exact OR partial as a "match"
+
+        const tagClass = state === 'exact' ? 'ok' : state === 'partial' ? 'partial' : 'no';
+        const tagText  = state === 'exact' ? 'Exact' : state === 'partial' ? 'Partial' : 'No match';
+
+        // Build the left-side value display
+        const guessVal = cf[k];
+        let valueHTML;
+        if (Array.isArray(guessVal)) {
+          valueHTML = '<div class="chips">' + guessVal.map(function(v){
+            const isHit = detail.matches && detail.matches.indexOf(v) !== -1;
+            return '<span class="chip ' + (isHit ? 'ok' : 'miss') + '">' + v + '</span>';
+          }).join('') + '</div>';
+        } else {
+          valueHTML = '<span>' + guessVal + '</span>';
+        }
+
         return (
           '<div class="fact">' +
-            '<b>'+FACT_LABEL[k]+'</b>' +
+            '<b>' + FACT_LABEL[k] + '</b>' +
             '<div class="row">' +
-              '<span>'+cf[k]+'</span>' +
-              '<span class="tag '+tagClass+'">'+(ok?'Match':'No match')+'</span>' +
+              valueHTML +
+              '<span class="tag ' + tagClass + '">' + tagText + '</span>' +
             '</div>' +
           '</div>'
         );
       }).join('');
+
       return (
         '<div class="guessCard">' +
           '<div class="row" style="margin-bottom:8px">' +
-            '<div style="font-weight:800">'+cf.display+'</div>' +
-            '<div class="pill">'+okCount+'/'+FACT_KEYS.length+' facts match</div>' +
+            '<div style="font-weight:800">' + cf.display + '</div>' +
+            '<div class="pill">' + okCount + '/' + FACT_KEYS.length + ' facts match</div>' +
           '</div>' +
-          '<div class="factsGrid">'+rows+'</div>' +
+          '<div class="factsGrid">' + rows + '</div>' +
         '</div>'
       );
     }
@@ -404,7 +563,33 @@ document.addEventListener('DOMContentLoaded', function(){
         : '<div class="empty">No guesses yet. Pick a character from the left to compare their facts with the target.</div>';
     }
 
-    function updateGuessesPill(){ guessesLeftPill.textContent = 'Guesses left: ' + guessesLeft; }
+    // accessibility: announce changes to screen readers
+    guessesLeftPill.setAttribute('aria-live','polite');
+
+    function updateGuessesPill(animate){
+      const pct = Math.max(0, Math.min(1, guessesLeft / MAX_GUESSES));
+      const state = (guessesLeft >= 6) ? 'ok' : (guessesLeft >= 3) ? 'warn' : 'danger';
+
+      // set classes for color state
+      guessesLeftPill.classList.remove('ok','warn','danger');
+      guessesLeftPill.classList.add(state);
+
+      // set the fill width
+      guessesLeftPill.style.setProperty('--fill', (pct*100) + '%');
+
+      // render big, explicit label
+      guessesLeftPill.innerHTML =
+        '<span class="label"><span class="big">' + guessesLeft +
+        '</span>/ ' + MAX_GUESSES + ' Guesses Left</span><i class="bar"></i>';
+
+      // pop animation on change
+      if (animate){
+        guessesLeftPill.classList.remove('bump');
+        // force reflow to restart the animation
+        void guessesLeftPill.offsetWidth;
+        guessesLeftPill.classList.add('bump');
+      }
+    }
 
     // Game flow
     function resetGame(){
@@ -414,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function(){
       over = false;
       renderBank();
       renderGuesses();
-      updateGuessesPill();
+      updateGuessesPill(false);
     }
 
     function onGuess(token){
@@ -434,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
 
       guessesLeft = Math.max(0, guessesLeft - 1);
-      updateGuessesPill();
+      updateGuessesPill(true);
       SFX.wrong();
 
       if (guessesLeft === 0){
@@ -459,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return (
           '<div class="fact">' +
             '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div>'+cf[k]+'</div>' +
+            '<div>'+displayValue(cf[k])+'</div>' +
           '</div>'
         );
       }).join('');
@@ -490,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function(){
         return (
           '<div class="fact">' +
             '<b>'+FACT_LABEL[k]+'</b>' +
-            '<div>'+cf[k]+'</div>' +
+            '<div>'+displayValue(cf[k])+'</div>' +
           '</div>'
         );
       }).join('');
@@ -516,16 +701,254 @@ document.addEventListener('DOMContentLoaded', function(){
       resetGame();
     });
 
-    // SFX toggle
+    // SFX toggle - track state
+    let sfxEnabled = true;
+    function updateSfxButtonText() {
+      sfxBtn.textContent = sfxEnabled ? '🔊 SFX: On (S)' : '🔇 SFX: Off (S)';
+    }
+    function toggleSfx() {
+      sfxEnabled = SFX.toggle();
+      updateSfxButtonText();
+      if (sfxEnabled) { SFX.resume(); SFX.ui(); }
+      return sfxEnabled;
+    }
     sfxBtn.addEventListener('click', function(){
-      const on = SFX.toggle();
-      sfxBtn.textContent = on ? '🔊 SFX: On' : '🔇 SFX: Off';
-      if (on) { SFX.resume(); SFX.ui(); }
+      toggleSfx();
     });
+    // Initialize button text
+    updateSfxButtonText();
+
+    // --- Help modal logic ---
+    const help         = byId('help');
+    const helpBody     = byId('helpBody');
+    const helpBtn      = byId('helpBtn');
+    const helpCloseBtn = byId('helpCloseBtn');
+
+    function uniqueValuesForKey(k){
+      const set = new Set();
+      Object.keys(CHARACTER_FACTS).forEach(tok => {
+        toArr(CHARACTER_FACTS[tok][k]).forEach(v => set.add(v));
+      });
+      // sort case-insensitively, stable
+      return Array.from(set).sort((a,b)=> (''+a).localeCompare(''+b));
+    }
+
+    function chipsHTML(arr){
+      return '<div class="chips" style="margin-top:6px">' +
+        arr.map(v => '<span class="chip">'+ v +'</span>').join('') +
+      '</div>';
+    }
+
+    function buildHelpContent(){
+      const groups = [
+        { key:'species',     label:'Species' },
+        { key:'color',        label:'Signature Color' },
+        { key:'origin',        label:'Debut (Film/Series)' },
+        { key:'affiliation', label:'Affiliation' },
+        { key:'role',        label:'Role' },
+        { key:'type',        label:'Power/Style' }
+      ];
+
+      const sections = groups.map(g => {
+        const vals = uniqueValuesForKey(g.key);
+        return (
+          '<div class="fact" style="margin-bottom:8px">' +
+            '<b>'+ g.label +'</b>' +
+            chipsHTML(vals) +
+          '</div>'
+        );
+      }).join('');
+
+      helpBody.innerHTML = sections;
+    }
+
+    function openHelp(){
+      buildHelpContent();          // build fresh in case the dataset changed
+      document.body.classList.add('modal-open');
+      help.classList.add('show');
+      SFX.ui();
+    }
+
+    function closeHelp(){
+      help.classList.remove('show');
+      document.body.classList.remove('modal-open');
+    }
+
+    helpBtn.addEventListener('click', openHelp);
+    helpCloseBtn.addEventListener('click', closeHelp);
+    // click outside panel closes
+    help.addEventListener('click', function(e){
+      if (e.target === help) closeHelp();
+    });
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e){
+      // Don't trigger shortcuts when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      // ESC to close help
+      if (e.key === 'Escape' && help.classList.contains('show')) {
+        closeHelp();
+        return;
+      }
+      
+      // Don't trigger other shortcuts if help is open (except H to close it)
+      if (help.classList.contains('show') && e.key !== 'H' && e.key !== 'h') return;
+      
+      // N - New Game
+      if ((e.key === 'N' || e.key === 'n') && !e.repeat) {
+        e.preventDefault();
+        SFX.ui();
+        win.classList.remove('show');
+        lose.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        resetGame();
+        return;
+      }
+      
+      // S - Toggle SFX
+      if ((e.key === 'S' || e.key === 's') && !e.repeat) {
+        e.preventDefault();
+        toggleSfx();
+        return;
+      }
+      
+      // M - Toggle Match-Only
+      if ((e.key === 'M' || e.key === 'm') && !e.repeat) {
+        e.preventDefault();
+        eligibleOnly = !eligibleOnly;
+        updateEligibleButtonText();
+        SFX.ui();
+        renderBank();
+        return;
+      }
+      
+      // H - Toggle Help
+      if ((e.key === 'H' || e.key === 'h') && !e.repeat) {
+        e.preventDefault();
+        if (help.classList.contains('show')) {
+          closeHelp();
+        } else {
+          openHelp();
+        }
+        return;
+      }
+    });
+
+    let eligibleOnly = false;
+
+    // Positive-only pruning:
+    // If a guess shows PARTIAL or EXACT for a fact, we keep that/those value(s).
+    // Characters that don't also match those value(s) get pruned.
+    // (We ignore all "No match" info entirely.)
+    function buildConstraintMaps(){
+      const dis = {};      // kept for compatibility, but we won't add to it
+      const reqHas = {};   // required values per fact (from PARTIAL or EXACT)
+      const reqExact = {}; // exact set per fact (from EXACT)
+      FACT_KEYS.forEach(k => { dis[k] = new Set(); reqHas[k] = new Set(); reqExact[k] = null; });
+
+      for (let i = 0; i < guesses.length; i++){
+        const entry = guesses[i];
+        const gf = CHARACTER_FACTS[entry.token];
+
+        FACT_KEYS.forEach(k => {
+          const det = entry.matches[k]; // { ok, state, matches:[] }
+          if (!det) return;
+
+          if (det.state === 'exact'){
+            // lock to the guess's full set for this fact
+            const exactSet = new Set(toArr(gf[k]));
+            if (!reqExact[k]) reqExact[k] = exactSet; // first exact takes precedence
+            // also treat exact values as required "has"
+            exactSet.forEach(v => reqHas[k].add(v));
+          } else if (det.state === 'partial'){
+            // require the overlapping values (chips that were green)
+            (det.matches || []).forEach(v => reqHas[k].add(v));
+          }
+          // state === 'none' -> do nothing (no negative pruning)
+        });
+      }
+
+      return { dis, reqHas, reqExact };
+    }
+
+    function isEligibleCharacterToken(token, cns){
+      const cf = CHARACTER_FACTS[token];
+
+      for (let i = 0; i < FACT_KEYS.length; i++){
+        const k = FACT_KEYS[i];
+        const vals = toArr(cf[k]);
+
+        // If any value is disallowed, reject
+        for (let j = 0; j < vals.length; j++){
+          if (cns.dis[k].has(vals[j])) return false;
+        }
+
+        // If there is an exact-set requirement, enforce equality
+        const ex = cns.reqExact[k];
+        if (ex && ex.__contradiction) return false;
+        if (ex){
+          if (vals.length !== ex.size) return false;
+          for (let j = 0; j < vals.length; j++){
+            if (!ex.has(vals[j])) return false;
+          }
+          // No need to check reqHas if exact passed (exact implies has)
+          continue;
+        }
+
+        // Otherwise, all required values for this fact must be present
+        for (const must of cns.reqHas[k]){
+          if (vals.indexOf(must) === -1) return false;
+        }
+      }
+
+      return true;
+    }
+
+    const eligibleBtn = byId('eligibleBtn');
+    function updateEligibleButtonText() {
+      eligibleBtn.textContent = eligibleOnly ? '🔎 Match-Only: On (M)' : '🔎 Match-Only: Off (M)';
+    }
+    eligibleBtn.addEventListener('click', function(){
+      eligibleOnly = !eligibleOnly;
+      updateEligibleButtonText();
+      SFX.ui();
+      renderBank();
+    });
+
+    function renderBank(){
+      const patt = (bankFilter.value||'').trim();
+      const rx = patt ? patternToRegex(patt) : null;
+
+      let items = BANK;
+
+      // Search filter
+      if (rx){
+        items = items.filter(c => rx.test(c.display.toUpperCase()) || rx.test(c.token));
+      }
+
+      // Eligible-only filter (now enforces positive constraints)
+      if (eligibleOnly && guesses.length){
+        const cns = buildConstraintMaps();
+        items = items.filter(c => isEligibleCharacterToken(c.token, cns));
+      }
+
+      items = items.sort((a,b)=> a.display.localeCompare(b.display));
+
+      bankList.innerHTML = items.length
+        ? items.map(c => {
+            const sel = guesses.some(g => g.token === c.token) ? ' selected' : '';
+            return '<button class="charBtn'+sel+'" data-token="'+c.token+'">'+c.display+'</button>';
+          }).join('')
+        : '<div class="empty">' + (eligibleOnly
+            ? 'No eligible characters remain with current constraints.'
+            : 'No characters match your filter.'
+          ) + '</div>';
+    }
 
     // INIT
     resetGame();
     renderBank();
+    updateEligibleButtonText();
 
     // Quick sanity tests (skip on mobile)
     (function runTests(){

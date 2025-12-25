@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Doodle Jump (Canvas)</title>
+<title>Arcade Jump (Canvas)</title>
 <style>
   :root {
     color-scheme: dark;
@@ -14,6 +14,12 @@
     --accent: #5eead4;
     --danger: #fb7185;
     --warn: #fbbf24;
+    --menu-paper: #0f172a;
+    --menu-ink: #e6edf3;
+    --menu-sky: #8ec5f2;
+    --menu-sun: #fbbf24;
+    --menu-mint: #5eead4;
+    --menu-ink-soft: #93a4b8;
   }
   html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
   #wrap { position:fixed; inset:0; overflow:hidden; background:
@@ -26,7 +32,8 @@
 /* optional but safe: ensure game canvas is above */
 #game { position:absolute; inset:0; z-index:1; }
 
-  .hud { position:fixed; top:10px; left:50%; z-index: 5; transform:translateX(-50%); display:flex; gap:12px; align-items:center; font-weight:700; letter-spacing:.3px; user-select:none; }
+  .hud { position:fixed; top:10px; left:50%; z-index: 5; transform:translateX(-50%); display:flex; gap:12px; align-items:center; font-weight:700; letter-spacing:.3px; user-select:none; transition: opacity .2s ease, transform .2s ease; }
+  body.menu-open .hud { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-10px); }
   .pill { background:#0f172a; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
   .pill b { color:var(--accent); }
   .btn { cursor:pointer; transition:.15s transform ease, .2s opacity; }
@@ -45,6 +52,309 @@
   .panel .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .panel .action { background:#111b2e; border:1px solid #2a3a57; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:700; }
   .panel .action.primary { background:#0e2c2a; border-color:#1f766b; color:var(--accent); }
+  .menu-overlay {
+    background:
+      radial-gradient(900px 600px at 18% 8%, rgba(76, 154, 64, 0.22), transparent 60%),
+      radial-gradient(900px 600px at 82% 0%, rgba(96, 165, 250, 0.22), transparent 60%),
+      linear-gradient(180deg, rgba(10, 16, 26, 0.55), rgba(10, 16, 26, 0.8));
+    backdrop-filter: blur(6px);
+  }
+  .menu-card {
+    width: min(92vw, 860px);
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.98) 0%, rgba(9, 16, 26, 0.96) 100%);
+    border: 1px solid #233048;
+    border-radius: 22px;
+    padding: 26px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    color: var(--menu-ink);
+    font-family: inherit;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .menu-card::before,
+  .menu-card::after {
+    content: "";
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+  .menu-card::before {
+    right: -120px;
+    top: -140px;
+    background: radial-gradient(circle at 35% 35%, rgba(108, 180, 82, 0.28), rgba(108, 180, 82, 0));
+  }
+  .menu-card::after {
+    left: -110px;
+    bottom: -130px;
+    background: radial-gradient(circle at 60% 40%, rgba(96, 165, 250, 0.22), rgba(96, 165, 250, 0));
+  }
+  .menu-hero {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: menuRise 0.6s ease both;
+  }
+  .menu-badge {
+    align-self: flex-start;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #0f172a;
+    border: 1px solid #26334a;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+  .menu-title {
+    margin: 0;
+    font-size: clamp(30px, 4.4vw, 44px);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .menu-tagline {
+    margin: 0;
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 420px;
+    line-height: 1.5;
+  }
+  .menu-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .menu-card .action {
+    background: #111b2e;
+    border: 1px solid #2a3a57;
+    padding: 12px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .menu-card .action.primary {
+    background: #0e2c2a;
+    border-color: #1f766b;
+    color: var(--accent);
+    box-shadow: 0 10px 24px rgba(15, 118, 110, 0.25);
+  }
+  .menu-card .action.ghost {
+    background: #0f172a;
+    border-color: #26334a;
+  }
+  .menu-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .menu-stat {
+    background: #0f172a;
+    border: 1px solid #26334a;
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-width: 120px;
+  }
+  .menu-stat-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .menu-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .menu-side {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: menuRise 0.6s ease both;
+    animation-delay: 0.08s;
+  }
+  .menu-visual {
+    position: relative;
+    height: 210px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #88bfe9 0%, #74addc 55%, #6aa7d8 100%);
+    border: 1px solid #233048;
+    overflow: hidden;
+  }
+  .menu-visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+    opacity: 0.35;
+  }
+  .menu-sun {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff7d1 0%, #fbbf24 45%, #f59e0b 70%, rgba(245, 158, 11, 0) 72%);
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.55);
+    z-index: 1;
+  }
+  .menu-hill {
+    position: absolute;
+    left: -20%;
+    width: 140%;
+    height: 70%;
+    border-radius: 50%;
+    z-index: 2;
+  }
+  .menu-hill::after {
+    content: "";
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    top: 34%;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0.4;
+  }
+  .menu-hill.hill-back {
+    bottom: -8%;
+    background: linear-gradient(180deg, #7ec45e 0%, #4e9a40 100%);
+    opacity: 0.95;
+  }
+  .menu-hill.hill-mid {
+    bottom: -26%;
+    background: linear-gradient(180deg, #6cb452 0%, #3f8a36 100%);
+    opacity: 0.98;
+  }
+  .menu-hill.hill-front {
+    bottom: -46%;
+    background: linear-gradient(180deg, #5aa344 0%, #317d2d 100%);
+  }
+  .menu-wind {
+    position: absolute;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.32);
+    opacity: 0.6;
+    z-index: 3;
+  }
+  .menu-wind.wind-one { width: 90px; left: 18px; top: 52px; transform: rotate(-6deg); }
+  .menu-wind.wind-two { width: 120px; right: 32px; top: 90px; transform: rotate(-4deg); }
+  .menu-wind.wind-three { width: 70px; left: 130px; top: 122px; transform: rotate(-8deg); }
+  .menu-guide {
+    background: #0f172a;
+    border: 1px solid #26334a;
+    border-radius: 14px;
+    padding: 14px;
+    color: var(--menu-ink);
+  }
+  .menu-guide h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .menu-controls {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .menu-control {
+    display: grid;
+    gap: 6px;
+  }
+  .menu-control-title {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .menu-control-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .menu-key {
+    background: #111b2e;
+    border: 1px solid #26334a;
+    color: #e6edf3;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .menu-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .menu-features {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .menu-features li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .menu-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    flex: 0 0 8px;
+  }
+  .menu-dot-sky { background: #60a5fa; }
+  .menu-dot-sun { background: #f59e0b; }
+  .menu-dot-mint { background: #10b981; }
+  @media (hover:hover) and (pointer:fine) {
+    .menu-card .action:hover { transform: translateY(-1px); }
+  }
+  @media (max-width: 840px) {
+    .menu-card { grid-template-columns: 1fr; padding: 22px; }
+    .menu-side { order: -1; }
+    .menu-visual { height: 180px; }
+  }
+  @media (max-width: 520px) {
+    .menu-card { padding: 18px; }
+    .menu-title { font-size: clamp(26px, 8vw, 36px); }
+    .menu-key { font-size: 11px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .menu-hero,
+    .menu-side {
+      animation: none;
+    }
+  }
+  @keyframes menuRise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   .fade { animation: fade .35s ease both; }
   @keyframes fade { from { opacity:0; transform:translateY(8px) scale(.98) } to { opacity:1; transform:none } }
 
@@ -105,19 +415,73 @@
     <div class="pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause</div>
   </div>
 
-  <div class="overlay fade" id="menu">
-    <div class="panel">
-      <h1>🪜 Doodle Jump — Canvas Edition</h1>
-      <p>Jump from platform to platform and climb as high as you can.<br>
-         Land on special platforms for surprises.</p>
-      <p><b>Controls</b>: <span style="color:var(--accent)">A / ←</span> left, <span style="color:var(--accent)">D / →</span> right, <span style="color:var(--accent)">Space</span> start &amp; <b>double-jump</b>, <span style="color:var(--accent)">P</span> pause.<br>
-         On phones: tap/hold left or right side of the screen.</p>
-      <div class="row">
-        <div class="action primary" id="startBtn">Start</div>
-  <div class="action" id="helpBtn">Help</div>
+  <div class="overlay menu-overlay fade" id="menu">
+    <div class="menu-card">
+      <div class="menu-hero">
+        <h1 class="menu-title">Arcade Jump</h1>
+        <p class="menu-tagline">Climb through shifting platforms, chain power-ups, and jump to new heights.</p>
+        <div class="menu-actions">
+          <div class="action primary" id="startBtn">Start Run</div>
+          <div class="action ghost" id="helpBtn">How to Play</div>
+        </div>
+        <div class="menu-stats">
+          <div class="menu-stat">
+            <span class="menu-stat-label">Best</span>
+            <span class="menu-stat-value" id="menuBest">0</span>
+          </div>
+        </div>
       </div>
-      <!-- CHANGED: explain moving variants + rain behavior (remove slippery mention) -->
-      
+      <div class="menu-side">
+        <div class="menu-visual" aria-hidden="true">
+          <div class="menu-sun"></div>
+          <div class="menu-hill hill-back"></div>
+          <div class="menu-hill hill-mid"></div>
+          <div class="menu-hill hill-front"></div>
+          <div class="menu-wind wind-one"></div>
+          <div class="menu-wind wind-two"></div>
+          <div class="menu-wind wind-three"></div>
+        </div>
+        <div class="menu-guide">
+          <h2>Quick Controls</h2>
+          <div class="menu-controls">
+            <div class="menu-control">
+              <span class="menu-control-title">Move</span>
+              <div class="menu-control-keys">
+                <span class="menu-key">A</span>
+                <span class="menu-key">D</span>
+                <span class="menu-key">Left Arrow</span>
+                <span class="menu-key">Right Arrow</span>
+              </div>
+            </div>
+            <div class="menu-control">
+              <span class="menu-control-title">Jump</span>
+              <div class="menu-control-keys">
+                <span class="menu-key">Auto on landing</span>
+                <span class="menu-key">Space (mid-air)</span>
+              </div>
+            </div>
+            <div class="menu-control">
+              <span class="menu-control-title">Pause</span>
+              <div class="menu-control-keys">
+                <span class="menu-key">P</span>
+              </div>
+            </div>
+            <div class="menu-control">
+              <span class="menu-control-title">Mobile steer</span>
+              <div class="menu-control-keys">
+                <span class="menu-key">Hold left</span>
+                <span class="menu-key">Hold right</span>
+              </div>
+            </div>
+          </div>
+          <p class="menu-note">Space also starts the run.</p>
+          <ul class="menu-features">
+            <li><span class="menu-dot menu-dot-sky"></span>Moving, breaking, and rain platforms.</li>
+            <li><span class="menu-dot menu-dot-sun"></span>Jetpack, boots, shield, and slow-mo drops.</li>
+            <li><span class="menu-dot menu-dot-mint"></span>Survive storms and reach space.</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -267,6 +631,7 @@ function updateBuffHUD(){
 
   const scoreEl = document.getElementById('score');
   const bestEl  = document.getElementById('best');
+  const menuBestEl = document.getElementById('menuBest');
   const pauseBtn = document.getElementById('pause');
   const muteBtn = document.getElementById('mute');
   const menu = document.getElementById('menu');
@@ -274,17 +639,34 @@ function updateBuffHUD(){
   const finalScore = document.getElementById('finalScore');
   const finalBest = document.getElementById('finalBest');
   const helpPanel = document.getElementById('helpPanel');
+const helpPanelCard = helpPanel ? helpPanel.querySelector('.panel') : null;
 const helpBtn = document.getElementById('helpBtn');
 const helpBtnOver = document.getElementById('helpBtnOver');
 const helpClose = document.getElementById('helpClose');
+  const body = document.body;
 
   document.getElementById('startBtn').onclick = start;
-document.getElementById('startBtn').onclick = start;
 
 
 if (helpBtn) helpBtn.onclick = openHelp;
 if (helpBtnOver) helpBtnOver.onclick = openHelp;
 if (helpClose) helpClose.onclick = closeHelp;
+
+// Close help menu when clicking outside the panel
+if (helpPanel) {
+  helpPanel.addEventListener('click', (e) => {
+    if (e.target === helpPanel) {
+      closeHelp();
+    }
+  });
+}
+
+// Prevent panel clicks from closing the menu
+if (helpPanelCard) {
+  helpPanelCard.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
 
 // Optional: Esc closes Help
 window.addEventListener('keydown', (e) => {
@@ -297,8 +679,14 @@ window.addEventListener('keydown', (e) => {
   muteBtn.onclick = () => { sound.setMuted(!sound.muted); updateMute(); };
   function updateMute(){ muteBtn.textContent = sound.muted ? '🔇 Muted' : '🔊 Sound'; }
 
-  function hide(el){ el.style.display = 'none'; }
-  function show(el){ el.style.display = 'flex'; }
+  function hide(el){
+    el.style.display = 'none';
+    if (el === menu) body.classList.remove('menu-open');
+  }
+  function show(el){
+    el.style.display = 'flex';
+    if (el === menu) body.classList.add('menu-open');
+  }
   function openHelp(){ helpPanel.style.display = 'flex'; }
 function closeHelp(){ helpPanel.style.display = 'none'; }
 
@@ -553,6 +941,7 @@ function bounceVy(baseVy){
   // === Storm phase (after the moon exits) ===
   const STORM_DARK_A = 0.925;          // full blackout (no light)
   const STORM_BRIGHT_A = 0.2;         // blackout alpha during afterglow (dim but visible)
+  const STORM_FADE_IN = 6;            // seconds to ramp from night into storm darkness
 
   // FEWER STRIKES: wider gaps between flashes
   const STORM_FLASH_DUR = 0.16;        // bright flash length (keeps)
@@ -774,6 +1163,8 @@ function isTypeUnlocked(type, score){
     nextFlashIn:0,
     bolts:[],
     afterglowT:0,      // time remaining of soft brightness
+    firstFlashTime:0,  // time until first lightning (for gradual darkening)
+    hasFirstFlash:false, // track if first lightning has occurred
     afterglowMax:0,     // length of the current afterglow segment
       pendingSpace:false    // NEW: wait for max darkness to jump to space
 
@@ -781,6 +1172,7 @@ function isTypeUnlocked(type, score){
 
   let best = +localStorage.getItem('doodle_best') || 0;
   bestEl.textContent = best;
+  if (menuBestEl) menuBestEl.textContent = best;
 
   function reset() {
     state = {
@@ -916,6 +1308,7 @@ space.ufoT = 0;
     finalScore.textContent = s;
     finalBest.textContent = best;
     bestEl.textContent = best;
+    if (menuBestEl) menuBestEl.textContent = best;
     sound.beep(440, .10, 'sawtooth', .10);
     setTimeout(()=>sound.beep(330, .12, 'sawtooth', .10), 90);
     setTimeout(()=>sound.beep(262, .18, 'sawtooth', .10), 200);
@@ -2031,7 +2424,9 @@ function drawSkyDecor(g){
 function beginStorm(){
   storm.active = true;
   storm.flashT = 0;
-  storm.nextFlashIn = rand(0.2, 0.8); // first strike comes quick
+  storm.nextFlashIn = STORM_FADE_IN + rand(0.8, 1.8); // wait until fade-in completes
+  storm.firstFlashTime = storm.nextFlashIn; // store initial time for gradual darkening
+  storm.hasFirstFlash = false; // reset flag
   storm.bolts = [];
   toast('⚡ Storm incoming');
     storm.elapsed = 0;              // NEW
@@ -2077,6 +2472,7 @@ function updateStorm(dt){
 function triggerLightningFlash(){
   storm.flashT = STORM_FLASH_DUR;
   storm.bolts = buildLightningBolts();
+  storm.hasFirstFlash = true; // mark that first flash has occurred
   sound.thunder(0.28);
 }
 
@@ -2137,19 +2533,33 @@ function drawLightning(g){
 function drawStormOverlay(g){
   if (!storm.active) return;
 
-  // Base blackout alpha: fully dark
-  let a = STORM_DARK_A;
+  const fade = clamp(storm.elapsed / STORM_FADE_IN, 0, 1);
+  const fadeEase = fade * fade * (3 - 2 * fade);
+  const darkA = STORM_DARK_A * fadeEase;
+  const brightA = STORM_BRIGHT_A * fadeEase;
 
-  // During afterglow, ease the blackout alpha toward a brighter level
-  if (storm.afterglowT > 0 && storm.afterglowMax > 0) {
-    const f = storm.afterglowT / storm.afterglowMax;        // 1 → 0
-    const ease = f*f*(3 - 2*f);                              // smoothstep
-    const brightA = STORM_BRIGHT_A;                          // dim but playable
-    a = brightA + (STORM_DARK_A - brightA) * (1 - ease);     // starts bright, fades darker
+  // Base blackout alpha: fully dark (scaled by fade-in)
+  let a = darkA;
+
+  // Pre-lightning gradual darkening: darken from 0 to STORM_DARK_A as we approach first lightning
+  // This happens when nextFlashIn > 0 and we haven't had the first flash yet
+  if (!storm.hasFirstFlash && storm.nextFlashIn > 0 && storm.firstFlashTime > 0) {
+    const progress = 1 - (storm.nextFlashIn / storm.firstFlashTime); // 0 → 1 as we approach first flash
+    const ease = progress * progress * (3 - 2 * progress); // smoothstep easing
+    a = ease * darkA; // gradually increase from 0 to darkA
   }
+  // After first lightning, use normal storm darkness logic
+  else {
+    // During afterglow, ease the blackout alpha toward a brighter level
+    if (storm.afterglowT > 0 && storm.afterglowMax > 0) {
+      const f = storm.afterglowT / storm.afterglowMax;        // 1 → 0
+      const ease = f*f*(3 - 2*f);                              // smoothstep
+      a = brightA + (darkA - brightA) * (1 - ease);     // starts bright, fades darker
+    }
 
-  // During the instantaneous flash, keep it very bright
-  if (storm.flashT > 0) a = Math.min(a, 0.15);
+    // During the instantaneous flash, keep it very bright
+    if (storm.flashT > 0) a = Math.min(a, 0.15);
+  }
 
   g.save();
   g.globalAlpha = a;

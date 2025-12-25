@@ -59,6 +59,8 @@
     <span class="led on" id="sfxLed"></span>
     <button id="musicBtn" class="toggle">🎵 Music</button>
     <span class="led off" id="musicLed"></span>
+    <span class="sep"></span>
+    <button id="helpBtn" class="toggle">❓ Help</button>
   </header>
 
   <canvas id="game" width="1200" height="780"></canvas>
@@ -66,6 +68,34 @@
   <footer>
     <span class="help">Controls: <span class="kbd">Left Click</span>/<span class="kbd">Tap</span> reveal • <span class="kbd">Right Click</span>/<span class="kbd">Long‑press</span> flag • Toggle <b>🚩 Flag Mode</b> on touch for easier flagging.</span>
   </footer>
+
+  <!-- Help Menu -->
+  <div class="overlay" id="helpOverlay" style="display:none; position:fixed; inset:0; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.75);">
+    <div class="help-card" style="background:var(--panel); border:1px solid #173051; padding:24px 26px; border-radius:16px; max-width:min(92vw, 600px); box-shadow:0 10px 30px rgba(0,0,0,.5); pointer-events:auto; color:var(--ink);">
+      <h2 style="margin:0 0 16px 0; font-size:24px; color:var(--accent);">❓ How to Play Minesweeper</h2>
+      <p><b>Objective:</b> Reveal all tiles that don't contain mines without clicking on any mines!</p>
+      
+      <p><b>Controls:</b></p>
+      <ul style="margin:8px 0; padding-left:20px; line-height:1.8;">
+        <li><b>Left Click</b> or <b>Tap</b> - Reveal a tile</li>
+        <li><b>Right Click</b> or <b>Long-press</b> - Flag/unflag a tile (mark as mine)</li>
+        <li><b>Flag Mode</b> - Toggle to make touch controls easier (tap to flag, tap again to reveal)</li>
+        <li><b>N</b> - Start a new game</li>
+      </ul>
+
+      <p><b>How to Play:</b></p>
+      <ul style="margin:8px 0; padding-left:20px; line-height:1.8;">
+        <li>Numbers show how many mines are adjacent to that tile</li>
+        <li>Use logic to figure out where mines are located</li>
+        <li>Flag tiles you think contain mines</li>
+        <li>Reveal all non-mine tiles to win!</li>
+        <li>Click a mine and it's game over</li>
+        <li>Choose from Beginner, Intermediate, Expert, or Custom difficulty</li>
+      </ul>
+
+      <button class="btn" id="helpClose" style="margin-top:16px; width:100%; background:var(--accent); color:#000; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer;">Close</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -450,6 +480,7 @@ function drawRaisedTile(x, y, s, hovered) {
   });
 
   canvas.addEventListener('mousedown', (e)=>{
+    if(helpOpen) return;
     mouseDown = true; mouseBtn = e.button;
     const cell = cellFromEvent(e); if (!cell) return;
     if (e.button === 2) { // right
@@ -474,6 +505,7 @@ function drawRaisedTile(x, y, s, hovered) {
 
   // Touch: short tap reveal / long-press flag (or Flag Mode toggles behavior)
   canvas.addEventListener('touchstart', (e)=>{
+    if(helpOpen) return;
     const cell = cellFromEvent(e); if (!cell) return;
     touchFlagged = false;
     if (state.flagMode) {
@@ -645,6 +677,50 @@ function drawRaisedTile(x, y, s, hovered) {
   });
   function updateFlagButton(){ flagBtn.textContent = `🚩 Flag Mode: ${state.flagMode? 'ON':'OFF'}`; }
   flagBtn.addEventListener('click', ()=>{ state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); });
+
+  // Help menu
+  const helpBtn = document.getElementById('helpBtn');
+  const helpOverlay = document.getElementById('helpOverlay');
+  const helpClose = document.getElementById('helpClose');
+  const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
+  let helpOpen = false;
+
+  function openHelp(){ 
+    if(helpOverlay) {
+      helpOpen = true;
+      helpOverlay.style.display = 'grid';
+      helpOverlay.style.pointerEvents = 'auto';
+    }
+  }
+  function closeHelp(){ 
+    if(helpOverlay) {
+      helpOpen = false;
+      helpOverlay.style.display = 'none';
+      helpOverlay.style.pointerEvents = 'none';
+    }
+  }
+
+  if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
+  if(helpClose) helpClose.addEventListener('click', (e) => { e.preventDefault(); closeHelp(); });
+  if(helpOverlay) {
+    helpOverlay.addEventListener('click', (e) => {
+      if(e.target === helpOverlay) closeHelp();
+    });
+  }
+  if(helpCard) {
+    helpCard.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if(e.code === 'KeyH' && !e.repeat) {
+      if(helpOverlay && helpOverlay.style.display === 'grid') closeHelp();
+      else openHelp();
+    }
+    if(e.code === 'Escape' && helpOverlay && helpOverlay.style.display === 'grid') {
+      closeHelp();
+    }
+  });
 
   // ===== Kick off =====
   window.addEventListener('resize', ()=>{

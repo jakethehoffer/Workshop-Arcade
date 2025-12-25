@@ -196,8 +196,10 @@
       </div>
       <button id="newBtn" class="btn">New Game</button>
       <button id="undoBtn" class="btn">Undo</button>
+      <button id="flipBtn" class="btn">🔄 Flip Board</button>
       <button id="sndBtn" class="btn" aria-pressed="true">🔊 Sound</button> <!-- 🔊 ADDED -->
       <button id="helpBtn" class="btn">❓ Help</button>
+      <label id="autoFlipWrap" style="display:none;"><input type="checkbox" id="autoFlip"> Auto-flip board</label>
       <label id="aiWrap">AI strength:
   <select id="aiDepth" class="select">
     <option value="3">Weak</option>
@@ -285,6 +287,7 @@ let aiPlays = BLK; // AI plays Black by default
 let aiDepth = 7;
 
 let turn = RED;
+let flipped = false; // false = Red on bottom; true = Black on bottom
 let board = [];
 let history = [];
 let locked = false;
@@ -301,6 +304,9 @@ const elModePVP = document.getElementById('mode-pvp');
 const elDepth   = document.getElementById('aiDepth');
 const elAiWrap  = document.getElementById('aiWrap');   // ⬅️ add this
 const elSnd     = document.getElementById('sndBtn'); /* 🔊 ADDED */
+const elFlipBtn = document.getElementById('flipBtn');
+const elAutoFlip = document.getElementById('autoFlip');
+const elAutoFlipWrap = document.getElementById('autoFlipWrap');
 // Game over elements
 const elGameOver = document.getElementById('gameOver');
 const elGoWinner = document.getElementById('goWinner');
@@ -710,6 +716,22 @@ function render(){
       if(forcedTargets.has(key)) child.classList.add('force-dst');
     }
   }
+  
+  // Apply CSS transform for flipping
+  if(flipped) {
+    elBoard.style.transform = 'rotate(180deg)';
+    // Also flip pieces so they appear right-side up
+    for(const child of elBoard.children){
+      const piece = child.querySelector('.piece');
+      if(piece) piece.style.transform = 'rotate(180deg)';
+    }
+  } else {
+    elBoard.style.transform = 'none';
+    for(const child of elBoard.children){
+      const piece = child.querySelector('.piece');
+      if(piece) piece.style.transform = 'none';
+    }
+  }
 
   updateTurnUI();
 }
@@ -781,7 +803,13 @@ function endTurn(){
     render();
     return;
   }
-  turn = -turn;
+  turn = opp; // Switch to opponent's turn
+  
+  // Auto-flip board in 2-player mode if enabled
+  if(mode === 'PVP' && elAutoFlip && elAutoFlip.checked) {
+    flipped = (turn === BLK); // Flip to show black on bottom when it's black's turn
+  }
+  
   render();
   if(mode==='SP' && turn===aiPlays){
     locked = true;
@@ -891,6 +919,8 @@ function undo(){
    Game Lifecycle
    =============== */
 function newGame(){
+  // Reset board orientation
+  flipped = false;
   hideGameOver();
   locked=false;
   history.length=0;
@@ -920,6 +950,13 @@ function setMode(next){
   elModeSP.setAttribute('aria-pressed', mode==='SP' ? 'true':'false');
   elModePVP.setAttribute('aria-pressed', mode==='PVP' ? 'true':'false');
     updateAiVisibility(); // ⬅️ add this line
+  // Show/hide auto-flip toggle based on mode
+  if(elAutoFlipWrap) {
+    elAutoFlipWrap.style.display = (mode === 'PVP') ? 'block' : 'none';
+  }
+  if(mode === 'SP' && elAutoFlip) {
+    elAutoFlip.checked = false; // Disable auto-flip when switching to singleplayer
+  }
   toast(mode==='SP' ? 'Switched to Singleplayer. New game started.' : 'Switched to Two-Player. New game started.');
   Sound.click(); /* 🔊 ADDED */
   newGame();
@@ -941,6 +978,13 @@ elSnd.addEventListener('click', ()=>{
 /* Wire up controls */
 elNew.addEventListener('click', ()=>{ Sound.click(); newGame(); });   /* 🔊 ADDED */
 elUndo.addEventListener('click', undo); // ✅ FIX: actually call undo()
+elFlipBtn.addEventListener('click', ()=>{ 
+  if(!locked) {
+    flipped = !flipped;
+    render();
+    Sound.click();
+  }
+});
 elModeSP.addEventListener('click', ()=> setMode('SP'));
 elModePVP.addEventListener('click', ()=> setMode('PVP'));
 elHelpBtn.addEventListener('click', openHelp);
@@ -982,6 +1026,10 @@ elDepth.addEventListener('change', e=>{
 
 /* Boot */
 aiDepth = +elDepth.value;
+// Initialize auto-flip toggle visibility
+if(elAutoFlipWrap) {
+  elAutoFlipWrap.style.display = 'none'; // Hidden by default (SP mode)
+}
 newGame(); // render the board immediately on page load
 setMode('SP');
 updateSoundUI(); /* 🔊 ADDED */

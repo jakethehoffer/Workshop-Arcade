@@ -152,6 +152,19 @@
   }
 
   body.modal-open{ overflow: hidden; }
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--ink);
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.1);
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -163,10 +176,10 @@
     </div>
 <div class="actions">
   <span class="pill" id="guessesLeftPill">Guesses left: —</span>
-  <button id="newGameBtn">New Game</button>
-  <button id="sfxBtn" class="btn">🔊 SFX: On</button>
-<button id="eligibleBtn" class="btn" title="Show only characters that match any matched facts">🔎 Match-Only: Off</button>
-<button id="helpBtn" class="btn" title="How to play & fact options">❓ Help</button>
+  <button id="newGameBtn">New Game (N)</button>
+  <button id="sfxBtn" class="btn">🔊 SFX: On (S)</button>
+<button id="eligibleBtn" class="btn" title="Show only characters that match any matched facts">🔎 Match-Only: Off (M)</button>
+<button id="helpBtn" class="btn" title="How to play & fact options">❓ Help (H)</button>
 </div>
 
   </header>
@@ -245,9 +258,22 @@
       <ol style="margin:8px 0 0 18px; padding:0">
         <li>Pick a character from the bank to see which facts match the target.</li>
         <li>Use the search box to narrow by name.</li>
-        <li>Toggle <i>Match-Only</i> to show only characters that share your matched facts (Partial/Exact). “No match” is ignored in that mode.</li>
+        <li>Toggle <i>Match-Only</i> to show only characters that share your matched facts (Partial/Exact).</li>
         <li>Win by tapping the exact character.</li>
       </ol>
+    </div>
+
+    <div class="sp"></div>
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="fact" style="margin-bottom:8px">
+      <b>Hotkeys</b>
+      <div style="margin-top:6px">
+        <div><kbd>N</kbd> - New Game</div>
+        <div><kbd>S</kbd> - Toggle SFX</div>
+        <div><kbd>M</kbd> - Toggle Match-Only Mode</div>
+        <div><kbd>H</kbd> - Toggle Help</div>
+        <div><kbd>Esc</kbd> - Close Help</div>
+      </div>
     </div>
 
     <div class="sp"></div>
@@ -416,7 +442,7 @@ function getMatches(a, b){
 
   PEACEMAKER: {display:'Peacemaker (Christopher Smith)', species:'Human', color:['Red','Silver'], home:'Evergreen', affiliation:['Suicide Squad'], role:'Antihero', type:'Soldier'},
   RED_HOOD: {display:'Red Hood (Jason Todd)', species:'Human', color:['Red','Black'], home:'Gotham City', affiliation:['Bat-Family'], role:'Antihero', type:'Marksman'},
-  SWAMP_THING: {display:'Swamp Thing', species:'Human', color:['Green','Brown'], home:'Louisiana', affiliation:['Justice League Dark'], role:'Hero', type:'Meta-Human'},
+  SWAMP_THING: {display:'Swamp Thing', species:'Human', color:['Green','Brown'], home:'Louisiana', affiliation:['Justice League Dark'], role:'Hero', type:'Meta-human'},
   BLUE_BEETLE_TED: {display:'Blue Beetle (Ted Kord)', species:'Human', color:'Blue', home:'Hub City', affiliation:['Justice League'], role:'Hero', type:'Tech'},
   /* --- Added heroes --- */
   GREEN_LANTERN_JOHN: {display:'Green Lantern (John Stewart)', species:'Human', color:'Green', home:'Detroit', affiliation:['Justice League','Lanterns'], role:'Hero', type:'Cosmic'},
@@ -441,11 +467,11 @@ function getMatches(a, b){
   PARASITE: {display:'Parasite (Rudy Jones)', species:'Human', color:['Purple'], home:'Metropolis', affiliation:['Injustice League','Superman Rogues'], role:'Villain', type:'Monster'},
   ARES: {display:'Ares', species:'God', color:['Black','Blue'], home:'Olympus', affiliation:['Injustice League'], role:'Villain', type:'Godly'},
   OCEAN_MASTER: {display:'Ocean Master (Orm Marius)', species:'Atlantean', color:['Purple','Silver'], home:'Atlantis', affiliation:['Injustice League'], role:'Villain', type:'Warrior'},
-  KING_SHARK: {display:'King Shark (Nanaue)', species:'Meta-human', color:['Gray','Blue'], home:'Midway City', affiliation:['Suicide Squad'], role:'Villain', type:'Monster'},
+  KING_SHARK: {display:'King Shark (Nanaue)', species:'Humanoid Shark', color:['Gray','Blue'], home:'Midway City', affiliation:['Suicide Squad'], role:'Villain', type:['Monster','Meta-human']},
   HUSH: {display:'Hush (Thomas Elliot)', species:'Human', color:['Gray'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tactician'},
   CLAYFACE: {display:'Clayface (Basil Karlo)', species:'Human', color:['Brown'], home:'Gotham City', affiliation:['Batman Rogues','Suicide Squad'], role:'Villain', type:['Monster','Shapeshifter']},
   MAN_BAT: {display:'Man-Bat (Kirk Langstrom)', species:'Human', color:['Brown'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Monster'},
-  HUGO_STRANGE: {display:'Hugo Strange', species:'Human', color:['Blue'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tactician'},
+  HUGO_STRANGE: {display:'Hugo Strange', species:'Human', color:['White'], home:'Gotham City', affiliation:['Batman Rogues'], role:'Villain', type:'Tactician'},
   TALIA_AL_GHUL: {display:"Talia al Ghul", species:'Human', color:['Green','Black'], home:'Nanda Parbat', affiliation:['League of Assassins'], role:'Antihero', type:'Tactician'},
    CAPTAIN_BOOMERANG: {display:'Captain Boomerang (Digger Harkness)', species:'Human', color:['Blue'], home:'Central City', affiliation:['Suicide Squad','Flash Rogues'], role:'Villain', type:'Marksman'},
   MIRROR_MASTER: {display:'Mirror Master (Sam Scudder)', species:'Human', color:['Orange','Green'], home:'Central City', affiliation:['Flash Rogues'], role:'Villain', type:'Tech'},
@@ -463,6 +489,146 @@ function getMatches(a, b){
   DEADSHOT: {display:'Deadshot (Floyd Lawton)', species:'Human', color:['Red','Black'], home:'Gotham City', affiliation:['Suicide Squad'], role:'Villain', type:'Marksman'},
   RA_S_AL_GHUL: {display:"Ra's al Ghul", species:'Human', color:['Green'], home:'Nanda Parbat', affiliation:['League of Assassins'], role:'Villain', type:'Tactician'},
   GORILLA_GRODD: {display:'Gorilla Grodd', species:'Gorilla', color:['Brown'], home:'Gorilla City', affiliation:['Injustice League','Flash Rogues'], role:'Villain', type:['Meta-human','Telepath']},
+  LOIS_LANE: {
+    display:'Lois Lane',
+    species:'Human',
+    color:['White'],
+    home:'Metropolis',
+    affiliation:['Daily Planet','Superman Family'],
+    role:'Support',
+    type:'Reporter'
+  },
+
+  BATWOMAN_KATE: {
+    display:'Batwoman (Kate Kane)',
+    species:'Human',
+    color:['Red','Black'],
+    home:'Gotham City',
+    affiliation:['Bat-Family'],
+    role:'Hero',
+    type:['Detective','Warrior']
+  },
+
+  HUNTRESS_HELENA: {
+    display:'Huntress (Helena Bertinelli)',
+    species:'Human',
+    color:['Purple','Black'],
+    home:'Gotham City',
+    affiliation:['Bat-Family','Birds of Prey'],
+    role:'Antihero',
+    type:['Marksman','Vigilante']
+  },
+
+  STATIC_VIRGIL: {
+    display:'Static (Virgil Hawkins)',
+    species:'Human',
+    color:['Blue','Yellow', 'Black'],
+    home:'Dakota City',
+    affiliation:['Teen Titans'],
+    role:'Hero',
+    type:['Meta-human','Energy']
+  },
+
+  BLACK_LIGHTNING: {
+    display:'Black Lightning (Jefferson Pierce)',
+    species:'Human',
+    color:['Blue','Yellow', 'Black'],
+    home:'Metropolis',
+    affiliation:['Justice League','Outsiders'],
+    role:'Hero',
+    type:['Meta-human','Energy']
+  },
+
+  VIXEN_MARI: {
+    display:'Vixen (Mari McCabe)',
+    species:'Human',
+    color:['Orange','Brown'],
+    home:'Detroit',
+    affiliation:['Justice League'],
+    role:'Hero',
+    type:['Magic','Shapeshifter']
+  },
+
+  FLASH_JAY: {
+    display:'The Flash (Jay Garrick)',
+    species:'Human',
+    color:['Red', 'Yellow','Blue'],
+    home:'Keystone City',
+    affiliation:['Justice Society','Justice League'],
+    role:'Hero',
+    type:'Meta-human'
+  },
+
+  GREEN_LANTERN_KYLE: {
+    display:'Green Lantern (Kyle Rayner)',
+    species:'Human',
+    color:['Green','White'],
+    home:'Los Angeles',
+    affiliation:['Justice League','Lanterns'],
+    role:'Hero',
+    type:'Cosmic'
+  },
+
+  MISS_MARTIAN: {
+    display:"Miss Martian (M'gann M'orzz)",
+    species:'Alien',
+    color:['Green','White'],
+    home:'Mars',
+    affiliation:['Teen Titans','Justice League'],
+    role:'Hero',
+    type:['Telepath','Shapeshifter']
+  },
+
+  AQUALAD_KALDUR: {
+    display:"Aqualad (Kaldur'ahm)",
+    species:'Atlantean-Human',
+    color:['Black','Blue'],
+    home:'Atlantis',
+    affiliation:['Teen Titans','Atlantis'],
+    role:'Hero',
+    type:['Magic','Warrior']
+  },
+
+  LOBO: {
+    display:'Lobo',
+    species:'Alien',
+    color:['White','Black'],
+    home:'Czarnia',
+    affiliation:['Bounty Hunters'],
+    role:'Antihero',
+    type:['Warrior','Bounty Hunter']
+  },
+
+  TRIGON: {
+    display:'Trigon',
+    species:'Demon',
+    color:['Red','Black'],
+    home:'Other-Dimensional Realm',
+    affiliation:['Demons'],
+    role:'Villain',
+    type:['Demon','Magic']
+  },
+
+  VANDAL_SAVAGE: {
+    display:'Vandal Savage',
+    species:'Human',
+    color:['White'],
+    home:'Unknown',
+    affiliation:['Injustice League'],
+    role:'Villain',
+    type:'Tactician'
+  },
+
+  AMANDA_WALLER: {
+    display:'Amanda Waller',
+    species:'Human',
+    color:['Black'],
+    home:'Washington, D.C.',
+    affiliation:['Suicide Squad','A.R.G.U.S.'],
+    role:'Support',
+    type:['Tactician','Leader']
+  },
+
   ZOOM_HUNTER: {display:'Zoom (Hunter Zolomon)', species:'Human', color:['Yellow','Black'], home:'Keystone City', affiliation:['Negative Speed Force','Flash Rogues'], role:'Villain', type:'Meta-human'}
 };
 
@@ -514,27 +680,6 @@ function chipsHTML(arr){
   '</div>';
 }
 
-function buildHelpContent(){
-  const groups = [
-    { key:'species',     label:'Species' },
-    { key:'home',        label:'Home Base / World' },
-    { key:'affiliation', label:'Affiliation / Team(s)' },
-    { key:'role',        label:'Role' },
-    { key:'type',        label:'Power / Skill Type' }
-  ];
-
-  const sections = groups.map(g => {
-    const vals = uniqueValuesForKey(g.key);
-    return (
-      '<div class="fact" style="margin-bottom:8px">' +
-        '<b>'+ g.label +'</b>' +
-        chipsHTML(vals) +
-      '</div>'
-    );
-  }).join('');
-
-  helpBody.innerHTML = sections;
-}
 
 function openHelp(){
   buildHelpContent();          // build fresh in case the dataset changed
@@ -554,9 +699,58 @@ helpCloseBtn.addEventListener('click', closeHelp);
 help.addEventListener('click', function(e){
   if (e.target === help) closeHelp();
 });
-// ESC to close
+// Keyboard shortcuts
 document.addEventListener('keydown', function(e){
-  if (e.key === 'Escape' && help.classList.contains('show')) closeHelp();
+  // Don't trigger shortcuts when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  
+  // ESC to close help
+  if (e.key === 'Escape' && help.classList.contains('show')) {
+    closeHelp();
+    return;
+  }
+  
+  // Don't trigger other shortcuts if help is open (except H to close it)
+  if (help.classList.contains('show') && e.key !== 'H' && e.key !== 'h') return;
+  
+  // N - New Game
+  if ((e.key === 'N' || e.key === 'n') && !e.repeat) {
+    e.preventDefault();
+    SFX.ui();
+    win.classList.remove('show');
+    lose.classList.remove('show');
+    document.body.classList.remove('modal-open');
+    resetGame();
+    return;
+  }
+  
+  // S - Toggle SFX
+  if ((e.key === 'S' || e.key === 's') && !e.repeat) {
+    e.preventDefault();
+    toggleSfx();
+    return;
+  }
+  
+  // M - Toggle Match-Only
+  if ((e.key === 'M' || e.key === 'm') && !e.repeat) {
+    e.preventDefault();
+    eligibleOnly = !eligibleOnly;
+    updateEligibleButtonText();
+    SFX.ui();
+    renderBank();
+    return;
+  }
+  
+  // H - Toggle Help
+  if ((e.key === 'H' || e.key === 'h') && !e.repeat) {
+    e.preventDefault();
+    if (help.classList.contains('show')) {
+      closeHelp();
+    } else {
+      openHelp();
+    }
+    return;
+  }
 });
 
 
@@ -640,7 +834,7 @@ function compareFacts(guessToken, targetToken){
   const res = {};
   for (let i=0;i<FACT_KEYS.length;i++){
     const k = FACT_KEYS[i];
-    res[k] = getMatches(ga[k], ta[k]); // { ok:boolean, matches:string[] }
+    res[k] = getMatches(ga[k], ta[k]); // { ok:boolean, state, matches:string[] }
   }
   return res;
 }
@@ -669,7 +863,7 @@ function renderBank(){
     items = items.filter(c => rx.test(c.display.toUpperCase()) || rx.test(c.token));
   }
 
-  // Eligible-only filter (now enforces both negative and positive constraints)
+  // Eligible-only filter (now enforces positive constraints)
   if (eligibleOnly && guesses.length){
     const cns = buildConstraintMaps();
     items = items.filter(c => isEligibleCharacterToken(c.token, cns));
@@ -796,7 +990,7 @@ function updateGuessesPill(animate){
       over = false;
       renderBank();
       renderGuesses();
-updateGuessesPill(false);
+      updateGuessesPill(false);
     }
 
     function onGuess(token){
@@ -814,8 +1008,8 @@ updateGuessesPill(false);
         return;
       }
 
-guessesLeft = Math.max(0, guessesLeft - 1);
-updateGuessesPill(true);
+      guessesLeft = Math.max(0, guessesLeft - 1);
+      updateGuessesPill(true);
       SFX.wrong();
 
       if (guessesLeft === 0){
@@ -896,26 +1090,63 @@ updateGuessesPill(true);
       resetGame();
     });
 
-    // SFX toggle
+    // SFX toggle - track state
+    let sfxEnabled = true;
+    function updateSfxButtonText() {
+      sfxBtn.textContent = sfxEnabled ? '🔊 SFX: On (S)' : '🔇 SFX: Off (S)';
+    }
+    function toggleSfx() {
+      sfxEnabled = SFX.toggle();
+      updateSfxButtonText();
+      if (sfxEnabled) { SFX.resume(); SFX.ui(); }
+      return sfxEnabled;
+    }
     sfxBtn.addEventListener('click', function(){
-      const on = SFX.toggle();
-      sfxBtn.textContent = on ? '🔊 SFX: On' : '🔇 SFX: Off';
-      if (on) { SFX.resume(); SFX.ui(); }
+      toggleSfx();
     });
+    // Initialize button text
+    updateSfxButtonText();
 
 const eligibleBtn = byId('eligibleBtn');
+function updateEligibleButtonText() {
+  eligibleBtn.textContent = eligibleOnly ? '🔎 Match-Only: On (M)' : '🔎 Match-Only: Off (M)';
+}
 eligibleBtn.addEventListener('click', function(){
   eligibleOnly = !eligibleOnly;
-  eligibleBtn.textContent = eligibleOnly ? '🔎 Match-Only: On' : '🔎 Match-Only: Off';
+  updateEligibleButtonText();
   SFX.ui();
   renderBank();
 });
+
+function buildHelpContent(){
+  const groups = [
+    { key:'species',     label:'Species' },
+    { key:'color',        label:'Primary Color(s)' },
+    { key:'home',        label:'Home Base / World' },
+    { key:'affiliation', label:'Affiliation/Team(s)' },
+    { key:'role',        label:'Role' },
+    { key:'type',        label:'Power/Skill Type' }
+  ];
+
+  const sections = groups.map(g => {
+    const vals = uniqueValuesForKey(g.key);
+    return (
+      '<div class="fact" style="margin-bottom:8px">' +
+        '<b>'+ g.label +'</b>' +
+        chipsHTML(vals) +
+      '</div>'
+    );
+  }).join('');
+
+  helpBody.innerHTML = sections;
+}
 
 
 
     // INIT
     resetGame();
     renderBank();
+    updateEligibleButtonText();
 
     // Smoke tests (desktop only)
     (function runTests(){

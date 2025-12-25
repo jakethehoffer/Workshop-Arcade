@@ -285,6 +285,7 @@ kbd{
   const cardStart = document.getElementById('msgStart');
   const cardNext  = document.getElementById('msgNext');
   const cardOver  = document.getElementById('msgOver');
+  const overlayEl = cardStart.closest('.overlay');
   const elBest = document.getElementById('best');
 const elFinalBest = document.getElementById('finalBest');
 const elNewBest = document.getElementById('newBest');
@@ -573,12 +574,14 @@ function openHelp(){
   G.running = false;
   btnPause.textContent = '▶️ Resume';
   cardStart.hidden = false;
+  if (overlayEl) overlayEl.style.pointerEvents = 'auto';
   renderLegendIcons();
 }
 
 function closeHelp(){
   if (cardStart.hidden) return;
   cardStart.hidden = true;
+  if (overlayEl) overlayEl.style.pointerEvents = 'none';
   if (resumeOnClose && cardOver.hidden){
     G.running = true;
     btnPause.textContent = '⏸️ Pause';
@@ -587,6 +590,22 @@ function closeHelp(){
 }
 
 function toggleHelp(){ cardStart.hidden ? openHelp() : closeHelp(); }
+
+// Close help menu when clicking outside the card
+if (overlayEl) {
+  overlayEl.addEventListener('click', (e) => {
+    if (!cardStart.hidden && e.target === overlayEl) {
+      closeHelp();
+    }
+  });
+}
+
+// Prevent card clicks from closing the menu
+if (cardStart) {
+  cardStart.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
 
 
 const EFFECT_DUR = { EXPAND: 10, STICKY: 8, FIRE: 8, SLOW: 8, SHIELD: 10, CURSE_SHRINK: 10, CURSE_SPEED: 8, GUN: 5 };
@@ -626,7 +645,7 @@ const COMBO_GRAD_MAX_STOPS = 6;  // keep it punchy & readable
     const r = 8;
     const a = angle ?? (-Math.PI/3 + (Math.random()*0.4 - 0.2));
 return { x, y, r,    px: x, py: y,                    // ← NEW: previous position
- vx: Math.cos(a)*speed, vy: Math.sin(a)*speed, speed, fire:false, stuck:false, portalCooldown:0 };
+ vx: Math.cos(a)*speed, vy: Math.sin(a)*speed, speed, fire:false, stuck:false, portalCooldown:0, lastPortalIndex: -1 };
   }
 
   // ===== Level Generator =====
@@ -1803,30 +1822,74 @@ drawComboBanner();
 }
 function tryPortalTeleport(b, dt){
   if (!G.portals || G.portals.length !== 2) return;
-  if (b.portalCooldown > 0){ b.portalCooldown = Math.max(0, b.portalCooldown - dt); return; }
+  if (b.portalCooldown > 0){ 
+    b.portalCooldown = Math.max(0, b.portalCooldown - dt);
+    // Reset lastPortalIndex when cooldown expires so ball can use portals again
+    if (b.portalCooldown <= 0 && b.lastPortalIndex >= 0) {
+      // Check if ball is far enough from the last portal it exited
+      const lastPortal = G.portals[b.lastPortalIndex];
+      if (lastPortal) {
+        const dx = b.x - (lastPortal.x + lastPortal.w/2);
+        const dy = b.y - (lastPortal.y + lastPortal.h/2);
+        const dist = Math.hypot(dx, dy);
+        // Reset if ball is far enough away (at least 2 portal widths)
+        if (dist > Math.max(lastPortal.w, lastPortal.h) * 2) {
+          b.lastPortalIndex = -1;
+        }
+      } else {
+        b.lastPortalIndex = -1;
+      }
+    }
+    return; 
+  }
 
   for (let i=0;i<2;i++){
     const P = G.portals[i];
     if (circleRectOverlap(b.x, b.y, b.r, P.x, P.y, P.w, P.h)){
-const Q = G.portals[1 - i];
+      // Prevent infinite loop: if ball just exited from the OTHER portal (which would send it here), check for deflection
+      const otherIndex = 1 - i;
+      const justExitedOther = (b.lastPortalIndex === otherIndex);
+
+const Q = G.portals[otherIndex];
 
 // Preserve exact direction & speed
 const speed = Math.hypot(b.vx, b.vy) || b.speed;
 const angIn = Math.atan2(b.vy, b.vx);
-const angOut = angIn;
+
+// Calculate angle from exit portal center to entry portal center
+const exitCx = Q.x + Q.w/2;
+const exitCy = Q.y + Q.h/2;
+const entryCx = P.x + P.w/2;
+const entryCy = P.y + P.h/2;
+const angleToEntry = Math.atan2(entryCy - exitCy, entryCx - exitCx);
+
+// Check if the ball's exit angle would send it directly back to the entry portal
+// If the angle difference is small (within ~30 degrees), deflect it
+// Only apply deflection if we just exited the other portal (potential loop scenario)
+let angOut = angIn;
+if (justExitedOther) {
+  const angDiff = Math.abs(angIn - angleToEntry);
+  const normalizedDiff = Math.min(angDiff, Math.PI * 2 - angDiff); // handle wrap-around
+  
+  if (normalizedDiff < Math.PI / 6) { // ~30 degrees
+    // Deflect the angle away from the entry portal to break the loop
+    // Deflect by 45 degrees in a random direction (left or right)
+    const deflection = (Math.random() < 0.5 ? 1 : -1) * Math.PI / 4;
+    angOut = angleToEntry + Math.PI + deflection; // opposite direction + deflection
+  }
+}
 
 // Place the ball just *outside* the exit portal along its travel direction
-const cx = Q.x + Q.w/2;
-const cy = Q.y + Q.h/2;
-// push distance: just past the portal’s bounding rect + ball radius
+// push distance: just past the portal's bounding rect + ball radius
 const push = Math.max(b.r + 2, Math.max(Q.w, Q.h) * 0.55);
 
-b.x  = cx + Math.cos(angOut) * push;
-b.y  = cy + Math.sin(angOut) * push;
+b.x  = exitCx + Math.cos(angOut) * push;
+b.y  = exitCy + Math.sin(angOut) * push;
 b.vx = Math.cos(angOut) * speed;
 b.vy = Math.sin(angOut) * speed;
 
 b.portalCooldown = 0.25; // still prevents immediate retrigger
+b.lastPortalIndex = i; // track which portal we just exited FROM (the one we entered)
 SFX.wall();
 return;
 
