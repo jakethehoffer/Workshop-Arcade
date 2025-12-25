@@ -353,20 +353,20 @@ document.addEventListener('DOMContentLoaded', function(){
     })();
 
     // --- Fact schema for LoL ---
-    // - region  (Runeterra region)
+    // - difficulty  (Easy, Medium, Hard)
     // - class   (Fighter, Assassin, Mage, Marksman, Tank, Support; may be array)
     // - resource (Mana, Energy, Fury, Ferocity, Manaless, etc.)
     // - range   (Melee, Ranged)
     // - damage  (AD, AP, Mixed)
-    // - species (Human, Yordle, Vastaya, Voidborn, Undead, etc.)
-    const FACT_KEYS = ['region','class','resource','range','damage','species'];
+    // - mobility (Low, Medium, High)
+    const FACT_KEYS = ['difficulty','class','resource','range','damage','mobility'];
     const FACT_LABEL = {
-      region:'Region',
+      difficulty:'Difficulty',
       class:'Class',
       resource:'Resource',
       range:'Range',
       damage:'Damage Type',
-      species:'Species'
+      mobility:'Mobility'
     };
 
     // Dynamic champion dataset, filled from Riot Data Dragon
@@ -412,6 +412,22 @@ document.addEventListener('DOMContentLoaded', function(){
       return 'Mixed';
     }
 
+    function normalizeDifficulty(difficulty){
+      if (difficulty === undefined || difficulty === null) return 'Medium';
+      // Difficulty is 0-10 scale in Data Dragon
+      if (difficulty <= 3) return 'Easy';
+      if (difficulty <= 7) return 'Medium';
+      return 'Hard';
+    }
+
+    function inferMobility(movespeed){
+      if (!movespeed) return 'Medium';
+      // Base movespeed is typically 325-340, with variations
+      if (movespeed < 330) return 'Low';
+      if (movespeed <= 340) return 'Medium';
+      return 'High';
+    }
+
     function champToken(id){
       return id.toUpperCase().replace(/[^A-Z0-9_]/g, '');
     }
@@ -431,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       CHARACTER_FACTS = {};
 
+      // First pass: load basic data from summary
       for (const id in champs){
         const ch = champs[id];
         const stats = ch.stats || {};
@@ -440,14 +457,39 @@ document.addEventListener('DOMContentLoaded', function(){
 
         CHARACTER_FACTS[token] = {
           display: ch.name,
-          region: 'Unknown',
-          species: 'Unknown',
+          difficulty: 'Medium', // Default, will be updated from individual files
           class: tags.length ? tags.slice() : ['Unknown'],
           resource: normalizeResource(ch.partype),
           range: inferRange(stats.attackrange || 125),
-          damage: guessDamageFromTags(tags)
+          damage: guessDamageFromTags(tags),
+          mobility: inferMobility(stats.movespeed)
         };
       }
+
+      // Second pass: fetch individual champion files for difficulty (info.difficulty)
+      // Batch fetch in parallel for efficiency
+      const championIds = Object.keys(champs);
+      const difficultyPromises = championIds.map(async (id) => {
+        try {
+          const detailRes = await fetch(
+            `https://ddragon.leagueoflegends.com/cdn/${latest}/data/en_US/champion/${id}.json`
+          );
+          const detailJson = await detailRes.json();
+          const champData = detailJson.data[id];
+          if (champData && champData.info && champData.info.difficulty !== undefined) {
+            const token = champToken(id);
+            if (CHARACTER_FACTS[token]) {
+              CHARACTER_FACTS[token].difficulty = normalizeDifficulty(champData.info.difficulty);
+            }
+          }
+        } catch (err) {
+          // If individual fetch fails, keep default 'Medium'
+          console.warn(`Failed to fetch difficulty for ${id}:`, err);
+        }
+      });
+
+      // Wait for all difficulty fetches to complete
+      await Promise.all(difficultyPromises);
 
       BANK = Object.keys(CHARACTER_FACTS).map(k => ({
         token: k,
@@ -558,12 +600,12 @@ document.addEventListener('DOMContentLoaded', function(){
         return;
       }
       const groups = [
-        { key:'region',  label:'Region' },
+        { key:'difficulty',  label:'Difficulty' },
         { key:'class',   label:'Class' },
         { key:'resource',label:'Resource' },
         { key:'range',   label:'Range' },
         { key:'damage',  label:'Damage Type' },
-        { key:'species', label:'Species' }
+        { key:'mobility', label:'Mobility' }
       ];
 
       const sections = groups.map(g => {
@@ -987,11 +1029,11 @@ document.addEventListener('DOMContentLoaded', function(){
         // Minimal fallback if network fails
         if (!Object.keys(CHARACTER_FACTS).length){
           CHARACTER_FACTS = {
-            ASHE: {display:'Ashe', region:'Freljord', class:['Marksman'], resource:'Mana', range:'Ranged', damage:'AD', species:'Human'},
-            GAREN: {display:'Garen', region:'Demacia', class:['Fighter'], resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
-            LUX: {display:'Lux', region:'Demacia', class:['Mage'], resource:'Mana', range:'Ranged', damage:'AP', species:'Human'},
-            YASUO: {display:'Yasuo', region:'Ionia', class:['Fighter'], resource:'Manaless', range:'Melee', damage:'AD', species:'Human'},
-            JINX: {display:'Jinx', region:'Zaun', class:['Marksman'], resource:'Mana', range:'Ranged', damage:'AD', species:'Human'}
+            ASHE: {display:'Ashe', difficulty:'Medium', class:['Marksman'], resource:'Mana', range:'Ranged', damage:'AD', mobility:'Medium'},
+            GAREN: {display:'Garen', difficulty:'Easy', class:['Fighter'], resource:'Manaless', range:'Melee', damage:'AD', mobility:'Low'},
+            LUX: {display:'Lux', difficulty:'Easy', class:['Mage'], resource:'Mana', range:'Ranged', damage:'AP', mobility:'Medium'},
+            YASUO: {display:'Yasuo', difficulty:'Hard', class:['Fighter'], resource:'Manaless', range:'Melee', damage:'AD', mobility:'High'},
+            JINX: {display:'Jinx', difficulty:'Medium', class:['Marksman'], resource:'Mana', range:'Ranged', damage:'AD', mobility:'Medium'}
           };
           BANK = Object.keys(CHARACTER_FACTS).map(k => ({ token:k, display:CHARACTER_FACTS[k].display }));
         }
