@@ -1,459 +1,1111 @@
+﻿
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Shape Inlay — Conveyor Edition</title>
-<style>
-  :root{
-    color-scheme: dark;
-    --bg:#0b0f14;
-    --panel:#0e1522;
-    --ink:#e6edf3;
-    --muted:#94a3b8;
-    --accent:#5eead4;
-    --stroke:#223247;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
-    font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
-  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto}
-  header{
-    padding:10px 16px; display:flex; align-items:center; justify-content:space-between;
-    border-bottom:1px solid #142238; background:linear-gradient(180deg,#142238,#0e1826);
-  }
-  .title{display:flex; align-items:center; gap:12px}
-  .light{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
-  .kbd{padding:1px 7px; border:1px solid var(--stroke); border-radius:6px; background:#0e1a2a; color:#cfe1f6; font-weight:700; font-size:12px}
-  main{padding:10px}
-  canvas{display:block; width:min(1280px, 100%); height:auto; margin:0 auto;
-    background:linear-gradient(#273043,#0b0f14); border:1px solid #132033; border-radius:16px;
-    box-shadow:0 20px 60px rgba(0,0,0,.35)}
-  footer{padding:10px 16px; color:var(--muted); font-size:14px; display:flex; gap:20px; flex-wrap:wrap; align-items:center; justify-content:center}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <div class="title">
-      <span class="light"></span>
-      <div>
-        <div style="font-weight:900;letter-spacing:.3px">Shape Inlay — Conveyor Edition</div>
-        <div style="font-size:12px;color:var(--muted)">Pick pieces from the belt. Fill the silhouette.</div>
-      </div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Slope Runner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Saira+Stencil+One&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-1: #0b0f1e;
+        --bg-2: #0f1f3a;
+        --bg-3: #0a162c;
+        --panel: rgba(10, 18, 36, 0.78);
+        --panel-edge: rgba(105, 242, 255, 0.22);
+        --accent: #46f0ff;
+        --accent-2: #ff6b8f;
+        --accent-3: #f7d46a;
+        --text: #f3f6ff;
+        --muted: rgba(243, 246, 255, 0.7);
+        --shadow: 0 24px 60px rgba(4, 9, 22, 0.6);
+        --risk: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family: "Chakra Petch", sans-serif;
+        background:
+          radial-gradient(circle at 15% 20%, rgba(70, 240, 255, 0.28), transparent 45%),
+          radial-gradient(circle at 80% 15%, rgba(255, 107, 143, 0.24), transparent 48%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 14px);
+        opacity: 0.35;
+        pointer-events: none;
+        mix-blend-mode: screen;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        width: 520px;
+        height: 520px;
+        top: -180px;
+        right: -160px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(79, 255, 214, 0.35), transparent 70%);
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px clamp(16px, 4vw, 36px) 42px;
+        display: grid;
+        gap: 24px;
+      }
+
+      .mast {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 20px;
+        flex-wrap: wrap;
+        animation: floatIn 0.7s ease both;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.35em;
+        font-size: 0.65rem;
+        color: var(--muted);
+      }
+
+      .mast h1 {
+        margin: 6px 0 10px;
+        font-family: "Saira Stencil One", sans-serif;
+        font-size: clamp(32px, 5vw, 58px);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        text-shadow: 0 8px 24px rgba(70, 240, 255, 0.35);
+      }
+
+      .tagline {
+        margin: 0;
+        color: var(--muted);
+        max-width: 460px;
+        font-size: 0.95rem;
+      }
+
+      .mast-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: linear-gradient(135deg, var(--accent), #4ea0ff);
+        color: #00161d;
+        cursor: pointer;
+        box-shadow: 0 12px 22px rgba(19, 237, 255, 0.25);
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 28px rgba(19, 237, 255, 0.3);
+      }
+
+      .btn.secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        border: 1px solid rgba(133, 242, 255, 0.25);
+        box-shadow: none;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(240px, 300px) 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+
+      .hud {
+        background: var(--panel);
+        border: 1px solid var(--panel-edge);
+        border-radius: 22px;
+        padding: 18px;
+        display: grid;
+        gap: 16px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+        animation: floatIn 0.7s ease 0.1s both;
+      }
+
+      .stat-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stat {
+        background: rgba(12, 20, 34, 0.7);
+        border: 1px solid rgba(121, 239, 255, 0.2);
+        border-radius: 16px;
+        padding: 12px 14px;
+      }
+
+      .stat-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font-size: clamp(20px, 2.2vw, 28px);
+        font-weight: 600;
+      }
+
+      .stat-value small {
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .status-card {
+        background: rgba(7, 14, 26, 0.75);
+        border-radius: 16px;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 212, 106, 0.2);
+      }
+
+      .status-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .status-value {
+        margin-top: 6px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--accent-3);
+      }
+
+      .meter-card {
+        background: rgba(9, 16, 30, 0.75);
+        border-radius: 16px;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 107, 143, 0.2);
+      }
+
+      .meter-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .meter {
+        margin-top: 8px;
+        height: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .meter span {
+        display: block;
+        height: 100%;
+        width: 10%;
+        background: linear-gradient(90deg, #39f0ff, #ff7b9c);
+        transition: width 0.2s ease;
+      }
+
+      .meter-note {
+        margin: 10px 0 0;
+        font-size: 0.8rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .tips {
+        border: 1px dashed rgba(79, 243, 255, 0.35);
+        border-radius: 16px;
+        padding: 12px 14px;
+        background: rgba(12, 18, 30, 0.6);
+      }
+
+      .tips p {
+        margin: 0 0 8px;
+        font-size: 0.7rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .tips ul {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: #dbe5ff;
+      }
+
+      .arena {
+        display: grid;
+        gap: 16px;
+      }
+
+      .canvas-frame {
+        position: relative;
+        min-height: clamp(420px, 65vh, 680px);
+        border-radius: 26px;
+        overflow: hidden;
+        background: #050814;
+        border: 1px solid rgba(95, 239, 255, 0.25);
+        box-shadow: var(--shadow);
+        animation: floatIn 0.7s ease 0.2s both;
+      }
+
+      .canvas-frame::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 26px;
+        border: 2px solid rgba(79, 243, 255, 0.3);
+        opacity: calc(0.3 + var(--risk) * 0.6);
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .canvas-frame.danger::before {
+        border-color: rgba(255, 107, 143, 0.65);
+        box-shadow: 0 0 30px rgba(255, 107, 143, 0.35);
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+
+      .scanlines {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px);
+        mix-blend-mode: screen;
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(6, 10, 22, 0.75);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+      }
+
+      .overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .overlay-card {
+        background: rgba(11, 18, 33, 0.88);
+        border: 1px solid rgba(114, 244, 255, 0.4);
+        border-radius: 18px;
+        padding: 24px;
+        text-align: center;
+        width: min(340px, 85%);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      }
+
+      .overlay-card h2 {
+        margin: 0 0 8px;
+        font-family: "Saira Stencil One", sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .overlay-card p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .legend {
+        display: grid;
+        gap: 8px;
+        padding: 12px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(90, 240, 255, 0.2);
+        background: rgba(10, 16, 30, 0.6);
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 10px rgba(70, 240, 255, 0.8);
+        flex-shrink: 0;
+      }
+
+      .legend-dot.alt {
+        background: var(--accent-2);
+        box-shadow: 0 0 10px rgba(255, 107, 143, 0.8);
+      }
+
+      @keyframes floatIn {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .mast {
+          align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .app {
+          padding: 22px 16px 32px;
+        }
+
+        .mast-actions {
+          width: 100%;
+        }
+
+        .btn {
+          flex: 1 1 auto;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="mast">
+        <div class="title-block">
+          <div class="eyebrow">Workshop Arcade</div>
+          <h1>Slope Runner</h1>
+          <p class="tagline">Thread the neon canyon. The floor never stops falling away.</p>
+        </div>
+        <div class="mast-actions">
+          <button class="btn" id="startBtn">Start run</button>
+          <button class="btn secondary" id="resetBtn">New track</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="hud">
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="stat-label">Distance</div>
+              <div class="stat-value"><span id="distance">0</span><small>m</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Speed</div>
+              <div class="stat-value"><span id="speed">0</span><small>km/h</small></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Best</div>
+              <div class="stat-value"><span id="best">0</span><small>m</small></div>
+            </div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">Status</div>
+            <div class="status-value" id="status">READY</div>
+          </div>
+          <div class="meter-card">
+            <div class="meter-label">Nerve</div>
+            <div class="meter">
+              <span id="nerveFill"></span>
+            </div>
+            <p class="meter-note">Ride the edge for speed, but do not fall off.</p>
+          </div>
+          <div class="tips">
+            <p>Controls</p>
+            <ul>
+              <li>A/D or Left/Right to steer</li>
+              <li>Drag across the runway for touch</li>
+              <li>Hit New track to reset anytime</li>
+            </ul>
+          </div>
+        </aside>
+
+        <section class="arena">
+          <div class="canvas-frame">
+            <canvas id="game"></canvas>
+            <div class="scanlines"></div>
+            <div class="overlay show" id="overlay">
+              <div class="overlay-card">
+                <h2 id="overlayTitle">Ready to drop</h2>
+                <p id="overlayText">Hold A/D or drag to steer. Survive the canyon.</p>
+                <button class="btn" id="overlayBtn">Start run</button>
+              </div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item">
+              <span class="legend-dot"></span>
+              The track bends. Stay aligned as the speed climbs.
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot alt"></span>
+              Barriers are real. Dodge them or the run ends.
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
-    <div style="display:flex;gap:12px;align-items:center;color:var(--muted)">
-      <span><span class="kbd">Click</span> pick up / place</span>
-      <span><span class="kbd">Click</span> trash to discard</span>
-      <span><span class="kbd">R</span>/<span class="kbd">Wheel</span> rotate</span>
-    </div>
-  </header>
 
-  <main>
-    <canvas id="game" width="1280" height="800"></canvas>
-  </main>
+    <script>
+      (() => {
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const overlay = document.getElementById("overlay");
+        const overlayTitle = document.getElementById("overlayTitle");
+        const overlayText = document.getElementById("overlayText");
+        const overlayBtn = document.getElementById("overlayBtn");
+        const startBtn = document.getElementById("startBtn");
+        const resetBtn = document.getElementById("resetBtn");
+        const distanceEl = document.getElementById("distance");
+        const speedEl = document.getElementById("speed");
+        const bestEl = document.getElementById("best");
+        const statusEl = document.getElementById("status");
+        const nerveFill = document.getElementById("nerveFill");
+        const frameEl = document.querySelector(".canvas-frame");
 
-  <footer>
-    Belt fills up? You lose. Pieces keep a fixed gap so they don’t bunch.
-  </footer>
-</div>
+        const config = {
+          segmentLength: 60,
+          segmentCount: 140,
+          safeSegments: 12,
+          trackWidth: 320,
+          minWidth: 240,
+          maxWidth: 360,
+          maxOffset: 170,
+          maxCurve: 0.35,
+          fov: 360,
+          ballRadius: 18,
+          ballZ: 100,
+          baseSpeed: 240,
+          maxSpeed: 700,
+          speedRamp: 18,
+          steerStrength: 520,
+          friction: 0.86,
+          obstacleChance: 0.18
+        };
 
-<script>
-(() => {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  function fitCanvas(){
-    const r = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    canvas.width = Math.round(w*r); canvas.height = Math.round(h*r);
-    ctx.setTransform(r,0,0,r,0,0);
-  }
-  fitCanvas(); window.addEventListener('resize', fitCanvas, {passive:true});
+        const state = {
+          running: false,
+          crashed: false,
+          speed: config.baseSpeed,
+          distance: 0,
+          best: 0,
+          ballX: 0,
+          ballVX: 0,
+          risk: 0,
+          shake: 0
+        };
 
-  // Layout
-  const LEFT_PANEL_W = 280, BELT_H = 130, PAD = 16;
-  const COLS = 24, ROWS = 16; let TILE = 32;
+        const input = {
+          left: false,
+          right: false,
+          pointer: false,
+          pointerValue: 0,
+          pointerId: null
+        };
 
-  function getRects(){
-    const W = canvas.clientWidth, H = canvas.clientHeight;
-    const boardWAvail = W - LEFT_PANEL_W - PAD*3;
-    const boardHAvail = H - BELT_H - PAD*3;
-    TILE = Math.floor(Math.min(boardWAvail / COLS, boardHAvail / ROWS));
-    const boardW = TILE*COLS, boardH = TILE*ROWS;
-    const boardX = LEFT_PANEL_W + PAD*2 + (boardWAvail-boardW)/2;
-    const boardY = PAD*1.5 + (boardHAvail-boardH)/2;
+        const view = {
+          width: 0,
+          height: 0,
+          midX: 0,
+          horizon: 0,
+          cameraHeight: 0
+        };
 
-    const lpX = PAD, lpY = PAD, lpW = LEFT_PANEL_W, lpH = boardH + (boardY - PAD*1.5)*2;
+        const segments = [];
+        const stars = [];
+        const profile = {
+          center: 0,
+          width: config.trackWidth,
+          curve: 0,
+          curveTarget: 0,
+          curveCountdown: 0,
+          widthTarget: config.trackWidth,
+          widthCountdown: 0
+        };
 
-    const beltX = PAD, beltW = W - PAD*2, beltH = BELT_H, beltY = H - PAD - beltH;
+        const storedBest = Number.parseInt(localStorage.getItem("slope-best") || "0", 10);
+        if (Number.isFinite(storedBest)) {
+          state.best = storedBest;
+          bestEl.textContent = String(state.best);
+        }
 
-    const chuteR = 58, chuteCX = lpX + lpW/2, chuteCY = lpY + lpH*0.63;
+        function clamp(value, min, max) {
+          return Math.min(max, Math.max(min, value));
+        }
 
-    // inner belt rect (moving area)
-    const innerX = beltX+16, innerY = beltY+22, innerW = beltW-32, innerH = beltH-44;
+        function randRange(min, max) {
+          return min + Math.random() * (max - min);
+        }
 
-    return {boardX,boardY,boardW,boardH,lpX,lpY,lpW,lpH,beltX,beltY,beltW,beltH,chuteCX,chuteCY,chuteR,innerX,innerY,innerW,innerH};
-  }
+        function resizeCanvas() {
+          const rect = canvas.getBoundingClientRect();
+          const ratio = window.devicePixelRatio || 1;
+          canvas.width = rect.width * ratio;
+          canvas.height = rect.height * ratio;
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          view.width = rect.width;
+          view.height = rect.height;
+          view.midX = rect.width / 2;
+          view.horizon = rect.height * 0.22;
+          view.cameraHeight = rect.height * 0.72;
+          initStars();
+        }
 
-  // Silhouette
-  const SILHOUETTE_KIND = 'star';
-  function rotateCells(c){ const r=c.map(([x,y])=>[y,-x]); let minx=Math.min(...r.map(v=>v[0])),miny=Math.min(...r.map(v=>v[1])); return r.map(([x,y])=>[x-minx,y-miny]); }
-  function bbox(c){ let maxx=Math.max(...c.map(v=>v[0])), maxy=Math.max(...c.map(v=>v[1])); return {w:maxx+1,h:maxy+1}; }
-  function makeSilhouette(cols,rows,tile,kind){
-    function star(cx,cy,sp,or,ir){const pts=[];let rot=Math.PI/2*3,step=Math.PI/sp;for(let i=0;i<sp;i++){pts.push([cx+Math.cos(rot)*or,cy+Math.sin(rot)*or]);rot+=step;pts.push([cx+Math.cos(rot)*ir,cy+Math.sin(rot)*ir]);rot+=step;}return pts;}
-    function ship(cx,cy,w,h){return[[cx-w*.45,cy+h*.15],[cx-w*.35,cy+h*.05],[cx-w*.25,cy-h*.05],[cx+w*.15,cy-h*.15],[cx+w*.35,cy-h*.05],[cx+w*.45,cy+h*.10],[cx+w*.15,cy+h*.15]];}
-    function heart(cx,cy,w,h){return[[cx,cy+h*.35],[cx-w*.35,cy+h*.12],[cx-w*.45,cy-h*.1],[cx-w*.25,cy-h*.3],[cx,cy-h*.1],[cx+w*.25,cy-h*.3],[cx+w*.45,cy-h*.1],[cx+w*.35,cy+h*.12]];}
-    const ow=cols*tile, oh=rows*tile, off=document.createElement('canvas'); off.width=ow; off.height=oh; const ox=off.getContext('2d');
-    let pts; if(kind==='ship') pts=ship(ow/2,oh/2,Math.min(ow,oh)*.7,Math.min(ow,oh)*.35);
-    else if(kind==='heart') pts=heart(ow/2,oh/2,Math.min(ow,oh)*.68,Math.min(ow,oh)*.58);
-    else {const outer=Math.min(ow,oh)*.36, inner=outer*.44; pts=star(ow/2,oh/2,5,outer,inner);}
-    ox.fillStyle='#fff'; ox.beginPath(); ox.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ox.lineTo(pts[i][0],pts[i][1]); ox.closePath(); ox.fill();
-    const img=ox.getImageData(0,0,ow,oh).data, mask=Array.from({length:rows},()=>Array(cols).fill(false)); let count=0;
-    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){ const cx=x*tile+tile/2, cy=y*tile+tile/2; const i=((cy|0)*ow+(cx|0))*4+3; if(img[i]>0){mask[y][x]=true;count++;}}
-    return {mask,count};
-  }
+        function initStars() {
+          stars.length = 0;
+          const count = Math.floor((view.width * view.height) / 15000);
+          for (let i = 0; i < count; i += 1) {
+            stars.push({
+              x: Math.random() * view.width,
+              y: Math.random() * view.height * 0.7,
+              size: randRange(1, 2),
+              alpha: randRange(0.2, 0.7)
+            });
+          }
+        }
 
-  // Pieces
-  const COLORS=['#60a5fa','#34d399','#fbbf24','#f472b6','#a78bfa','#22d3ee','#f87171','#cbd5e1'];
-  const SHAPES=[
-    {name:'I4',cells:[[0,0],[1,0],[2,0],[3,0]]},
-    {name:'L4',cells:[[0,0],[0,1],[0,2],[1,2]]},
-    {name:'T4',cells:[[0,0],[1,0],[2,0],[1,1]]},
-    {name:'S4',cells:[[1,0],[2,0],[0,1],[1,1]]},
-    {name:'Z4',cells:[[0,0],[1,0],[1,1],[2,1]]},
-    {name:'O4',cells:[[0,0],[1,0],[0,1],[1,1]]},
-    {name:'U5',cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]},
-    {name:'F5',cells:[[1,0],[0,1],[1,1],[1,2],[2,2]]},
-    {name:'L5',cells:[[0,0],[0,1],[0,2],[0,3],[1,3]]},
-    {name:'N5',cells:[[1,0],[1,1],[1,2],[0,2],[0,3]]},
-    {name:'T5',cells:[[0,0],[1,0],[2,0],[1,1],[1,2]]},
-    {name:'X5',cells:[[1,0],[0,1],[1,1],[2,1],[1,2]]},
-    {name:'Domino',cells:[[0,0],[1,0]]},
-    {name:'Tri',cells:[[0,0],[1,0],[0,1]]},
-  ];
-  function newPiece(){
-    const b=SHAPES[Math.floor(Math.random()*SHAPES.length)];
-    const color=COLORS[Math.floor(Math.random()*COLORS.length)];
-    const p={name:b.name,color,cells:JSON.parse(JSON.stringify(b.cells)),rot:Math.floor(Math.random()*4),x:0,y:0,originX:0,originY:0};
-    for(let i=0;i<p.rot;i++) p.cells=rotateCells(p.cells);
-    const bb=bbox(p.cells); p.originX=Math.floor(bb.w/2); p.originY=Math.floor(bb.h/2);
-    return p;
-  }
+        function updateProfile() {
+          if (profile.curveCountdown <= 0) {
+            profile.curveTarget = randRange(-config.maxCurve, config.maxCurve);
+            profile.curveCountdown = Math.floor(randRange(12, 36));
+          }
+          profile.curve += (profile.curveTarget - profile.curve) * 0.15;
+          profile.curveCountdown -= 1;
 
-  // Game state
-  let boardMask,totalCells,filledCells,occupied,score=0,gameOver=false;
-  const MINI=22, BELT_GAP=18;
-  const BELT_SPEED_START=60; // slower
-  let beltSpeed=BELT_SPEED_START;
-  const beltPieces=[]; // {piece,x,y,w,h}
-  let spawnT=0, SPAWN_INTERVAL=2000; // slower stream
+          if (profile.widthCountdown <= 0) {
+            profile.widthTarget = randRange(config.minWidth, config.maxWidth);
+            profile.widthCountdown = Math.floor(randRange(18, 40));
+          }
+          profile.width += (profile.widthTarget - profile.width) * 0.12;
+          profile.widthCountdown -= 1;
+        }
 
-  // Held (click-to-hold, no return to belt)
-  let held=null;
+        function createObstacles(width, difficulty) {
+          const obstacles = [];
+          const chance = config.obstacleChance + difficulty * 0.08;
+          if (Math.random() > chance) {
+            return obstacles;
+          }
+          const obstacleWidth = randRange(34, 54);
+          const edgeBuffer = width * 0.22;
+          const x = randRange(-width / 2 + edgeBuffer, width / 2 - edgeBuffer);
+          obstacles.push({
+            x,
+            w: obstacleWidth,
+            h: obstacleWidth * randRange(0.8, 1.2)
+          });
+          return obstacles;
+        }
 
-  // Utils
-  function toBoardCoords(sx,sy){ const {boardX,boardY}=getRects(); return {x:sx-boardX,y:sy-boardY}; }
-  function screenToGrid(sx,sy){ const {boardX,boardY}=getRects(); return {x:Math.round((sx-boardX)/TILE), y:Math.round((sy-boardY)/TILE)}; }
-  function placeable(p){
-    for(const [dx,dy] of p.cells){
-      const gx=p.x+dx, gy=p.y+dy;
-      if(gx<0||gx>=COLS||gy<0||gy>=ROWS) return false;
-      if(!boardMask[gy][gx]) return false;
-      if(occupied[gy][gx]!==0) return false;
-    } return true;
-  }
-  function place(p){
-    let add=0;
-    for(const [dx,dy] of p.cells){ const gx=p.x+dx, gy=p.y+dy; occupied[gy][gx]=p.color; add++; }
-    filledCells += add; score += add*2; if(filledCells>=totalCells){ setTimeout(()=>alert('🎉 Filled! New puzzle starting.'),10); newGame(); }
-  }
+        function makeSegment(z, last, safeZone) {
+          updateProfile();
+          profile.center = clamp(
+            profile.center + profile.curve * config.segmentLength,
+            -config.maxOffset,
+            config.maxOffset
+          );
+          profile.width = clamp(profile.width, config.minWidth, config.maxWidth);
+          const difficulty = state.running
+            ? clamp((state.speed - config.baseSpeed) / (config.maxSpeed - config.baseSpeed), 0, 1)
+            : 0;
+          const obstacles = safeZone ? [] : createObstacles(profile.width, difficulty);
+          const stripe = last ? !last.stripe : false;
+          return {
+            z,
+            center: profile.center,
+            width: profile.width,
+            obstacles,
+            stripe
+          };
+        }
 
-  // Input
-  const mouse={x:0,y:0};
-  canvas.addEventListener('mousemove',(e)=>{
-    const r=canvas.getBoundingClientRect(); mouse.x=e.clientX-r.left; mouse.y=e.clientY-r.top;
-    if(held){ const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY; }
-  });
+        function initTrack() {
+          segments.length = 0;
+          profile.center = 0;
+          profile.width = config.trackWidth;
+          profile.curve = 0;
+          profile.curveTarget = 0;
+          profile.curveCountdown = 0;
+          profile.widthTarget = config.trackWidth;
+          profile.widthCountdown = 0;
+          for (let i = 0; i < config.segmentCount; i += 1) {
+            const z = i * config.segmentLength;
+            const safeZone = i < config.safeSegments;
+            const last = segments.length ? segments[segments.length - 1] : null;
+            segments.push(makeSegment(z, last, safeZone));
+          }
+        }
 
-  // Click handler: pick from belt OR place/trash when holding
-  function processPrimaryClick(sx,sy){
-    if(gameOver){ newGame(); return; }
+        function refreshSegment(segment, last) {
+          updateProfile();
+          profile.center = clamp(
+            profile.center + profile.curve * config.segmentLength,
+            -config.maxOffset,
+            config.maxOffset
+          );
+          profile.width = clamp(profile.width, config.minWidth, config.maxWidth);
+          const difficulty = state.running
+            ? clamp((state.speed - config.baseSpeed) / (config.maxSpeed - config.baseSpeed), 0, 1)
+            : 0;
+          segment.center = profile.center;
+          segment.width = profile.width;
+          segment.stripe = last ? !last.stripe : segment.stripe;
+          segment.obstacles = createObstacles(profile.width, difficulty);
+          return segment;
+        }
 
-    if(!held){
-      const idx=hitBeltPiece(sx,sy);
-      if(idx!=null){
-        const bp=beltPieces.splice(idx,1)[0];
-        held=detachToBoardPiece(bp.piece);
-        // snap to current cursor grid
-        const g=screenToGrid(sx,sy); held.x=g.x-held.originX; held.y=g.y-held.originY;
-      }
-      return;
-    }
+        function advanceTrack(dt, speed) {
+          const delta = speed * dt;
+          segments.forEach((segment) => {
+            segment.z -= delta;
+          });
+          while (segments.length && segments[0].z < 0) {
+            const segment = segments.shift();
+            const last = segments[segments.length - 1];
+            segment.z = last.z + config.segmentLength;
+            refreshSegment(segment, last);
+            segments.push(segment);
+          }
+        }
 
-    // If we are holding a piece: trash or place
-    const {chuteCX,chuteCY,chuteR}=getRects();
-    const dx=sx-chuteCX, dy=sy-chuteCY;
-    if(dx*dx+dy*dy<=chuteR*chuteR){ score=Math.max(0,score-5); held=null; return; }
+        function getSegmentAt(z) {
+          for (let i = 0; i < segments.length; i += 1) {
+            const segment = segments[i];
+            if (segment.z <= z && segment.z + config.segmentLength > z) {
+              return segment;
+            }
+            if (segment.z > z) {
+              break;
+            }
+          }
+          return segments[0] || null;
+        }
 
-    const g=screenToGrid(sx,sy); held.x=g.x-held.originX; held.y=g.y-held.originY;
-    if(placeable(held)){ place(held); held=null; }
-    // else: do nothing; keep holding (no return to belt)
-  }
+        function projectPoint(x, z) {
+          const scale = config.fov / (config.fov + z);
+          return {
+            x: view.midX + x * scale,
+            y: view.horizon + view.cameraHeight * scale,
+            scale
+          };
+        }
 
-  canvas.addEventListener('click',(e)=>{ processPrimaryClick(e.offsetX,e.offsetY); });
+        function drawBackground() {
+          const gradient = ctx.createLinearGradient(0, 0, 0, view.height);
+          gradient.addColorStop(0, "#08101f");
+          gradient.addColorStop(0.5, "#0d2240");
+          gradient.addColorStop(1, "#050814");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, view.width, view.height);
 
-  // Touch: tap to pick/place/trash, move to preview
-  canvas.addEventListener('touchstart',(e)=>{
-    const t=e.changedTouches[0]; const r=canvas.getBoundingClientRect();
-    mouse.x=t.clientX-r.left; mouse.y=t.clientY-r.top;
-    if(held){ const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY; }
-  },{passive:true});
-  canvas.addEventListener('touchmove',(e)=>{
-    const t=e.changedTouches[0]; const r=canvas.getBoundingClientRect();
-    mouse.x=t.clientX-r.left; mouse.y=t.clientY-r.top;
-    if(held){ const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY; }
-  },{passive:true});
-  canvas.addEventListener('touchend',(e)=>{
-    const t=e.changedTouches[0]; const r=canvas.getBoundingClientRect();
-    const x=t.clientX-r.left, y=t.clientY-r.top;
-    processPrimaryClick(x,y);
-  },{passive:true});
+          ctx.fillStyle = "rgba(70, 240, 255, 0.12)";
+          ctx.fillRect(0, view.horizon - 30, view.width, 80);
 
-  canvas.addEventListener('wheel',(e)=>{ if(held){ rotateHeld(e.deltaY>0?1:-1); } e.preventDefault(); },{passive:false});
-  window.addEventListener('keydown',(e)=>{
-    if(gameOver && (e.key==='n'||e.key==='N')){ newGame(); return; }
-    if(e.key==='r'||e.key==='R'){ rotateHeld(1); }
-    else if(e.key==='ArrowLeft' && held){ held.x--; }
-    else if(e.key==='ArrowRight' && held){ held.x++; }
-    else if(e.key==='ArrowDown' && held){ held.y++; }
-    else if(e.key==='ArrowUp' && held){ held.y--; }
-    // ESC is intentionally disabled (no return to belt)
-  });
+          stars.forEach((star) => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+            ctx.fillRect(star.x, star.y, star.size, star.size);
+          });
+        }
 
-  function rotateHeld(dir=1){
-    if(!held) return;
-    // rotate shape; keep it snapped under cursor/grid
-    held.cells=rotateCells(held.cells); held.rot=(held.rot+dir+4)%4;
-    const bb=bbox(held.cells); held.originX=Math.floor(bb.w/2); held.originY=Math.floor(bb.h/2);
-    const g=screenToGrid(mouse.x,mouse.y); held.x=g.x-held.originX; held.y=g.y-held.originY;
-  }
+        function drawTrack() {
+          for (let i = segments.length - 1; i > 0; i -= 1) {
+            const far = segments[i];
+            const near = segments[i - 1];
+            if (far.z <= 0 || near.z <= 0) {
+              continue;
+            }
+            const farProj = projectPoint(far.center, far.z);
+            const nearProj = projectPoint(near.center, near.z);
+            const farHalf = (far.width / 2) * farProj.scale;
+            const nearHalf = (near.width / 2) * nearProj.scale;
 
-  function beltPieceFor(p){ const bb=bbox(p.cells); return {piece:p,x:0,y:0,w:bb.w*MINI,h:bb.h*MINI}; }
-  function detachToBoardPiece(p){
-    const piece={name:p.name,color:p.color,cells:JSON.parse(JSON.stringify(p.cells)),
-      rot:p.rot,x:0,y:0,originX:p.originX,originY:p.originY};
-    const g=screenToGrid(mouse.x,mouse.y); piece.x=g.x-piece.originX; piece.y=g.y-piece.originY; return piece;
-  }
-  function hitBeltPiece(sx,sy){
-    const r=getRects(); if(!(sy>=r.innerY && sy<=r.innerY+r.innerH)) return null;
-    for(let i=beltPieces.length-1;i>=0;i--){
-      const b=beltPieces[i];
-      if(sx>=b.x-b.w/2 && sx<=b.x+b.w/2 && sy>=b.y-b.h/2 && sy<=b.y+b.h/2) return i;
-    } return null;
-  }
+            ctx.beginPath();
+            ctx.moveTo(farProj.x - farHalf, farProj.y);
+            ctx.lineTo(farProj.x + farHalf, farProj.y);
+            ctx.lineTo(nearProj.x + nearHalf, nearProj.y);
+            ctx.lineTo(nearProj.x - nearHalf, nearProj.y);
+            ctx.closePath();
+            ctx.fillStyle = far.stripe ? "rgba(18, 34, 62, 0.95)" : "rgba(10, 24, 44, 0.95)";
+            ctx.fill();
 
-  // New Game
-  function newGame(){
-    const s=makeSilhouette(COLS,ROWS,TILE||28,SILHOUETTE_KIND);
-    boardMask=s.mask; totalCells=s.count; filledCells=0;
-    occupied=Array.from({length:ROWS},()=>Array(COLS).fill(0));
-    beltPieces.length=0; held=null; score=0; beltSpeed=BELT_SPEED_START; spawnT=0; gameOver=false;
+            ctx.strokeStyle = "rgba(66, 242, 255, 0.15)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(farProj.x - farHalf, farProj.y);
+            ctx.lineTo(nearProj.x - nearHalf, nearProj.y);
+            ctx.stroke();
 
-    // prime a few pieces (3)
-    for(let i=0;i<3;i++) spawnPiece(true);
-  }
+            ctx.beginPath();
+            ctx.moveTo(farProj.x + farHalf, farProj.y);
+            ctx.lineTo(nearProj.x + nearHalf, nearProj.y);
+            ctx.stroke();
 
-  // Rendering
-  function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
-  function drawLeftPanel(r){
-    const {lpX,lpY,lpW,lpH,chuteCX,chuteCY,chuteR}=r;
-    const grad=ctx.createLinearGradient(lpX,lpY,lpX,lpY+lpH); grad.addColorStop(0,'#1a2c3f'); grad.addColorStop(1,'#0e1826');
-    ctx.fillStyle=grad; roundRect(ctx,lpX,lpY,lpW,lpH,18); ctx.fill();
-    ctx.strokeStyle='#223247'; ctx.lineWidth=2; roundRect(ctx,lpX,lpY,lpW,lpH,18); ctx.stroke();
+            if (i % 6 === 0) {
+              ctx.strokeStyle = "rgba(255, 214, 106, 0.25)";
+              ctx.beginPath();
+              ctx.moveTo(farProj.x, farProj.y);
+              ctx.lineTo(nearProj.x, nearProj.y);
+              ctx.stroke();
+            }
+          }
+        }
 
-    ctx.fillStyle='#e9f0fb'; ctx.font='700 28px system-ui,-apple-system,Segoe UI'; ctx.fillText('Score', lpX+20, lpY+42);
-    ctx.fillStyle='#c6d4ea'; ctx.font='900 40px system-ui,-apple-system,Segoe UI'; ctx.fillText(String(score), lpX+20, lpY+88);
+        function drawObstacles() {
+          for (let i = segments.length - 1; i >= 0; i -= 1) {
+            const segment = segments[i];
+            if (!segment.obstacles.length || segment.z <= 0) {
+              continue;
+            }
+            const proj = projectPoint(segment.center, segment.z);
+            segment.obstacles.forEach((obs) => {
+              const obsProj = projectPoint(segment.center + obs.x, segment.z);
+              const width = obs.w * obsProj.scale;
+              const height = obs.h * obsProj.scale;
+              const x = obsProj.x - width / 2;
+              const y = proj.y - height;
+              ctx.fillStyle = "rgba(255, 107, 143, 0.9)";
+              ctx.fillRect(x, y, width, height);
+              ctx.strokeStyle = "rgba(255, 210, 230, 0.7)";
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x, y, width, height);
+            });
+          }
+        }
 
-    // badges
-    drawBadge(lpX+20,lpY+120,'TIME'); drawBadge(lpX+100,lpY+120,'BOOST'); drawBadge(lpX+200,lpY+120,'LUCK');
+        function drawBall() {
+          const segment = getSegmentAt(config.ballZ);
+          if (!segment) {
+            return;
+          }
+          const proj = projectPoint(state.ballX, config.ballZ);
+          const radius = config.ballRadius * proj.scale;
+          const centerY = proj.y - radius * 0.6;
+          const shadowY = proj.y + radius * 0.2;
 
-    // trash chute
-    ctx.save(); ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=18;
-    ctx.beginPath(); ctx.arc(chuteCX,chuteCY,chuteR,0,Math.PI*2); ctx.closePath();
-    ctx.fillStyle='#0c0f14'; ctx.fill(); ctx.lineWidth=8; ctx.strokeStyle='#7a8794'; ctx.stroke();
-    ctx.lineWidth=3; ctx.strokeStyle='#c7d2db'; ctx.stroke(); ctx.restore();
+          ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+          ctx.beginPath();
+          ctx.ellipse(proj.x, shadowY, radius * 1.2, radius * 0.4, 0, 0, Math.PI * 2);
+          ctx.fill();
 
-    ctx.fillStyle='#93a4b8'; ctx.beginPath(); ctx.arc(lpX+24, lpY+20, 6, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(lpX+48, lpY+20, 6, 0, Math.PI*2); ctx.fill();
-  }
-  function drawBadge(x,y,label){
-    ctx.save(); ctx.translate(x,y);
-    ctx.fillStyle='#1a2d44'; roundRect(ctx,-10,-6,72,34,8); ctx.fill(); ctx.strokeStyle='#2a3e5a'; ctx.stroke();
-    ctx.fillStyle='#cde7ff'; ctx.font='800 12px system-ui,-apple-system'; ctx.fillText(label,6,16);
-    ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(56,-6,10,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='800 12px system-ui'; ctx.fillText('0',53,-2); ctx.restore();
-  }
-  function drawBoard(r){
-    const {boardX,boardY,boardW,boardH}=r;
-    ctx.save(); const g=ctx.createLinearGradient(boardX,boardY,boardX+boardW,boardY+boardH);
-    g.addColorStop(0,'rgba(23,194,169,.92)'); g.addColorStop(1,'rgba(33,70,120,.92)');
-    ctx.fillStyle=g; roundRect(ctx,boardX-8,boardY-8,boardW+16,boardH+16,14); ctx.fill();
+          const glow = ctx.createRadialGradient(
+            proj.x - radius * 0.3,
+            centerY - radius * 0.3,
+            radius * 0.2,
+            proj.x,
+            centerY,
+            radius * 1.2
+          );
+          glow.addColorStop(0, "#f6ffff");
+          glow.addColorStop(0.4, "#42f0ff");
+          glow.addColorStop(1, "#071530");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(proj.x, centerY, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
-    const bg=ctx.createLinearGradient(boardX,boardY,boardX,boardY+boardH);
-    bg.addColorStop(0,'#1aa7a6'); bg.addColorStop(1,'#1c2f55');
-    ctx.fillStyle=bg; roundRect(ctx,boardX,boardY,boardW,boardH,10); ctx.fill();
+        function getSteer() {
+          if (input.pointer) {
+            return input.pointerValue;
+          }
+          let steer = 0;
+          if (input.left) {
+            steer -= 1;
+          }
+          if (input.right) {
+            steer += 1;
+          }
+          return steer;
+        }
 
-    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
-      const px=boardX+x*TILE, py=boardY+y*TILE;
-      ctx.fillStyle = boardMask[y][x] ? 'rgba(240,240,240,.26)' : 'rgba(0,0,0,.28)';
-      ctx.fillRect(px,py,TILE,TILE);
-      const occ=occupied[y][x];
-      if(occ){ ctx.fillStyle=occ; ctx.fillRect(px+1,py+1,TILE-2,TILE-2); ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1); }
-      else if(boardMask[y][x]){ ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1); }
-    }
-    ctx.restore();
-  }
-  function drawHeld(r){
-    if(!held) return; const {boardX,boardY}=r;
-    for(const [dx,dy] of held.cells){
-      const gx=(held.x+dx)*TILE, gy=(held.y+dy)*TILE;
-      ctx.fillStyle=held.color; ctx.fillRect(boardX+gx+1,boardY+gy+1,TILE-2,TILE-2);
-      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(boardX+gx+.5,boardY+gy+.5,TILE-1,TILE-1);
-    }
-    const ok=placeable(held), bb=bbox(held.cells);
-    ctx.strokeStyle=ok?'rgba(34,197,94,.75)':'rgba(239,68,68,.75)'; ctx.lineWidth=2;
-    ctx.strokeRect(boardX+held.x*TILE+.5,boardY+held.y*TILE+.5,bb.w*TILE-1,bb.h*TILE-1);
-  }
-  function drawBelt(r,dt){
-    // Housing
-    ctx.save();
-    ctx.fillStyle='#a4b1bd'; roundRect(ctx,r.beltX,r.beltY,r.beltW,r.beltH,14); ctx.fill();
-    ctx.strokeStyle='#6f7d89'; ctx.lineWidth=2; roundRect(ctx,r.beltX,r.beltY,r.beltW,r.beltH,14); ctx.stroke();
-    ctx.fillStyle='#1f252b'; roundRect(ctx,r.beltX+10,r.beltY+12,r.beltW-20,r.beltH-24,12); ctx.fill();
-    ctx.fillStyle='#303841'; roundRect(ctx,r.innerX,r.innerY,r.innerW,r.innerH,10); ctx.fill();
+        function updateHud() {
+          distanceEl.textContent = String(Math.floor(state.distance / 10));
+          speedEl.textContent = String(Math.round(state.speed / 4));
+          bestEl.textContent = String(state.best);
+          statusEl.textContent = state.running ? "RUNNING" : state.crashed ? "CRASHED" : "READY";
+          const nerve = Math.max(6, state.risk * 100);
+          nerveFill.style.width = `${nerve}%`;
+          frameEl.style.setProperty("--risk", state.risk.toFixed(2));
+          frameEl.classList.toggle("danger", state.risk > 0.85 && state.running);
+        }
 
-    // Rollers
-    ctx.fillStyle='#c7d3dc';
-    ctx.beginPath(); ctx.roundRect(r.beltX-18,r.beltY+20,26,r.beltH-40,8); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(r.beltX+r.beltW-8,r.beltY+20,26,r.beltH-40,8); ctx.fill();
+        function showOverlay(title, message, buttonText) {
+          overlayTitle.textContent = title;
+          overlayText.textContent = message;
+          overlayBtn.textContent = buttonText;
+          overlay.classList.add("show");
+        }
 
-    // Moving stripes
-    ctx.save(); ctx.beginPath(); ctx.roundRect(r.innerX,r.innerY,r.innerW,r.innerH,10); ctx.clip();
-    ctx.fillStyle='#3c454c';
-    beltOffset=(beltOffset + beltSpeed*dt) % 52;
-    for(let x=r.innerX-beltOffset; x<r.innerX+r.innerW+26; x+=52){ ctx.fillRect(x,r.innerY,26,r.innerH); }
-    ctx.restore();
-    ctx.restore();
+        function hideOverlay() {
+          overlay.classList.remove("show");
+        }
 
-    // Movement with non-overlap/pile-up
-    beltPieces.sort((a,b)=>a.x-b.x); // left→right
-    for(let i=0;i<beltPieces.length;i++){
-      const bp=beltPieces[i];
-      let newX = bp.x - beltSpeed*dt;
-      const leftLimit = r.innerX + bp.w/2; // stop at left roller
-      if(newX < leftLimit) newX = leftLimit;
-      if(i>0){ // keep gap behind the piece ahead (to the left)
-        const ahead=beltPieces[i-1];
-        const minX = ahead.x + ahead.w/2 + BELT_GAP + bp.w/2;
-        if(newX < minX) newX = minX;
-      }
-      bp.x = newX; bp.y = r.innerY + r.innerH/2;
-    }
+        function prepareRun() {
+          state.speed = config.baseSpeed;
+          state.distance = 0;
+          state.ballX = 0;
+          state.ballVX = 0;
+          state.risk = 0;
+          state.shake = 0;
+          initTrack();
+        }
 
-    // Spawn stream
-    spawnT -= dt*1000;
-    if(spawnT <= 0 && !gameOver){
-      spawnT += SPAWN_INTERVAL;
-      spawnPiece(false);
-      // gentle speedup
-      beltSpeed = Math.min(120, beltSpeed + 0.5);
-    }
+        function resetGame() {
+          prepareRun();
+          state.running = false;
+          state.crashed = false;
+          showOverlay("Ready to drop", "Hold A/D or drag to steer. Survive the canyon.", "Start run");
+          updateHud();
+        }
 
-    // Full-belt detection (length of pile ≥ inner width)
-    checkBeltFull();
+        function startGame() {
+          prepareRun();
+          state.running = true;
+          state.crashed = false;
+          hideOverlay();
+          updateHud();
+        }
 
-    // Draw pieces
-    for(const bp of beltPieces) drawMiniPiece(bp);
-  }
-  let beltOffset=0;
+        function triggerCrash(reason) {
+          if (!state.running) {
+            return;
+          }
+          state.running = false;
+          state.crashed = true;
+          state.shake = 10;
+          const distance = Math.floor(state.distance / 10);
+          if (distance > state.best) {
+            state.best = distance;
+            try { localStorage.setItem("slope-best", String(state.best)); } catch(e) {}
+          }
+          showOverlay("Run ended", `${reason} Distance ${distance}m.`, "Run it back");
+          updateHud();
+        }
 
-  function totalBeltLength(){
-    if(beltPieces.length===0) return 0;
-    let sum = beltPieces.reduce((s,b)=>s + b.w, 0);
-    sum += BELT_GAP * (beltPieces.length-1);
-    return sum;
-  }
-  function checkBeltFull(){
-    const r=getRects();
-    if(totalBeltLength() >= r.innerW - 2){
-      // jammed!
-      gameOver = true;
-    }
-  }
+        function step(dt) {
+          const scrollSpeed = state.running ? state.speed : config.baseSpeed * 0.25;
+          advanceTrack(dt, scrollSpeed);
 
-  function spawnPiece(initial=false){
-    const r=getRects();
-    const p = newPiece();
-    const bp = beltPieceFor(p);
-    const need = totalBeltLength() + (beltPieces.length>0 ? BELT_GAP : 0) + bp.w;
-    if(need > r.innerW - 2){ gameOver = true; return; } // no room: lose
-    bp.x = r.innerX + r.innerW - bp.w/2 - 2;
-    bp.y = r.innerY + r.innerH/2;
-    beltPieces.push(bp);
-    if(initial){ // nudge positions so initial pieces start spaced
-      beltPieces.sort((a,b)=>a.x-b.x);
-      for(let i=beltPieces.length-1;i>0;i--){
-        const right = beltPieces[i], left = beltPieces[i-1];
-        const minX = left.x + left.w/2 + BELT_GAP + right.w/2;
-        if(right.x < minX) right.x = minX;
-      }
-    }
-  }
+          if (state.running) {
+            state.distance += state.speed * dt;
+            state.speed = Math.min(config.maxSpeed, state.speed + config.speedRamp * dt);
+          }
 
-  function drawMiniPiece(bp){
-    const {x,y,w,h} = bp;
-    const bb=bbox(bp.piece.cells);
-    const ox=x - w/2, oy=y - h/2;
-    for(const [dx,dy] of bp.piece.cells){
-      ctx.fillStyle=bp.piece.color;
-      ctx.fillRect(ox + dx*MINI + 1, oy + dy*MINI + 1, MINI-2, MINI-2);
-      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(ox + dx*MINI + .5, oy + dy*MINI + .5, MINI-1, MINI-1);
-    }
-  }
+          const steer = getSteer();
+          if (state.running) {
+            const steerStrength =
+              config.steerStrength * (0.55 + 0.45 * (state.speed / config.maxSpeed));
+            state.ballVX += steer * steerStrength * dt;
+            state.ballVX *= Math.pow(config.friction, dt * 60);
+            state.ballX += state.ballVX * dt;
+          } else {
+            state.ballVX *= Math.pow(config.friction, dt * 60);
+            const alignSegment = getSegmentAt(config.ballZ);
+            if (alignSegment) {
+              state.ballX += (alignSegment.center - state.ballX) * dt * 1.6;
+            }
+          }
 
-  function drawGameOverOverlay(){
-    const W=canvas.clientWidth, H=canvas.clientHeight;
-    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#eef3fb'; ctx.font='900 42px system-ui,-apple-system'; ctx.fillText('Belt Jammed!', 40, 90);
-    ctx.fillStyle='#cbd5e1'; ctx.font='700 18px system-ui,-apple-system';
-    ctx.fillText('The conveyor belt is full. Click to start a new puzzle.', 40, 122);
-  }
+          const segment = getSegmentAt(config.ballZ);
+          if (segment) {
+            const edge = segment.width / 2 - config.ballRadius * 0.9;
+            const localX = state.ballX - segment.center;
+            state.risk = clamp(Math.abs(localX) / Math.max(edge, 1), 0, 1);
+            if (state.running) {
+              if (Math.abs(localX) > edge) {
+                triggerCrash("Dropped off track.");
+              } else {
+                segment.obstacles.forEach((obs) => {
+                  if (Math.abs(localX - obs.x) < (config.ballRadius + obs.w * 0.5) * 0.85) {
+                    triggerCrash("Hit a barrier.");
+                  }
+                });
+              }
+            }
+          } else {
+            state.risk = 0;
+          }
 
-  // Main loop
-  let last=performance.now();
-  function frame(now){
-    const dt=Math.min(0.05,(now-last)/1000); last=now;
-    const r=getRects();
-    ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+          if (state.shake > 0) {
+            state.shake = Math.max(0, state.shake - dt * 14);
+          }
 
-    drawLeftPanel(r);
-    drawBoard(r);
-    drawBelt(r,dt);
-    drawHeld(r);
+          updateHud();
+        }
 
-    if(gameOver){
-      drawGameOverOverlay();
-    }
-    requestAnimationFrame(frame);
-  }
+        function render() {
+          ctx.save();
+          if (state.shake > 0) {
+            const wobble = state.shake;
+            ctx.translate(
+              (Math.random() - 0.5) * wobble,
+              (Math.random() - 0.5) * wobble
+            );
+          }
+          drawBackground();
+          drawTrack();
+          drawObstacles();
+          drawBall();
+          ctx.restore();
+        }
 
-  // Boot
-  if(!CanvasRenderingContext2D.prototype.roundRect){
-    CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){ roundRect(this,x,y,w,h,r); };
-  }
-  newGame();
-  requestAnimationFrame(frame);
-})();
-</script>
-</body>
+        function updatePointer(event) {
+          const rect = canvas.getBoundingClientRect();
+          const ratio = (event.clientX - rect.left) / rect.width;
+          const steerTarget = clamp((ratio - 0.5) * 2, -1, 1);
+          input.pointerValue = input.pointerValue * 0.6 + steerTarget * 0.4;
+        }
+
+        startBtn.addEventListener("click", () => {
+          if (state.running && !confirm("Abandon current run?")) return;
+          startGame();
+        });
+        overlayBtn.addEventListener("click", startGame);
+        resetBtn.addEventListener("click", resetGame);
+
+        window.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+            input.left = true;
+          }
+          if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+            input.right = true;
+          }
+        });
+
+        window.addEventListener("keyup", (event) => {
+          if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+            input.left = false;
+          }
+          if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+            input.right = false;
+          }
+        });
+
+        window.addEventListener("blur", () => {
+          input.left = false;
+          input.right = false;
+          input.pointer = false;
+          input.pointerValue = 0;
+        });
+
+        canvas.addEventListener("pointerdown", (event) => {
+          if (overlay.classList.contains("show")) {
+            return;
+          }
+          input.pointer = true;
+          input.pointerId = event.pointerId;
+          updatePointer(event);
+          canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+          if (!input.pointer || event.pointerId !== input.pointerId) {
+            return;
+          }
+          updatePointer(event);
+        });
+
+        canvas.addEventListener("pointerup", (event) => {
+          if (event.pointerId === input.pointerId) {
+            input.pointer = false;
+            input.pointerValue = 0;
+            input.pointerId = null;
+            canvas.releasePointerCapture(event.pointerId);
+          }
+        });
+
+        canvas.addEventListener("pointercancel", (event) => {
+          if (event.pointerId === input.pointerId) {
+            input.pointer = false;
+            input.pointerValue = 0;
+            input.pointerId = null;
+            canvas.releasePointerCapture(event.pointerId);
+          }
+        });
+
+        window.addEventListener("resize", resizeCanvas);
+
+        resizeCanvas();
+        resetGame();
+
+        let lastTime = null;
+        let rafHandle;
+        function loop(timestamp) {
+          if (lastTime === null) lastTime = timestamp;
+          const dt = Math.min((timestamp - lastTime) / 1000, 0.033);
+          lastTime = timestamp;
+          step(dt);
+          render();
+          rafHandle = requestAnimationFrame(loop);
+        }
+        rafHandle = requestAnimationFrame(loop);
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            cancelAnimationFrame(rafHandle);
+          } else {
+            lastTime = null;
+            rafHandle = requestAnimationFrame(loop);
+          }
+        });
+      })();
+    </script>
+  </body>
 </html>

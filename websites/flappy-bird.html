@@ -349,11 +349,11 @@ function scheduleMusicStep(time, step) {
   if (pos === 4 || pos === 12) playSnare(time + 0.005);
 }
 
-function startMusic() {
+function startMusic(resetStep = false) {
   ensureAudio();
   if (!audioCtx || music.isOn) return;
   music.isOn = true;
-  music.step = 0;
+  if (resetStep) music.step = 0;
   music.nextTime = audioCtx.currentTime + 0.05;
   music.timer = setInterval(() => {
     if (!music.isOn || !audioCtx) return;
@@ -724,7 +724,7 @@ function updatePipes(step) {
     const px1 = p.x, px2 = p.x + pipeWidth;
     const inX = (bx2 > px1 && bx1 < px2);
     const hitsTop = bird.y - bird.height/2 < p.top;
-    const hitsBottom = bird.y + bird.height/2 > (WORLD_H - groundH - p.bottom);
+    const hitsBottom = bird.y + bird.height/2 > (WORLD_H - groundH - p.bottom - 10);
     if (inX && (hitsTop || hitsBottom)) { setGameOver(); break; }
     // scoring
     if (!gameOver && !p.scored && px2 < bird.x - bird.width/2) {
@@ -774,13 +774,13 @@ function restartGame() {
   newBestThisRun = false;
   groundOffset = 0;
   resumeAudio();
-  startMusic();
+  startMusic(false);
 }
 
 /* ----- Main loop (dt-normalized) ----- */
-let lastTime = performance.now(); // for dt
-function loop() {
-  const now = performance.now();
+let lastTime = null; // for dt
+function loop(now) {
+  if (lastTime === null) { lastTime = now; requestAnimationFrame(loop); return; }
   // seconds since last frame
   let dt = (now - lastTime) / 1000;
   lastTime = now;
@@ -850,8 +850,8 @@ function loop() {
 /* ----- Input ----- */
 function doFlapOrStart() {
   resumeAudio();
-  if (!started) { started = true; startMusic(); }
-  if (gameOver) restartGame();
+  if (!started) { started = true; startMusic(true); }
+  if (gameOver) { restartGame(); return; } // early return — don't flap on restart
   bird.flap();
   SFX.flap();
 }
@@ -890,7 +890,7 @@ document.addEventListener("keydown", e => {
   }
 });
 canvas.addEventListener("mousedown", doFlapOrStart);
-document.addEventListener("touchstart", (e) => { e.preventDefault(); doFlapOrStart(); }, { passive: false });
+canvas.addEventListener("touchstart", (e) => { e.preventDefault(); doFlapOrStart(); }, { passive: false });
 
 if(helpBtn) helpBtn.onclick = (e) => { e.preventDefault(); openHelp(); };
 if(helpClose) helpClose.onclick = (e) => { e.preventDefault(); closeHelp(); };

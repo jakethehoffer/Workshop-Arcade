@@ -19,7 +19,7 @@
     --gridLight: #122034;
   }
   html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
-  #wrap { position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr auto; }
+  #wrap { position:fixed; inset:0; display:grid; grid-template-rows:auto auto 1fr auto; }
   header { display:flex; gap:12px; align-items:center; padding:10px 14px; background:linear-gradient(180deg, #0d1422, #0b101a); border-bottom:1px solid #142236; }
   header .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; display:flex; align-items:center; gap:8px; font-weight:700; }
   header select, header button { background:#0f172a; color:var(--ink); border:1px solid #25324a; border-radius:10px; padding:6px 10px; font-weight:700; letter-spacing:.3px; }
@@ -34,6 +34,12 @@
   .led.on { color: var(--ok); background: var(--ok); }
   .led.off { color: #334155; background:#334155; box-shadow:none; }
   .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0f172a; border:1px solid #26334a; border-radius:6px; padding:2px 6px; }
+  header button .kbd { margin-left:6px; font-size:12px; }
+  .custom-controls { display:inline-flex; align-items:center; gap:6px 10px; }
+  .custom-controls .custom-field { display:inline-flex; align-items:center; gap:6px; }
+  .custom-controls input { background:#0f172a; color:var(--ink); border:1px solid #25324a; border-radius:8px; padding:4px 6px; font-weight:700; }
+  .custom-notice { display:flex; flex-wrap:wrap; gap:4px 10px; padding:0 14px 6px; font-size:11px; line-height:1.4; color: var(--muted); }
+  .custom-warn { color: var(--warn); display:none; }
   .help { color: var(--muted); }
 </style>
 </head>
@@ -41,6 +47,7 @@
 <div id="wrap">
   <header>
     <span class="pill">⏱️ <span id="time">000</span></span>
+    <span class="pill" id="bestWrap">Best <span id="bestTime">--</span></span>
     <span class="pill">💣 <span id="mines">000</span></span>
     <button id="reset">🙂 New Game (N)</button>
     <select id="difficulty" title="Difficulty">
@@ -49,19 +56,27 @@
       <option value="expert">Expert 30×16 (99)</option>
       <option value="custom">Custom…</option>
     </select>
-    <span class="pill" id="customControls" style="display:none;">
-      W:<input id="cw" type="number" min="5" max="50" value="16" style="width:60px"> H:<input id="ch" type="number" min="5" max="30" value="16" style="width:60px"> M:<input id="cm" type="number" min="1" max="300" value="40" style="width:80px"> <button id="applyCustom">Apply</button>
+    <span class="pill custom-controls" id="customControls" style="display:none;">
+      <span class="custom-field">W:<input id="cw" type="number" min="5" max="50" value="16" inputmode="numeric" style="width:60px"></span>
+      <span class="custom-field">H:<input id="ch" type="number" min="5" max="30" value="16" inputmode="numeric" style="width:60px"></span>
+      <span class="custom-field">M:<input id="cm" type="number" min="1" max="300" value="40" inputmode="numeric" style="width:80px"></span>
+      <button id="applyCustom">Apply</button>
     </span>
     <span class="sep"></span>
-    <button id="flagMode" title="Touch helper">🚩 Flag Mode: OFF</button>
+    <button id="flagMode" title="Touch helper"><span class="icon">🚩</span> Flag Mode: <span id="flagState">OFF</span> <span class="kbd">F</span></button>
     <span class="sep"></span>
-    <button id="sfxBtn" class="toggle">🔊 SFX</button>
+    <button id="sfxBtn" class="toggle"><span class="icon">🔊</span> SFX <span class="kbd">S</span></button>
     <span class="led on" id="sfxLed"></span>
-    <button id="musicBtn" class="toggle">🎵 Music</button>
+    <button id="musicBtn" class="toggle"><span class="icon">🎵</span> Music <span class="kbd">M</span></button>
     <span class="led off" id="musicLed"></span>
     <span class="sep"></span>
-    <button id="helpBtn" class="toggle">❓ Help</button>
+    <button id="helpBtn" class="toggle"><span class="icon">❓</span> How to Play <span class="kbd">H</span></button>
   </header>
+
+  <div id="customNotice" class="custom-notice" style="display:none;">
+    <span class="custom-hint" id="customHint"></span>
+    <span class="custom-warn" id="customWarn" role="status" aria-live="polite"></span>
+  </div>
 
   <canvas id="game" width="1200" height="780"></canvas>
 
@@ -77,8 +92,8 @@
       
       <p><b>Controls:</b></p>
       <ul style="margin:8px 0; padding-left:20px; line-height:1.8;">
-        <li><b>Left Click</b> or <b>Tap</b> - Reveal a tile</li>
-        <li><b>Right Click</b> or <b>Long-press</b> - Flag/unflag a tile (mark as mine)</li>
+        <li><b>Left Click</b> - Reveal a tile</li>
+        <li><b>Right Click</b> - Flag/unflag a tile (mark as mine)</li>
         <li><b>Flag Mode</b> - Toggle to make touch controls easier (tap to flag, tap again to reveal)</li>
         <li><b>N</b> - Start a new game</li>
       </ul>
@@ -104,20 +119,59 @@
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const choice = (arr) => arr[Math.floor(Math.random()*arr.length)];
 
+  // ===== rAF handle =====
+  let rafId = null;
+
   // ===== Canvas + DPI scaling =====
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
   function resizeCanvasForBoard(cols, rows) {
-    // Keep a nice aspect and fit within viewport width
     const maxW = Math.min(window.innerWidth * 0.96, 1200);
-    // target tile size in CSS pixels
-    const tileCSS = clamp(Math.floor(maxW / (cols + 2)), 18, 40);
-    const boardW = tileCSS * cols;
-    const boardH = tileCSS * rows;
-    const cssW = boardW + tileCSS * 2; // padding sides
-    const cssH = boardH + tileCSS * 2 + 40; // a bit extra for top HUD spacing
+    const useHeightLimit = currentPreset === 'custom';
+
+    if (!useHeightLimit) {
+      // Default sizing for preset boards.
+      const tileCSS = clamp(Math.floor(maxW / (cols + 2)), 18, 40);
+      const boardW = tileCSS * cols;
+      const boardH = tileCSS * rows;
+      const cssW = boardW + tileCSS * 2; // padding sides
+      const cssH = boardH + tileCSS * 2 + 40; // a bit extra for top HUD spacing
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      canvas.width = Math.floor(cssW * DPR);
+      canvas.height = Math.floor(cssH * DPR);
+      return { tile: tileCSS * DPR, pad: tileCSS * DPR };
+    }
+
+    // Fit within viewport width and height so custom boards never overflow.
+    const headerEl = document.querySelector('header');
+    const footerEl = document.querySelector('footer');
+    const noticeEl = document.getElementById('customNotice');
+    const headerH = headerEl ? headerEl.offsetHeight : 0;
+    const footerH = footerEl ? footerEl.offsetHeight : 0;
+    const noticeVisible = noticeEl ? getComputedStyle(noticeEl).display !== 'none' : false;
+    const noticeH = noticeVisible ? noticeEl.offsetHeight : 0;
+    const verticalMargins = 36; // canvas margin top/bottom
+    const availableH = Math.max(0, window.innerHeight - headerH - footerH - noticeH - verticalMargins);
+    const extraRatio = 0.9; // extra headroom relative to tile size
+
+    const tileByWidth = Math.floor(maxW / (cols + 2));
+    const tileByHeight = Math.floor(availableH / (rows + 2 + extraRatio));
+    let tileCSS = Math.max(1, Math.min(tileByWidth, tileByHeight, 40));
+
+    let extraTop = Math.round(tileCSS * extraRatio);
+    let cssW = (cols + 2) * tileCSS;
+    let cssH = (rows + 2) * tileCSS + extraTop;
+
+    if (cssH > availableH) {
+      tileCSS = Math.max(1, Math.floor((availableH - extraTop) / (rows + 2)));
+      extraTop = Math.round(tileCSS * extraRatio);
+      cssW = (cols + 2) * tileCSS;
+      cssH = (rows + 2) * tileCSS + extraTop;
+    }
+
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
     canvas.width = Math.floor(cssW * DPR);
@@ -230,8 +284,9 @@
     // flood if zero
     if (cell.adj === 0) {
       const q = [[c,r]];
-      while (q.length) {
-        const [cc, rr] = q.shift();
+      let qi = 0;
+      while (qi < q.length) {
+        const [cc, rr] = q[qi++];
         forEachNbr(cc, rr, (nc, nr) => {
           const ncell = state.grid[nr][nc];
           if (!ncell.revealed && !ncell.flagged && !ncell.mine) {
@@ -284,6 +339,13 @@
     state.over = true;
     state.win = win;
     stopTimer();
+    if (win) {
+      const best = getBestTime(state.cols, state.rows, state.mines);
+      if (best === null || state.timer < best) {
+        setBestTime(state.cols, state.rows, state.mines, state.timer);
+      }
+      updateBestDisplay();
+    }
     if (!win) {
       // reveal all mines
       for (let r=0; r<state.rows; r++) for (let c=0; c<state.cols; c++) {
@@ -296,15 +358,57 @@
   // ===== Timer & HUD =====
   const timeEl = document.getElementById('time');
   const minesEl = document.getElementById('mines');
+  const bestEl = document.getElementById('bestTime');
+  const bestWrap = document.getElementById('bestWrap');
+  const BEST_KEY_PREFIX = 'minesweeper_best_';
+
+  function formatTime(value) {
+    return String(value).padStart(3, '0');
+  }
+
+  function bestKeyForConfig(cols, rows, mines) {
+    return `${cols}x${rows}_${mines}`;
+  }
+
+  function bestLabelForConfig(cols, rows, mines) {
+    for (const [name, cfg] of Object.entries(DIFFS)) {
+      if (cfg.cols === cols && cfg.rows === rows && cfg.mines === mines) {
+        return name[0].toUpperCase() + name.slice(1);
+      }
+    }
+    return `Custom ${cols}x${rows} (${mines})`;
+  }
+
+  function getBestTime(cols, rows, mines) {
+    const key = BEST_KEY_PREFIX + bestKeyForConfig(cols, rows, mines);
+    const raw = localStorage.getItem(key);
+    const value = raw === null ? NaN : parseInt(raw, 10);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  function setBestTime(cols, rows, mines, seconds) {
+    const key = BEST_KEY_PREFIX + bestKeyForConfig(cols, rows, mines);
+    localStorage.setItem(key, String(seconds));
+  }
+
+  function updateBestDisplay() {
+    if (!bestEl) return;
+    const best = getBestTime(state.cols, state.rows, state.mines);
+    bestEl.textContent = best === null ? '-' : formatTime(best);
+    if (bestWrap) {
+      bestWrap.title = `Best time for ${bestLabelForConfig(state.cols, state.rows, state.mines)}`;
+    }
+  }
   function startTimer() {
     stopTimer();
     state.timerId = setInterval(() => { state.timer++; updateTimer(); }, 1000);
   }
   function stopTimer() { if (state.timerId) { clearInterval(state.timerId); state.timerId=null; } }
-  function updateTimer() { timeEl.textContent = String(state.timer).padStart(3,'0'); }
+  function updateTimer() { timeEl.textContent = formatTime(state.timer); }
   function updateMinesLeft() {
-    const left = clamp(state.mines - state.flagsPlaced, -999, 999);
-    minesEl.textContent = String(left).padStart(3,'0');
+    const left = state.mines - state.flagsPlaced;
+    const display = left < 0 ? '-' + String(Math.abs(left)).padStart(2,'0') : String(left).padStart(3,'0');
+    minesEl.textContent = display;
   }
 
   // ===== Drawing =====
@@ -379,18 +483,59 @@
     // Game state banners
     if (state.over) {
       const msg = state.win ? 'YOU WIN! 🎉' : 'BOOM! GAME OVER 💥';
+      const fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto';
+      const maxFont = Math.floor(28*DPR);
+      const minFont = Math.floor(12*DPR);
+      const bannerPad = 16 * DPR;
+      const maxWidth = Math.max(10 * DPR, w - bannerPad * 2);
+      let lines = [msg];
+
       ctx.save();
       ctx.fillStyle = state.win ? 'rgba(52, 211, 153, .18)' : 'rgba(251, 113, 133, .2)';
       ctx.fillRect(ox, oy + h/2 - 40*DPR, w, 80*DPR);
-      ctx.font = `${Math.floor(28*DPR)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+      const measureLines = (fontSize, list) => {
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        let widest = 0;
+        for (const line of list) {
+          widest = Math.max(widest, ctx.measureText(line).width);
+        }
+        return widest;
+      };
+
+      let fontSize = maxFont;
+      let widest = measureLines(fontSize, lines);
+      if (widest > maxWidth) {
+        fontSize = Math.max(minFont, Math.floor(fontSize * (maxWidth / widest)));
+        widest = measureLines(fontSize, lines);
+      }
+      if (widest > maxWidth && !state.win) {
+        lines = ['BOOM!', 'GAME OVER 💥'];
+        fontSize = maxFont;
+        widest = measureLines(fontSize, lines);
+        if (widest > maxWidth) {
+          fontSize = Math.max(minFont, Math.floor(fontSize * (maxWidth / widest)));
+        }
+        ctx.font = `${fontSize}px ${fontFamily}`;
+      }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = state.win ? '#34d399' : '#fb7185';
-      ctx.fillText(msg, ox + w/2, oy + h/2);
+
+      const lineHeight = fontSize * 1.15;
+      const centerY = oy + h/2;
+      if (lines.length === 1) {
+        ctx.fillText(lines[0], ox + w/2, centerY);
+      } else {
+        ctx.fillText(lines[0], ox + w/2, centerY - lineHeight * 0.5);
+        ctx.fillText(lines[1], ox + w/2, centerY + lineHeight * 0.5);
+      }
+
       ctx.restore();
     }
 
-    updateMinesLeft();
-    requestAnimationFrame(draw);
+    rafId = requestAnimationFrame(draw);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -528,9 +673,23 @@ function drawRaisedTile(x, y, s, hovered) {
   });
 
   // Keyboard helpers
-  document.addEventListener('keydown', (e)=>{
-    if (e.key.toLowerCase()==='f') { state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); }
-    if (e.key==="n") { newGame(currentPreset); }
+  function isTypingTarget(target) {
+    if (!target) return false;
+    const tag = target.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    if (isTypingTarget(e.target) && e.key !== 'Escape') return;
+
+    const key = e.key.toLowerCase();
+    if (key === 'f') { toggleFlagMode(); }
+    else if (key === 'n') { startNewGame(); }
+    else if (key === 's') { toggleSfx(); }
+    else if (key === 'm') { toggleMusic(); }
+    else if (key === 'h') { toggleHelp(); }
+    else if (e.key === 'Escape') { if (helpOpen) closeHelp(); }
   });
 
   // ===== Audio: SFX + simple generative music =====
@@ -631,12 +790,23 @@ function drawRaisedTile(x, y, s, hovered) {
   // UI audio toggles
   const sfxBtn = document.getElementById('sfxBtn');
   const musicBtn = document.getElementById('musicBtn');
-  sfxBtn.addEventListener('click', () => { sfxOn = !sfxOn; sfxLed.className = 'led ' + (sfxOn?'on':'off'); sfx('tick'); });
-  musicBtn.addEventListener('click', () => {
-    musicOn = !musicOn; musicLed.className = 'led ' + (musicOn?'on':'off'); sfx('tick');
+
+  function toggleSfx() {
+    sfxOn = !sfxOn;
+    sfxLed.className = 'led ' + (sfxOn ? 'on' : 'off');
+    sfx('tick');
+  }
+
+  function toggleMusic() {
+    musicOn = !musicOn;
+    musicLed.className = 'led ' + (musicOn ? 'on' : 'off');
+    sfx('tick');
     ensureAudio();
     if (musicOn) startMusic(); else stopMusic();
-  });
+  }
+
+  sfxBtn.addEventListener('click', toggleSfx);
+  musicBtn.addEventListener('click', toggleMusic);
 
   // ===== New Game / Difficulty =====
   const resetBtn = document.getElementById('reset');
@@ -646,9 +816,104 @@ function drawRaisedTile(x, y, s, hovered) {
   const ch = document.getElementById('ch');
   const cm = document.getElementById('cm');
   const applyCustomBtn = document.getElementById('applyCustom');
+  const customNotice = document.getElementById('customNotice');
+  const customHint = document.getElementById('customHint');
+  const customWarn = document.getElementById('customWarn');
   const flagBtn = document.getElementById('flagMode');
+  const flagStateEl = document.getElementById('flagState');
+
+  const CUSTOM_LIMITS = {
+    minCols: 5,
+    minRows: 5,
+    minMines: 1,
+    maxCols: 50,
+    maxRows: 30,
+    maxMines: 300,
+    mineRatio: 0.35
+  };
+
+  function parseNumber(value, fallback) {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function blockExponentInput(input) {
+    if (!input) return;
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'e' || event.key === 'E') event.preventDefault();
+    });
+    input.addEventListener('input', () => {
+      if (/[eE]/.test(input.value)) {
+        input.value = input.value.replace(/[eE]/g, '');
+      }
+    });
+  }
+
+  function maxMinesFor(cols, rows) {
+    const sizeCap = Math.max(1, Math.floor(cols * rows * CUSTOM_LIMITS.mineRatio));
+    const tileCap = Math.max(1, cols * rows - 1);
+    return Math.min(CUSTOM_LIMITS.maxMines, sizeCap, tileCap);
+  }
+
+  function setCustomNoticeVisible(visible) {
+    if (!customNotice) return;
+    customNotice.style.display = visible ? 'flex' : 'none';
+  }
+
+  function updateCustomHint(cols, rows, mineMax) {
+    if (!customHint) return;
+    const percent = Math.round(CUSTOM_LIMITS.mineRatio * 100);
+    customHint.textContent = `Max size: ${CUSTOM_LIMITS.maxCols}x${CUSTOM_LIMITS.maxRows}. Max mines for ${cols}x${rows}: ${mineMax} (${percent}% of tiles, cap ${CUSTOM_LIMITS.maxMines}).`;
+  }
+
+  function updateCustomWarning(reasons) {
+    if (!customWarn) return;
+    if (reasons.length) {
+      customWarn.textContent = `Adjusted to limits: ${reasons.join(' ')}`;
+      customWarn.style.display = 'block';
+    } else {
+      customWarn.textContent = '';
+      customWarn.style.display = 'none';
+    }
+  }
+
+  function enforceCustomLimits() {
+    const rawCols = parseNumber(cw.value, CUSTOM_LIMITS.minCols);
+    const rawRows = parseNumber(ch.value, CUSTOM_LIMITS.minRows);
+    const rawMines = parseNumber(cm.value, CUSTOM_LIMITS.minMines);
+
+    const cols = clamp(rawCols, CUSTOM_LIMITS.minCols, CUSTOM_LIMITS.maxCols);
+    const rows = clamp(rawRows, CUSTOM_LIMITS.minRows, CUSTOM_LIMITS.maxRows);
+    const mineMax = maxMinesFor(cols, rows);
+    const mines = clamp(rawMines, CUSTOM_LIMITS.minMines, mineMax);
+
+    const reasons = [];
+    if (rawCols > CUSTOM_LIMITS.maxCols) reasons.push(`Width capped at ${CUSTOM_LIMITS.maxCols}.`);
+    if (rawRows > CUSTOM_LIMITS.maxRows) reasons.push(`Height capped at ${CUSTOM_LIMITS.maxRows}.`);
+    if (rawMines > mineMax) {
+      const percent = Math.round(CUSTOM_LIMITS.mineRatio * 100);
+      reasons.push(`Mines capped at ${mineMax} (${percent}% of tiles, cap ${CUSTOM_LIMITS.maxMines}).`);
+    }
+
+    cw.value = cols;
+    ch.value = rows;
+    cm.value = mines;
+    cm.max = mineMax;
+
+    updateCustomHint(cols, rows, mineMax);
+    updateCustomWarning(reasons);
+
+    if (currentPreset === 'custom') {
+      lastCustomConfig = { cols, rows, mines };
+    }
+
+    return { cols, rows, mines };
+  }
 
   let currentPreset = 'intermediate';
+  let lastCustomConfig = null;
+
+  [cw, ch, cm].forEach(blockExponentInput);
 
   function newGame(presetOrCfg) {
     let cfg = null;
@@ -659,24 +924,54 @@ function drawRaisedTile(x, y, s, hovered) {
     state.tile = dims.tile; state.pad = dims.pad;
     initGrid(state.cols, state.rows);
     updateMinesLeft();
+    updateBestDisplay();
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     draw();
   }
 
-  resetBtn.addEventListener('click', ()=>{ sfx('tick'); newGame(currentPreset); });
+  function startNewGame() {
+    if (currentPreset === 'custom') {
+      const config = lastCustomConfig || enforceCustomLimits();
+      lastCustomConfig = { cols: config.cols, rows: config.rows, mines: config.mines };
+      newGame(lastCustomConfig);
+    } else {
+      newGame(currentPreset);
+    }
+  }
+
+  resetBtn.addEventListener('click', ()=>{
+    sfx('tick');
+    startNewGame();
+  });
   diffSel.addEventListener('change', ()=>{
     sfx('tick');
-    if (diffSel.value==='custom') customCtrls.style.display='inline-flex';
-    else { customCtrls.style.display='none'; currentPreset = diffSel.value; newGame(currentPreset); }
+    if (diffSel.value==='custom') {
+      currentPreset = 'custom';
+      customCtrls.style.display='inline-flex';
+      setCustomNoticeVisible(true);
+      enforceCustomLimits();
+    }
+    else {
+      customCtrls.style.display='none';
+      setCustomNoticeVisible(false);
+      updateCustomWarning([]);
+      currentPreset = diffSel.value;
+      startNewGame();
+    }
   });
   applyCustomBtn.addEventListener('click', ()=>{
-    const C = clamp(parseInt(cw.value||16), 5, 50);
-    const R = clamp(parseInt(ch.value||16), 5, 30);
-    const M = clamp(parseInt(cm.value||40), 1, Math.min(300, C*R-1));
-    newGame({cols:C, rows:R, mines:M});
+    const { cols, rows, mines } = enforceCustomLimits();
+    lastCustomConfig = { cols, rows, mines };
+    newGame(lastCustomConfig);
     currentPreset = 'custom';
   });
-  function updateFlagButton(){ flagBtn.textContent = `🚩 Flag Mode: ${state.flagMode? 'ON':'OFF'}`; }
-  flagBtn.addEventListener('click', ()=>{ state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); });
+  [cw, ch, cm].forEach((input) => {
+    if (input) input.addEventListener('change', enforceCustomLimits);
+  });
+  function updateFlagButton(){ if (flagStateEl) flagStateEl.textContent = state.flagMode ? 'ON' : 'OFF'; }
+  function toggleFlagMode(){ state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); }
+  flagBtn.addEventListener('click', toggleFlagMode);
+  updateFlagButton();
 
   // Help menu
   const helpBtn = document.getElementById('helpBtn');
@@ -699,6 +994,10 @@ function drawRaisedTile(x, y, s, hovered) {
       helpOverlay.style.pointerEvents = 'none';
     }
   }
+  function toggleHelp(){
+    if (helpOpen) closeHelp();
+    else openHelp();
+  }
 
   if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
   if(helpClose) helpClose.addEventListener('click', (e) => { e.preventDefault(); closeHelp(); });
@@ -712,15 +1011,6 @@ function drawRaisedTile(x, y, s, hovered) {
       e.stopPropagation();
     });
   }
-  document.addEventListener('keydown', (e) => {
-    if(e.code === 'KeyH' && !e.repeat) {
-      if(helpOverlay && helpOverlay.style.display === 'grid') closeHelp();
-      else openHelp();
-    }
-    if(e.code === 'Escape' && helpOverlay && helpOverlay.style.display === 'grid') {
-      closeHelp();
-    }
-  });
 
   // ===== Kick off =====
   window.addEventListener('resize', ()=>{
@@ -729,7 +1019,6 @@ function drawRaisedTile(x, y, s, hovered) {
   });
 
   newGame(currentPreset);
-  draw();
 
 })();
 </script>

@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (p.includes('heat')) return 'Heat';
       if (p.includes('blood')) return 'Blood Well';
       if (p.includes('shield')) return 'Shield';
-      if (p.includes('gnar')) return 'Rage';
+      if (p.includes('rage')) return 'Rage';
       return 'Manaless';
     }
 
@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
         CHARACTER_FACTS[token] = {
           display: ch.name,
-          difficulty: 'Medium', // Default, will be updated from individual files
+          difficulty: normalizeDifficulty(ch.info && ch.info.difficulty),
           class: tags.length ? tags.slice() : ['Unknown'],
           resource: normalizeResource(ch.partype),
           range: inferRange(stats.attackrange || 125),
@@ -465,31 +465,6 @@ document.addEventListener('DOMContentLoaded', function(){
           mobility: inferMobility(stats.movespeed)
         };
       }
-
-      // Second pass: fetch individual champion files for difficulty (info.difficulty)
-      // Batch fetch in parallel for efficiency
-      const championIds = Object.keys(champs);
-      const difficultyPromises = championIds.map(async (id) => {
-        try {
-          const detailRes = await fetch(
-            `https://ddragon.leagueoflegends.com/cdn/${latest}/data/en_US/champion/${id}.json`
-          );
-          const detailJson = await detailRes.json();
-          const champData = detailJson.data[id];
-          if (champData && champData.info && champData.info.difficulty !== undefined) {
-            const token = champToken(id);
-            if (CHARACTER_FACTS[token]) {
-              CHARACTER_FACTS[token].difficulty = normalizeDifficulty(champData.info.difficulty);
-            }
-          }
-        } catch (err) {
-          // If individual fetch fails, keep default 'Medium'
-          console.warn(`Failed to fetch difficulty for ${id}:`, err);
-        }
-      });
-
-      // Wait for all difficulty fetches to complete
-      await Promise.all(difficultyPromises);
 
       BANK = Object.keys(CHARACTER_FACTS).map(k => ({
         token: k,
@@ -643,10 +618,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Positive-only pruning (ignore "no match")
     function buildConstraintMaps(){
-      const dis = {};
       const reqHas = {};
       const reqExact = {};
-      FACT_KEYS.forEach(k => { dis[k] = new Set(); reqHas[k] = new Set(); reqExact[k] = null; });
+      FACT_KEYS.forEach(k => { reqHas[k] = new Set(); reqExact[k] = null; });
 
       for (let i = 0; i < guesses.length; i++){
         const entry = guesses[i];
@@ -666,7 +640,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
       }
 
-      return { dis, reqHas, reqExact };
+      return { reqHas, reqExact };
     }
 
     function isEligibleCharacterToken(token, cns){
@@ -675,10 +649,6 @@ document.addEventListener('DOMContentLoaded', function(){
       for (let i = 0; i < FACT_KEYS.length; i++){
         const k = FACT_KEYS[i];
         const vals = toArr(cf[k]);
-
-        for (let j = 0; j < vals.length; j++){
-          if (cns.dis[k].has(vals[j])) return false;
-        }
 
         const ex = cns.reqExact[k];
         if (ex && ex.__contradiction) return false;
@@ -844,6 +814,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     function onGuess(token){
+      if(!target || over) return;
       if (!CHARACTER_FACTS[token] || over) return;
 
       for (let i=0;i<guesses.length;i++){
@@ -1017,6 +988,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     // INIT – load all champs, then start the game
+    bankList.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Loading champions…</div>';
     loadChampionsFromDataDragon()
       .then(() => {
         resetGame();

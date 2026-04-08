@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Neon Snake</title>
 <style>
-  html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-  canvas { display:block; margin:auto; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display:flex; align-items:center; justify-content:center; }
+  canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
   .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:14px; align-items:center; font-weight:700; }
   .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
   .pill.button { cursor:pointer; user-select:none; }
+  .has-hotkey { display:inline-flex; align-items:center; gap:8px; }
+  .hotkey { background:#0b1120; border:1px solid #26334a; padding:2px 6px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:0.04em; line-height:1; }
   .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
   .btn:active { transform:translateY(1px); }
@@ -31,8 +33,8 @@
     <div class="pill" id="score">Score: 0</div>
     <div class="pill" id="best">Best: 0</div>
     <div class="pill" id="status">Press Space to start</div>
-    <div class="pill button" id="musicPill" title="Toggle music (M)">♪ Music: On</div>
-    <div class="pill button" id="helpBtn" title="Help (H)">❓ Help</div>
+    <div class="pill button has-hotkey" id="musicPill" title="Toggle music (M)"><span class="label">♪ Music: On</span><span class="hotkey">M</span></div>
+    <div class="pill button has-hotkey" id="helpBtn" title="How to Play (H)"><span class="label">❓ How to Play</span><span class="hotkey">H</span></div>
   </div>
   <div class="btns">
     <button class="btn" id="upBtn">⬆︎</button>
@@ -40,8 +42,8 @@
     <button class="btn" id="rightBtn">➡︎</button>
     <button class="btn" id="downBtn">⬇︎</button>
     <button class="btn" id="restartBtn">Restart</button>
-    <button class="btn" id="musicToggle">Music: On</button>
-    <button class="btn" id="helpBtnMobile">Help</button>
+    <button class="btn has-hotkey" id="musicToggle"><span class="label">Music: On</span><span class="hotkey">M</span></button>
+    <button class="btn has-hotkey" id="helpBtnMobile"><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
 
   <!-- Help Menu -->
@@ -69,7 +71,6 @@
       <ul style="margin:8px 0; padding-left:20px; color:#b8c1cc; line-height:1.8;">
         <li>Each food eaten increases your score and makes the snake longer</li>
         <li>Plan your path to avoid trapping yourself</li>
-        <li>On mobile, use the on-screen buttons or swipe on the canvas</li>
       </ul>
 
       <button class="btn btn-close" id="helpClose">Close</button>
@@ -90,6 +91,8 @@
   const restartBtn=document.getElementById('restartBtn');
   const musicToggleBtn=document.getElementById('musicToggle');
   const musicPill=document.getElementById('musicPill');
+  const musicToggleLabel=musicToggleBtn ? musicToggleBtn.querySelector('.label') : null;
+  const musicPillLabel=musicPill ? musicPill.querySelector('.label') : null;
   const helpBtn=document.getElementById('helpBtn');
   const helpBtnMobile=document.getElementById('helpBtnMobile');
   const helpOverlay=document.getElementById('helpOverlay');
@@ -137,6 +140,7 @@
     let playing=false;    // currently running
     let interval=null;    // scheduler
     let step=0;           // 16th notes counter
+    let bar=0;            // bar counter (persists across stop/resume)
     let bpm=96;           // tempo (ramps up slightly with score)
     let masterGain=null;  // master volume with fades
     // Chord progression (Am–F–C–G) in MIDI numbers relative to A3=220Hz
@@ -232,9 +236,9 @@
       updateLabels();
     }
     function updateLabels(){
-      const label = enabled ? "♪ Music: On" : "♪ Music: Off";
-      if(musicToggleBtn) musicToggleBtn.textContent=label.replace('♪ ','Music: ');
-      if(musicPill) musicPill.textContent=label;
+      const label = enabled ? "Music: On" : "Music: Off";
+      if(musicToggleLabel) musicToggleLabel.textContent=label;
+      if(musicPillLabel) musicPillLabel.textContent='♪ '+label;
     }
     function start(){
       const ac=ensureAC(); if(!ac || !enabled) { updateLabels(); return; }
@@ -243,10 +247,9 @@
       playing=true;
       fadeTo(0.22,0.35);
       const stepDur = ()=> 60/currentBpm()/4; // 16th note
-      let bar=0;
-      // schedule pad at bar start
+      // schedule pad at bar start (bar/step continue from where they left off)
       padChord(ac, chords[bar%chords.length], ac.currentTime+0.02);
-      interval = setInterval(()=>{
+      function scheduleTick(){
         if(!playing) return;
         const t=ac.currentTime+0.005;
         const chord = chords[bar%chords.length];
@@ -258,12 +261,15 @@
         if(step%8===4) playPluck(ac, chord[1], t+0.01);
         step=(step+1)%16;
         if(step===0){ bar++; padChord(ac, chords[bar%chords.length], t+0.02); }
-      }, stepDur()*1000);
+        interval = setTimeout(scheduleTick, stepDur()*1000);
+      }
+      interval = setTimeout(scheduleTick, stepDur()*1000);
       updateLabels();
     }
     function stop(hard=false){
-      if(interval){ clearInterval(interval); interval=null; }
+      if(interval){ clearTimeout(interval); interval=null; }
       playing=false;
+      if(hard){ step=0; bar=0; }
       if(masterGain){
         fadeTo(0.0, hard?0.08:0.3);
       }
@@ -276,29 +282,31 @@
   // ------------------------------------------------
 
   const COLS=24, ROWS=24;
-  function resize(){
-    const pad=12;
-    const availW=Math.max(320, window.innerWidth - pad*2);
-    const availH=Math.max(320, window.innerHeight - pad*2);
-    const cell=Math.floor(Math.min(availW/COLS, availH/ROWS));
-    canvas.width = cell*COLS; canvas.height = cell*ROWS;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
   const HS_KEY='neonsnake_best';
   let best=0; try{ best=Number(localStorage.getItem(HS_KEY)||0);}catch(_){ }
   bestEl.textContent='Best: '+best;
 
-  let snake, prevSnake, dir, nextDir, food, running, gameOver, score, acc, stepMs;
+  let snake=[], prevSnake=[], dir={x:1,y:0}, dirQueue=[], food=null, running=false, gameOver=false, gameWon=false, score=0, acc=0, stepMs=140;
+
+  function resize(){
+    const pad=12;
+    const hudH=50; // account for fixed HUD at top
+    const availW=Math.max(320, window.innerWidth - pad*2);
+    const availH=Math.max(320, window.innerHeight - pad*2 - hudH);
+    const cell=Math.floor(Math.min(availW/COLS, availH/ROWS));
+    canvas.width = cell*COLS; canvas.height = cell*ROWS;
+    draw();
+  }
+  resize();
+  window.addEventListener('resize', resize);
 
   function newGame(){
     const midX=Math.floor(COLS/2), midY=Math.floor(ROWS/2);
     snake=[{x:midX, y:midY},{x:midX-1, y:midY},{x:midX-2, y:midY}];
     prevSnake=snake.map(p=>({...p}));
-    dir={x:1,y:0}; nextDir={x:1,y:0};
+    dir={x:1,y:0}; dirQueue=[];
     score=0; stepMs=140; acc=0;
-    running=false; gameOver=false;
+    running=false; gameOver=false; gameWon=false;
     statusEl.textContent='Press Space to start';
     spawnFood();
     updateHUD();
@@ -321,6 +329,14 @@
     const taken=new Set(snake.map(c=>c.x+','+c.y));
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(!taken.has(x+','+y)) free.push({x,y});
     food = free.length ? free[Math.floor(Math.random()*free.length)] : null;
+    if(food === null){ triggerWin(); }
+  }
+
+  function triggerWin(){
+    gameWon=true; running=false;
+    statusEl.textContent='You Win! — Press Space';
+    SFX.eat(); Music.stop();
+    draw();
   }
 
   function curSpeed(){ return Math.max(60, stepMs - Math.floor(score/5)*6); }
@@ -337,7 +353,9 @@
 
   function step(){
     prevSnake = snake.map(p=>({...p}));
-    dir = validateDir(nextDir, dir);
+    if(dirQueue.length){
+      dir = dirQueue.shift();
+    }
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
     if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
       gameOver=true; running=false; statusEl.textContent='Game Over — Press Space'; SFX.die(); Music.stop(); draw(); return;
@@ -350,8 +368,13 @@
     }
   }
 
-  function validateDir(n, cur){
-    if((n.x===-cur.x && n.y===0) || (n.y===-cur.y && n.x===0)) return cur; return n;
+  function sameDir(a,b){ return a.x===b.x && a.y===b.y; }
+  function isOpposite(a,b){ return a.x===-b.x && a.y===-b.y; }
+  function queueDir(n){
+    const last = dirQueue.length ? dirQueue[dirQueue.length-1] : dir;
+    if(sameDir(n,last) || isOpposite(n,last)) return;
+    if(dirQueue.length >= 2) return;
+    dirQueue.push(n);
   }
 
   function roundRect(x,y,w,h,r){
@@ -446,7 +469,14 @@
       drawEye(ex1,ey1,eyeR); drawEye(ex2,ey2,eyeR);
     }
 
-    if(gameOver){
+    if(gameWon){
+      ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#22d3ee'; ctx.textAlign='center'; ctx.font='32px system-ui, sans-serif';
+      ctx.fillText('You Win!', canvas.width/2, canvas.height/2 - 16);
+      ctx.fillStyle='#e6edf3'; ctx.font='18px system-ui, sans-serif';
+      ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
+      ctx.fillText('Press Space', canvas.width/2, canvas.height/2 + 36);
+    } else if(gameOver){
       ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='32px system-ui, sans-serif';
       ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 16);
@@ -462,21 +492,22 @@
     }
   }
 
-  function start(){ if(running||gameOver) return; running=true; statusEl.textContent=''; SFX.start(); Music.resume(); }
+  function start(){ if(running||gameOver||gameWon) return; running=true; statusEl.textContent='Press Space to pause'; SFX.start(); Music.resume(); }
   function restart(){ newGame(); }
-  function pause(){ if(!running||gameOver) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); }
+  function pause(){ if(!running||gameOver||gameWon) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); }
 
   function onKey(e){
     const c=e.code;
-    if(c==='Space'){ if(gameOver){ restart(); } else if(!running){ start(); } else { pause(); } }
-    else if(c==='ArrowUp'||c==='KeyW'){ nextDir={x:0,y:-1}; }
-    else if(c==='ArrowDown'||c==='KeyS'){ nextDir={x:0,y:1}; }
-    else if(c==='ArrowLeft'||c==='KeyA'){ nextDir={x:-1,y:0}; }
-    else if(c==='ArrowRight'||c==='KeyD'){ nextDir={x:1,y:0}; }
+    if(c==='Space'){ if(gameOver||gameWon){ restart(); } else if(!running){ start(); } else { pause(); } }
+    else if(c==='ArrowUp'||c==='KeyW'){ queueDir({x:0,y:-1}); }
+    else if(c==='ArrowDown'||c==='KeyS'){ queueDir({x:0,y:1}); }
+    else if(c==='ArrowLeft'||c==='KeyA'){ queueDir({x:-1,y:0}); }
+    else if(c==='ArrowRight'||c==='KeyD'){ queueDir({x:1,y:0}); }
     else if(c==='KeyM'){ // toggle music
       // user intent counts as gesture; ensure AC
       ensureAC();
-      const currentlyOn = (musicToggleBtn.textContent.indexOf('On')>-1);
+      const currentLabel = musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent;
+      const currentlyOn = (currentLabel.indexOf('On')>-1);
       Music.setEnabled(!currentlyOn);
     }
     // prevent page scroll with arrows/space on some browsers
@@ -486,14 +517,15 @@
 
   function toggleMusic(){
     ensureAC();
-    const currentlyOn = (musicToggleBtn.textContent.indexOf('On')>-1);
+    const currentLabel = musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent;
+    const currentlyOn = (currentLabel.indexOf('On')>-1);
     Music.setEnabled(!currentlyOn);
   }
 
-  upBtn.addEventListener('click', ()=>{ nextDir={x:0,y:-1}; if(!running&&!gameOver) start(); });
-  downBtn.addEventListener('click', ()=>{ nextDir={x:0,y:1}; if(!running&&!gameOver) start(); });
-  leftBtn.addEventListener('click', ()=>{ nextDir={x:-1,y:0}; if(!running&&!gameOver) start(); });
-  rightBtn.addEventListener('click', ()=>{ nextDir={x:1,y:0}; if(!running&&!gameOver) start(); });
+  upBtn.addEventListener('click', ()=>{ queueDir({x:0,y:-1}); if(!running&&!gameOver) start(); });
+  downBtn.addEventListener('click', ()=>{ queueDir({x:0,y:1}); if(!running&&!gameOver) start(); });
+  leftBtn.addEventListener('click', ()=>{ queueDir({x:-1,y:0}); if(!running&&!gameOver) start(); });
+  rightBtn.addEventListener('click', ()=>{ queueDir({x:1,y:0}); if(!running&&!gameOver) start(); });
   restartBtn.addEventListener('click', ()=>{ restart(); });
   musicToggleBtn.addEventListener('click', toggleMusic);
   musicPill.addEventListener('click', toggleMusic);
@@ -539,10 +571,10 @@
 
   let tsx=0, tsy=0, swiping=false;
   canvas.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; tsx=t.clientX; tsy=t.clientY; swiping=true; }, {passive:true});
-  canvas.addEventListener('touchend', (e)=>{ if(!swiping) return; const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy; swiping=false; const ax=Math.abs(dx), ay=Math.abs(dy); if(Math.max(ax,ay)<20) { if(!running&&!gameOver) start(); return; } if(ax>ay) nextDir={x:dx>0?1:-1,y:0}; else nextDir={x:0,y:dy>0?1:-1}; if(!running&&!gameOver) start(); }, {passive:true});
+  canvas.addEventListener('touchend', (e)=>{ if(!swiping) return; const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy; swiping=false; const ax=Math.abs(dx), ay=Math.abs(dy); if(Math.max(ax,ay)<20) { if(!running&&!gameOver) start(); return; } if(ax>ay) queueDir({x:dx>0?1:-1,y:0}); else queueDir({x:0,y:dy>0?1:-1}); if(!running&&!gameOver) start(); }, {passive:true});
 
   let last=performance.now();
-  function loop(){ const now=performance.now(); const dt=Math.min(60, now-last); last=now; tick(dt); draw(); requestAnimationFrame(loop); }
+  function loop(){ const now=performance.now(); const dt=Math.min(500, now-last); last=now; tick(dt); draw(); requestAnimationFrame(loop); }
 
   // init
   Music.updateLabels();

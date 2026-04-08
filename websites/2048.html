@@ -161,7 +161,8 @@
   const TILE_COLORS = {               // background color by tile value
     0:"#cdc1b4", 2:"#eee4da", 4:"#ede0c8",
     8:"#f2b179", 16:"#f59563", 32:"#f67c5f", 64:"#f65e3b",
-    128:"#edcf72", 256:"#edcc61", 512:"#edc850", 1024:"#edc53f", 2048:"#edc22e"
+    128:"#edcf72", 256:"#edcc61", 512:"#edc850", 1024:"#edc53f", 2048:"#edc22e",
+    4096:'#3d73c2', 8192:'#9c27b0', 16384:'#e91e63', 32768:'#ff5722', 65536:'#ff9800'
   };
 
   // --- DOM & canvas setup ----------------------------------------------------
@@ -178,9 +179,10 @@
   const undoBtn = document.getElementById('undoBtn');
 
   // --- Game state ------------------------------------------------------------
-  let tiles = [];          // {id,value,r,c,fromR,fromC,toR,toC,scale,removing,mergedInto}
+  let tiles = [];          // {id,value,r,c,fromR,fromC,toR,toC,scale,popStart,removing,mergedInto}
   let board;               // 2D array holding tile id or 0
   let score, best, won, over, keepPlaying;
+  best = Number(localStorage.getItem('best2048')||0);
   let moving = false;      // during slide animation
   let lastState = null;    // snapshot for undo
 
@@ -260,7 +262,6 @@ function clearQueue(){ inputQ.length = 0; }
     tiles = [];
     score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null;
     for(let i=0;i<START_TILES;i++) spawnRandomTile(true); // true => spawn immediately
-    best = Number(localStorage.getItem('best2048')||0);
     updateHUD();
     hideOverlay();
     draw();
@@ -316,7 +317,7 @@ function clearQueue(){ inputQ.length = 0; }
     if(empties.length===0) return false;
     const spot = empties[Math.floor(Math.random()*empties.length)];
     const value = Math.random()<FOUR_PROB ? 4 : 2;
-    const t = { id:idCounter++, value, r:spot.r, c:spot.c, fromR:spot.r, fromC:spot.c, toR:spot.r, toC:spot.c, scale: immediate?1:0.5, removing:false, mergedInto:false };
+    const t = { id:idCounter++, value, r:spot.r, c:spot.c, fromR:spot.r, fromC:spot.c, toR:spot.r, toC:spot.c, scale:1, popStart:null, popDuration:null, removing:false, mergedInto:false };
     tiles.push(t);
     board[spot.r][spot.c] = t.id;
 if(!immediate) animatePop(t, effectivePopTime());  // was POP_TIME
@@ -522,8 +523,19 @@ function checkWinOnly(){
       const x = sx + (dx - sx) * e;
       const y = sy + (dy - sy) * e;
 
-      drawTile(x,y,cellSize, radius, t.value, t.scale || 1);
+      // Compute pop scale from popStart if a pop animation is in progress
+      let scale = t.scale || 1;
+      if(t.popStart != null){
+        const elapsed = performance.now() - t.popStart;
+        const p = Math.min(1, elapsed / t.popDuration);
+        scale = p<0.5 ? (0.5 + p*1.24) : (1.12 - (p-0.5)*0.24*2);
+        if(p>=1){ t.popStart = null; t.popDuration = null; scale = 1; }
+      }
+      drawTile(x,y,cellSize, radius, t.value, scale);
     }
+
+    // If any tile still has an active pop, schedule another draw frame
+    if(tiles.some(t=>t.popStart != null)) requestAnimationFrame(()=>draw());
   }
 
   function drawTile(x,y,size,radius,value,scale){
@@ -559,18 +571,10 @@ function checkWinOnly(){
 
   function easeOutCubic(p){ return 1 - Math.pow(1-p,3); }
 
-  // Short pop animation (used on spawn and after a merge)
+  // Short pop animation (data-driven: store start time, scale computed in drawTile)
   function animatePop(tile, duration){
-    const start = performance.now();
-    function tick(){
-      const now = performance.now();
-      const t = Math.min(1, (now - start)/duration);
-      // Scale up to ~1.12 then settle to 1.0
-      tile.scale = t<0.5 ? (0.5 + t*1.24) : (1.12 - (t-0.5)*0.24*2);
-      draw();
-      if(t<1) requestAnimationFrame(tick); else { tile.scale = 1; draw(); }
-    }
-    requestAnimationFrame(tick);
+    tile.popStart = performance.now();
+    tile.popDuration = duration;
   }
 
   // --- Overlay controls ------------------------------------------------------
@@ -640,7 +644,7 @@ function checkWinOnly(){
   const DIR_KEYS = {ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down', a:'left', d:'right', w:'up', s:'down'};
   window.addEventListener('keydown', e=>{
     const k = e.key;
-    if(k==='n' || k==='N') { newGame(); return; }
+    if((k==='n'||k==='N') && !helpOpen){ newGame(); return; }
     if(k==='z' || k==='Z') { if(!over) undo(); return; } // Prevent undo when game over
     if(overlay.classList.contains('show') || helpOpen){
       // Block moves while overlay is up; let the focused button handle keys.
@@ -671,7 +675,7 @@ function checkWinOnly(){
 
   // --- Self-test harness (logs to console) ----------------------------------
   function runSelfTests(){
-    const ENABLE_SELF_TESTS = true; // set false to skip
+    const ENABLE_SELF_TESTS = false; // set false to skip
     if(!ENABLE_SELF_TESTS) return;
 
     const tests = [];

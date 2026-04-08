@@ -622,6 +622,7 @@
 
     /* NEW: pause/resume helpers */
     function pauseGame() {
+      if(state.pendingOver > 0) return; // don't allow pausing during death sequence
       if (state.mode !== 'playing') return;
       state.mode = 'paused';
       pausedEl.hidden = false;
@@ -660,10 +661,21 @@
         muteBtn.textContent = isMuted ? '🔇' : '🔊';
       }
 
+      if (e.code === 'KeyH' && !e.repeat) {
+        toggleHelp();
+      }
+
       // NEW: P or Esc to toggle pause (only when in-game / paused)
-      if (e.code === 'KeyP' || e.code === 'Escape') {
-        e.preventDefault();
+      if (e.code === 'KeyP') {
+        if (state.mode === 'playing' || state.mode === 'paused') e.preventDefault();
         togglePause();
+      }
+
+      if (e.key === 'Escape') {
+        if (state.mode === 'playing' || state.mode === 'paused') e.preventDefault();
+        if (helpOverlay && !helpOverlay.hidden) { closeHelp(); return; }
+        togglePause();
+        return;
       }
     }, { passive: false });
 
@@ -727,14 +739,6 @@
         e.stopPropagation();
       });
     }
-    window.addEventListener('keydown', (e) => {
-      if(e.code === 'KeyH' && !e.repeat) {
-        toggleHelp();
-      }
-      if(e.code === 'Escape' && helpOverlay && !helpOverlay.hidden) {
-        closeHelp();
-      }
-    });
 
     let last = performance.now();
     function frame(now) {
@@ -774,7 +778,6 @@
       if (s > state.high) {
         state.high = s;
         if (highEl) highEl.textContent = String(s);
-        try { localStorage.setItem(HS_KEY, String(s)); } catch {}
       }
 
       state.spawnTimer += dt;

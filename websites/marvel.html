@@ -371,61 +371,61 @@ document.addEventListener('DOMContentLoaded', function(){
     // Dataset: popular MCU characters (films & Disney+). Keep values consistent for reliable matching.
     const CHARACTER_FACTS = {
   IRON_MAN: {display:'Iron Man (Tony Stark)', species:'Human', color:['Red','Gold'], origin:'Iron Man', affiliation:['Avengers','Iron Man'], role:'Hero', type:['Tech','Tactician']},
-  CAPTAIN_AMERICA: {display:'Captain America (Steve Rogers)', species:'Enhanced', color:['Blue','Red','White'], origin:'Captain America: The First Avenger', affiliation:['Avengers','Captain America'], role:'Hero', type:['Super Soldier','Tactician']},
+  CAPTAIN_AMERICA: {display:'Captain America (Steve Rogers)', species:['Enhanced','Human'], color:['Blue','Red','White'], origin:'Captain America: The First Avenger', affiliation:['Avengers','Captain America'], role:'Hero', type:['Super Soldier','Tactician']},
   THOR: {display:'Thor', species:'Asgardian', color:['Red','Gold','Blue'], origin:'Thor', affiliation:['Avengers','Thor'], role:'Hero', type:['Godly','Warrior']},
-  HULK: {display:'Hulk (Bruce Banner)', species:['Enhanced'], color:['Green','Purple'], origin:'The Incredible Hulk', affiliation:['Avengers','Hulk'], role:'Hero', type:['Gamma','Super Strength']},
+  HULK: {display:'Hulk (Bruce Banner)', species:['Enhanced','Human'], color:['Green','Purple'], origin:'The Incredible Hulk', affiliation:['Avengers','Hulk'], role:'Hero', type:['Gamma','Super Strength']},
   BLACK_WIDOW: {display:'Black Widow (Natasha Romanoff)', species:'Human', color:['Black','Red'], origin:'Iron Man 2', affiliation:['Avengers','S.H.I.E.L.D.','Black Widow'], role:'Hero', type:['Spy','Tactician']},
   HAWKEYE: {display:'Hawkeye (Clint Barton)', species:'Human', color:['Purple','Black'], origin:'Thor', affiliation:['Avengers','S.H.I.E.L.D.','Hawkeye'], role:'Hero', type:['Archer','Tactician']},
-  SPIDER_MAN: {display:'Spider-Man (Peter Parker)', species:'Human', color:['Red','Blue'], origin:'Captain America: Civil War', affiliation:['Avengers','Street-Level'], role:'Hero', type:['Tech','Super Strength']},
+  SPIDER_MAN: {display:'Spider-Man (Peter Parker)', species:['Human','Enhanced'], color:['Red','Blue'], origin:'Captain America: Civil War', affiliation:['Avengers','Street-Level'], role:'Hero', type:['Tech','Super Strength']},
   BLACK_PANTHER: {display:'Black Panther (T\'Challa)', species:'Human', color:['Black','Purple'], origin:'Captain America: Civil War', affiliation:['Wakanda','Avengers'], role:'Hero', type:['Vibranium','Tactician']},
   DOCTOR_STRANGE: {display:'Doctor Strange', species:'Human', color:['Red','Blue','Gold'], origin:'Doctor Strange', affiliation:['Doctor Strange','Avengers'], role:'Hero', type:['Mystic','Tactician']},
-  CAPTAIN_MARVEL: {display:'Captain Marvel (Carol Danvers)', species:['Enhanced'], color:['Gold','Red','Blue'], origin:'Captain Marvel', affiliation:'Avengers', role:'Hero', type:['Cosmic','Energy']},
+  CAPTAIN_MARVEL: {display:'Captain Marvel (Carol Danvers)', species:['Human','Enhanced'], color:['Gold','Red','Blue'], origin:'Captain Marvel', affiliation:'Avengers', role:'Hero', type:['Cosmic','Energy']},
   ANT_MAN: {display:'Ant-Man (Scott Lang)', species:'Human', color:['Red','Black'], origin:'Ant-Man', affiliation:['Avengers','Ant-Man'], role:'Hero', type:['Tech','Tactician']},
   WASP: {display:'Wasp (Hope van Dyne)', species:'Human', color:['Gold','Black','Yellow'], origin:'Ant-Man', affiliation:['Avengers','Ant-Man'], role:'Hero', type:['Tech','Tactician']},
-  SCARLET_WITCH: {display:'Scarlet Witch (Wanda Maximoff)', species:'Enhanced', color:['Red','Pink'], origin:'Avengers: Age of Ultron', affiliation:['Avengers','WandaVision'], role:['Hero','Villain'], type:['Mystic','Reality Warper']},
+  SCARLET_WITCH: {display:'Scarlet Witch (Wanda Maximoff)', species:['Human','Enhanced'], color:['Red','Pink'], origin:'Avengers: Age of Ultron', affiliation:['Avengers','WandaVision'], role:['Hero','Villain'], type:['Mystic','Reality Warper']},
   VISION: {display:'Vision', species:'AI', color:['Gold','Red','Green','Yellow'], origin:'Avengers: Age of Ultron', affiliation:['Avengers','WandaVision'], role:'Hero', type:['Android','Tech']},
   FALCON: {display:'Falcon (Sam Wilson)', species:'Human', color:['Red','White','Blue'], origin:'Captain America: The Winter Soldier', affiliation:['Avengers','Captain America'], role:'Hero', type:['Tech','Tactician']},
-  WINTER_SOLDIER: {display:'Winter Soldier (Bucky Barnes)', species:'Human', color:['Silver','Black','Red'], origin:'Captain America: The First Avenger', affiliation:['Avengers','Captain America'], role:['Hero','Villain'], type:['Super Soldier','Tactician']},
+  WINTER_SOLDIER: {display:'Winter Soldier (Bucky Barnes)', species:['Human','Enhanced'], color:['Silver','Black','Red'], origin:'Captain America: The First Avenger', affiliation:['Avengers','Captain America'], role:['Hero','Villain'], type:['Super Soldier','Tactician']},
   WAR_MACHINE: {display:'War Machine (James Rhodes)', species:'Human', color:['Grey','Silver','Black'], origin:'Iron Man 2', affiliation:['Avengers','Iron Man'], role:'Hero', type:['Tech','Tactician']},
   SHURI: {display:'Shuri', species:'Human', color:['Purple','Black'], origin:'Black Panther', affiliation:['Wakanda','Black Panther'], role:'Support', type:['Tech','Tactician']},
   VALKYRIE: {display:'Valkyrie', species:'Asgardian', color:['White','Brown','Blue'], origin:'Thor: Ragnarok', affiliation:['Thor'], role:'Hero', type:['Warrior','Tactician']},
   KORG: {display:'Korg', species:'Alien', color:['Grey','Brown'], origin:'Thor: Ragnarok', affiliation:['Thor'], role:'Support', type:'Warrior'},
-  LOKI: {display:'Loki', species:'Asgardian', color:['Green','Gold','Black'], origin:'Thor', affiliation:['Thor','Time Variance Authority'], role:['Hero','Villain'], type:['Godly','Tactician']},
+  LOKI: {display:'Loki', species:['Asgardian','Frost Giant'], color:['Green','Gold','Black'], origin:'Thor', affiliation:['Thor','Time Variance Authority'], role:['Hero','Villain'], type:['Godly','Tactician']},
   HELA: {display:'Hela', species:'Asgardian', color:['Green','Black'], origin:'Thor: Ragnarok', affiliation:'Thor', role:'Villain', type:['Mystic','Godly']},
   WONG: {display:'Wong', species:'Human', color:['Brown','Yellow','Gold'], origin:'Doctor Strange', affiliation:['Doctor Strange','Avengers'], role:'Support', type:['Mystic','Tactician']},
   SHANG_CHI: {display:'Shang-Chi', species:'Human', color:['Red','Gold','Black'], origin:'Shang-Chi', affiliation:['Ten Rings','Shang-Chi Family'], role:'Hero', type:['Martial','Mystic']},
-  STAR_LORD: {display:'Star-Lord (Peter Quill)', species:'Human', color:['Red','Blue','Brown'], origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:['Cosmic','Tactician']},
+  STAR_LORD: {display:'Star-Lord (Peter Quill)', species:['Human','Alien'], color:['Red','Blue','Brown'], origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:['Cosmic','Tactician']},
   GAMORA: {display:'Gamora', species:'Alien', color:['Green','Black','Blue'], origin:'Guardians of the Galaxy', affiliation:['Guardians','Thanos'], role:['Hero','Villain'], type:['Assassin','Warrior']},
   DRAX: {display:'Drax', species:'Alien', color:['Green','Grey','Red'], origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:['Warrior','Super Strength']},
   ROCKET: {display:'Rocket', species:'Alien', color:['Brown','Grey','Black'], origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:['Tech','Tactician']},
-  GROOT: {display:'Groot', species:'Flora', color:['Brown','Green'], origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:['Cosmic','Super Strength']},
+  GROOT: {display:'Groot', species:'Alien', color:['Brown','Green'], origin:'Guardians of the Galaxy', affiliation:'Guardians', role:'Hero', type:['Cosmic','Super Strength']},
   NEBULA: {display:'Nebula', species:'Alien', color:['Blue','Grey','Purple'], origin:'Guardians of the Galaxy', affiliation:['Guardians','Thanos'], role:['Hero','Villain'], type:['Cybernetic','Assassin']},
   MANTIS: {display:'Mantis', species:'Alien', color:['Green','White','Pink'], origin:'Guardians Vol. 2', affiliation:'Guardians', role:'Hero', type:['Empath','Mystic']},
   YONDU: {display:'Yondu', species:'Alien', color:['Blue','Red'], origin:'Guardians of the Galaxy', affiliation:['Ravagers','Guardians'], role:'Support', type:['Cosmic','Marksman']},
-  THANOS: {display:'Thanos', species:'Eternal', color:['Purple','Gold'], origin:'Avengers: Infinity War', affiliation:['Titan','Black Order'], role:'Villain', type:['Cosmic','Tactician']},
+  THANOS: {display:'Thanos', species:'Alien', color:['Purple','Gold'], origin:'Avengers: Infinity War', affiliation:['Titan','Black Order'], role:'Villain', type:['Cosmic','Tactician']},
   ULTRON: {display:'Ultron', species:'AI', color:['Red','Silver'], origin:'Avengers: Age of Ultron', affiliation:'Rogue AI', role:'Villain', type:['Android','Tech']},
   NICK_FURY: {display:'Nick Fury', species:'Human', color:['Black','Brown'], origin:'Iron Man', affiliation:['S.H.I.E.L.D.','Avengers'], role:'Support', type:['Spy','Tactician']},
   MARIA_HILL: {display:'Maria Hill', species:'Human', color:['Blue','Black'], origin:'Avengers', affiliation:['S.H.I.E.L.D.','Avengers'], role:'Support', type:['Tactician','Spy']},
   PEGGY_CARTER: {display:'Peggy Carter', species:'Human', color:['Blue','Red'], origin:'Captain America: The First Avenger', affiliation:['S.H.I.E.L.D.','Captain America'], role:'Support', type:['Spy','Tactician']},
   KATE_BISHOP: {display:'Kate Bishop', species:'Human', color:['Purple','Black'], origin:'Hawkeye', affiliation:['Street-Level','Hawkeye'], role:'Hero', type:['Archer','Tactician']},
   MOON_KNIGHT: {display:'Moon Knight (Marc Spector)', species:'Human', color:['White','Gold','Black'], origin:'Moon Knight', affiliation:['Street-Level','Moon Knight'], role:'Hero', type:['Mystic','Tactician']},
-  DAREDEVIL: {display:'Daredevil (Matt Murdock)', species:'Human', color:['Red','Black'], origin:'Daredevil', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Martial','Detective']},
-  JESSICA_JONES: {display:'Jessica Jones', species:'Human', color:['Purple','Blue','Black'], origin:'Jessica Jones', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Detective','Super Strength']},
-  LUKE_CAGE: {display:'Luke Cage', species:'Human', color:['Yellow','Black'], origin:'Luke Cage', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Super Strength','Tactician']},
-  IRON_FIST: {display:'Iron Fist (Danny Rand)', species:'Human', color:['Green','Yellow','Gold'], origin:'Iron Fist', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Martial','Mystic']},
+  DAREDEVIL: {display:'Daredevil (Matt Murdock)', species:['Human','Enhanced'], color:['Red','Black'], origin:'Daredevil', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Martial','Detective']},
+  JESSICA_JONES: {display:'Jessica Jones', species:['Human','Enhanced'], color:['Purple','Blue','Black'], origin:'Jessica Jones', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Detective','Super Strength']},
+  LUKE_CAGE: {display:'Luke Cage', species:['Human','Enhanced'], color:['Yellow','Black'], origin:'Luke Cage', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Super Strength','Tactician']},
+  IRON_FIST: {display:'Iron Fist (Danny Rand)', species:['Human','Enhanced'], color:['Green','Yellow','Gold'], origin:'Iron Fist', affiliation:['Street-Level','Defenders'], role:'Hero', type:['Martial','Mystic']},
   KINGPIN: {display:'Kingpin (Wilson Fisk)', species:'Human', color:['White','Black'], origin:'Daredevil', affiliation:['Crime Syndicate','Street-Level'], role:'Villain', type:['Crime','Tactician']},
   GREEN_GOBLIN: {display:'Green Goblin (Norman Osborn)', species:'Human', color:['Green','Purple'], origin:'Spider-Man: No Way Home', affiliation:['Sinister Six','Spider-Man'], role:'Villain', type:['Tech','Tactician']},
   DOCTOR_OCTOPUS: {display:'Doctor Octopus (Otto Octavius)', species:'Human', color:['Green','Brown','Silver'], origin:'Spider-Man: No Way Home', affiliation:['Sinister Six','Spider-Man'], role:'Villain', type:['Tech','Tactician']},
   MYSTERIO: {display:'Mysterio (Quentin Beck)', species:'Human', color:['Green','Blue','Silver'], origin:'Spider-Man: Far From Home', affiliation:['Sinister Six','Spider-Man'], role:'Villain', type:['Illusion','Tech']},
-  ELECTRO: {display:'Electro (Max Dillon)', species:'Human', color:['Yellow','Blue','Electric'], origin:'Spider-Man: No Way Home', affiliation:['Sinister Six','Spider-Man'], role:'Villain', type:['Electric','Energy']},
+  ELECTRO: {display:'Electro (Max Dillon)', species:['Human','Enhanced'], color:['Yellow','Blue','Electric'], origin:'Spider-Man: No Way Home', affiliation:['Sinister Six','Spider-Man'], role:'Villain', type:['Electric','Energy']},
   VENOM: {display:'Venom (Eddie Brock)', species:['Alien', 'Human'], color:['Black','White'], origin:'Venom', affiliation:['Spider-Man'], role:['Hero','Villain'], type:['Symbiote','Super Strength']},
-  DEADPOOL: {display:'Deadpool (Wade Wilson)', species:'Human', color:['Red','Black'], origin:'Deadpool', affiliation:['X-Force','Deadpool'], role:'Hero', type:['Regeneration','Marksman']},
+  DEADPOOL: {display:'Deadpool (Wade Wilson)', species:'Mutant', color:['Red','Black'], origin:'Deadpool', affiliation:['X-Force','Deadpool'], role:'Hero', type:['Regeneration','Marksman']},
   WOLVERINE: {display:'Wolverine (Logan)', species:'Mutant', color:['Yellow','Blue','Brown'], origin:'Deadpool 3', affiliation:['X-Men','Wolverine'], role:'Hero', type:['Regeneration','Super Strength']},
   PROFESSOR_X: {display:'Professor X (Charles Xavier)', species:'Mutant', color:['Blue','White'], origin:'Doctor Strange in the Multiverse of Madness', affiliation:'X-Men', role:'Support', type:['Telepath','Tactician']},
-  FANTASTIC_MR: {display:'Mister Fantastic (Reed Richards)', species:'Human', color:['Blue','White'], origin:'Doctor Strange in the Multiverse of Madness', affiliation:'Fantastic Four', role:'Hero', type:['Elastic','Tactician']},
-  INVISIBLE_WOMAN: {display:'Invisible Woman (Sue Storm)', species:'Human', color:['Blue','White'], origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:['Force Fields','Tactician']},
-  HUMAN_TORCH: {display:'Human Torch (Johnny Storm)', species:'Human', color:['Orange','Yellow','Red'], origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:['Fire','Energy']},
-  THING: {display:'Thing (Ben Grimm)', species:'Human', color:['Orange','Brown'], origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:['Super Strength','Tactician']},
+  FANTASTIC_MR: {display:'Mister Fantastic (Reed Richards)', species:['Human','Enhanced'], color:['Blue','White'], origin:'Doctor Strange in the Multiverse of Madness', affiliation:'Fantastic Four', role:'Hero', type:['Elastic','Tactician']},
+  INVISIBLE_WOMAN: {display:'Invisible Woman (Sue Storm)', species:['Human','Enhanced'], color:['Blue','White'], origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:['Force Fields','Tactician']},
+  HUMAN_TORCH: {display:'Human Torch (Johnny Storm)', species:['Human','Enhanced'], color:['Orange','Yellow','Red'], origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:['Fire','Energy']},
+  THING: {display:'Thing (Ben Grimm)', species:['Human','Enhanced'], color:['Orange','Brown'], origin:'Fantastic Four', affiliation:'Fantastic Four', role:'Hero', type:['Super Strength','Tactician']},
   YELENA: {display:'Yelena Belova', species:'Human', color:['Black','White'], origin:'Black Widow', affiliation:['Black Widow','Thunderbolts'], role:'Hero', type:['Spy','Tactician']},
   RED_GUARDIAN: {display:'Red Guardian (Alexei Shostakov)', species:'Human', color:['Red','White'], origin:'Black Widow', affiliation:['Black Widow','Thunderbolts'], role:'Hero', type:['Super Soldier','Tactician']},
   TASKMASTER: {display:'Taskmaster (Antonia Dreykov)', species:'Human', color:['Black','Grey'], origin:'Black Widow', affiliation:['Black Widow'], role:['Hero','Villain'], type:['Mimic','Tactician']},
@@ -433,25 +433,25 @@ document.addEventListener('DOMContentLoaded', function(){
   OKOYE: {display:'Okoye', species:'Human', color:['Red','Black'], origin:'Black Panther', affiliation:['Wakanda','Black Panther'], role:'Support', type:['Warrior','Tactician']},
   MBAKU: {display:'M\'Baku', species:'Human', color:['Brown','Black'], origin:'Black Panther', affiliation:['Wakanda','Black Panther'], role:'Support', type:['Warrior','Tactician']},
   AGATHA: {display:'Agatha Harkness', species:'Enhanced', color:['Purple','Black'], origin:'WandaVision', affiliation:'WandaVision', role:'Villain', type:['Mystic','Reality Warper']},
-  ZEMO: {display:'Zemo (Helmut Zemo)', species:'Human', color:['Purple','Black'], origin:'Captain America: Civil War', affiliation:['Hydra',], role:'Villain', type:['Tactician','Crime']},
+  ZEMO: {display:'Zemo (Helmut Zemo)', species:'Human', color:['Purple','Black'], origin:'Captain America: Civil War', affiliation:['Hydra', 'Thunderbolts'], role:'Villain', type:['Tactician','Crime']},
   SHARON_CARTER: {display:'Sharon Carter', species:'Human', color:['Blue','Black'], origin:'Captain America: The Winter Soldier', affiliation:['S.H.I.E.L.D.','Captain America'], role:['Support'], type:['Spy','Tactician']},
   AMERICA_CHAVEZ: {display:'America Chavez', species:'Enhanced', color:['Red','White','Blue'], origin:'Doctor Strange in the Multiverse of Madness', affiliation:'Doctor Strange', role:'Hero', type:['Cosmic','Reality Warper']},
   KAMALA_KHAN: {display:'Ms. Marvel (Kamala Khan)', species:'Enhanced', color:['Red','Blue','Yellow'], origin:'Ms. Marvel', affiliation:['Street-Level'], role:'Hero', type:['Elastic','Energy']},
-  SHE_HULK: {display:'She-Hulk (Jennifer Walters)', species:'Enhanced', color:['Green','White'], origin:'She-Hulk', affiliation:['Street-Level','Hulk'], role:'Hero', type:['Gamma','Super Strength']},
+  SHE_HULK: {display:'She-Hulk (Jennifer Walters)', species:['Human','Enhanced'], color:['Green','White'], origin:'She-Hulk', affiliation:['Street-Level','Hulk'], role:'Hero', type:['Gamma','Super Strength']},
   WENWU: {display:'The Mandarin (Wenwu)', species:'Human', color:['Gold','Black','Red'], origin:'Shang-Chi', affiliation:['Ten Rings','Shang-Chi Family'], role:['Hero','Villain'], type:['Mystic','Martial']},
-  ADAM_WARLOCK: {display:'Adam Warlock', species:'Enhanced', color:['Gold','Yellow'], origin:'Guardians Vol. 3', affiliation:['Guardians','Sovereign'], role:['Hero','Villain'], type:['Cosmic','Energy']},
+  ADAM_WARLOCK: {display:'Adam Warlock', species:['Alien'], color:['Gold','Yellow'], origin:'Guardians Vol. 3', affiliation:['Guardians','Sovereign'], role:['Hero','Villain'], type:['Cosmic','Energy']},
   HIGH_EVOLUTIONARY: {display:'High Evolutionary', species:'Human', color:['Purple','Gold'], origin:'Guardians Vol. 3', affiliation:'Sovereign', role:'Villain', type:['Tech','Tactician']},
   KANG: {display:'Kang the Conqueror', species:'Human', color:['Purple','Blue','Gold'], origin:'Loki', affiliation:'Time Variance Authority', role:'Villain', type:['Tech','Tactician']},
   Yellowjacket: {display:'Yellowjacket (Darren Cross)', species:'Human', color:['Yellow','Black'], origin:'Ant-Man', affiliation:'Ant-Man', role:'Villain', type:['Tech','Tactician']},
   MODOK: {display:'MODOK (Darren Cross)', species:'Human', color:['Yellow','Purple'], origin:'Ant-Man and the Wasp: Quantumania', affiliation:'Ant-Man', role:'Villain', type:['Tech','Tactician']},
-  CASSIE_LANG: {display:'Cassie Lang', species:'Human', color:['Red','Blue'], origin:'Ant-Man', affiliation:['Ant-Man','Avengers'], role:'Hero', type:['Tech','Tactician']},
-  RED_SKULL: {display:'Red Skull (Johann Schmidt)', species:'Human', color:['Red','Black'], origin:'Captain America: The First Avenger', affiliation:'Hydra', role:'Villain', type:['Tactician','Crime']},
-  ABOMINATION: {display:'Abomination (Emil Blonsky)', species:'Enhanced', color:['Green','Grey'], origin:'The Incredible Hulk', affiliation:'Hulk', role:['Hero','Villain'], type:['Gamma','Super Strength']},
+  CASSIE_LANG: {display:'Cassie Lang', species:'Human', color:['Red','Blue'], origin:'Ant-Man', affiliation:['Ant-Man'], role:'Hero', type:['Tech','Tactician']},
+  RED_SKULL: {display:'Red Skull (Johann Schmidt)', species:['Human','Enhanced'], color:['Red','Black'], origin:'Captain America: The First Avenger', affiliation:'Hydra', role:'Villain', type:['Tactician','Crime']},
+  ABOMINATION: {display:'Abomination (Emil Blonsky)', species:['Human','Enhanced'], color:['Green','Grey'], origin:'The Incredible Hulk', affiliation:'Hulk', role:['Hero','Villain'], type:['Gamma','Super Strength']},
   WHIPLASH: {display:'Whiplash (Ivan Vanko)', species:'Human', color:['Grey','Silver'], origin:'Iron Man 2', affiliation:'Iron Man', role:'Villain', type:['Tech','Tactician']},
   RONAN: {display:'Ronan the Accuser', species:'Alien', color:['Blue','Grey','Black'], origin:'Guardians of the Galaxy', affiliation:'Kree', role:'Villain', type:['Warrior','Tactician']},
-  EGO: {display:'Ego', species:'Alien', color:['Blue','White'], origin:'Guardians Vol. 2', affiliation:'Kree', role:'Villain', type:['Cosmic','Reality Warper']},
+  EGO: {display:'Ego', species:'Alien', color:['Blue','White'], origin:'Guardians Vol. 2', affiliation:'Celestial', role:'Villain', type:['Cosmic','Reality Warper']},
   MALEKITH: {display:'Malekith', species:'Alien', color:['Black','Grey'], origin:'Thor: The Dark World', affiliation:'Thor', role:'Villain', type:['Mystic','Tactician']},
-  QUICKSILVER: {display:'Quicksilver (Pietro Maximoff)', species:'Enhanced', color:['Silver','Blue'], origin:'Avengers: Age of Ultron', affiliation:'Avengers', role:'Hero', type:['Super Speed','Tactician']}
+  QUICKSILVER: {display:'Quicksilver (Pietro Maximoff)', species:['Human','Enhanced'], color:['Silver','Blue'], origin:'Avengers: Age of Ultron', affiliation:'Avengers', role:'Hero', type:['Super Speed','Tactician']}
 };
 
 
@@ -635,16 +635,16 @@ document.addEventListener('DOMContentLoaded', function(){
       renderGuesses();
       renderBank();
 
+      guessesLeft = Math.max(0, guessesLeft - 1);
+      updateGuessesPill(true);
+
       if (isCorrectGuess(token, target)){
         games.played++; games.wins++;
         over = true;
-        SFX.correct();
         showWin(token);
         return;
       }
 
-      guessesLeft = Math.max(0, guessesLeft - 1);
-      updateGuessesPill(true);
       SFX.wrong();
 
       if (guessesLeft === 0){
@@ -803,6 +803,18 @@ document.addEventListener('DOMContentLoaded', function(){
     // click outside panel closes
     help.addEventListener('click', function(e){
       if (e.target === help) closeHelp();
+    });
+    win.addEventListener('click', function(e){
+      if (e.target === win) {
+        win.classList.remove('show');
+        document.body.classList.remove('modal-open');
+      }
+    });
+    lose.addEventListener('click', function(e){
+      if (e.target === lose) {
+        lose.classList.remove('show');
+        document.body.classList.remove('modal-open');
+      }
     });
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e){
@@ -971,7 +983,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // INIT
     resetGame();
-    renderBank();
     updateEligibleButtonText();
 
     // Quick sanity tests (skip on mobile)

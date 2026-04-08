@@ -4450,7 +4450,12 @@
         base.auto *= 1 + (active.effects.autoMult - 1) * boost;
       }
       if (active.effects.speedMult) {
-        base.speed *= active.effects.speedMult;
+        const speedEffect = active.effects.speedMult;
+        if (speedEffect < 1) {
+          base.speed *= 1 - (1 - speedEffect) * boost;
+        } else {
+          base.speed *= speedEffect;
+        }
       }
       return base;
     }
@@ -4907,7 +4912,8 @@
     function claimAllAchievements() {
       let claimed = 0;
       ACHIEVEMENTS.forEach((ach) => {
-        while (claimAchievement(ach, { silent: true, deferUpdate: true, skipSave: true })) {
+        let safetyCounter = 0;
+        while (claimAchievement(ach, { silent: true, deferUpdate: true, skipSave: true }) && ++safetyCounter < 200) {
           claimed += 1;
         }
       });
@@ -5102,14 +5108,15 @@
       const includeSurge = options.includeSurge !== false;
       const eventRef = includeEvent ? activeEvent : null;
       const mult = getActiveMultipliers(eventRef, { includeEvent, includeSurge });
-      let total = state.autoClickers * currentClickValue(eventRef, { includeEvent, includeSurge });
+      let autoClickerIncome = state.autoClickers * currentClickValue(eventRef, { includeEvent, includeSurge }) * mult.auto;
+      let businessIncome = 0;
       businesses.forEach((biz) => {
         if (biz.manager && biz.owned > 0) {
-          total += calcBusinessPayout(biz, eventRef, { includeEvent, includeSurge })
+          businessIncome += calcBusinessPayout(biz, eventRef, { includeEvent, includeSurge })
             / calcBusinessDuration(biz, eventRef, { includeEvent, includeSurge });
         }
       });
-      return total * mult.auto;
+      return autoClickerIncome + businessIncome;
     }
 
     function currentClickValue(event, options = {}) {
@@ -5354,6 +5361,7 @@
           owned: biz.owned,
           manager: biz.manager
         })),
+        buyAmount: state.buyAmount,
         perks: perks.filter((perk) => perk.purchased).map((perk) => perk.id),
         timestamp: Date.now()
       };
@@ -5378,6 +5386,7 @@
         state.totalEvents = Number(data.totalEvents) || 0;
         state.surgeCharge = Number(data.surgeCharge) || 0;
         state.totalCrits = Number(data.totalCrits) || 0;
+        if (data.buyAmount) setBuyAmount(data.buyAmount);
         state.achievements = data.achievements || {};
         state.quests = Array.isArray(data.quests) ? data.quests : [];
         state.daily = data.daily || { lastClaim: 0, streak: 0 };

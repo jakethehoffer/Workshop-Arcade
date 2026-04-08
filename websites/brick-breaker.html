@@ -525,11 +525,7 @@ hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
   // ===== Game State =====
   const G = {
     running: true,
-    comboCount: 0,            // how many consecutive hits in current chain
-comboActive: false,       // only true once we reach 2+ hits in-window
-comboSparks: [],          // small celebration particles
-comboBanner: { t:0, dur:0 }, // animated center banner timer
-comboCount: 0,
+    comboCount: 0,
 comboActive: false,
 comboSparks: [],
 comboBanner: { t:0, dur:0 },
@@ -562,6 +558,7 @@ puCap: 2,                        // max spawns per type per level
     portals: [],
 riskMult: 1,
 shrinkDebt: 0,   // how many pixels CURSE_SHRINK has removed (to restore later)
+expandDebt: 0,   // how many pixels EXPAND actually added (to remove later)
     combo: 1,
 comboTime: 0
 
@@ -730,7 +727,7 @@ const PATTERNS = [
 
 
 function difficultyFor(level){
-  const rows = Math.min(10, 5 + Math.floor((level-1)/1));
+  const rows = Math.min(10, 5 + Math.floor((level-1)/2));
   const cols = Math.min(14, 10 + Math.floor((level-1)/2));
   const ballSpeedAdd = Math.min(200, (level-1)*18);
   const paddleShrink = Math.min(60, (level-1)*3);
@@ -1049,9 +1046,9 @@ function restartGame(){
 }
 
   // ===== Input =====
-  function unlockAudioOnce(){ ensureAudio(); MUSIC.start(); removeEventListener('pointerdown', unlockAudioOnce); removeEventListener('keydown', unlockAudioOnce); }
-  addEventListener('pointerdown', unlockAudioOnce, {once:false});
-  addEventListener('keydown', unlockAudioOnce, {once:false});
+  function unlockAudioOnce(){ ensureAudio(); MUSIC.start(); }
+  addEventListener('pointerdown', unlockAudioOnce, {once: true});
+  addEventListener('keydown', unlockAudioOnce, {once: true});
   
   addEventListener('keydown', (e)=>{
     if (e.repeat) return;
@@ -1387,10 +1384,13 @@ case 'MULTI': {
   SFX.multiball();
 } break;
 
-      case 'EXPAND':
+      case 'EXPAND': {
         pushTimed('EXPAND', EFFECT_DUR.EXPAND);
-        G.paddle.w = Math.min(200, G.paddle.w + 60);
+        const addedW = Math.min(200, G.paddle.w + 60) - G.paddle.w;
+        G.paddle.w += addedW;
+        G.expandDebt = addedW;
         break;
+      }
         case 'GUN':
   pushTimed('GUN', EFFECT_DUR.GUN);
   G.gunCooldown = 0;       // fire immediately
@@ -1454,7 +1454,7 @@ function recalcRiskMult(){
       G.effects[i].remaining -= clockDt;
     if (G.effects[i].remaining <= 0){
   const {type} = G.effects[i];
-  if (type==='EXPAND') G.paddle.w = Math.max(80, G.paddle.w - 60);
+  if (type==='EXPAND') { G.paddle.w = Math.max(80, G.paddle.w - G.expandDebt); G.expandDebt = 0; }
   if (type==='FIRE') { for (const b of G.balls) b.fire=false; }
   if (type==='SLOW') G.speedMod = 1;
   if (type==='CURSE_SHRINK'){                // <- add this
@@ -1701,7 +1701,7 @@ if (br.hp<=0){
     // Check level clear
     if (remaining===0){
       G.running = false; cardNext.hidden = false;
-      setTimeout(()=>{ resetLevel(true); }, 900);
+      setTimeout(()=>{ if(G.lives > 0) resetLevel(true); }, 900);
     }
     updateExplosions(dt); // NEW: animate explosion FX
     // Effects tick with real-time, not speed-modified dt

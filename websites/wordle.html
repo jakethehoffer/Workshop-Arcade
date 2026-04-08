@@ -33,6 +33,7 @@
   --correct:#22c55e;      /* green */
   --present:#fbbf24;      /* yellow (brighter) */
   --absent:#475569;       /* slate (brighter than before) */
+  --warn:#f87171;         /* red warning text */
   }
 
   /* NEW: clearer default key look */
@@ -93,9 +94,11 @@
   .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:8px;width:min(100vw,540px);margin:6px auto 16px}
   .keys{display:grid;grid-template-columns:repeat(10,1fr);gap:8px}
   .keys.row2{grid-template-columns:repeat(9,1fr);margin:0 18px}
-  .keys.row3{grid-template-columns:repeat(7,1fr)}
+  .keys.row3{grid-template-columns:1.5fr repeat(7,1fr) 1.5fr}
   .key{background:var(--panel);border:1px solid var(--stroke);border-radius:8px;padding:10px;font-weight:700;text-transform:uppercase;text-align:center}
   .key.wide{grid-column:span 2}
+  .keys.row3 .key.wide{grid-column:auto}
+  .key svg{width:24px;height:18px;display:block;margin:0 auto}
   .key.k-c{background:var(--correct);border-color:var(--correct)}
   .key.k-p{background:var(--present);border-color:var(--present)}
   .key.k-a{background:var(--absent);border-color:var(--absent)}
@@ -103,6 +106,8 @@
   .status{font-size:13px;color:var(--muted)}
   .btn{background:var(--panel);border:1px solid var(--stroke);padding:8px 10px;border-radius:10px}
   .btn.primary{border-color:var(--accent)}
+  .btn[data-hotkey],.pill[data-hotkey]{display:inline-flex;align-items:center;gap:6px}
+  .btn[data-hotkey]::after,.pill[data-hotkey]::after{content:attr(data-hotkey);display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 6px;border-radius:999px;background:#111827;border:1px solid var(--stroke);color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
   dialog{border:1px solid var(--stroke);background:var(--panel);color:var(--ink);border-radius:14px;padding:16px;max-width:min(90vw,520px)}
   dialog::backdrop{background:rgba(0,0,0,.55)}
   .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -118,9 +123,9 @@
     <h1>LEXICA</h1>
     <div class="controls">
       <!-- Length + Strict controls removed; fixed 5-letter, strict always on -->
-      <label class="pill"><input id="hard" type="checkbox"> Hard</label>
-      <button class="pill" id="helpBtn" title="How to play">?</button>
-      <label class="pill"><input id="sound" type="checkbox" checked> Sound</label> <!-- ADDED -->
+      <label class="pill" data-hotkey="1"><input id="hard" type="checkbox"> Hard</label>
+      <button class="pill" id="helpBtn" title="How to play" data-hotkey="2">How to play</button>
+      <label class="pill" data-hotkey="3"><input id="sound" type="checkbox" checked> Sound</label> <!-- ADDED -->
     </div>
   </header>
 
@@ -136,7 +141,7 @@
   <footer>
     <div class="status" id="status">Make a guess.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" id="newBtn">Play Again</button>
+      <button class="btn" id="newBtn" data-hotkey="Ctrl+Enter">Play Again</button>
     </div>
   </footer>
 </div>
@@ -153,6 +158,7 @@
     <li><b>Slate</b> = not in the word.</li>
   </ul>
   <p>Hard mode forces you to reuse revealed letters in the same spots on later guesses.</p>
+  <p><b>Hotkeys</b>: 1 hard mode, 2 how to play, 3 sound, Esc closes dialogs, Ctrl+Enter for new game, Ctrl+Backspace clears the row.</p>
 </dialog>
 <!-- ADDED: Start (home) screen -->
 <dialog id="start"> <!-- ADDED -->
@@ -165,7 +171,7 @@
     <span class="stat">Strict dictionary</span> <!-- ADDED -->
     <span class="stat">Hard mode optional</span> <!-- ADDED -->
   </div> <!-- ADDED -->
-  <button class="btn primary" id="startBtn">Play</button> <!-- ADDED -->
+  <button class="btn primary" id="startBtn" data-hotkey="Enter">Play</button> <!-- ADDED -->
 </dialog> <!-- ADDED -->
 
 <!-- ADDED: Game Over screen -->
@@ -177,7 +183,7 @@
   <p id="overMsg">You win!</p> <!-- ADDED -->
   <p><small>Answer: <b id="overSecret">?????</b></small></p> <!-- ADDED -->
   <div style="display:flex; gap:8px; flex-wrap:wrap"> <!-- ADDED -->
-    <button class="btn primary" id="againBtn">Play Again</button> <!-- ADDED -->
+    <button class="btn primary" id="againBtn" data-hotkey="Enter">Play Again</button> <!-- ADDED -->
   </div> <!-- ADDED -->
 </dialog> <!-- ADDED -->
 <script src="words5.js"></script>
@@ -226,19 +232,46 @@
   const ROWS = [
     Array.from('qwertyuiop'),
     Array.from('asdfghjkl'),
-    ['enter', ...Array.from('zxcvbnm'), '←']
+    ['enter', ...Array.from('zxcvbnm'), 'backspace']
   ];
+  const KEY_LABELS = { enter: 'enter' };
+  const WIDE_KEYS = new Set(['enter', 'backspace']);
   function buildKeyboard(){
     for (let el of [row1,row2,row3]) el.innerHTML='';
     ROWS[0].forEach(k=>row1.appendChild(makeKey(k)));
     ROWS[1].forEach(k=>row2.appendChild(makeKey(k)));
     ROWS[2].forEach(k=>row3.appendChild(makeKey(k)));
   }
+  function buildBackspaceIcon(){
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 32 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    outline.setAttribute('d', 'M10 3h18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H10L2 12l8-9z');
+    const cross1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    cross1.setAttribute('d', 'M14 9l6 6');
+    const cross2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    cross2.setAttribute('d', 'M20 9l-6 6');
+    svg.appendChild(outline);
+    svg.appendChild(cross1);
+    svg.appendChild(cross2);
+    return svg;
+  }
   function makeKey(k){
   const b=document.createElement('button');
-  b.className='key'+((k==='enter'||k==='←')?' wide':'');
-  b.textContent=k;
+  b.className='key'+(WIDE_KEYS.has(k)?' wide':'');
   b.dataset.key=k;
+  if(k === 'backspace'){
+    b.setAttribute('aria-label', 'backspace');
+    b.appendChild(buildBackspaceIcon());
+  } else {
+    b.textContent=KEY_LABELS[k] || k;
+    if(KEY_LABELS[k]) b.setAttribute('aria-label', k);
+  }
   b.addEventListener('click',()=>{
     AudioFX.start();             // ADDED
     onKey(k);
@@ -372,10 +405,35 @@ const AudioFX = (() => {                               // ADDED
 
 
   // ===== Input handling =====
+  function isDialogOpen(){
+    return !!(help?.open || start?.open || over?.open);
+  }
+  function closeDialogs(){
+    let closed = false;
+    if (help.open) { help.close(); closed = true; }
+    if (start.open) { start.close(); closed = true; }
+    if (over.open) { over.close(); closed = true; }
+    return closed;
+  }
+  function toggleHelp(){
+    if (help.open) { help.close(); return; }
+    try { start.close(); } catch(e){}
+    try { over.close(); } catch(e){}
+    try { help.showModal(); } catch(e){
+      try { help.show(); } catch(e2){ help.setAttribute('open',''); }
+    }
+  }
+  function clearCurrent(){
+    if(current.length>0){ current=''; repaint(); save(); }
+  }
+  function toggleCheckbox(checkbox){
+    checkbox.checked = !checkbox.checked;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+  }
   function onKey(k){
-  if(finished) return;
+  if(finished || isDialogOpen()) return;
   if(k==='enter'){ AudioFX.enter(); submit(); return; }       // CHANGED
-  if(k==='←' || k==='backspace'){ AudioFX.back(); backspace(); return; } // CHANGED
+  if(k==='backspace' || k==='delete'){ AudioFX.back(); backspace(); return; } // CHANGED
 
   if(/^[a-zA-Z]$/.test(k)){
     if(current.length<COLS){
@@ -391,8 +449,36 @@ const AudioFX = (() => {                               // ADDED
     if(current.length>0){ current=current.slice(0,-1); repaint(); save(); }
   }
   document.addEventListener('keydown', (e)=>{
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
+    if (typing) return;
+
+    if (e.key === 'Escape' && closeDialogs()) { e.preventDefault(); return; }
+    if (e.key === '2' && !e.repeat) { e.preventDefault(); AudioFX.start(); toggleHelp(); return; }
+    if (e.key === '1' && !e.repeat) { e.preventDefault(); AudioFX.start(); toggleCheckbox(hardChk); return; }
+    if (e.key === '3' && !e.repeat) { e.preventDefault(); AudioFX.start(); toggleCheckbox(soundChk); return; }
+    if (e.key === 'Enter' && (start.open || over.open)) {
+      e.preventDefault();
+      AudioFX.start();
+      startNew({fromOverlay:true});
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      AudioFX.start();
+      startNew({fromOverlay:true});
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Backspace') {
+      e.preventDefault();
+      AudioFX.start();
+      AudioFX.back();
+      clearCurrent();
+      return;
+    }
+    if (isDialogOpen()) return;
     if(e.key==='Enter'){ onKey('enter'); }
-    else if(e.key==='Backspace'){ onKey('←'); }
+    else if(e.key==='Backspace' || e.key==='Delete'){ onKey('backspace'); }
     else if(/^[a-zA-Z]$/.test(e.key)){ onKey(e.key.toLowerCase()); }
   });
 
@@ -416,25 +502,31 @@ const AudioFX = (() => {                               // ADDED
     if(finished) return;
     if(current.length!==COLS){ flashRow('Not enough letters.'); return; }
 
+    if(guesses.includes(current)){ flashRow('Already guessed that word.'); return; }
+
     // STRICT: must be in dictionary
     if(!STRICT.has(current)){
       flashRow('Not in dictionary.');
       return;
     }
 
-    if(hardChk.checked && guesses.length>0){
-      // Enforce revealed greens stay, and revealed yellows must be included somewhere
-      const last = evaluate(guesses[guesses.length-1], secret);
-      for(let i=0;i<COLS;i++){
-        if(last[i].state==='c' && current[i]!==guesses[guesses.length-1][i]){
-          flashRow('Hard mode: keep green letters in place.');
-          return;
-        }
+    const hard = hardChk.checked && guesses.length > 0;
+    if(hard){
+      const greens = {};
+      const yellows = [];
+      guesses.forEach((g) => {
+        const ev = evaluate(g, secret);
+        ev.forEach((x, i) => {
+          if(x.state === 'c') greens[i] = g[i];
+          if(x.state === 'p') yellows.push(g[i]);
+        });
+      });
+      for(const [i, ch] of Object.entries(greens)){
+        if(current[i] !== ch){ flashRow('Hard mode: keep green letters in place.'); return; }
       }
-      // Ensure all prior revealed letters appear (basic rule)
-      const needed = new Set();
-      last.forEach((x,i)=>{ if(x.state!=='a') needed.add(guesses[guesses.length-1][i]); });
-      for(const ch of needed){ if(!current.includes(ch)){ flashRow('Hard mode: reuse revealed letters.'); return; } }
+      for(const ch of yellows){
+        if(!current.includes(ch)){ flashRow('Hard mode: reuse revealed letters.'); return; }
+      }
     }
 
     guesses.push(current);
@@ -499,8 +591,10 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
         const evals = evaluate(guesses[r], secret);
         evals.forEach((e,i)=>{
           const tile=row.children[i];
-          tile.classList.add('reveal');
-          tile.style.animationDelay = `${i*80}ms`;
+          if(!tile.classList.contains('state-c') && !tile.classList.contains('state-p') && !tile.classList.contains('state-a')){
+            tile.classList.add('reveal');
+            tile.style.animationDelay = `${i * 80}ms`;
+          }
           tile.classList.add(`state-${e.state}`);
         });
       }
@@ -522,7 +616,12 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
   
 
   // ===== Buttons =====
-  newBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // CHANGED
+  newBtn.addEventListener('click', () => {
+    if(!finished && guesses.length > 0){
+      if(!confirm('Abandon current game?')) return;
+    }
+    startNew({fromOverlay: true});
+  }); // CHANGED
   hardChk.addEventListener('change', ()=>{ save(); setStatus('Hard mode '+(hardChk.checked?'on':'off')); });
   startBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // ADDED
   againBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // ADDED

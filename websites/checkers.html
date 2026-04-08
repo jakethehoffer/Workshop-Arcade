@@ -778,7 +778,7 @@ async function makePlayerMove(move){
     const end = move.steps[move.steps.length-1];
     const landedVal = board[end[0]][end[1]];
     const moreCaps = genCapturesFrom(board, end[0], end[1]);
-    if(moreCaps.length && !(move.crownAtEnd && willCrown(landedVal,end[0])) ){
+    if(moreCaps.length && !move.crownAtEnd){
       mustContinueFrom = {r:end[0], c:end[1]};
       selected = {r:end[0], c:end[1]};
       legalDest = moreCaps.map(m=> ({...m, from:end}));
@@ -888,7 +888,7 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
 
 function pushHistory(){
   history.push({board: copyBoard(board), turn, must: mustContinueFrom? {...mustContinueFrom}:null});
-  elUndo.disabled = history.length===0;
+  elUndo.disabled = history.length === 0;
 }
 function undo(){
   if(locked || history.length===0) return;
@@ -903,11 +903,13 @@ function undo(){
 
   // If we're vs AI and the snapshot we restored is the AI's turn,
   // pop one more so it's the human's turn again.
-  if(mode === 'SP' && turn === aiPlays && history.length > 0){
-    state = history.pop();
-    board = state.board;
-    turn = state.turn;
-    mustContinueFrom = state.must;
+  if(mode === 'SP' && turn === aiPlays){
+    if(history.length > 0){
+      state = history.pop();
+      board = state.board;
+      turn = state.turn;
+      mustContinueFrom = state.must;
+    }
   }
 
   elUndo.disabled = history.length === 0;

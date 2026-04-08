@@ -708,6 +708,7 @@ function closeHelp(){ helpPanel.style.display = 'none'; }
 
 // Double-jump trigger (Space in mid-air)
 if (e.code === 'Space' && running && !paused) {
+  if(!state || !state.player) return;
   const P = state.player;
 
   // NEW: don't allow double-jump while jetpack is active
@@ -739,13 +740,14 @@ window.addEventListener('keyup', (e) => {
   const zoneRight = document.getElementById('zoneRight');
   zoneLeft.addEventListener('pointerdown', (e)=>{ e.preventDefault(); touchLeft = true; });
   zoneRight.addEventListener('pointerdown',(e)=>{ e.preventDefault(); touchRight = true; });
-  const endTouch = ()=>{ touchLeft=false; touchRight=false; };
-  zoneLeft.addEventListener('pointerup', endTouch);
-  zoneRight.addEventListener('pointerup', endTouch);
-  zoneLeft.addEventListener('pointercancel', endTouch);
-  zoneRight.addEventListener('pointercancel', endTouch);
-  zoneLeft.addEventListener('pointerleave', endTouch);
-  zoneRight.addEventListener('pointerleave', endTouch);
+  const endTouchLeft = ()=>{ touchLeft=false; };
+  const endTouchRight = ()=>{ touchRight=false; };
+  zoneLeft.addEventListener('pointerup', endTouchLeft);
+  zoneRight.addEventListener('pointerup', endTouchRight);
+  zoneLeft.addEventListener('pointercancel', endTouchLeft);
+  zoneRight.addEventListener('pointercancel', endTouchRight);
+  zoneLeft.addEventListener('pointerleave', endTouchLeft);
+  zoneRight.addEventListener('pointerleave', endTouchRight);
 
   // ===== Sound & Music (WebAudio, no external assets) =====
   const sound = {
@@ -900,7 +902,7 @@ window.addEventListener('keyup', (e) => {
   const JETPACK_ACCEL = -2600;     // upward accel while jetpack held
 
   // === POWERUPS: constants & helpers ===
-const POWERUP_SPAWN_CHANCE = 0.2;         // 14% chance to spawn on a new platform row
+const POWERUP_SPAWN_CHANCE = 0.2;         // 20% chance to spawn on a new platform row
 const MAX_POWERUPS_ON_SCREEN = 4;
 // === POWERUPS: tuning ===
 const FORCE_POWERUP_AFTER_ROWS = 6;  // if no pickup in 6 new rows, force one
@@ -1995,6 +1997,7 @@ if (space.active) updateSpace(dt);
     for (const pa of state.particles) pa.y += dy;
     for (const d of state.drops) d.y += dy; // move rain with camera
     for (const it of state.powerups)  it.y += dy;
+    for (const en of state.enemies) en.y += dy;
 
     scoreEl.textContent = Math.round(state.score);
     if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03);
@@ -3460,15 +3463,16 @@ function drawPlayer(P) {
 
 
   // ===== Toast helper =====
-  let toastTimer = 0, toastText = '', toastAlpha = 0;
+  let toastTimer = 0, toastText = '', toastAlpha = 0, toastRafId = 0;
   function toast(msg) {
     toastText = msg; toastAlpha = 1;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(()=>toastAlpha=0, 1400);
+    if(toastRafId){ cancelAnimationFrame(toastRafId); toastRafId = 0; }
     drawToast();
   }
 function drawToast() {
-  if (!toastAlpha) return;
+  if (!toastAlpha) { toastRafId = 0; return; }
   ctx.save();
   ctx.globalAlpha = toastAlpha * .9;
 
@@ -3498,7 +3502,7 @@ function drawToast() {
   ctx.fillText(toastText, W/2, y + 20);
 
   ctx.restore();
-  requestAnimationFrame(drawToast);
+  toastRafId = requestAnimationFrame(drawToast);
 }
 
 

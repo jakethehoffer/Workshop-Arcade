@@ -165,9 +165,13 @@
     font-family: ui-monospace, monospace;
     font-weight: 600;
   }
+  /* Toast notification */
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:10px 22px;border-radius:24px;font-size:.9rem;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
+<div id="toast"></div>
 <div class="wrap">
   <header>
     <div>
@@ -376,6 +380,12 @@ document.addEventListener('DOMContentLoaded', function(){
     function toArr(v){ return Array.isArray(v) ? v : [v]; }
 function getMatches(a, b){
   const A = toArr(a), B = toArr(b);
+
+  // 'None' sentinel means "no value" — two None values must not count as an exact match
+  if(A.length === 1 && A[0] === 'None' && B.length === 1 && B[0] === 'None'){
+    return { ok: false, state: 'none', matches: [] };
+  }
+
   const matches = A.filter(x => B.indexOf(x) !== -1);
   const overlap = matches.length > 0;
 
@@ -595,6 +605,15 @@ function getMatches(a, b){
     // Utils
     const byId = id => document.getElementById(id);
     const choice = arr => arr[(Math.random()*arr.length)|0];
+
+    let _toastTimer = null;
+    function showToast(msg){
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      if(_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+    }
     function patternToRegex(pat) {
       if (!pat) return null;
       let raw = (pat + '').toUpperCase().trim();
@@ -706,10 +725,7 @@ document.addEventListener('keydown', function(e){
   // M - Toggle Match-Only
   if ((e.key === 'M' || e.key === 'm') && !e.repeat) {
     e.preventDefault();
-    eligibleOnly = !eligibleOnly;
-    updateEligibleButtonText();
-    SFX.ui();
-    renderBank();
+    toggleEligible();
     return;
   }
   
@@ -955,9 +971,18 @@ function updateGuessesPill(animate){
 
 
     // Game flow
+    let lastTarget = null;
+    function pickTarget(){
+      if(BANK.length <= 1) return choice(BANK).token;
+      let t;
+      do { t = choice(BANK).token; } while(t === lastTarget);
+      lastTarget = t;
+      return t;
+    }
+
     function resetGame(){
       guesses = [];
-      target = choice(BANK).token;
+      target = pickTarget();
       guessesLeft = MAX_GUESSES;
       over = false;
       renderBank();
@@ -966,7 +991,13 @@ updateGuessesPill(false);
     }
 
     function onGuess(token){
-      for (let i=0;i<guesses.length;i++){ if (guesses[i].token === token) return; }
+      for(let i=0;i<guesses.length;i++){
+        if(guesses[i].token===token){
+          SFX.click && SFX.click();
+          showToast('Already guessed!');
+          return;
+        }
+      }
 
       const matches = compareFacts(token, target);
       guesses.unshift({ token: token, matches: matches });
@@ -1083,18 +1114,21 @@ const eligibleBtn = byId('eligibleBtn');
 function updateEligibleButtonText() {
   eligibleBtn.textContent = eligibleOnly ? '🔎 Match-Only: On (M)' : '🔎 Match-Only: Off (M)';
 }
-eligibleBtn.addEventListener('click', function(){
+function toggleEligible(){
   eligibleOnly = !eligibleOnly;
   updateEligibleButtonText();
   SFX.ui();
+  if(eligibleOnly && guesses.length === 0){
+    showToast('Make a guess first to filter');
+  }
   renderBank();
-});
+}
+eligibleBtn.addEventListener('click', toggleEligible);
 
 
 
     // INIT
     resetGame();
-    renderBank();
     updateEligibleButtonText();
 
     // Smoke tests (desktop only)

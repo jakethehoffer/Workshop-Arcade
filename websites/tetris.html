@@ -20,6 +20,7 @@
   .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
   .btn:active { transform:translateY(1px); }
+  .btns .btn { touch-action: none; }
   @media (min-width: 860px){ .btns { display:none; } }
   #holdCanvas, #nextCanvas { background:#0e1522; margin-top:4px; }
 
@@ -50,13 +51,12 @@
       <h2 id="helpTitle">How to Play</h2>
       <div class="help-grid">
         <div>
-          <div><span class="key">←</span><span class="key">→</span> Move</div>
-          <div><span class="key">↓</span> / <span class="key">S</span> Soft Drop</div>
-          <div><span class="key">Space</span> Hard Drop &amp; Start</div>
-          <div><span class="key">P</span> Pause</div>
+          <div><span class="key">Left Arrow / A</span><span class="key">Right Arrow / D</span> Move</div>
+          <div><span class="key">Down Arrow / S</span> Soft Drop</div>
+          <div><span class="key">Space</span> Hard Drop</div>
+          <div><span class="key">P</span> Pause/Play</div>
         </div>
         <div>
-          <div><span class="key">↑</span> / <span class="key">W</span> Rotate CW</div>
           <div><span class="key">X</span> Rotate CW</div>
           <div><span class="key">Z</span> Rotate CCW</div>
           <div><span class="key">C</span> / <span class="key">Shift</span> Hold Piece</div>
@@ -64,9 +64,8 @@
       </div>
       <div class="help-actions">
         <button id="helpPlay" class="btn" type="button">Play</button>
-        <button id="helpMute" class="btn" type="button">Sound: On</button>
+        <button id="helpMute" class="btn" type="button">Sound: On (M)</button>
       </div>
-      <p style="opacity:.8; font-size:13px; text-align:center; margin-top:8px">Tip: mobile users can use the on-screen buttons at the bottom.</p>
     </div>
   </div>
 
@@ -82,16 +81,17 @@
     <div class="pill" id="next">Next<canvas id="nextCanvas" width="64" height="64"></canvas></div>
     <div class="pill" id="status">Press Space to Start</div>
     <button class="btn" id="resetBtn" type="button" aria-label="Reset game">Reset</button>
-    <button class="btn" id="soundBtn" type="button" aria-label="Toggle sound">Sound: On</button>
+    <button class="btn" id="soundBtn" type="button" aria-label="Toggle sound (M)">Sound: On (M)</button>
   </div>
 
   <div class="btns">
-    <button class="btn" id="leftBtn">◀︎</button>
-    <button class="btn" id="rotLBtn">⤺</button>
-    <button class="btn" id="hardBtn">⬇︎⬇︎</button>
-    <button class="btn" id="rotRBtn">⤼</button>
-    <button class="btn" id="rightBtn">▶︎</button>
+    <button class="btn" id="leftBtn">Left</button>
+    <button class="btn" id="rotLBtn">Rotate L</button>
+    <button class="btn" id="hardBtn">Drop</button>
+    <button class="btn" id="rotRBtn">Rotate R</button>
+    <button class="btn" id="rightBtn">Right</button>
   </div>
+
 
 <script>
 (function(){
@@ -110,6 +110,7 @@
   let helpUp = true; // overlay visible initially
   let helpMode = 'start';      // 'start' | 'pause'
 
+  const SOUND_KEY = 'M';
 
   let audioCtx=null;
   let muted = false; // 🔊 global mute flag
@@ -164,12 +165,12 @@
   }
 
   function showHelp(mode){ // mode: 'start' | 'pause'
-  helpMode = mode;
-  helpUp = true;
-  if (helpEl) helpEl.style.display = 'flex';
-  if (helpPlay) helpPlay.textContent = (mode === 'pause') ? 'Resume' : 'Play';
-  if (mode === 'pause' && statusEl) statusEl.textContent = 'Paused — Press Space/Enter or Play';
-}
+    helpMode = mode;
+    helpUp = true;
+    if (helpEl) helpEl.style.display = 'flex';
+    if (helpPlay) helpPlay.textContent = (mode === 'pause') ? 'Resume' : 'Play';
+    if (mode === 'pause' && statusEl) statusEl.textContent = 'Paused - Press Space/Enter or Play';
+  }
 
   function stopMusic(){ if(music.loop){ clearInterval(music.loop); } music.loop=null; music.on=false; }
 
@@ -222,8 +223,41 @@
   function rot90(m){ const h=m.length, w=m[0].length; const r=Array.from({length:w},()=>Array(h).fill(0)); for(let y=0;y<h;y++) for(let x=0;x<w;x++) r[x][h-1-y]=m[y][x]; return r; }
   for(const k of Object.keys(PIECES)){ while(PIECES[k].length<4){ PIECES[k].push(rot90(PIECES[k][PIECES[k].length-1])); } }
 
+  const KICKS_JLSTZ = {
+    '0>1': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '1>0': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    '1>2': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    '2>1': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '2>3': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    '3>2': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '3>0': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '0>3': [[0,0],[1,0],[1,-1],[0,2],[1,2]]
+  };
+  const KICKS_I = {
+    '0>1': [[0,0],[-2,0],[1,0],[-2,1],[1,-2]],
+    '1>0': [[0,0],[2,0],[-1,0],[2,-1],[-1,2]],
+    '1>2': [[0,0],[-1,0],[2,0],[-1,-2],[2,1]],
+    '2>1': [[0,0],[1,0],[-2,0],[1,2],[-2,-1]],
+    '2>3': [[0,0],[2,0],[-1,0],[2,-1],[-1,2]],
+    '3>2': [[0,0],[-2,0],[1,0],[-2,1],[1,-2]],
+    '3>0': [[0,0],[1,0],[-2,0],[1,2],[-2,-1]],
+    '0>3': [[0,0],[-1,0],[2,0],[-1,-2],[2,1]]
+  };
+  function getKickData(type, from, to){
+    if (type === 'O') return [[0,0]];
+    const key = from + '>' + to;
+    return (type === 'I' ? KICKS_I[key] : KICKS_JLSTZ[key]) || [[0,0]];
+  }
+
   let bag = [];
-  function refillBag(){ bag = ['I','O','T','S','Z','J','L'].sort(()=>Math.random()-0.5); }
+  function shuffleBag(list){
+    for (let i = list.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }
+  function refillBag(){ bag = shuffleBag(['I','O','T','S','Z','J','L']); }
   refillBag();
   function nextType(){ if(!bag.length) refillBag(); return bag.pop(); }
   function peekNext(){ if(!bag.length) refillBag(); return bag[bag.length-1]; }
@@ -232,12 +266,30 @@
   let ghostY = 0;
   let rotatedSinceMove = false;
 
+  const DAS = 150;
+  const ARR = 30;
+  const LOCK_DELAY = 500;
+  const LOCK_RESET_LIMIT = 15;
+
+  let lockTimer = 0;
+  let lockResets = 0;
+
+  let leftHeld = false;
+  let rightHeld = false;
+  let moveDir = 0;
+  let dasTimer = 0;
+  let arrTimer = 0;
+  let dasActive = false;
+
+  let combo = -1;
+  let b2b = false;
+
   let holdType = null;
   let holdUsed = false;
 
   function spawnWithType(type){
     const piece = { x:3, y:-2, type, rot:0, shape: PIECES[type][0] };
-    if(collide(piece.x,piece.y,piece.shape)) { gameOver=true; running=false; statusEl.textContent='Game Over — Click Reset'; saveBest(); stopMusic(); return null; }
+    if(collide(piece.x,piece.y,piece.shape)) { gameOver=true; running=false; statusEl.textContent='Game Over - Click Reset'; saveBest(); stopMusic(); return null; }
     return piece;
   }
   function lock(){
@@ -249,26 +301,40 @@
     merge();
     const cleared = clearLines();
     SFX.drop();
-    if(cleared>0){
-      // Pick a message
-  const labels = ['','Nice!','Double!','Triple!','TETRIS!'];
-  const base = labels[cleared] || 'Great!';
-  triggerCongrats((tspin ? 'T-Spin ' : '') + base);
+    if(cleared > 0){
       SFX.clear();
-      let pts = [0,100,300,500,800][cleared] * level;
-      if(tspin){
-        const tPts = [0,400,800,1200,1600][cleared] * level;
-        pts = Math.max(pts, tPts);
-      }
+      const isB2B = (cleared === 4) || (tspin && cleared > 0);
+      const baseScores = tspin ? [0,800,1200,1600] : [0,100,300,500,800];
+      let pts = (baseScores[cleared] || 0) * level;
+      if(isB2B && b2b) pts = Math.floor(pts * 1.5);
+      combo = (combo < 0) ? 0 : combo + 1;
+      if(combo > 0) pts += combo * 50 * level;
       score += pts;
       lines += cleared;
-      const newLevel = 1 + Math.floor(lines / 5);  // ← 5 lines per level
-if (newLevel !== level){
-  level = newLevel;
-  fallDelay = speedForLevel(level);
-}
-    } else if(tspin){
-      score += 400 * level;
+      const newLevel = 1 + Math.floor(lines / 10);
+      if (newLevel !== level){
+        level = newLevel;
+        fallDelay = speedForLevel(level);
+      }
+      let baseLabel;
+      if(tspin){
+        baseLabel = ['T-Spin Single','T-Spin Double','T-Spin Triple','T-Spin Quad'][cleared - 1] || 'T-Spin';
+      } else {
+        baseLabel = ['','Single!','Double!','Triple!','TETRIS!'][cleared] || 'Line Clear!';
+      }
+      const parts = [];
+      if(isB2B && b2b) parts.push('Back-to-Back');
+      parts.push(baseLabel);
+      if(combo > 0) parts.push('Combo x' + combo);
+      triggerCongrats(parts.join(' '));
+      b2b = isB2B;
+    } else {
+      if(tspin){
+        score += 400 * level;
+        triggerCongrats('T-Spin!');
+        b2b = false; // zero-line T-Spin breaks B2B chain
+      }
+      combo = -1;
     }
     updateHUD();
     spawn();
@@ -277,7 +343,7 @@ if (newLevel !== level){
   function spawn(){
     cur = spawnWithType(nextType());
     if(!cur) return;
-    rotatedSinceMove = false; holdUsed = false; updateGhost(); drawHold(); drawNext();
+    rotatedSinceMove = false; holdUsed = false; clearLock(); updateGhost(); drawHold(); drawNext();
   }
 
   function drawMini(ctx2, canvas2, type){
@@ -299,7 +365,8 @@ if (newLevel !== level){
     drawHold();
     if(prev==null){ cur = spawnWithType(nextType()); }
     else { cur = spawnWithType(prev); }
-    holdUsed = true; rotatedSinceMove = false; updateGhost(); drawNext();
+    if(!cur) return;
+    holdUsed = true; rotatedSinceMove = false; clearLock(); updateGhost(); drawNext();
   }
 
   function collide(px,py,sh){
@@ -313,6 +380,29 @@ if (newLevel !== level){
     return false;
   }
 
+  function isOnGround(piece){
+    const p = piece || cur;
+    if(!p) return false;
+    return collide(p.x, p.y + 1, p.shape);
+  }
+
+  function clearLock(){
+    lockTimer = 0;
+    lockResets = 0;
+  }
+
+  function resetLockOnMove(){
+    if(!cur) return;
+    if(isOnGround(cur)){
+      if(lockResets < LOCK_RESET_LIMIT){
+        lockTimer = 0;
+        lockResets++;
+      }
+    } else {
+      clearLock();
+    }
+  }
+
   function merge(){
     const s=cur.shape; for(let y=0;y<s.length;y++) for(let x=0;x<s[y].length;x++){
       const v=s[y][x]; if(!v) continue; const bx=cur.x+x, by=cur.y+y; if(by>=0) board[by][bx]=v;
@@ -320,15 +410,105 @@ if (newLevel !== level){
   }
 
   function rotate(dir){
-    const n = (cur.rot + (dir>0?1:3)) % 4;
-    const s = PIECES[cur.type][n];
-    const kicks = [0,-1,1,-2,2];
-    for(const k of kicks){ if(!collide(cur.x+k, cur.y, s)){ cur.rot=n; cur.shape=s; cur.x+=k; rotatedSinceMove = true; SFX.rotate(); updateGhost(); return; } }
+    if(!cur) return false;
+    const from = cur.rot;
+    const to = (from + (dir > 0 ? 1 : 3)) % 4;
+    const s = PIECES[cur.type][to];
+    const kicks = getKickData(cur.type, from, to);
+    for(const [dx, dy] of kicks){
+      if(!collide(cur.x + dx, cur.y + dy, s)){
+        cur.rot = to;
+        cur.shape = s;
+        cur.x += dx;
+        cur.y += dy;
+        rotatedSinceMove = true;
+        SFX.rotate();
+        updateGhost();
+        resetLockOnMove();
+        return true;
+      }
+    }
+    return false;
   }
 
-  function hardDrop(){ rotatedSinceMove = false; while(!collide(cur.x, cur.y+1, cur.shape)) { cur.y++; score+=2; } lock(); }
-  function softDrop(){ rotatedSinceMove = false; if(!collide(cur.x, cur.y+1, cur.shape)){ cur.y++; score+=1; } else { lock(); } }
-  function move(dx){ if(!collide(cur.x+dx,cur.y,cur.shape)){ cur.x+=dx; rotatedSinceMove = false; SFX.move(); updateGhost(); } }
+  function hardDrop(){
+    if(!cur) return;
+    rotatedSinceMove = false;
+    let dropped = 0;
+    while(!collide(cur.x, cur.y + 1, cur.shape)){
+      cur.y++;
+      dropped++;
+    }
+    if(dropped > 0){
+      score += dropped * 2;
+      updateGhost();
+    }
+    lock();
+  }
+
+  function stepDown(addScore){
+    if(!cur) return false;
+    if(!collide(cur.x, cur.y + 1, cur.shape)){
+      cur.y++;
+      if(addScore) score += 1;
+      rotatedSinceMove = false;
+      updateGhost();
+      clearLock();
+      return true;
+    }
+    return false;
+  }
+
+  function softDrop(){ if(running) stepDown(true); }
+  function move(dx){
+    if(!cur) return;
+    if(!collide(cur.x+dx,cur.y,cur.shape)){
+      cur.x+=dx;
+      rotatedSinceMove = false;
+      SFX.move();
+      updateGhost();
+      resetLockOnMove();
+    }
+  }
+
+  function clearMoveState(){
+    leftHeld = false;
+    rightHeld = false;
+    moveDir = 0;
+    dasTimer = 0;
+    arrTimer = 0;
+    dasActive = false;
+  }
+
+  function updateMoveDir(){
+    const nextDir = (leftHeld === rightHeld) ? 0 : (leftHeld ? -1 : 1);
+    if(nextDir !== moveDir){
+      moveDir = nextDir;
+      dasTimer = 0;
+      arrTimer = 0;
+      dasActive = false;
+      if(moveDir !== 0 && running && !gameOver) move(moveDir);
+    }
+  }
+
+  function handleAutoShift(dt){
+    if(moveDir === 0 || !running || gameOver) return;
+    if(!dasActive){
+      dasTimer += dt;
+      if(dasTimer < DAS) return;
+      dasActive = true;
+      arrTimer = 0;
+      move(moveDir);
+      return;
+    }
+    const arr = Math.max(ARR, 1);
+    arrTimer += dt;
+    while(arrTimer >= arr){
+      arrTimer -= arr;
+      move(moveDir);
+      if(!running || gameOver) break;
+    }
+  }
 
   function isTSpin(){
     if(cur.type!=='T' || !rotatedSinceMove) return false;
@@ -426,19 +606,19 @@ if (newLevel !== level){
 
   // Exponential speed curve like modern Tetris; clamp at 60ms/step.
   function speedForLevel(l){
-  // NES frames/row @60Hz: 0:48,1:43,2:38,3:33,4:28,5:23,6:18,7:13,8:8,9:6,
-  // 10–12:5, 13–15:4, 16–18:3, 19–28:2, 29+:1
-  const L = Math.max(0, l - 1);
-  let frames;
-  if (L <= 9)        frames = [48,43,38,33,28,23,18,13,8,6][L];
-  else if (L <= 12)  frames = 5;
-  else if (L <= 15)  frames = 4;
-  else if (L <= 18)  frames = 3;
-  else if (L <= 28)  frames = 2;
-  else               frames = 1;
+    // NES frames/row @60Hz: 0:48,1:43,2:38,3:33,4:28,5:23,6:18,7:13,8:8,9:6,
+    // 10-12:5, 13-15:4, 16-18:3, 19-28:2, 29+:1
+    const L = Math.max(0, l - 1);
+    let frames;
+    if (L <= 9)        frames = [48,43,38,33,28,23,18,13,8,6][L];
+    else if (L <= 12)  frames = 5;
+    else if (L <= 15)  frames = 4;
+    else if (L <= 18)  frames = 3;
+    else if (L <= 28)  frames = 2;
+    else               frames = 1;
 
-  return Math.max(16, Math.round(frames * (1000/60))); // ms per row
-}
+    return Math.max(16, Math.round(frames * (1000/60))); // ms per row
+  }
 
 
   let dropAcc=0; let fallDelay=speedForLevel(1);
@@ -448,40 +628,53 @@ if (newLevel !== level){
   function newGame(){
     for(let y=0;y<H;y++) for(let x=0;x<W;x++) board[y][x]=0;
     score=0; lines=0; level=1; fallDelay=speedForLevel(1); dropAcc=0; running=true; gameOver=false; statusEl.textContent='Press P to Pause';
+    combo = -1; b2b = false; clearLock(); clearMoveState();
     refillBag(); holdType=null; holdUsed=false; drawHold(); drawNext();
     spawn(); updateHUD();
     ensureAudio(); if(!muted) startMusic(); else stopMusic();
   }
 
   function togglePause(){
-  if(gameOver) return;
-  if(running){
-    running = false;
-    stopMusic();
-    showHelp('pause');                 // ⬅️ show instructions on pause
-  } else {
-    // If overlay is hidden (edge case), allow P to resume directly.
-    if (!helpUp){
-      running = true;
-      if (statusEl) statusEl.textContent = 'Press P to Pause';
-      ensureAudio(); if (!muted) startMusic();
+    if(gameOver) return;
+    if(running){
+      running = false;
+      clearMoveState();
+      stopMusic();
+      showHelp('pause');                 // show instructions on pause
+    } else {
+      // If overlay is hidden (edge case), allow P to resume directly.
+      if (!helpUp){
+        clearMoveState();
+        running = true;
+        if (statusEl) statusEl.textContent = 'Press P to Pause';
+        ensureAudio(); if (!muted) startMusic();
+      }
     }
   }
-}
 
 
   function tick(dt){
-  if(!running || gameOver) return;
-  dropAcc += dt;
-  if (congratsTimer > 0) congratsTimer -= dt;
+    if(!running || gameOver) return;
+    dropAcc += dt;
+    if (congratsTimer > 0) congratsTimer -= dt;
 
-  // Drop as many rows as needed this frame
-  while (dropAcc >= fallDelay){
-    dropAcc -= fallDelay;
-    softDrop();
-    if (gameOver || !running) break; // safety if lock() ends the game
+    while (dropAcc >= fallDelay){
+      dropAcc -= fallDelay;
+      if(!stepDown(false)) break;
+    }
+
+    handleAutoShift(dt);
+
+    if(cur && isOnGround(cur)){
+      lockTimer += dt;
+      if(lockTimer >= LOCK_DELAY){
+        lock();
+        return;
+      }
+    } else {
+      clearLock();
+    }
   }
-}
 
 
   let last = performance.now();
@@ -492,24 +685,38 @@ if (newLevel !== level){
   requestAnimationFrame(loop);
 
   function onKey(e){
-// 📖 HELP: while overlay is up, only Space/Enter (and P if paused) dismiss it
-if (helpUp){
-  if (
-    e.code === 'Space' ||
-    e.code === 'Enter' ||
-    (helpMode === 'pause' && e.code === 'KeyP') // ⬅️ resume with P
-  ){
-    e.preventDefault();
-    dismissHelp(helpMode === 'pause' ? 'resume' : 'start');
-  }
-  return;
-}
+    if (e.code === 'Key' + SOUND_KEY){
+      e.preventDefault();
+      setMuted(!muted);
+      return;
+    }
+    // HELP: while overlay is up, only Space/Enter (and P if paused) dismiss it
+    if (helpUp){
+      if (
+        e.code === 'Space' ||
+        e.code === 'Enter' ||
+        (helpMode === 'pause' && e.code === 'KeyP') // resume with P
+      ){
+        e.preventDefault();
+        dismissHelp(helpMode === 'pause' ? 'resume' : 'start');
+      }
+      return;
+    }
 
-
+    const isLeft = (e.code === 'ArrowLeft' || e.code === 'KeyA');
+    const isRight = (e.code === 'ArrowRight' || e.code === 'KeyD');
+    if (isLeft || isRight){
+      e.preventDefault();
+      if (e.repeat) return;
+      if (running){
+        if (isLeft) leftHeld = true;
+        if (isRight) rightHeld = true;
+        updateMoveDir();
+      }
+      return;
+    }
 
     if(e.code==='Space'){ if(!running||gameOver){ newGame(); } else { hardDrop(); } }
-    else if(e.code==='ArrowLeft' || e.code==='KeyA'){ e.preventDefault(); if(running) move(-1); }
-    else if(e.code==='ArrowRight'|| e.code==='KeyD'){ e.preventDefault(); if(running) move(1); }
     else if(e.code==='ArrowDown'|| e.code==='KeyS'){ e.preventDefault(); if(running) softDrop(); }
     else if(e.code==='ArrowUp'  || e.code==='KeyW'){ e.preventDefault(); if(running) rotate(1); }
     else if(e.code==='KeyZ'){ e.preventDefault(); if(running) rotate(-1); }
@@ -517,11 +724,51 @@ if (helpUp){
     else if(e.code==='KeyC' || e.code==='ShiftLeft' || e.code==='ShiftRight'){ e.preventDefault(); if(running) doHold(); }
     else if(e.code==='KeyP'){ togglePause(); }
   }
-  window.addEventListener('keydown', onKey, {passive:false});
 
-  function bindBtn(id, fn){ const el=document.getElementById(id); if(!el) return; el.addEventListener('click',()=>{ if(!running||gameOver){ newGame(); } else fn(); }); }
-  bindBtn('leftBtn', ()=>move(-1));
-  bindBtn('rightBtn',()=>move(1));
+  function onKeyUp(e){
+    const isLeft = (e.code === 'ArrowLeft' || e.code === 'KeyA');
+    const isRight = (e.code === 'ArrowRight' || e.code === 'KeyD');
+    if (isLeft || isRight){
+      e.preventDefault();
+      if (isLeft) leftHeld = false;
+      if (isRight) rightHeld = false;
+      updateMoveDir();
+    }
+  }
+  window.addEventListener('keydown', onKey, {passive:false});
+  window.addEventListener('keyup', onKeyUp, {passive:false});
+
+  function bindBtn(id, fn){
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('click',()=>{ if(gameOver){ newGame(); } else if(!running){ togglePause(); fn(); } else { fn(); } });
+  }
+
+  function bindHoldBtn(id, dir){
+    const el=document.getElementById(id);
+    if(!el) return;
+    const setHeld = (isDown)=>{
+      if(!running || gameOver){
+        if(isDown) newGame();
+        return;
+      }
+      if(dir === 'left') leftHeld = isDown;
+      if(dir === 'right') rightHeld = isDown;
+      updateMoveDir();
+    };
+    el.addEventListener('pointerdown',(e)=>{
+      e.preventDefault();
+      if(el.setPointerCapture) el.setPointerCapture(e.pointerId);
+      setHeld(true);
+    });
+    const clear = (e)=>{ if(e) e.preventDefault(); setHeld(false); };
+    el.addEventListener('pointerup', clear);
+    el.addEventListener('pointercancel', clear);
+    el.addEventListener('pointerleave', clear);
+  }
+
+  bindHoldBtn('leftBtn', 'left');
+  bindHoldBtn('rightBtn', 'right');
   bindBtn('rotLBtn', ()=>rotate(-1));
   bindBtn('rotRBtn', ()=>rotate(1));
   bindBtn('hardBtn', ()=>hardDrop());
@@ -531,7 +778,15 @@ if (helpUp){
 
   // 🔊 Sound toggle (HUD)
   const soundBtn = document.getElementById('soundBtn');
-  function updateSoundBtn(){ if(soundBtn) soundBtn.textContent = muted ? 'Sound: Off' : 'Sound: On'; if(helpMute) helpMute.textContent = muted ? 'Sound: Off' : 'Sound: On'; }
+  function updateSoundBtn(){
+    const label = muted ? 'Sound: Off' : 'Sound: On';
+    const text = label + ' (' + SOUND_KEY + ')';
+    if(soundBtn){
+      soundBtn.textContent = text;
+      soundBtn.setAttribute('aria-label', 'Toggle sound (' + SOUND_KEY + ')');
+    }
+    if(helpMute) helpMute.textContent = text;
+  }
   function setMuted(m){
     muted = m; updateSoundBtn();
     if(muted){ stopMusic(); } else if(running && !gameOver){ ensureAudio(); startMusic(); }
@@ -540,28 +795,29 @@ if (helpUp){
 
   // 📖 HELP wiring
   function dismissHelp(action){ // 'start' | 'resume'
-  helpUp = false;
-  if (helpEl) helpEl.style.display = 'none';
-  if (action === 'start'){
-    newGame();
-  } else if (action === 'resume'){
-    running = true;
-    if (statusEl) statusEl.textContent = 'Press P to Pause';
-    ensureAudio(); if (!muted) startMusic();
+    helpUp = false;
+    if (helpEl) helpEl.style.display = 'none';
+    if (action === 'start'){
+      newGame();
+    } else if (action === 'resume'){
+      clearMoveState();
+      running = true;
+      if (statusEl) statusEl.textContent = 'Press P to Pause';
+      ensureAudio(); if (!muted) startMusic();
+    }
   }
-}
 
-if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
+  if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
   if (helpMute) helpMute.addEventListener('click', ()=> setMuted(!muted));
-if (helpEl)   helpEl.addEventListener('click',  ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
-if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation());
+  if (helpEl)   helpEl.addEventListener('click',  ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
+  if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation());
 
   updateSoundBtn();
 
   window.addEventListener('blur', ()=>{ if(running) togglePause(); });
   window.addEventListener('beforeunload', saveBest);
 
-  setInterval(()=>{ draw(); }, 200);
+
 })();
 </script>
 </body>

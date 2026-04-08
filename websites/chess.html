@@ -364,9 +364,14 @@ const HL_CHECK   = getComputedStyle(document.documentElement).getPropertyValue('
 let flipped = false;           // false = White bottom; true = Black bottom
 let vsComputer = false;
 let aiThinking = false;
+let lastFlipped = null;
+let lastSize = null;
 
 // ---------- Coordinates overlay ----------
 function drawCoordsOverlay() {
+  if (flipped === lastFlipped && SIZE === lastSize) return;
+  lastFlipped = flipped;
+  lastSize = SIZE;
   coordsEl.innerHTML = '';
   const PAD = 6; // small inset so labels sit inside the corner
 
@@ -391,7 +396,7 @@ function drawCoordsOverlay() {
       rank = 8 - r;
       y = r * SQ + PAD;
     } else {
-      rank = 8 - r;
+      rank = r + 1;
       y = SIZE - (r + 1) * SQ + PAD;
     }
     span.textContent = rank.toString();
@@ -977,7 +982,7 @@ function applyMove(mv, promotionChoice) {
       choice = (choice || 'q').toLowerCase();
       if (!['q','r','b','n'].includes(choice)) choice = 'q';
     }
-    fromPiece.type = choice;
+    st.board[mv.toRow][mv.toCol] = { type: choice, color: fromPiece.color };
   }
 
   // Castling rook move
@@ -1271,6 +1276,7 @@ const depth = Math.max(1, Math.min(6, parseInt(depthEl.value || '3', 10)));
   setTimeout(() => {
     stateHistory.push(cloneState(state));
     const mv = computeBestMoveForBlack(depth) || fallbackRandomMove('b');
+    if (!mv) return;
     const animInfo = buildAnimationFromMove(mv);
     applyMove(mv, 'q'); // AI auto-queens
     startAnimation(animInfo, () => {
@@ -1288,6 +1294,7 @@ const depth = Math.max(1, Math.min(6, parseInt(depthEl.value || '3', 10)));
 
 function fallbackRandomMove(color) {
   const moves = generateAllLegalMoves(color);
+  if (!moves.length) return null;
   return moves[Math.floor(Math.random() * moves.length)];
 }
 
@@ -1345,7 +1352,8 @@ function resizeLayout(){
 
   draw();
 }
-window.addEventListener('resize', resizeLayout);
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resizeLayout, 100); });
 
 
 // ---------- Init ----------
