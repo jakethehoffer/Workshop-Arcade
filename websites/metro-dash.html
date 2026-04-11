@@ -111,7 +111,7 @@ const VANISH_Y_RATIO = 0.38;
 const TRACK_BOTTOM_W_RATIO = 0.7;
 const TRACK_TOP_W_RATIO = 0.02;
 const NUM_LANES = 3;
-const PLAYER_Z = 0.15;
+const PLAYER_Z = 0.08;
 
 function HORIZON_LINE() { return H * VANISH_Y_RATIO; }
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -318,7 +318,7 @@ function spawnObstacle() {
 }
 
 function updateObstacles(dt60) {
-  const speed = gameSpeed * 0.008 * dt60;
+  const speed = gameSpeed * 0.004 * dt60;
   spawnTimer += dt60;
   const spawnInterval = Math.max(30, 60 - distance * 0.03);
   if (spawnTimer >= spawnInterval) { spawnObstacle(); spawnTimer = 0; }
@@ -397,7 +397,7 @@ function spawnCoinRow() {
 }
 
 function updateCoins(dt60) {
-  const speed = gameSpeed * 0.008 * dt60;
+  const speed = gameSpeed * 0.004 * dt60;
   coinSpawnTimer += dt60;
   if (coinSpawnTimer >= 45) { spawnCoinRow(); coinSpawnTimer = 0; }
 
@@ -568,7 +568,7 @@ function stopMusic() {
 /* ----- Game state ----- */
 let state = "title";
 let lastTime = null;
-let gameSpeed = 5;
+let gameSpeed = 3;
 let distance = 0;
 let coins = 0;
 let newBestThisRun = false;
@@ -579,7 +579,7 @@ try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
 
 function startGame() {
   state = "playing";
-  distance = 0; coins = 0; gameSpeed = 5;
+  distance = 0; coins = 0; gameSpeed = 3;
   player.lane = 0; player.targetLane = 0; player.laneX = 0;
   player.y = 0; player.vy = 0;
   player.isJumping = false; player.isSliding = false;
@@ -756,7 +756,7 @@ function loop(now) {
   if (state === "playing") {
     updatePlayer(dt60);
     distance += currentSpeed * dt60 * 0.1;
-    gameSpeed = 5 + distance * 0.005;
+    gameSpeed = 3 + distance * 0.003;
     updateObstacles(dt60);
     updateCoins(dt60);
   }
