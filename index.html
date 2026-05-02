@@ -95,6 +95,16 @@
 
     /* Empty state */
     .empty{padding:40px;border:1px dashed var(--stroke);border-radius:14px;text-align:center;color:var(--muted)}
+    .queue{margin-top:24px;border-top:1px solid var(--stroke);padding-top:18px}
+    .queue-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .queue-head h2{margin:0;font-size:20px}
+    .queue-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .queue-list{display:grid;gap:8px}
+    .queue-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:#0a1322;
+      border:1px solid #1d314d;border-radius:12px;padding:12px}
+    .queue-row strong{display:block;font-size:14px;line-height:1.25}
+    .queue-row span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+    .queue-state{font-size:12px;color:var(--muted);min-height:18px}
 
     /* Workshop modal */
     [hidden]{display:none!important}
@@ -133,6 +143,8 @@
       .choice-grid{grid-template-columns:1fr}
       .card-actions{width:100%;margin-left:0}
       .row{align-items:flex-start;flex-wrap:wrap}
+      .queue-head,.queue-row{grid-template-columns:1fr;display:grid}
+      .queue-actions{justify-content:flex-start}
     }
 
     /* Focus outlines for accessibility */
@@ -189,6 +201,19 @@
       </article>
     </template>
     <div id="empty" class="empty" hidden>No results. Try a different search or filter.</div>
+    <section class="queue" aria-labelledby="queueTitle">
+      <div class="queue-head">
+        <div>
+          <h2 id="queueTitle">Improvement Queue</h2>
+          <div class="queue-state" id="queueStatus" aria-live="polite">Tracked in GitHub issues</div>
+        </div>
+        <div class="queue-actions">
+          <button class="btn subtle" type="button" id="newQueueRequestBtn">New Request</button>
+          <a class="btn" id="openQueueLink" href="https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request" target="_blank" rel="noopener">Open Queue</a>
+        </div>
+      </div>
+      <div class="queue-list" id="queueList"></div>
+    </section>
   </main>
 
   <div class="modal" id="workshopModal" hidden>
@@ -308,6 +333,9 @@ const els = {
   sort: document.getElementById('sort'),
   resultCount: document.getElementById('resultCount'),
   empty: document.getElementById('empty'),
+  queueStatus: document.getElementById('queueStatus'),
+  queueList: document.getElementById('queueList'),
+  newQueueRequestBtn: document.getElementById('newQueueRequestBtn'),
   workshopModal: document.getElementById('workshopModal'),
   workshopCard: document.querySelector('.workshop-card'),
   workshopForm: document.getElementById('workshopForm'),
@@ -344,6 +372,7 @@ loadDrafts();
   buildFilters();
   populateWorkshopGames();
   update();
+  renderIssueQueueSummary();
   // If the URL has #play=slug, auto-open in a new tab
   syncHash();
 })();
@@ -441,6 +470,29 @@ function render(){
   els.empty.hidden = n !== 0;
 }
 
+function renderIssueQueueSummary(){
+  els.queueStatus.textContent = 'Tracked in GitHub issues';
+  els.queueList.innerHTML = '';
+
+  const row = document.createElement('a');
+  row.className = 'queue-row';
+  row.href = 'https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request';
+  row.target = '_blank';
+  row.rel = 'noopener';
+
+  const meta = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = 'Open workshop-request issues';
+  const detail = document.createElement('span');
+  detail.textContent = 'Review, prioritize, and close game improvement requests in GitHub.';
+  meta.append(title, detail);
+
+  const action = document.createElement('span');
+  action.textContent = 'View';
+  row.append(meta, action);
+  els.queueList.appendChild(row);
+}
+
 function placeholderCover(title){
   // Generate a unique hue from the title so every game gets a distinct colour
   let h = 0; for(let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) & 0xfff;
@@ -535,6 +587,7 @@ function generateBrief(){
     `Game: ${title}`,
     `File: ${file}`,
     `Catalog tags: ${tags}`,
+    'Labels: workshop-request, enhancement',
     '',
     'Upgrade request:',
     goal,
@@ -685,9 +738,10 @@ function openGitHubIssue(){
   const game = selectedWorkshopGame();
   const title = game ? game.title : (els.newGameTitle.value.trim() || 'New game submission');
   const params = new URLSearchParams({
+    template: 'workshop-request.md',
     title: `Workshop: ${title}`,
     body: `${brief}\n\nSubmitted from the Workshop Arcade catalog.`,
-    labels: 'enhancement'
+    labels: 'workshop-request,enhancement'
   });
   window.open(`${GITHUB_ISSUE_URL}?${params.toString()}`, '_blank', 'noopener');
   setStatus('GitHub issue draft opened.');
@@ -710,6 +764,7 @@ els.saveDraftBtn.addEventListener('click', saveDraft);
 els.copyBriefBtn.addEventListener('click', copyBrief);
 els.downloadBriefBtn.addEventListener('click', downloadBrief);
 els.openIssueBtn.addEventListener('click', openGitHubIssue);
+els.newQueueRequestBtn.addEventListener('click', () => openWorkshop('__new__'));
 els.openSelectedGameBtn.addEventListener('click', () => {
   const game = selectedWorkshopGame();
   if(game) openPlayer(game);
