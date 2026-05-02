@@ -23,3 +23,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 ```
 
 The validator checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, and a synchronized fallback catalog in `index.html`.
+
+See `CONTRIBUTING.md` for the full add/update/remove checklist.
