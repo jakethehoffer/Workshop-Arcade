@@ -165,13 +165,20 @@ canvas{
   cursor: pointer;
 }
 .go-actions button:hover{ background:#1f293b; }
-.go-note{
+  .go-note{
   margin-top:10px;
   font-size:12px;
   opacity:.8;
 }
+@media (max-width: 760px){
+  .wrap{height:auto;min-height:100vh;flex-direction:column;align-items:center;overflow-x:hidden}
+  .left{width:100%;justify-content:center}
+  canvas{max-width:100%;height:auto}
+  .side{width:100%;min-width:0;max-height:none}
+}
 
 </style>
+  <script src="workshop-runtime.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -1330,13 +1337,15 @@ function resizeLayout(){
   const sideCSSWidth = 360;           // matches .side width
   const gap = 20;                     // matches .wrap gap
   const wrapPad = 32;                 // 16px left + 16px right
+  const compact = window.innerWidth <= 760;
 
   // Target board size = min(available height, available width next to the side)
   const availH = window.innerHeight - wrapPad;                       // keep a top/bottom gutter
-  const availW = window.innerWidth - (sideCSSWidth + gap + wrapPad); // room left of panel
+  const availW = compact ? window.innerWidth - wrapPad : window.innerWidth - (sideCSSWidth + gap + wrapPad); // room left of panel
 
   // Keep a little breathing room (12px border around board)
-  const boardSize = Math.max(480, Math.min(availH - 24, availW - 24)); // clamp to >=480px
+  const minBoard = compact ? 280 : 480;
+  const boardSize = Math.max(minBoard, Math.min(availH - 24, availW - 24)); // clamp for desktop and mobile
 
   // Update logical size used by all draw routines
   SIZE = Math.floor(boardSize);

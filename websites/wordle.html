@@ -80,7 +80,7 @@
   select,button,input[type=checkbox]{accent-color:var(--accent)}
   button{cursor:pointer}
   main{display:grid;justify-items:center;align-items:center;padding:6px}
-  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:8px;width:min(100vw,520px);aspect-ratio: 5 / 6}
+  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:8px;width:min(100%,520px);aspect-ratio: 5 / 6}
   .row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .tile{border:2px solid var(--stroke);display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:28px;text-transform:uppercase;background:var(--panel)}
   .tile.filled{border-color:#475569}
@@ -91,7 +91,7 @@
   @keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
   .shake{animation:shake .45s linear}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-  .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:8px;width:min(100vw,540px);margin:6px auto 16px}
+  .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:8px;width:min(100%,540px);margin:6px auto 16px}
   .keys{display:grid;grid-template-columns:repeat(10,1fr);gap:8px}
   .keys.row2{grid-template-columns:repeat(9,1fr);margin:0 18px}
   .keys.row3{grid-template-columns:1.5fr repeat(7,1fr) 1.5fr}
@@ -115,7 +115,15 @@
   .meta{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
   .stat{background:#0f172a;border:1px solid var(--stroke);border-radius:12px;padding:8px 10px;font-size:12px}
   .sr{position:absolute;left:-10000px}
+  @media (max-width: 480px){
+    main{padding:6px 4px}
+    .board,.keyboard{gap:5px}
+    .row,.keys{gap:5px}
+    .keys.row2{margin:0 10px}
+    .key{padding:9px 4px}
+  }
 </style>
+  <script src="workshop-runtime.js"></script>
 </head>
 <body>
 <div class="wrap">

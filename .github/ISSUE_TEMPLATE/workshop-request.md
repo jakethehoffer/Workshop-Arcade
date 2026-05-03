@@ -25,6 +25,9 @@ labels: "workshop-request, enhancement"
 ## Acceptance checks
 
 - [ ] The catalog loads without broken game links or missing covers.
+- [ ] The game follows `docs/game-contract.md`.
 - [ ] The game starts, restarts, and handles its main controls.
 - [ ] Text and controls do not overlap on desktop or mobile.
+- [ ] `scripts/validate-catalog.ps1 -Fix` has been run when catalog metadata changed.
 - [ ] `scripts/validate-catalog.ps1` passes before publishing.
+- [ ] `npm run test:games` passes before publishing.

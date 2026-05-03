@@ -3,10 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pac-Man Arcade</title>
+    <title>Maze Chase Arcade</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap");
-
       :root {
         --bg-1: #0a0f1f;
         --bg-2: #121c3a;
@@ -26,7 +24,7 @@
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "Share Tech Mono", monospace;
+        font-family: Consolas, "Liberation Mono", ui-monospace, monospace;
         color: var(--ink);
         background:
           radial-gradient(circle at 15% 20%, rgba(76, 201, 240, 0.18), transparent 50%),
@@ -67,7 +65,7 @@
       }
 
       .title {
-        font-family: "Press Start 2P", monospace;
+        font-family: Impact, "Arial Black", ui-sans-serif, system-ui, sans-serif;
         font-size: clamp(22px, 3vw, 32px);
         letter-spacing: 2px;
         text-transform: uppercase;
@@ -126,7 +124,7 @@
         background: rgba(15, 24, 48, 0.9);
         color: var(--yellow);
         padding: 12px 16px;
-        font-family: "Share Tech Mono", monospace;
+        font-family: Consolas, "Liberation Mono", ui-monospace, monospace;
         letter-spacing: 1px;
         text-transform: uppercase;
         cursor: pointer;
@@ -195,7 +193,7 @@
       }
 
       .overlay-card h2 {
-        font-family: "Press Start 2P", monospace;
+        font-family: Impact, "Arial Black", ui-sans-serif, system-ui, sans-serif;
         font-size: 1rem;
         color: var(--neon);
         margin: 0 0 12px;
@@ -216,7 +214,7 @@
       }
 
       .btn {
-        font-family: "Press Start 2P", monospace;
+        font-family: Impact, "Arial Black", ui-sans-serif, system-ui, sans-serif;
         font-size: 0.65rem;
         padding: 10px 14px;
         border-radius: 10px;
@@ -262,11 +260,12 @@
         }
       }
     </style>
-  </head>
+    <script src="workshop-runtime.js"></script>
+</head>
   <body>
     <main class="page">
       <header>
-        <div class="title">Pac-Man Arcade</div>
+        <div class="title">Maze Chase Arcade</div>
         <div class="subtitle">
           Clear every pellet, chain power bites, and keep your streak alive. Use
           arrows or WASD, then press Enter to start.
@@ -296,7 +295,7 @@
         </div>
 
         <div class="game-wrap">
-          <canvas id="game" aria-label="Pac-Man game board"></canvas>
+          <canvas id="game" aria-label="Maze Chase game board"></canvas>
           <div class="overlay show" id="overlay">
             <div class="overlay-card">
               <h2 id="overlay-title">Ready</h2>
@@ -314,7 +313,7 @@
       <div class="footer">
         <div>Controls: arrows or WASD.</div>
         <div>Pause: space or P.</div>
-        <div>Power pellets slow ghosts, but the clock is short.</div>
+        <div>Power pellets slow sentries, but the clock is short.</div>
       </div>
     </main>
 
@@ -395,7 +394,7 @@
         const state = {
           phase: "ready",
           score: 0,
-          highScore: Number(localStorage.getItem("pacmanHigh") || 0),
+          highScore: Number(localStorage.getItem("mazeChaseHigh") || 0),
           level: 1,
           lives: 3,
           frightenedTimer: 0,
@@ -413,8 +412,8 @@
           disableGlobalAfterRelease: false,
         };
 
-        const dotReleaseOrder = ["Pinky", "Inky", "Clyde"];
-        const globalDotThresholds = { Pinky: 7, Inky: 17, Clyde: 32 };
+        const dotReleaseOrder = ["Rosewire", "Bluewire", "Amberline"];
+        const globalDotThresholds = { Rosewire: 7, Bluewire: 17, Amberline: 32 };
 
         const modeSchedule = [7, 20, 7, 20, 5, 20, 5, Infinity];
         const modeState = { index: 0, timer: modeSchedule[0] };
@@ -460,10 +459,10 @@
         const blinkyStart = exitTile;
 
         const ghosts = [
-          createGhost("Blinky", "#ff4d6d", houseCenter, blinkyStart, houseCenter, tileCenter(width - 2, 1)),
-          createGhost("Pinky", "#ff9ff3", houseCenter, houseCenter, houseCenter, tileCenter(1, 1)),
-          createGhost("Inky", "#4dd0ff", houseCenter, houseLeft, houseLeft, tileCenter(width - 2, height - 2)),
-          createGhost("Clyde", "#ffb347", houseCenter, houseRight, houseRight, tileCenter(1, height - 2)),
+          createGhost("Redshift", "#ff4d6d", houseCenter, blinkyStart, houseCenter, tileCenter(width - 2, 1)),
+          createGhost("Rosewire", "#ff9ff3", houseCenter, houseCenter, houseCenter, tileCenter(1, 1)),
+          createGhost("Bluewire", "#4dd0ff", houseCenter, houseLeft, houseLeft, tileCenter(width - 2, height - 2)),
+          createGhost("Amberline", "#ffb347", houseCenter, houseRight, houseRight, tileCenter(1, height - 2)),
         ];
 
         let pellets = new Set();
@@ -490,7 +489,7 @@
           sfx: 0.38,
         };
 
-        const savedMuted = localStorage.getItem("pacmanMuted") === "1";
+        const savedMuted = localStorage.getItem("mazeChaseMuted") === "1";
 
         const audio = {
           ctx: null,
@@ -734,7 +733,7 @@
 
         function setMuted(isMuted) {
           audio.muted = isMuted;
-          localStorage.setItem("pacmanMuted", isMuted ? "1" : "0");
+          localStorage.setItem("mazeChaseMuted", isMuted ? "1" : "0");
           if (audio.ctx && audio.master) {
             const target = isMuted ? 0 : audioLevels.master;
             audio.master.gain.setTargetAtTime(target, audio.ctx.currentTime, 0.06);
@@ -771,13 +770,13 @@
         }
 
         function getDotLimitForGhost(name) {
-          if (name === "Pinky") {
+          if (name === "Rosewire") {
             return 0;
           }
-          if (name === "Inky") {
+          if (name === "Bluewire") {
             return state.level === 1 ? 30 : 0;
           }
-          if (name === "Clyde") {
+          if (name === "Amberline") {
             if (state.level === 1) {
               return 60;
             }
@@ -826,7 +825,7 @@
           ghosts.forEach((ghost) => {
             ghost.pos = { ...ghost.start };
             ghost.dir = -1;
-            ghost.state = ghost.name === "Blinky" ? "normal" : "waiting";
+            ghost.state = ghost.name === "Redshift" ? "normal" : "waiting";
             ghost.inHouse = tileAt(Math.floor(ghost.pos.x), Math.floor(ghost.pos.y)) === "H";
             ghost.houseTarget = ghost.houseTop;
             ghost.respawnTimer = 0;
@@ -853,7 +852,7 @@
         function updateHud() {
           if (state.score > state.highScore) {
             state.highScore = state.score;
-            localStorage.setItem("pacmanHigh", state.highScore);
+            localStorage.setItem("mazeChaseHigh", state.highScore);
           }
           scoreEl.textContent = state.score;
           highScoreEl.textContent = state.highScore;
@@ -1045,14 +1044,14 @@
         }
 
         function getGlobalReleaseCandidate() {
-          if (house.globalCounter === globalDotThresholds.Pinky) {
-            return getGhostByName("Pinky");
+          if (house.globalCounter === globalDotThresholds.Rosewire) {
+            return getGhostByName("Rosewire");
           }
-          if (house.globalCounter === globalDotThresholds.Inky) {
-            return getGhostByName("Inky");
+          if (house.globalCounter === globalDotThresholds.Bluewire) {
+            return getGhostByName("Bluewire");
           }
-          if (house.globalCounter === globalDotThresholds.Clyde) {
-            return getGhostByName("Clyde");
+          if (house.globalCounter === globalDotThresholds.Amberline) {
+            return getGhostByName("Amberline");
           }
           return null;
         }
@@ -1064,7 +1063,7 @@
             const candidate = getGlobalReleaseCandidate();
             if (isGhostReadyToLeave(candidate)) {
               house.pendingRelease = candidate;
-              if (house.globalCounter === globalDotThresholds.Clyde) {
+              if (house.globalCounter === globalDotThresholds.Amberline) {
                 house.disableGlobalAfterRelease = true;
               }
             }
@@ -1440,10 +1439,10 @@
         function getChaseTarget(ghost) {
           const ahead = getPacmanAhead(4);
 
-          if (ghost.name === "Pinky") {
+          if (ghost.name === "Rosewire") {
             return ahead;
           }
-          if (ghost.name === "Inky") {
+          if (ghost.name === "Bluewire") {
             const blinky = ghosts[0];
             const pivot = getPacmanAhead(2);
             return {
@@ -1451,7 +1450,7 @@
               y: pivot.y + (pivot.y - blinky.pos.y),
             };
           }
-          if (ghost.name === "Clyde") {
+          if (ghost.name === "Amberline") {
             const dx = Math.floor(pacman.pos.x) - Math.floor(ghost.pos.x);
             const dy = Math.floor(pacman.pos.y) - Math.floor(ghost.pos.y);
             const dist = Math.sqrt(dx * dx + dy * dy);
