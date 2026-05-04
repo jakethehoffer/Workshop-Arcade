@@ -25,3 +25,11 @@ Original prompt: Do this for me
 - Tightened Solitaire header/HUD, desktop board scale, mobile card readability, footer density, and added `render_game_to_text` / `advanceTime` diagnostics for stock/waste, foundations, tableau, moves, draw mode, time, stuck/win state, and last hint/action.
 - Verified with the required web-game Playwright client plus direct interaction assertions for Chess move/undo and Solitaire draw/hint/undo/restart. Catalog validation and full game smoke tests passed locally.
 - Suggested next pass: continue rendered-quality ranking with the remaining older DOM games that lack first-class diagnostic hooks or have dense mobile control surfaces.
+
+## 2026-05-04 Codex pass 4
+
+- Refreshed the full 20-game desktop/mobile contact sheet into `test-results/quality-pass-4/before/contact-sheet.png`.
+- Selected Checkers, Lexica, and 2048 as the next pass targets from current screenshots and hook coverage: Checkers had slight mobile overflow and no diagnostics, Lexica opened with a blocking startup modal and no diagnostics, and 2048 lacked diagnostics plus responsive shell polish.
+- Initial implementation: tightened Checkers and 2048 responsive layout, made Lexica show the playable grid immediately, and added `render_game_to_text` / `advanceTime` hooks to all three targets.
+- Verified the edited targets with focused desktop/mobile captures in `test-results/quality-pass-4/after/`, the required web-game client, direct Playwright interaction assertions, catalog validation, and the full 20-game smoke suite.
+- Suggested next pass: add diagnostics to the remaining games without hooks, then do a smaller mobile control-density pass on any title still close to the overflow limit.

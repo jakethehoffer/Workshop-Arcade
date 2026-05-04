@@ -72,17 +72,17 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
     font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
-  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:14px}
-  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--stroke)}
+  .wrap{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid var(--stroke);flex-wrap:wrap}
   header h1{margin:0;font-size:20px;letter-spacing:.8px}
-  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .pill{background:#0f172a;border:1px solid var(--stroke);padding:6px 10px;border-radius:999px;color:var(--ink);font-size:12px}
   select,button,input[type=checkbox]{accent-color:var(--accent)}
   button{cursor:pointer}
-  main{display:grid;justify-items:center;align-items:center;padding:6px}
-  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:8px;width:min(100%,520px);aspect-ratio: 5 / 6}
+  main{display:grid;justify-items:center;align-content:center;padding:6px 10px;gap:10px}
+  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:7px;width:min(100%,440px);aspect-ratio: 5 / 6}
   .row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-  .tile{border:2px solid var(--stroke);display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:28px;text-transform:uppercase;background:var(--panel)}
+  .tile{border:2px solid var(--stroke);display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:clamp(22px,6vw,30px);text-transform:uppercase;background:var(--panel)}
   .tile.filled{border-color:#475569}
   .tile.reveal{transform:rotateX(0);animation:flip .55s ease forwards}
   .tile.state-c{background:var(--correct);border-color:var(--correct)}
@@ -91,11 +91,11 @@
   @keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
   .shake{animation:shake .45s linear}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-  .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:8px;width:min(100%,540px);margin:6px auto 16px}
+  .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:7px;width:min(100%,480px);margin:0 auto 8px}
   .keys{display:grid;grid-template-columns:repeat(10,1fr);gap:8px}
   .keys.row2{grid-template-columns:repeat(9,1fr);margin:0 18px}
   .keys.row3{grid-template-columns:1.5fr repeat(7,1fr) 1.5fr}
-  .key{background:var(--panel);border:1px solid var(--stroke);border-radius:8px;padding:10px;font-weight:700;text-transform:uppercase;text-align:center}
+  .key{background:var(--panel);border:1px solid var(--stroke);border-radius:8px;padding:9px 7px;font-weight:700;text-transform:uppercase;text-align:center}
   .key.wide{grid-column:span 2}
   .keys.row3 .key.wide{grid-column:auto}
   .key svg{width:24px;height:18px;display:block;margin:0 auto}
@@ -116,11 +116,19 @@
   .stat{background:#0f172a;border:1px solid var(--stroke);border-radius:12px;padding:8px 10px;font-size:12px}
   .sr{position:absolute;left:-10000px}
   @media (max-width: 480px){
-    main{padding:6px 4px}
-    .board,.keyboard{gap:5px}
+    .wrap{gap:6px}
+    header{padding:9px 10px}
+    header h1{font-size:18px}
+    .controls{gap:6px}
+    .pill{font-size:11px;padding:6px 8px}
+    main{padding:6px 6px;align-content:start}
+    .board{width:min(100%,330px);gap:5px}
+    .keyboard{width:min(100%,370px);gap:5px;margin-bottom:6px}
     .row,.keys{gap:5px}
     .keys.row2{margin:0 10px}
-    .key{padding:9px 4px}
+    .key{padding:8px 4px;min-height:38px}
+    footer{padding:7px 10px}
+    .status{font-size:12px}
   }
 </style>
   <script src="workshop-runtime.js"></script>
@@ -621,7 +629,60 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
     });
   }
 
-  
+  function renderGameToText(){
+    const rows = [];
+    for(let r=0;r<6;r++){
+      const guess = r < guesses.length ? guesses[r] : (r === guesses.length ? current : '');
+      rows.push({
+        row: r + 1,
+        text: guess,
+        committed: r < guesses.length,
+        states: r < guesses.length ? evaluate(guesses[r], secret).map(x => x.state) : []
+      });
+    }
+    const keyboard = {};
+    document.querySelectorAll('.key').forEach(key => {
+      const ch = key.dataset.key;
+      if(/^[a-z]$/.test(ch)){
+        keyboard[ch] = key.classList.contains('k-c') ? 'correct'
+          : key.classList.contains('k-p') ? 'present'
+          : key.classList.contains('k-a') ? 'absent'
+          : 'unknown';
+      }
+    });
+    return JSON.stringify({
+      game: 'Lexica',
+      ready: true,
+      columns: COLS,
+      guessesUsed: guesses.length,
+      guessesRemaining: Math.max(0, 6 - guesses.length),
+      currentGuess: current,
+      rows,
+      keyboard,
+      hardMode: !!hardChk.checked,
+      sound: !!soundChk.checked,
+      finished: !!finished,
+      answer: finished ? secret : null,
+      answerLength: secret.length,
+      status: statusEl.textContent,
+      dialogs: {
+        start: !!start.open,
+        help: !!help.open,
+        gameOver: !!over.open
+      }
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms = 0){
+    repaint();
+    return new Promise(resolve => {
+      setTimeout(() => {
+        repaint();
+        resolve(renderGameToText());
+      }, Math.max(0, ms));
+    });
+  };
 
   // ===== Buttons =====
   newBtn.addEventListener('click', () => {
@@ -644,11 +705,11 @@ document.addEventListener('keydown', () => AudioFX.start(), {once:true}); // ADD
   buildKeyboard();
   buildBoard();
   startNew();                              // CHANGED: create a secret immediately so scoring works
-    try { start.showModal(); } catch(e){} // ADDED (show home screen on load)
-    // Restore preference on load                                // ADDED
-try { soundChk.checked = JSON.parse(localStorage.getItem('lexica:sound') ?? 'true'); } catch(e){}
-// Save when changed                                          // ADDED
-soundChk.addEventListener('change', ()=> localStorage.setItem('lexica:sound', JSON.stringify(soundChk.checked)));
+  try { start.close(); } catch(e){} // Keep the playable grid visible on load.
+  // Restore preference on load                                // ADDED
+  try { soundChk.checked = JSON.parse(localStorage.getItem('lexica:sound') ?? 'true'); } catch(e){}
+  // Save when changed                                          // ADDED
+  soundChk.addEventListener('change', ()=> localStorage.setItem('lexica:sound', JSON.stringify(soundChk.checked)));
 
 
 })();
