@@ -18,50 +18,84 @@
 
   var style = document.createElement("style");
   style.textContent = `
-    :root{color-scheme:dark;--bg:#071018;--panel:#0d1827;--ink:#ecf7ff;--muted:#9bb4c7;--accent:#50f0c8;--line:#1c3146;--warn:#f7c66a}
+    :root{color-scheme:dark;--bg:#071018;--panel:#0d1827;--panel-strong:#111f33;--ink:#ecf7ff;--muted:#9bb4c7;--accent:#50f0c8;--accent-2:#f7c66a;--line:#1c3146;--warn:#f7c66a}
     *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#163250 0,#071018 48%,#04070c 100%);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+    html,body{min-height:100%}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 18% 0,#24476d 0,#0a1726 35%,#05080e 76%),linear-gradient(135deg,rgba(80,240,200,.08),rgba(247,198,106,.06));color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
     button,input{font:inherit}
-    .shell{width:min(1080px,100%);margin:0 auto;padding:22px;display:grid;gap:16px}
-    .hero{display:grid;gap:8px}
-    h1{margin:0;font-size:clamp(30px,6vw,56px);line-height:.95}
-    .sub{margin:0;color:var(--muted);max-width:720px;line-height:1.45}
-    .board{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px}
-    .panel{background:rgba(13,24,39,.92);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.32);padding:16px}
-    .stats{display:flex;gap:10px;flex-wrap:wrap}
-    .pill{border:1px solid var(--line);background:#091321;border-radius:999px;padding:8px 11px;color:var(--muted);font-weight:700}
-    .pill strong{color:var(--ink)}
-    .clues{display:grid;gap:10px;margin:16px 0}
-    .clue{border:1px solid var(--line);border-radius:12px;background:#081321;padding:12px}
-    .clue span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:800}
-    .guess{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:12px}
-    input{min-width:0;border:1px solid var(--line);border-radius:12px;background:#050b13;color:var(--ink);padding:12px;outline:0}
+    .shell{width:min(1180px,100%);min-height:100vh;margin:0 auto;padding:clamp(18px,3vw,34px);display:grid;grid-template-rows:auto minmax(0,1fr);gap:18px;align-content:center}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end}
+    .eyebrow{color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}
+    h1{margin:5px 0 0;font-size:clamp(36px,6vw,72px);line-height:.9;text-shadow:0 10px 34px rgba(80,240,200,.16)}
+    .sub{margin:8px 0 0;color:var(--muted);max-width:720px;line-height:1.45;font-size:clamp(15px,2vw,18px)}
+    .round-card{align-self:stretch;display:grid;gap:4px;align-content:center;min-width:180px;border:1px solid rgba(80,240,200,.24);border-radius:18px;background:rgba(5,11,19,.62);padding:14px 16px;box-shadow:0 16px 40px rgba(0,0,0,.26)}
+    .round-card span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:900}
+    .round-card strong{font-size:28px;color:var(--accent-2)}
+    .board{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:18px;align-items:stretch}
+    .panel{background:linear-gradient(180deg,rgba(17,31,51,.94),rgba(9,19,33,.94));border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.03);padding:18px}
+    .play-panel{display:grid;grid-template-rows:auto 1fr auto auto;min-height:510px}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .pill{border:1px solid var(--line);background:#091321;border-radius:14px;padding:10px 12px;color:var(--muted);font-weight:800}
+    .pill strong{display:block;color:var(--ink);font-size:24px;line-height:1.1;margin-top:2px}
+    .clues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0;align-content:start}
+    .clue{border:1px solid rgba(80,240,200,.14);border-radius:16px;background:linear-gradient(180deg,#0c1828,#081321);padding:15px;min-height:104px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+    .clue:first-child{grid-column:1/-1;background:linear-gradient(135deg,rgba(80,240,200,.12),rgba(247,198,106,.08)),#0a1727}
+    .clue span{display:block;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;font-weight:900}
+    .guess{display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:10px;margin-top:12px}
+    input{min-width:0;border:1px solid var(--line);border-radius:14px;background:#050b13;color:var(--ink);padding:13px 14px;outline:0}
     input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(80,240,200,.18)}
-    button{border:1px solid var(--line);border-radius:12px;background:#102033;color:var(--ink);font-weight:800;padding:11px 13px;cursor:pointer}
+    button{border:1px solid var(--line);border-radius:14px;background:#102033;color:var(--ink);font-weight:900;padding:12px 14px;cursor:pointer}
     button.primary{background:linear-gradient(180deg,#5cf2cc,#26cbb6);color:#042524;border:0}
     button:hover{border-color:#335f82}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .result{min-height:26px;margin-top:12px;color:var(--warn);font-weight:800}
+    .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+    .result{min-height:30px;margin-top:12px;color:var(--warn);font-weight:900}
     .bank-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
-    .bank{display:grid;gap:8px;max-height:470px;overflow:auto;padding-right:4px}
-    .bank button{text-align:left;background:#07111d;border-radius:10px;padding:9px 10px;font-weight:700}
-    .bank small{display:block;color:var(--muted);font-weight:600;margin-top:3px}
-    @media (max-width:820px){.shell{padding:14px}.board{grid-template-columns:1fr}.guess{grid-template-columns:1fr}.bank{max-height:260px}}
+    .bank-head strong{font-size:18px}
+    .bank{display:grid;gap:8px;max-height:536px;overflow:auto;padding-right:4px}
+    .bank button{text-align:left;background:#07111d;border-radius:12px;padding:10px 11px;font-weight:800}
+    .bank small{display:block;color:var(--muted);font-weight:600;margin-top:4px}
+    @media (max-width:820px){
+      .shell{padding:14px;align-content:start}
+      .hero{grid-template-columns:1fr}
+      .round-card{display:none}
+      .board{grid-template-columns:1fr}
+      .play-panel{min-height:auto}
+      .clues{grid-template-columns:1fr}
+      .guess{grid-template-columns:1fr}
+      .actions{grid-template-columns:1fr 1fr}
+      .bank{max-height:300px}
+      .stats{grid-template-columns:repeat(3,1fr)}
+      .pill{padding:9px}
+      .pill strong{font-size:20px}
+    }
+    @media (max-width:420px){
+      h1{font-size:clamp(34px,11vw,48px)}
+      .panel{padding:14px}
+      .actions{grid-template-columns:1fr}
+      .stats{gap:7px}
+    }
   `;
   document.head.appendChild(style);
 
   document.body.innerHTML = `
     <main class="shell">
       <section class="hero">
-        <h1>${escapeHtml(config.title)}</h1>
-        <p class="sub">${escapeHtml(config.subtitle || "")}</p>
+        <div>
+          <div class="eyebrow">Workshop Arcade Dossier</div>
+          <h1>${escapeHtml(config.title)}</h1>
+          <p class="sub">${escapeHtml(config.subtitle || "")}</p>
+        </div>
+        <div class="round-card">
+          <span>Current Case</span>
+          <strong id="caseNumber">01</strong>
+        </div>
       </section>
       <section class="board">
-        <div class="panel">
+        <div class="panel play-panel">
           <div class="stats">
-            <div class="pill">Streak: <strong id="streak">0</strong></div>
-            <div class="pill">Best: <strong id="best">${state.best}</strong></div>
-            <div class="pill">Clues: <strong id="clueCount">3</strong></div>
+            <div class="pill">Streak <strong id="streak">0</strong></div>
+            <div class="pill">Best <strong id="best">${state.best}</strong></div>
+            <div class="pill">Clues <strong id="clueCount">3</strong></div>
           </div>
           <div class="clues" id="clues"></div>
           <div class="guess">
@@ -102,6 +136,7 @@
     bank: document.getElementById("bank"),
     bankCount: document.getElementById("bankCount")
   };
+  els.caseNumber = document.getElementById("caseNumber");
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (char) {
@@ -117,8 +152,10 @@
     state.answer = config.items[Math.floor(Math.random() * config.items.length)];
     state.cluesShown = Math.min(3, config.fields.length);
     state.revealed = false;
+    state.round = (state.round || 0) + 1;
     els.guess.value = "";
     els.result.textContent = "";
+    if (els.caseNumber) els.caseNumber.textContent = String(state.round).padStart(2, "0");
     renderClues();
     renderBank();
     els.guess.focus();
@@ -181,6 +218,27 @@
     els.streak.textContent = state.streak;
     els.best.textContent = state.best;
   }
+
+  window.render_game_to_text = function () {
+    return JSON.stringify({
+      game: config.title,
+      mode: state.revealed ? "revealed" : "guessing",
+      round: state.round || 1,
+      streak: state.streak,
+      best: state.best,
+      cluesShown: state.cluesShown,
+      visibleClues: config.fields.slice(0, state.cluesShown).map(function (field) {
+        return { label: field.label, value: state.answer[field.key] };
+      }),
+      answer: state.answer ? state.answer.name : null,
+      result: els.result.textContent,
+      bankCount: config.items.length
+    });
+  };
+
+  window.advanceTime = function () {
+    return window.render_game_to_text();
+  };
 
   els.guessBtn.addEventListener("click", submitGuess);
   els.guess.addEventListener("keydown", function (event) {
