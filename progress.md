@@ -17,3 +17,11 @@ Original prompt: Do this for me
 - Implemented shared fact-match visual upgrade and added `render_game_to_text` / `advanceTime` hooks for automated inspection.
 - Verified the pass with rerendered desktop/mobile screenshots, required web-game client runs, catalog validation, full game smoke tests, and `git diff --check`.
 - Suggested next pass: polish Chess/Solitaire desktop density and add text-state hooks to more non-canvas games so rendered regressions are easier to diagnose.
+
+## 2026-05-04 Codex pass 3
+
+- Refreshed Chess and Klondike Solitaire desktop/mobile baselines into `test-results/quality-pass-3/before/` and rerendered the edited pass into `test-results/quality-pass-3/after/`.
+- Tightened Chess board/sidebar density, mobile stacking, controls, move-history sizing, and added `render_game_to_text` / `advanceTime` diagnostics for board occupancy, move state, check state, flip state, and AI mode.
+- Tightened Solitaire header/HUD, desktop board scale, mobile card readability, footer density, and added `render_game_to_text` / `advanceTime` diagnostics for stock/waste, foundations, tableau, moves, draw mode, time, stuck/win state, and last hint/action.
+- Verified with the required web-game Playwright client plus direct interaction assertions for Chess move/undo and Solitaire draw/hint/undo/restart. Catalog validation and full game smoke tests passed locally.
+- Suggested next pass: continue rendered-quality ranking with the remaining older DOM games that lack first-class diagnostic hooks or have dense mobile control surfaces.

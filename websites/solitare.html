@@ -17,43 +17,44 @@
     --bad:#ef4444;
     --stroke:#223047;
 
-    --card-w:94px;
-    --card-h:132px;
+    --card-w:104px;
+    --card-h:146px;
     --radius:12px;
-    --fan-up: 36px;      /* spacing for face-up cards in tableau */
-    --fan-down: 14px;    /* spacing for face-down cards in tableau */
-    --gap: 16px;
+    --fan-up: 34px;
+    --fan-down: 13px;
+    --gap: 12px;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+  html,body{height:100%;margin:0;background:
+    radial-gradient(circle at 28% 8%, rgba(94,234,212,0.1), transparent 28%),
+    linear-gradient(180deg,#0c121b,var(--bg));color:var(--ink);
     font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
-  .wrap{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:12px}
-  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0));position:sticky;top:0;z-index:20}
-  header h1{font-size:18px;margin:0 10px 0 0;opacity:.9}
-  header .controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-  button,select,input[type="number"],input[type="text"]{background:#0f1726;border:1px solid var(--stroke);color:var(--ink);padding:8px 10px;border-radius:10px;cursor:pointer}
+  .wrap{min-height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:8px}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--stroke);background:rgba(11,15,20,0.82);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+  header h1{font-size:19px;margin:0 6px 0 0;opacity:.92}
+  header .controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  button,select,input[type="number"],input[type="text"]{background:#0f1726;border:1px solid var(--stroke);color:var(--ink);padding:7px 9px;border-radius:9px;cursor:pointer;font-size:12px}
   button:hover{border-color:#2c3a56}
   button.primary{border-color:#2e435f;box-shadow:0 0 0 1px rgba(94,234,212,.15) inset}
   button.good{border-color:#2b5f3b}
   button.warn{border-color:#5b4b26}
-  .toggle{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--stroke);background:#0f1726}
+  .toggle{display:inline-flex;gap:6px;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid var(--stroke);background:#0f1726;font-size:12px}
   .toggle input{accent-color:var(--accent)}
-  .hud{margin-left:auto;display:flex;gap:12px;align-items:center;color:var(--muted);font-size:13px}
+  .hud{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
   .hud .dot{width:8px;height:8px;border-radius:99px;background:var(--accent);display:inline-block;margin-right:6px}
 
-  main{padding:10px 14px 24px}
-  .board{width:100%;max-width:1200px;margin:0 auto;display:grid;gap:var(--gap);grid-template-rows:var(--card-h) 1fr}
-  .top{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap)}
-  .bottom{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap);align-content:start}
+  main{padding:8px 12px 12px;display:flex;align-items:flex-start;justify-content:center}
+  .board{width:min(100%, 980px);display:grid;gap:var(--gap);grid-template-rows:calc(var(--card-h) + 8px) 1fr}
+  .top{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--gap);min-width:0}
+  .bottom{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--gap);align-content:start;min-width:0}
   .pile{position:relative;
-    /* Make pile just a bit larger than a card and center it */
-    width: calc(var(--card-w) + 12px);
-    min-height: calc(var(--card-h) + 12px);
+    width: calc(var(--card-w) + 8px);
+    min-height: calc(var(--card-h) + 8px);
     margin-inline:auto;
-    padding:6px 0; /* vertical breathing room for a visible perimeter */
+    padding:4px 0;
     background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
     border:1px dashed rgba(255,255,255,0.06);
-    border-radius:14px;
+    border-radius:13px;
   }
   .pile.stock,.pile.waste{background:none;border:1px dashed rgba(255,255,255,0.08)}
   .label{position:absolute;inset:auto auto 6px 8px;color:var(--muted);font-size:12px;pointer-events:none}
@@ -96,25 +97,32 @@
     transform:none !important;
   }
 
-  footer{padding:10px 14px;border-top:1px solid var(--stroke);color:var(--muted);font-size:12px}
+  footer{padding:8px 12px;border-top:1px solid var(--stroke);color:var(--muted);font-size:11px;line-height:1.35}
   .sr{position:absolute;left:-10000px}
 
   @media (max-width: 900px){
-    :root{--card-w:78px;--card-h:110px;--fan-up:30px;--fan-down:12px}
+    :root{--card-w:86px;--card-h:120px;--fan-up:30px;--fan-down:12px}
   }
   @media (max-width: 700px){
-    :root{--card-w:66px;--card-h:96px;--fan-up:26px;--fan-down:10px}
+    :root{--card-w:66px;--card-h:96px;--fan-up:25px;--fan-down:10px;--gap:8px}
+    header{position:static}
+    .hud{width:100%;margin-left:0;justify-content:space-between}
   }
   @media (max-width: 480px){
-    :root{--card-w:clamp(28px,9vw,36px);--card-h:52px;--fan-up:18px;--fan-down:8px;--gap:4px}
-    main{padding:6px 4px 18px}
-    header{padding:10px 8px}
+    :root{--card-w:clamp(42px,12vw,48px);--card-h:64px;--fan-up:20px;--fan-down:8px;--gap:5px}
+    main{padding:6px 4px 10px}
+    header{padding:10px 8px;gap:8px}
+    header h1{font-size:20px;width:100%}
+    header .controls{gap:6px}
+    button{font-size:12px;padding:8px 9px}
+    .toggle{font-size:12px;padding:7px 9px}
     .board{gap:var(--gap)}
-    .pile{width:var(--card-w);min-height:var(--card-h);padding:0}
+    .pile{width:var(--card-w);min-height:var(--card-h);padding:0;border-radius:10px}
     .label{font-size:9px;left:2px;bottom:2px}
-    .card .rank{top:4px;left:5px;font-size:11px}
-    .card .suit{top:17px;left:5px;font-size:12px}
-    .card .pips{right:5px;bottom:4px;font-size:13px}
+    .card .rank{top:4px;left:5px;font-size:12px}
+    .card .suit{top:18px;left:5px;font-size:13px}
+    .card .pips{right:5px;bottom:4px;font-size:14px}
+    footer{font-size:11px;padding:8px 10px}
   }
 </style>
   <script src="workshop-runtime.js"></script>
@@ -338,6 +346,7 @@ function startAutoComplete(){
     f: [el('#f0'), el('#f1'), el('#f2'), el('#f3')],
     t: [el('#t0'), el('#t1'), el('#t2'), el('#t3'), el('#t4'), el('#t5'), el('#t6')]
   };
+  let lastAction = 'Ready';
 
   function cardEl(card){
     const div = document.createElement('div');
@@ -431,6 +440,7 @@ updateAutoCompleteVisibility();   // <-- add this line
   function deal(seed){
     // ✅ CHANGED: seed ignores any DOM input; uses provided seed or random
     state.seed = (seed ?? (Math.floor(Math.random()*1e9)>>>0));
+    lastAction = 'new-deal';
     const rng = mulberry32(state.seed);
     const deck = seededShuffle(newDeck(), rng);
 
@@ -479,8 +489,8 @@ updateAutoCompleteVisibility();   // <-- add this line
   // ===== Moves & Undo =====
   function snapshot(){ return deepClone({seed: state.seed, drawOne: state.drawOne, unlimited: state.unlimited, piles: state.piles, moves: state.moves, time: state.time, stockCycles: state.stockCycles}) }
   function restore(snap){ Object.assign(state, deepClone(snap)); render(); updateTimeHud() }
-  function pushHistory(label){ state.history.push(snapshot()); state.future.length=0; state.moves++; }
-  function undo(){ if(state.history.length){ const cur=snapshot(); const prev=state.history.pop(); state.future.push(cur); restore(prev); render() } }
+  function pushHistory(label){ state.history.push(snapshot()); state.future.length=0; state.moves++; lastAction = label || 'move'; }
+  function undo(){ if(state.history.length){ const cur=snapshot(); const prev=state.history.pop(); state.future.push(cur); restore(prev); lastAction = 'undo'; render() } }
 
   // ===== Stock/Waste actions =====
   pilesEls.stock.addEventListener('click', ()=>{
@@ -837,13 +847,56 @@ function doHint(){
 
 
   function flashStatus(msg, type){
+    lastAction = msg;
     const st = el('#status'); const old = st.textContent; st.textContent = msg; st.style.color = type==='bad'? '#ef9a9a' : (type==='ok'? '#a7f3d0' : '');
     setTimeout(()=>{ st.textContent = old; st.style.color=''; }, 1200);
   }
 
+  function renderGameToText(){
+    const foundations = state.piles.f.map((pile, index) => ({
+      suit: SUITS[index],
+      count: pile.length,
+      top: pile.length ? describe(pile[pile.length - 1]) : null
+    }));
+    const tableau = state.piles.t.map((pile, index) => ({
+      index: index + 1,
+      faceDown: pile.down.length,
+      faceUp: pile.up.length,
+      top: pile.up.length ? describe(pile.up[pile.up.length - 1]) : null,
+      visibleCards: pile.up.map(describe)
+    }));
+    const stockEmpty = state.piles.stock.length === 0;
+    const noWaste = state.piles.waste.length === 0;
+    const noMoves = listAllMoves({forHint:true}).length === 0;
+    return JSON.stringify({
+      game: 'Klondike Solitaire',
+      ready: true,
+      stockCount: state.piles.stock.length,
+      wasteCount: state.piles.waste.length,
+      wasteTop: state.piles.waste.length ? describe(state.piles.waste[state.piles.waste.length - 1]) : null,
+      foundations,
+      tableau,
+      moves: state.moves,
+      drawMode: state.drawOne ? 1 : 3,
+      time: state.time,
+      timeText: fmtTime(state.time),
+      won: isWon(),
+      stuck: !isWon() && noMoves && stockEmpty && noWaste,
+      status: el('#status').textContent,
+      lastAction
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(){
+    render();
+    updateTimeHud();
+    return renderGameToText();
+  };
+
   // ===== Controls =====
   el('#newDeal').addEventListener('click', ()=> deal());
-  el('#restart').addEventListener('click', ()=>{ if(state.initial){ restore(state.initial) } });
+  el('#restart').addEventListener('click', ()=>{ if(state.initial){ restore(state.initial); lastAction = 'restart'; render() } });
   el('#undo').addEventListener('click', undo);
   el('#hint').addEventListener('click', doHint);
   el('#autoComplete').addEventListener('click', startAutoComplete);
