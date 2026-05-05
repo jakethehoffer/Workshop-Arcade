@@ -818,6 +818,75 @@
   window.addEventListener('blur', ()=>{ if(running) togglePause(); });
   window.addEventListener('beforeunload', saveBest);
 
+  // Diagnostics for automated smoke/debug tooling.
+  function pieceSnapshot(piece){
+    if(!piece) return null;
+    const cells = [];
+    for(let y=0;y<piece.shape.length;y++){
+      for(let x=0;x<piece.shape[y].length;x++){
+        if(piece.shape[y][x]) cells.push({ x: piece.x + x, y: piece.y + y, value: piece.shape[y][x] });
+      }
+    }
+    return { type: piece.type, x: piece.x, y: piece.y, rot: piece.rot, cells };
+  }
+
+  function occupiedCells(){
+    const cells = [];
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        if(board[y][x]) cells.push({ x, y, value: board[y][x] });
+      }
+    }
+    return cells;
+  }
+
+  function renderGameToText(){
+    const occupied = occupiedCells();
+    return JSON.stringify({
+      game: 'Block Drop',
+      coordinateSystem: 'grid cells, origin top-left, x right, y down',
+      grid: { width: W, height: H },
+      running: !!running,
+      paused: !running && !gameOver && !helpUp,
+      helpOpen: !!helpUp,
+      helpMode,
+      gameOver: !!gameOver,
+      score,
+      best,
+      lines,
+      level,
+      current: pieceSnapshot(cur),
+      hold: { type: holdType, used: !!holdUsed },
+      next: bag.length ? bag[bag.length - 1] : null,
+      ghostY,
+      occupiedCount: occupied.length,
+      occupiedCells: occupied.slice(0, 80),
+      timers: {
+        dropAcc: Math.round(dropAcc),
+        fallDelay,
+        lockTimer: Math.round(lockTimer),
+        lockResets,
+        dasTimer: Math.round(dasTimer),
+        arrTimer: Math.round(arrTimer),
+        moveDir
+      },
+      combo,
+      backToBack: !!b2b,
+      muted: !!muted,
+      status: statusEl.textContent
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms = 0){
+    const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
+    for(let i = 0; i < steps; i++){
+      tick(1000 / 60);
+    }
+    draw();
+    return renderGameToText();
+  };
+
 
 })();
 </script>

@@ -33,3 +33,12 @@ Original prompt: Do this for me
 - Initial implementation: tightened Checkers and 2048 responsive layout, made Lexica show the playable grid immediately, and added `render_game_to_text` / `advanceTime` hooks to all three targets.
 - Verified the edited targets with focused desktop/mobile captures in `test-results/quality-pass-4/after/`, the required web-game client, direct Playwright interaction assertions, catalog validation, and the full 20-game smoke suite.
 - Suggested next pass: add diagnostics to the remaining games without hooks, then do a smaller mobile control-density pass on any title still close to the overflow limit.
+
+## 2026-05-04 Codex pass 5
+
+- Standardized `render_game_to_text` / `advanceTime` diagnostics across the six older arcade targets: Brick Breaker, Neon Snake, Block Drop, Minesweeper, Maze Chase, and Metro Dash.
+- Kept gameplay rules intact while exposing score/state, player or board positions, active hazards/objects, timers, controls, overlays, and audio flags in compact JSON payloads.
+- Captured focused before/after desktop and mobile screenshots in `test-results/quality-pass-5/`, ran the required web-game client for all six targets, and verified direct interaction assertions for movement, reveal/flag, launch/drop, and runner/chase state updates.
+- Fixed a concrete visual regression caught during inspection: Neon Snake mobile HUD and touch controls now wrap instead of clipping off-screen.
+- Local checks passed: catalog validation, full 20-game smoke suite, and `git diff --check`.
+- Suggested next pass: decide whether to add hooks to the remaining endless/idle pages or move into a mobile control-density polish pass for the games that still feel cramped.

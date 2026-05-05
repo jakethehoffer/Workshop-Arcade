@@ -1030,6 +1030,56 @@ function drawRaisedTile(x, y, s, hovered) {
     state.tile = dims.tile; state.pad = dims.pad;
   });
 
+  // Diagnostics for automated smoke/debug tooling.
+  function visibleCellSummary(){
+    const countsByNumber = {};
+    const revealedPreview = [];
+    const flaggedPreview = [];
+    const boomCells = [];
+    for(let r=0; r<state.rows; r++){
+      for(let c=0; c<state.cols; c++){
+        const cell = state.grid[r][c];
+        if(cell.revealed){
+          const key = String(cell.adj);
+          countsByNumber[key] = (countsByNumber[key] || 0) + 1;
+          if(revealedPreview.length < 30) revealedPreview.push({ c, r, adj: cell.adj, mine: !!cell.mine });
+        }
+        if(cell.flagged && flaggedPreview.length < 30) flaggedPreview.push({ c, r });
+        if(cell.boom) boomCells.push({ c, r });
+      }
+    }
+    return { countsByNumber, revealedPreview, flaggedPreview, boomCells };
+  }
+
+  function renderGameToText(){
+    const summary = visibleCellSummary();
+    return JSON.stringify({
+      game: 'Minesweeper',
+      coordinateSystem: 'grid cells, origin top-left, c right, r down',
+      board: { cols: state.cols, rows: state.rows, mines: state.mines },
+      started: !!state.started,
+      over: !!state.over,
+      win: !!state.win,
+      firstClickSafe: !!state.firstClickSafe,
+      revealedCount: state.revealedCount,
+      hiddenSafeCount: Math.max(0, state.cols * state.rows - state.mines - state.revealedCount),
+      flagsPlaced: state.flagsPlaced,
+      minesLeft: state.mines - state.flagsPlaced,
+      timer: state.timer,
+      flagMode: !!state.flagMode,
+      hover: { c: state.hover.c, r: state.hover.r },
+      helpOpen: !!helpOpen,
+      preset: currentPreset,
+      visible: summary
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(){
+    draw();
+    return renderGameToText();
+  };
+
   newGame(currentPreset);
 
 })();

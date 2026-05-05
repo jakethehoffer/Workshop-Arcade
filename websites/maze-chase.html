@@ -1781,6 +1781,72 @@
           requestAnimationFrame(loop);
         }
 
+        function dirName(index) {
+          return DIRS[index] ? DIRS[index].name : "none";
+        }
+
+        function renderGameToText() {
+          return JSON.stringify({
+            game: "Maze Chase",
+            coordinateSystem: "maze tiles, origin top-left, x right, y down",
+            phase: state.phase,
+            score: state.score,
+            highScore: state.highScore,
+            level: state.level,
+            lives: state.lives,
+            pendingNextLevel: !!state.pendingNextLevel,
+            pelletsRemaining,
+            powerPelletsRemaining: powerPellets.size,
+            frightenedTimer: Math.round(state.frightenedTimer * 100) / 100,
+            eatStreak: state.eatStreak,
+            mode: { index: modeState.index, timer: Math.round(modeState.timer * 100) / 100, name: getGlobalMode() },
+            pacman: {
+              x: Math.round(pacman.pos.x * 100) / 100,
+              y: Math.round(pacman.pos.y * 100) / 100,
+              tile: { col: Math.floor(pacman.pos.x), row: Math.floor(pacman.pos.y) },
+              dir: dirName(pacman.dir),
+              nextDir: dirName(pacman.nextDir)
+            },
+            fruit: {
+              active: !!fruitState.active,
+              timer: Math.round(fruitState.timer * 100) / 100,
+              spawned: fruitState.spawned,
+              kind: fruitTypes[fruitState.kindIndex]?.name || null
+            },
+            ghosts: ghosts.map(ghost => ({
+              name: ghost.name,
+              state: ghost.state,
+              x: Math.round(ghost.pos.x * 100) / 100,
+              y: Math.round(ghost.pos.y * 100) / 100,
+              tile: { col: Math.floor(ghost.pos.x), row: Math.floor(ghost.pos.y) },
+              dir: dirName(ghost.dir),
+              inHouse: !!ghost.inHouse,
+              dotCounter: ghost.dotCounter,
+              dotLimit: ghost.dotLimit
+            })),
+            house: {
+              globalCounterActive: !!house.globalCounterActive,
+              globalCounter: house.globalCounter,
+              pendingRelease: house.pendingRelease
+            },
+            audio: { muted: !!audio.muted, unlocked: !!audio.unlocked, musicOn: !!audio.musicOn },
+            overlay: { visible: overlay.classList.contains("show"), title: overlayTitle.textContent },
+            controls: { pauseLabel: pauseBtn.textContent, mutedLabel: muteBtn.textContent }
+          });
+        }
+
+        window.render_game_to_text = renderGameToText;
+        window.advanceTime = function advanceTime(ms = 0) {
+          const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
+          for (let i = 0; i < steps; i++) {
+            if (state.phase === "playing") {
+              update(step);
+            }
+          }
+          render(performance.now() / 1000);
+          return renderGameToText();
+        };
+
         function handleDirection(dirName) {
           const dirIndex = DIRS.findIndex((dir) => dir.name === dirName);
           pacman.nextDir = dirIndex;

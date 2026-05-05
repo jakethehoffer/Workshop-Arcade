@@ -821,6 +821,90 @@ document.addEventListener("visibilitychange", () => {
   else if (!document.hidden && state === "playing") startMusic();
 });
 
+/* ===== DIAGNOSTICS ===== */
+function diagnosticFrame(dt60 = 1) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const spd = state === "playing" ? gameSpeed : 2;
+  drawScene(dt60, spd);
+  drawCoins();
+  drawObstacles();
+  if (state !== "title") drawPlayer();
+  drawParticles();
+  drawHUD();
+  if (state === "title") drawTitleScreen();
+  if (state === "gameover") drawGameOver();
+}
+
+function renderGameToText() {
+  return JSON.stringify({
+    game: "Metro Dash",
+    coordinateSystem: "runner lanes -1..1 and depth z 0 near to 1 far",
+    state,
+    distance: Math.floor(distance),
+    coins,
+    highScore,
+    newBest: !!newBest,
+    speed: Math.round(gameSpeed * 100) / 100,
+    player: {
+      lane: player.lane,
+      targetLane: player.targetLane,
+      laneX: Math.round(player.laneX * 100) / 100,
+      y: Math.round(player.y * 100) / 100,
+      vy: Math.round(player.vy * 100) / 100,
+      jumping: !!player.isJumping,
+      sliding: !!player.isSliding,
+      slideTimer: Math.round(player.slideTimer * 100) / 100,
+      height: Math.round(player.height * 100) / 100
+    },
+    obstacles: obstacles.slice(0, 12).map(o => ({
+      type: o.type,
+      lane: o.lane,
+      width: o.width,
+      z: Math.round(o.z * 1000) / 1000
+    })),
+    coinsVisible: coinObjects.filter(c => !c.collected).slice(0, 12).map(c => ({
+      lane: c.lane,
+      z: Math.round(c.z * 1000) / 1000
+    })),
+    counts: {
+      obstacles: obstacles.length,
+      coins: coinObjects.filter(c => !c.collected).length,
+      particles: particles.length
+    },
+    timers: {
+      spawnTimer: Math.round(spawnTimer * 100) / 100,
+      coinSpawnTimer: Math.round(coinSpawnTimer * 100) / 100,
+      shakeTimer: Math.round(shakeTimer * 100) / 100
+    },
+    overlays: {
+      helpOpen: !!helpOpen,
+      pauseOpen: pauseOverlay.classList.contains("show")
+    },
+    musicOn: !!mus.on
+  });
+}
+
+window.render_game_to_text = renderGameToText;
+window.advanceTime = function advanceTime(ms = 0) {
+  const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
+  for (let i = 0; i < steps; i++) {
+    const dt60 = 1;
+    if (state !== "paused" && !helpOpen) {
+      updateShake(dt60);
+      if (state === "playing") {
+        updatePlayer(dt60);
+        distance += gameSpeed * dt60 * 0.1;
+        gameSpeed = 3 + distance * 0.003;
+        updateObstacles(dt60);
+        updateCoins(dt60);
+      }
+      updateParticles(dt60);
+    }
+  }
+  diagnosticFrame(1);
+  return renderGameToText();
+};
+
 /* ===== MAIN LOOP ===== */
 function loop(now) {
   if (lastTime === null) { lastTime = now; requestAnimationFrame(loop); return; }

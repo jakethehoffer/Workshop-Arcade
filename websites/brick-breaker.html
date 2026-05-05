@@ -2557,6 +2557,82 @@ for (const e of G.effects){
 
 
 
+  // ===== Diagnostics =====
+  function diagNum(value){
+    return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
+  }
+
+  function renderGameToText(){
+    const visibleBricks = G.bricks.filter(br => br.hp > 0);
+    return JSON.stringify({
+      game: 'Brick Breaker',
+      coordinateSystem: 'canvas pixels, origin top-left, x right, y down',
+      ready: !!gameReady,
+      running: !!G.running,
+      waitingLaunch: !!G.waitingLaunch,
+      helpOpen: !cardStart.hidden,
+      nextLevelOpen: !cardNext.hidden,
+      gameOver: !cardOver.hidden,
+      score: G.score,
+      highScore,
+      level: G.level,
+      lives: G.lives,
+      paddle: {
+        x: diagNum(G.paddle.x),
+        y: diagNum(G.paddle.y),
+        w: diagNum(G.paddle.w),
+        h: diagNum(G.paddle.h),
+        leftPressed: !!G.keys.left,
+        rightPressed: !!G.keys.right
+      },
+      balls: G.balls.map(b => ({
+        x: diagNum(b.x),
+        y: diagNum(b.y),
+        vx: diagNum(b.vx),
+        vy: diagNum(b.vy),
+        r: diagNum(b.r),
+        stuck: !!b.stuck,
+        fire: !!b.fire
+      })),
+      bricks: {
+        total: G.bricks.length,
+        remaining: visibleBricks.length,
+        moving: visibleBricks.filter(br => br.moving).length,
+        preview: visibleBricks.slice(0, 12).map(br => ({
+          x: diagNum(br.x),
+          y: diagNum(br.y),
+          hp: br.hp,
+          type: br.type || 'NORMAL',
+          moving: !!br.moving
+        }))
+      },
+      powerups: G.powerups.map(pu => ({
+        type: pu.type,
+        x: diagNum(pu.x),
+        y: diagNum(pu.y),
+        vy: diagNum(pu.vy)
+      })),
+      effects: G.effects.map(e => ({ type: e.type, remaining: diagNum(e.remaining) })),
+      bullets: G.bullets.map(b => ({ x: diagNum(b.x), y: diagNum(b.y), vy: diagNum(b.vy) })),
+      portals: G.portals.map(p => ({ x: diagNum(p.x), y: diagNum(p.y), w: diagNum(p.w), h: diagNum(p.h) })),
+      combo: { multiplier: diagNum(G.combo), time: diagNum(G.comboTime) },
+      audio: { musicOn, sfxOn }
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms = 0){
+    const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
+    for (let i = 0; i < steps; i++) {
+      if (G.running && cardStart.hidden && cardNext.hidden && cardOver.hidden) {
+        const dtRaw = 1 / 60;
+        update(dtRaw * G.speedMod, dtRaw);
+      }
+    }
+    render();
+    return renderGameToText();
+  };
+
   // ===== Tests =====
   function runTests(){
     const results=[]; const t=(name,fn)=>{ try{ fn(); results.push({name, ok:true}); } catch(e){ results.push({name, ok:false, err: String(e)});} };

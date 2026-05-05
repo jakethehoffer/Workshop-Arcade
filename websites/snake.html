@@ -16,6 +16,15 @@
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
   .btn:active { transform:translateY(1px); }
   @media (min-width: 860px){ .btns { display:none; } }
+  @media (max-width: 640px){
+    .hud { left:8px; right:8px; transform:none; flex-wrap:wrap; justify-content:center; gap:6px; }
+    .pill { padding:6px 8px; font-size:12px; }
+    #status { max-width:78px; white-space:normal; text-align:center; }
+    .has-hotkey { gap:6px; }
+    .hotkey { padding:2px 5px; font-size:11px; }
+    .btns { left:8px; right:8px; transform:none; bottom:8px; flex-wrap:wrap; justify-content:center; gap:6px; }
+    .btn { flex:0 0 auto; padding:9px 11px; font-size:12px; }
+  }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.7); }
   .overlay.show { display:grid; pointer-events:auto; }
   .help-card { background:#0e1522; border:1px solid #26334a; padding:24px 26px; border-radius:16px; max-width:min(92vw, 500px); box-shadow:0 10px 30px rgba(0,0,0,.45); pointer-events:auto; }
@@ -573,6 +582,44 @@
   let tsx=0, tsy=0, swiping=false;
   canvas.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; tsx=t.clientX; tsy=t.clientY; swiping=true; }, {passive:true});
   canvas.addEventListener('touchend', (e)=>{ if(!swiping) return; const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy; swiping=false; const ax=Math.abs(dx), ay=Math.abs(dy); if(Math.max(ax,ay)<20) { if(!running&&!gameOver) start(); return; } if(ax>ay) queueDir({x:dx>0?1:-1,y:0}); else queueDir({x:0,y:dy>0?1:-1}); if(!running&&!gameOver) start(); }, {passive:true});
+
+  // Diagnostics for automated smoke/debug tooling.
+  function renderGameToText(){
+    return JSON.stringify({
+      game: 'Neon Snake',
+      coordinateSystem: 'grid cells, origin top-left, x right, y down',
+      grid: { cols: COLS, rows: ROWS },
+      running: !!running,
+      gameOver: !!gameOver,
+      gameWon: !!gameWon,
+      score,
+      best,
+      status: statusEl.textContent,
+      direction: { x: dir.x, y: dir.y },
+      queuedDirections: dirQueue.map(d => ({ x: d.x, y: d.y })),
+      speedMs: curSpeed(),
+      accumulatorMs: Math.round(acc),
+      head: snake[0] ? { x: snake[0].x, y: snake[0].y } : null,
+      bodyLength: snake.length,
+      bodyPreview: snake.slice(0, 12).map(c => ({ x: c.x, y: c.y })),
+      food: food ? { x: food.x, y: food.y } : null,
+      helpOpen: !!(helpOverlay && helpOverlay.classList.contains('show')),
+      music: {
+        label: musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent,
+        playing: !Music.paused()
+      }
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms = 0){
+    const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
+    for(let i = 0; i < steps; i++){
+      tick(1000 / 60);
+    }
+    draw();
+    return renderGameToText();
+  };
 
   let last=performance.now();
   function loop(){ const now=performance.now(); const dt=Math.min(500, now-last); last=now; tick(dt); draw(); requestAnimationFrame(loop); }
