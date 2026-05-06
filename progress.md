@@ -51,3 +51,13 @@ Original prompt: Do this for me
 - Captured focused before/after desktop and mobile screenshots in `test-results/quality-pass-6/`, ran the required web-game client for all five targets, and verified direct Playwright assertions for movement, flap/pipe spawn, slope steering, idle click/buy/run, and Arena movement/spawn state.
 - Local checks passed: catalog validation, full 20-game smoke suite, and `git diff --check`.
 - Suggested next pass: run one full catalog screenshot ranking now that diagnostics coverage is broad, then polish any remaining visual weak spots rather than adding more hooks.
+
+## 2026-05-06 Codex pass 7
+
+- Added the durable full-catalog rendered ranking harness as `npm run capture:games`, writing screenshots, `summary.json`, `contact-sheet.html`, and `contact-sheet.png` under `test-results/render-ranking/<timestamp>/`.
+- Baseline ranking in `test-results/render-ranking/2026-05-06T13-22-26-356Z/` selected shared fact-match mobile, Idle Tycoon mobile menu density, and 2048 text/control overflow as the top polish targets.
+- Tightened shared fact-match mobile density so Guess and round actions land earlier in the first viewport, hid the Idle Tycoon background app while the save menu is open and compacted its mobile menu cards, and separated 2048's control hint from the button row.
+- Final capture in `test-results/render-ranking/2026-05-06T13-38-45-182Z/` showed the selected issues cleared from the top ranking with no console/page/network errors or mobile horizontal overflow.
+- Verified with the required web-game client for 2048, Hero Fact Match, and Idle Tycoon plus direct Playwright assertions for 2048 moves, fact-match hint/correct guess, and Idle Tycoon slot/click/buy state.
+- Local checks passed: `npm run capture:games`, catalog validation, and full 20-game smoke suite.
+- Suggested next pass: refine low-priority harness heuristics around intentional stacked-card DOM and then address the real remaining mobile first-action candidates, especially Neon Snake and Lexica, if screenshots still show buried controls.

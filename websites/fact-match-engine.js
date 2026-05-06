@@ -26,7 +26,7 @@
     .shell{width:min(1180px,100%);min-height:100vh;margin:0 auto;padding:clamp(18px,3vw,34px);display:grid;grid-template-rows:auto minmax(0,1fr);gap:18px;align-content:center}
     .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end}
     .eyebrow{color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}
-    h1{margin:5px 0 0;font-size:clamp(36px,6vw,72px);line-height:.9;text-shadow:0 10px 34px rgba(80,240,200,.16)}
+    h1{margin:5px 0 0;font-size:clamp(36px,6vw,72px);line-height:1;text-shadow:0 10px 34px rgba(80,240,200,.16);overflow-wrap:anywhere}
     .sub{margin:8px 0 0;color:var(--muted);max-width:720px;line-height:1.45;font-size:clamp(15px,2vw,18px)}
     .round-card{align-self:stretch;display:grid;gap:4px;align-content:center;min-width:180px;border:1px solid rgba(80,240,200,.24);border-radius:18px;background:rgba(5,11,19,.62);padding:14px 16px;box-shadow:0 16px 40px rgba(0,0,0,.26)}
     .round-card span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:900}
@@ -55,23 +55,33 @@
     .bank button{text-align:left;background:#07111d;border-radius:12px;padding:10px 11px;font-weight:800}
     .bank small{display:block;color:var(--muted);font-weight:600;margin-top:4px}
     @media (max-width:820px){
-      .shell{padding:14px;align-content:start}
+      .shell{padding:12px;gap:12px;align-content:start}
       .hero{grid-template-columns:1fr}
+      .eyebrow{font-size:10px;letter-spacing:.18em}
+      h1{font-size:clamp(30px,9vw,42px);line-height:1.02}
+      .sub{font-size:14px;line-height:1.35;margin-top:5px}
       .round-card{display:none}
       .board{grid-template-columns:1fr}
+      .panel{padding:14px;border-radius:16px}
       .play-panel{min-height:auto}
-      .clues{grid-template-columns:1fr}
-      .guess{grid-template-columns:1fr}
-      .actions{grid-template-columns:1fr 1fr}
-      .bank{max-height:300px}
+      .clues{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+      .clue{min-height:auto;padding:10px;border-radius:12px;font-size:14px;line-height:1.25}
+      .clue span{font-size:10px;margin-bottom:5px}
+      .guess{grid-template-columns:minmax(0,1fr) 92px;gap:8px;margin-top:8px}
+      input{padding:10px 11px;border-radius:12px}
+      button{padding:10px 11px;border-radius:12px}
+      .actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+      .bank{max-height:260px}
+      .bank button{padding:9px 10px}
       .stats{grid-template-columns:repeat(3,1fr)}
       .pill{padding:9px}
       .pill strong{font-size:20px}
     }
     @media (max-width:420px){
-      h1{font-size:clamp(34px,11vw,48px)}
-      .panel{padding:14px}
-      .actions{grid-template-columns:1fr}
+      h1{font-size:clamp(30px,10vw,40px)}
+      .panel{padding:12px}
+      .actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .actions button{font-size:12px;padding:9px 7px}
       .stats{gap:7px}
     }
   `;
