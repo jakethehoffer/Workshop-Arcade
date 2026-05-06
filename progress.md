@@ -72,3 +72,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client for Snake, Minesweeper, and Lexica plus direct mobile Playwright assertions for Snake start/move, Minesweeper reveal/flag, and Lexica typed guess.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: move from first-screen cleanup to deeper subjective gameplay polish, starting with any zero-score screenshots that still feel sparse or visually dated despite passing the automated rubric.
+
+## 2026-05-06 Codex pass 9
+
+- Baseline: `test-results/render-ranking/2026-05-06T18-58-06-224Z/` scored all 40 rendered surfaces at zero automated issues, so target selection moved to manual player-feel inspection.
+- Selected Block Drop, Metro Dash, and Maze Chase as the weakest subjective surfaces: Block Drop hid play behind its help modal, Metro Dash's first frame felt too sparse, and Maze Chase mobile made the board compete with surrounding UI.
+- Implemented the polish pass: Block Drop now shows the board and a compact Play/Help panel immediately, Metro Dash has a wider/brighter runway and stronger title start panel, and Maze Chase has a denser shell with a larger board emphasis.
+- Final capture in `test-results/render-ranking/2026-05-06T19-17-24-584Z/` scored all 40 rendered surfaces at zero automated issues and the target desktop/mobile screenshots were manually inspected.
+- Verified with the required web-game client for Block Drop, Metro Dash, and Maze Chase plus state inspection showing Block Drop running with occupied cells, Metro Dash playing with distance/coins/obstacle state, and Maze Chase playing with pellet progress.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: after this polish lands, use the fresh final contact sheet to decide whether to keep improving subjective game feel or add any missing reusable assertions to the capture harness.

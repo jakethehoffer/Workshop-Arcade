@@ -19,9 +19,9 @@
   }
   .hud-btn {
     position:fixed; top:12px; z-index:50;
-    background:rgba(0,0,0,0.55); border:2px solid rgba(255,255,255,0.2);
-    color:#fff; padding:8px 14px; border-radius:10px; font-weight:700;
-    cursor:pointer; font-size:15px; backdrop-filter:blur(6px);
+    background:rgba(4,10,24,0.66); border:1px solid rgba(79,195,247,0.35);
+    color:#e9fbff; padding:8px 12px; border-radius:9px; font-weight:800;
+    cursor:pointer; font-size:14px; backdrop-filter:blur(8px);
     transition: background 0.15s;
   }
   .hud-btn:hover { background:rgba(0,0,0,0.8); }
@@ -39,6 +39,12 @@
   .card .btn:active { transform:translateY(1px); }
   .btn-primary { background:linear-gradient(135deg,#4fc3f7,#0288d1); color:#fff; }
   .btn-warn { background:linear-gradient(135deg,#ff9800,#e65100); color:#fff; }
+  @media (max-width: 640px) {
+    .hud-btn { top:10px; padding:7px 10px; font-size:12px; }
+    #pauseBtn { right:64px; }
+    .card { padding:20px; border-radius:14px; }
+    .card h2 { font-size:20px; }
+  }
 </style>
   <script src="workshop-runtime.js"></script>
 </head>
@@ -92,9 +98,9 @@ window.addEventListener("resize", resizeCanvas, { passive: true });
 resizeCanvas();
 
 /* ===== PERSPECTIVE ===== */
-const VAN_Y = 0.36;
-const TRACK_BOT = 0.72;
-const TRACK_TOP = 0.015;
+const VAN_Y = 0.32;
+const TRACK_BOT = 0.92;
+const TRACK_TOP = 0.06;
 const LANES = 3;
 const PLAYER_Z = 0.08;
 
@@ -158,15 +164,15 @@ function drawScene(dt60, speed) {
 
   // Sky / distant tunnel glow
   const skyG = ctx.createRadialGradient(cx, vy, 10, cx, vy, H * 0.8);
-  skyG.addColorStop(0, "#1a1a35");
-  skyG.addColorStop(0.5, "#0e0e1c");
-  skyG.addColorStop(1, "#060610");
+  skyG.addColorStop(0, "#27345c");
+  skyG.addColorStop(0.46, "#10182d");
+  skyG.addColorStop(1, "#050711");
   ctx.fillStyle = skyG;
   ctx.fillRect(0, 0, W, H);
 
   // Atmospheric fog at vanishing point
   const fogG = ctx.createRadialGradient(cx, vy, 0, cx, vy, W * 0.15);
-  fogG.addColorStop(0, "rgba(100,140,200,0.12)");
+  fogG.addColorStop(0, "rgba(88,210,255,0.22)");
   fogG.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = fogG;
   ctx.fillRect(0, 0, W, H);
@@ -179,7 +185,7 @@ function drawScene(dt60, speed) {
   ctx.lineTo(cx - tbW / 2, H); ctx.lineTo(0, H); ctx.closePath();
   ctx.clip();
   const lwG = ctx.createLinearGradient(0, 0, cx * 0.4, 0);
-  lwG.addColorStop(0, "#0c0c18"); lwG.addColorStop(1, "#181828");
+  lwG.addColorStop(0, "#090c19"); lwG.addColorStop(1, "#1f2942");
   ctx.fillStyle = lwG; ctx.fill();
   // Brick rows on left wall
   for (let i = 0; i < 30; i++) {
@@ -187,7 +193,7 @@ function drawScene(dt60, speed) {
     const y1 = projY(z), y2 = projY(z + 1/30);
     const x1 = lerp(cx - tbW/2, cx - ttW/2, z);
     const x2 = lerp(cx - tbW/2, cx - ttW/2, z + 1/30);
-    ctx.strokeStyle = `rgba(60,50,70,${0.4 * (1-z)})`;
+    ctx.strokeStyle = `rgba(88,120,170,${0.46 * (1-z)})`;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(x1, y1); ctx.stroke();
     // Vertical brick joints
@@ -206,7 +212,7 @@ function drawScene(dt60, speed) {
   ctx.lineTo(cx + tbW / 2, H); ctx.lineTo(W, H); ctx.closePath();
   ctx.clip();
   const rwG = ctx.createLinearGradient(W, 0, cx + W * 0.3, 0);
-  rwG.addColorStop(0, "#0c0c18"); rwG.addColorStop(1, "#181828");
+  rwG.addColorStop(0, "#090c19"); rwG.addColorStop(1, "#1f2942");
   ctx.fillStyle = rwG; ctx.fill();
   for (let i = 0; i < 30; i++) {
     const z = i / 30;
@@ -214,7 +220,7 @@ function drawScene(dt60, speed) {
     const y2 = projY(z + 1/30);
     const x1 = lerp(cx + tbW/2, cx + ttW/2, z);
     const x2 = lerp(cx + tbW/2, cx + ttW/2, z + 1/30);
-    ctx.strokeStyle = `rgba(60,50,70,${0.4 * (1-z)})`;
+    ctx.strokeStyle = `rgba(88,120,170,${0.46 * (1-z)})`;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(W, y1); ctx.lineTo(x1, y1); ctx.stroke();
     const bricks = 3 + Math.floor((1-z) * 5);
@@ -231,7 +237,7 @@ function drawScene(dt60, speed) {
   ctx.lineTo(cx + ttW/2, vy); ctx.lineTo(cx + tbW/2, H);
   ctx.closePath();
   const floorG = ctx.createLinearGradient(0, vy, 0, H);
-  floorG.addColorStop(0, "#25253a"); floorG.addColorStop(1, "#35354d");
+  floorG.addColorStop(0, "#202d4d"); floorG.addColorStop(0.58, "#273858"); floorG.addColorStop(1, "#3c4663");
   ctx.fillStyle = floorG; ctx.fill();
 
   // Track ties (scrolling)
@@ -242,8 +248,8 @@ function drawScene(dt60, speed) {
     const y = projY(z), s = projS(z);
     const tw = lerp(tbW, ttW, z);
     const h = Math.max(0.5, 2.5 * s);
-    const a = 0.35 * (1-z);
-    ctx.fillStyle = `rgba(80,70,55,${a})`;
+    const a = 0.5 * (1-z);
+    ctx.fillStyle = `rgba(245,191,90,${a})`;
     ctx.fillRect(cx - tw/2, y - h/2, tw, h);
   }
 
@@ -251,8 +257,8 @@ function drawScene(dt60, speed) {
   for (let d = -1; d <= 1; d += 2) {
     ctx.beginPath();
     ctx.setLineDash([8, 12]);
-    ctx.strokeStyle = "rgba(255,200,50,0.35)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255,220,90,0.58)";
+    ctx.lineWidth = 2;
     const off = d * 0.333;
     for (let z = 0; z < 1; z += 0.005) {
       const x = projX(off, z), y = projY(z);
@@ -747,26 +753,68 @@ function drawHUD() {
   drawText(String(coins), 46, 40, 20, "left", "#ffd700", true);
 }
 
+function drawTitleRunwayPreview() {
+  const pulse = 0.6 + Math.sin(performance.now() / 520) * 0.2;
+  for (const lane of [-1, 0, 1]) {
+    for (let i = 0; i < 5; i++) {
+      const z = 0.18 + i * 0.14;
+      const x = projX(lane, z);
+      const y = projY(z) - 18 * projS(z);
+      const s = Math.max(0.18, projS(z));
+      ctx.globalAlpha = 0.46 * (1 - z) + pulse * 0.18;
+      ctx.fillStyle = lane === 0 ? "#4fc3f7" : "#ffd166";
+      ctx.beginPath();
+      ctx.arc(x, y, 7 * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.22 * (1 - z);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(x - 2 * s, y - 2 * s, 3 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
 /* ===== SCREENS ===== */
 function drawTitleScreen() {
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillStyle = "rgba(1,4,14,0.3)";
   ctx.fillRect(0, 0, W, H);
-  // Title glow
-  const tg = ctx.createRadialGradient(W/2, H * 0.32, 0, W/2, H * 0.32, 200);
-  tg.addColorStop(0, "rgba(79,195,247,0.1)"); tg.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = tg; ctx.fillRect(0, H * 0.15, W, H * 0.35);
+  const panelW = Math.min(W - 40, 420);
+  const panelH = W < 520 ? 176 : 190;
+  const panelX = W / 2 - panelW / 2;
+  const panelY = Math.max(76, H * 0.18);
+  const pg = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
+  pg.addColorStop(0, "rgba(6,18,38,0.86)");
+  pg.addColorStop(1, "rgba(2,5,16,0.68)");
+  ctx.fillStyle = pg;
+  ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 18); ctx.fill();
+  ctx.strokeStyle = "rgba(79,195,247,0.42)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
-  drawText("METRO DASH", W/2, H * 0.33, 56, "center", "#4fc3f7", true);
-  drawText("Sprint through the subway!", W/2, H * 0.33 + 45, 18, "center", "#8899aa");
+  const titleSize = Math.max(36, Math.min(60, W * 0.1));
+  drawText("METRO DASH", W/2, panelY + 56, titleSize, "center", "#5ad7ff", true);
+  drawText("Swipe lanes. Jump beams. Chase coins.", W/2, panelY + 90, W < 520 ? 14 : 17, "center", "#b9d6e8");
 
   // Pulsing start text
   const pulse = 0.7 + Math.sin(performance.now() / 400) * 0.3;
   ctx.globalAlpha = pulse;
-  drawText("Tap or press SPACE to start", W/2, H * 0.55, 22, "center", "#fff");
+  const btnW = Math.min(250, panelW - 72);
+  const btnH = 44;
+  const btnX = W / 2 - btnW / 2;
+  const btnY = panelY + panelH - 66;
+  const bg = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
+  bg.addColorStop(0, "#4fc3f7");
+  bg.addColorStop(1, "#19e2a4");
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.roundRect(btnX, btnY, btnW, btnH, 14); ctx.fill();
+  drawText("START RUN", W/2, btnY + 29, 18, "center", "#06111c");
   ctx.globalAlpha = 1;
+  drawText("Tap or press SPACE", W/2, btnY + 66, 14, "center", "#e5f7ff");
 
   if (highScore > 0) {
-    drawText("Best: " + highScore + "m", W/2, H * 0.55 + 40, 18, "center", "#ffd700");
+    drawText("Best: " + highScore + "m", W/2, btnY + 90, 16, "center", "#ffd700");
   }
 }
 
@@ -826,9 +874,10 @@ function diagnosticFrame(dt60 = 1) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const spd = state === "playing" ? gameSpeed : 2;
   drawScene(dt60, spd);
+  if (state === "title") drawTitleRunwayPreview();
   drawCoins();
   drawObstacles();
-  if (state !== "title") drawPlayer();
+  if (state !== "gameover") drawPlayer();
   drawParticles();
   drawHUD();
   if (state === "title") drawTitleScreen();
@@ -933,9 +982,10 @@ function loop(now) {
   updateParticles(dt60);
 
   drawScene(dt60, spd);
+  if (state === "title") drawTitleRunwayPreview();
   drawCoins();
   drawObstacles();
-  if (state !== "title") drawPlayer();
+  if (state !== "gameover") drawPlayer();
   drawParticles();
   drawHUD();
   if (state === "title") drawTitleScreen();

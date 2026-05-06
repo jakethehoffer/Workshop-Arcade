@@ -6,45 +6,87 @@
 <title>Block Drop</title>
 <style>
   html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; overflow:hidden; }
-  canvas { display:block; margin:0 auto; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  body { min-height:100%; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:110px 12px 10px; }
+  canvas { display:block; margin:0 auto; background:#0e1522; border:1px solid #223047; border-radius:10px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
 
   .hud{
     position:fixed; top:8px; left:50%; transform:translateX(-50%);
-    display:flex; gap:18px; align-items:center; font-weight:700; letter-spacing:.3px;
+    display:flex; gap:8px; align-items:center; font-weight:700; letter-spacing:.2px;
     flex-wrap:nowrap; width:calc(100vw - 16px); justify-content:center;
     overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    z-index:40;
   }
+  .hud::-webkit-scrollbar{ display:none; }
   .hud > *{ flex:0 0 auto; }
-  .hud .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; display:flex; flex-direction:column; align-items:center; }
+  .hud .pill { background:rgba(17,24,39,.86); border:1px solid #26334a; padding:5px 8px; border-radius:10px; display:flex; flex-direction:column; align-items:center; min-height:32px; justify-content:center; }
+  .keynote { display:none; }
 
-  .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
-  .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
+  .btns { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; width:min(100vw - 16px, 520px); justify-content:center; z-index:45; }
+  .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; }
   .btn:active { transform:translateY(1px); }
-  .btns .btn { touch-action: none; }
+  .btns .btn { touch-action: none; flex:1 1 0; min-width:0; padding:10px 8px; }
   @media (min-width: 860px){ .btns { display:none; } }
   #holdCanvas, #nextCanvas { background:#0e1522; margin-top:4px; }
+
+  .start-panel {
+    position:fixed; left:50%; top:50%; transform:translate(-50%, -50%);
+    width:min(92vw, 300px); z-index:60;
+    display:flex; flex-direction:column; align-items:stretch; gap:10px;
+    padding:14px; border-radius:14px;
+    background:rgba(9,14,28,.86); border:1px solid rgba(55,181,255,.34);
+    box-shadow:0 18px 50px rgba(0,0,0,.45), inset 0 0 28px rgba(55,181,255,.06);
+    backdrop-filter:blur(10px);
+  }
+  .start-panel[hidden] { display:none; }
+  .start-title { text-align:center; font-size:13px; letter-spacing:1.2px; color:#7dd3fc; text-transform:uppercase; font-weight:800; }
+  .start-actions { display:grid; grid-template-columns:1fr auto; gap:8px; }
+  .start-actions .btn:first-child { background:#37b5ff; color:#06111c; border-color:#79d6ff; }
 
   /* 📖 HELP overlay */
   .overlay {
     position: fixed; inset: 0; z-index: 1000;
-    background: rgba(4,8,12,0.86);
-    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(4,8,12,0.68);
+    display: none; align-items: center; justify-content: center; padding: 18px;
+    backdrop-filter:blur(4px);
   }
+  .overlay.show { display:flex; }
   .help-card {
     background:#0e1522; border:1px solid #26334a; border-radius:16px;
     box-shadow: 0 24px 80px rgba(0,0,0,.55);
-    width:min(92vw, 760px); padding:20px 22px;
+    width:min(92vw, 560px); padding:16px 18px;
   }
-  .help-card h2 { margin:0 0 8px 0; font-size:22px; }
-  .help-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+  .help-card h2 { margin:0 0 8px 0; font-size:20px; }
+  .help-grid { display:grid; grid-template-columns: 1fr; gap:8px; font-size:14px; }
   @media (min-width:640px){ .help-grid{ grid-template-columns: 1fr 1fr; } }
   .key { display:inline-block; padding:4px 8px; border-radius:8px; background:#111827; border:1px solid #2a344a; font-weight:700; margin:2px 6px 2px 0; }
   .help-actions { display:flex; justify-content:center; gap:10px; margin-top:14px; }
+  @media (max-width: 720px){
+    body { padding:104px 8px 88px; }
+    .hud { top:6px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; overflow:visible; align-items:stretch; }
+    .hud > *{ min-width:0; }
+    .hud .pill { padding:4px 5px; font-size:12px; border-radius:9px; }
+    #holdCanvas, #nextCanvas { width:34px; height:34px; }
+    #status, #resetBtn, #soundBtn { display:none; }
+    .start-panel { top:48%; width:min(88vw, 260px); padding:12px; }
+    .start-actions { grid-template-columns:1fr 72px; }
+    .help-card { padding:14px; }
+    .help-grid { font-size:13px; gap:6px; }
+    .key { padding:3px 6px; }
+  }
 </style>
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
   <canvas id="game"></canvas>
+
+  <div id="startPanel" class="start-panel" role="group" aria-label="Block Drop start controls">
+    <div class="start-title">Block Drop</div>
+    <div class="start-actions">
+      <button id="playBtn" class="btn" type="button">Play</button>
+      <button id="openHelpBtn" class="btn" type="button">Help</button>
+    </div>
+  </div>
 
   <!-- 📖 HELP: Controls overlay shown on load -->
   <div id="help" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -108,7 +150,10 @@
   const helpCard = document.getElementById('helpCard');
   const helpPlay = document.getElementById('helpPlay');
   const helpMute = document.getElementById('helpMute');
-  let helpUp = true; // overlay visible initially
+  const startPanel = document.getElementById('startPanel');
+  const playBtn = document.getElementById('playBtn');
+  const openHelpBtn = document.getElementById('openHelpBtn');
+  let helpUp = false;
   let helpMode = 'start';      // 'start' | 'pause'
 
   const SOUND_KEY = 'M';
@@ -168,18 +213,31 @@
   function showHelp(mode){ // mode: 'start' | 'pause'
     helpMode = mode;
     helpUp = true;
-    if (helpEl) helpEl.style.display = 'flex';
+    if (helpEl) helpEl.classList.add('show');
+    updateStartPanel();
     if (helpPlay) helpPlay.textContent = (mode === 'pause') ? 'Resume' : 'Play';
     if (mode === 'pause' && statusEl) statusEl.textContent = 'Paused - Press Space/Enter or Play';
   }
 
   function stopMusic(){ if(music.loop){ clearInterval(music.loop); } music.loop=null; music.on=false; }
 
+  function updateStartPanel(){
+    if (!startPanel) return;
+    const show = !running && !helpUp;
+    startPanel.hidden = !show;
+    if (show && playBtn) playBtn.textContent = gameOver ? 'Play Again' : 'Play';
+  }
+
   // Viewport-fit resize
   function resize(){
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    let cell = Math.floor(Math.min(vw/10, vh/20));
+    const compact = vw < 720;
+    const topReserve = compact ? 112 : 100;
+    const bottomReserve = compact ? 98 : 20;
+    const usableW = Math.max(240, vw - (compact ? 16 : 24));
+    const usableH = Math.max(360, vh - topReserve - bottomReserve);
+    let cell = Math.floor(Math.min(usableW/10, usableH/20));
     if (cell < 6) cell = 6;
     canvas.width = cell * 10;
     canvas.height = cell * 20;
@@ -290,7 +348,7 @@
 
   function spawnWithType(type){
     const piece = { x:3, y:-2, type, rot:0, shape: PIECES[type][0] };
-    if(collide(piece.x,piece.y,piece.shape)) { gameOver=true; running=false; statusEl.textContent='Game Over - Click Reset'; saveBest(); stopMusic(); return null; }
+    if(collide(piece.x,piece.y,piece.shape)) { gameOver=true; running=false; statusEl.textContent='Game Over - Click Reset'; saveBest(); stopMusic(); updateStartPanel(); return null; }
     return piece;
   }
   function lock(){
@@ -632,6 +690,7 @@
     combo = -1; b2b = false; clearLock(); clearMoveState();
     refillBag(); holdType=null; holdUsed=false; drawHold(); drawNext();
     spawn(); updateHUD();
+    updateStartPanel();
     ensureAudio(); if(!muted) startMusic(); else stopMusic();
   }
 
@@ -648,6 +707,7 @@
         clearMoveState();
         running = true;
         if (statusEl) statusEl.textContent = 'Press P to Pause';
+        updateStartPanel();
         ensureAudio(); if (!muted) startMusic();
       }
     }
@@ -700,6 +760,9 @@
       ){
         e.preventDefault();
         dismissHelp(helpMode === 'pause' ? 'resume' : 'start');
+      } else if (e.code === 'Escape' && helpMode === 'start') {
+        e.preventDefault();
+        hideHelp();
       }
       return;
     }
@@ -776,6 +839,8 @@
 
   const resetBtn = document.getElementById('resetBtn');
   if (resetBtn) resetBtn.addEventListener('click', () => newGame());
+  if (playBtn) playBtn.addEventListener('click', () => newGame());
+  if (openHelpBtn) openHelpBtn.addEventListener('click', () => showHelp('start'));
 
   // 🔊 Sound toggle (HUD)
   const soundBtn = document.getElementById('soundBtn');
@@ -795,25 +860,32 @@
   if (soundBtn) soundBtn.addEventListener('click', ()=> setMuted(!muted));
 
   // 📖 HELP wiring
-  function dismissHelp(action){ // 'start' | 'resume'
+  function hideHelp(){
     helpUp = false;
-    if (helpEl) helpEl.style.display = 'none';
+    if (helpEl) helpEl.classList.remove('show');
+    updateStartPanel();
+  }
+
+  function dismissHelp(action){ // 'start' | 'resume'
+    hideHelp();
     if (action === 'start'){
       newGame();
     } else if (action === 'resume'){
       clearMoveState();
       running = true;
       if (statusEl) statusEl.textContent = 'Press P to Pause';
+      updateStartPanel();
       ensureAudio(); if (!muted) startMusic();
     }
   }
 
   if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
   if (helpMute) helpMute.addEventListener('click', ()=> setMuted(!muted));
-  if (helpEl)   helpEl.addEventListener('click',  ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
+  if (helpEl)   helpEl.addEventListener('click',  ()=> helpMode === 'pause' ? dismissHelp('resume') : hideHelp());
   if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation());
 
   updateSoundBtn();
+  updateStartPanel();
 
   window.addEventListener('blur', ()=>{ if(running) togglePause(); });
   window.addEventListener('beforeunload', saveBest);
