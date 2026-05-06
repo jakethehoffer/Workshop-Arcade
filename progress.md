@@ -42,3 +42,12 @@ Original prompt: Do this for me
 - Fixed a concrete visual regression caught during inspection: Neon Snake mobile HUD and touch controls now wrap instead of clipping off-screen.
 - Local checks passed: catalog validation, full 20-game smoke suite, and `git diff --check`.
 - Suggested next pass: decide whether to add hooks to the remaining endless/idle pages or move into a mobile control-density polish pass for the games that still feel cramped.
+
+## 2026-05-05 Codex pass 6
+
+- Implemented the combined endless diagnostics and mobile density pass for Arcade Jump, Sky Hopper, Slope Runner, Idle Tycoon, and Arena.
+- Added compact `render_game_to_text` / `advanceTime` coverage to Arcade Jump, Sky Hopper, Slope Runner, and Idle Tycoon, and added the missing `advanceTime` hook to Arena.
+- Tightened mobile first-screen density for Arcade Jump, Slope Runner, and Idle Tycoon without changing gameplay rules, saves, audio preferences, or catalog metadata.
+- Captured focused before/after desktop and mobile screenshots in `test-results/quality-pass-6/`, ran the required web-game client for all five targets, and verified direct Playwright assertions for movement, flap/pipe spawn, slope steering, idle click/buy/run, and Arena movement/spawn state.
+- Local checks passed: catalog validation, full 20-game smoke suite, and `git diff --check`.
+- Suggested next pass: run one full catalog screenshot ranking now that diagnostics coverage is broad, then polish any remaining visual weak spots rather than adding more hooks.

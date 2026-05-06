@@ -341,8 +341,22 @@
     .menu-visual { height: 180px; }
   }
   @media (max-width: 520px) {
-    .menu-card { padding: 18px; }
+    .overlay { align-items: flex-start; overflow-y: auto; padding: 12px 0; }
+    .menu-card { padding: 16px; gap: 14px; max-height: calc(100vh - 24px); overflow-y: auto; }
+    .menu-side { order: 0; gap: 10px; }
+    .menu-hero { gap: 10px; }
     .menu-title { font-size: clamp(26px, 8vw, 36px); }
+    .menu-tagline { font-size: 14px; line-height: 1.35; }
+    .menu-actions { gap: 8px; }
+    .menu-card .action { padding: 10px 12px; }
+    .menu-stats { margin-top: 0; }
+    .menu-stat { padding: 8px 10px; min-width: 0; flex: 1 1 120px; }
+    .menu-visual { height: 120px; }
+    .menu-guide { padding: 10px; }
+    .menu-guide h2,
+    .menu-note,
+    .menu-features { display: none; }
+    .menu-controls { gap: 8px; margin-bottom: 0; }
     .menu-key { font-size: 11px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -3508,6 +3522,96 @@ function drawToast() {
 
 
   // Start by clicking/tapping canvas or pressing Space
+  function renderGameToText() {
+    const P = state?.player || null;
+    const visiblePlatforms = state?.plats
+      ? state.plats
+          .filter((platform) => platform.alive !== false && platform.y > -80 && platform.y < H + 80)
+          .slice(0, 12)
+          .map((platform) => ({
+            x: Math.round(platform.x),
+            y: Math.round(platform.y),
+            w: Math.round(platform.w),
+            type: platform.type || "normal",
+            moving: !!platform.moving,
+            alive: platform.alive !== false
+          }))
+      : [];
+    return JSON.stringify({
+      state: !state ? "menu" : (running ? (paused ? "paused" : "playing") : (state.player?.alive === false ? "game-over" : "menu")),
+      running,
+      paused,
+      score: Math.round(state?.score || 0),
+      best,
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down",
+      viewport: { width: Math.round(W), height: Math.round(H) },
+      player: P ? {
+        x: Math.round(P.x),
+        y: Math.round(P.y),
+        vx: Math.round(P.vx * 10) / 10,
+        vy: Math.round(P.vy * 10) / 10,
+        w: P.w,
+        h: P.h,
+        alive: P.alive,
+        canDouble: P.canDouble,
+        shield: P.shield || 0,
+        jetpackT: Math.round((P.jetpackT || 0) * 10) / 10,
+        jumpBoostT: Math.round((P.jumpBoostT || 0) * 10) / 10,
+        slowT: Math.round((P.slowT || 0) * 10) / 10
+      } : null,
+      cameraY: Math.round(state?.cameraY || 0),
+      platforms: visiblePlatforms,
+      platformCount: state?.plats?.length || 0,
+      powerups: (state?.powerups || []).slice(0, 8).map((item) => ({
+        type: item.type,
+        x: Math.round(item.x),
+        y: Math.round(item.y)
+      })),
+      enemies: (state?.enemies || []).slice(0, 8).map((enemy) => ({
+        type: enemy.type || "enemy",
+        x: Math.round(enemy.x),
+        y: Math.round(enemy.y),
+        vx: Math.round((enemy.vx || 0) * 10) / 10
+      })),
+      storm: {
+        active: storm.active,
+        pendingSpace: storm.pendingSpace,
+        bolts: storm.bolts.length
+      },
+      space: {
+        active: space.active,
+        planets: space.planets.length,
+        shooters: space.shooters.length,
+        ufos: space.ufos.length
+      },
+      input: {
+        keys: Array.from(keys),
+        touchLeft,
+        touchRight
+      },
+      audio: {
+        muted: sound.muted,
+        ready: !!sound.ctx,
+        musicRunning: music.running
+      }
+    });
+  }
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms = 0) {
+    const total = Math.max(0, Number(ms) || 0);
+    const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
+    const dt = total / steps / 1000 || 1 / 60;
+    for (let i = 0; i < steps; i += 1) {
+      if (running && !paused && state?.player) {
+        update(Math.min(dt, 0.033));
+      }
+    }
+    if (state?.player) draw();
+    lastT = performance.now();
+    return renderGameToText();
+  };
+
   canvas.addEventListener('pointerdown', () => { if (!running) start(); }, { passive:true });
   show(menu);
 })();

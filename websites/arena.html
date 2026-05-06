@@ -954,14 +954,77 @@
 
     resize();
     showMenu();
+    function advanceArena(dt) {
+      if (state.mode !== 'playing') {
+        draw();
+        return;
+      }
+
+      state.time += dt;
+
+      if (state.pendingOver > 0) {
+        state.pendingOver -= dt;
+        state.shake = Math.max(0, state.shake - dt);
+        state.player.flash = Math.max(0, state.player.flash - dt);
+        if (state.pendingOver <= 0) {
+          state.mode = 'gameover';
+          Sound.stopMusic();
+          showGameOver();
+        }
+        draw();
+        return;
+      }
+
+      if (state.invuln > 0) state.invuln = Math.max(0, state.invuln - dt);
+      if (state.levelFlash > 0) state.levelFlash = Math.max(0, state.levelFlash - dt);
+      if (state.nukeFlash > 0) state.nukeFlash = Math.max(0, state.nukeFlash - dt);
+
+      state.score += dt * 10;
+      const s = Math.floor(state.score);
+      scoreEl.textContent = String(s);
+      if (s > state.high) {
+        state.high = s;
+        if (highEl) highEl.textContent = String(s);
+      }
+
+      state.spawnTimer += dt;
+      const dynamic = state.spawnEvery - state.time * 0.004 - state.level * 0.02;
+      const target = Math.max(0.18, dynamic);
+      while (state.spawnTimer >= target) {
+        state.spawnTimer -= target;
+        spawnEnemy();
+      }
+
+      handleInput(dt);
+      updateEnemies(dt);
+      updateGems(dt);
+
+      draw();
+      drawPopups(dt);
+      drawLevelText(dt);
+    }
     window.render_game_to_text = () => JSON.stringify({
       mode: state.mode,
       score: Math.floor(state.score),
       level: state.level,
       xp: state.xp,
       xpToLevel: state.xpToLevel,
+      time: Math.round(state.time * 10) / 10,
+      pendingOver: Math.round(state.pendingOver * 10) / 10,
+      highScore: state.high,
       coordinateSystem: 'canvas pixels, origin top-left, x right, y down',
-      player: { x: Math.round(state.player.x), y: Math.round(state.player.y), r: state.player.r },
+      player: {
+        x: Math.round(state.player.x),
+        y: Math.round(state.player.y),
+        r: state.player.r,
+        speed: Math.round(state.player.speed),
+        flash: Math.round(state.player.flash * 10) / 10
+      },
+      pointer: {
+        active: state.pointer.active,
+        x: Math.round(state.pointer.x),
+        y: Math.round(state.pointer.y)
+      },
       enemies: state.enemies.slice(0, 10).map((enemy) => ({
         x: Math.round(enemy.x),
         y: Math.round(enemy.y),
@@ -970,6 +1033,13 @@
       })),
       gems: state.gems.slice(0, 10).map((gem) => ({ x: Math.round(gem.x), y: Math.round(gem.y), life: Math.round(gem.life * 10) / 10 }))
     });
+    window.advanceTime = (ms = 0) => {
+      const total = Math.max(0, Number(ms) || 0);
+      const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
+      const dt = Math.min(0.05, total / steps / 1000 || 1 / 60);
+      for (let i = 0; i < steps; i += 1) advanceArena(dt);
+      return window.render_game_to_text();
+    };
     requestAnimationFrame(frame);
   })();
   </script>

@@ -409,7 +409,75 @@
 
       @media (max-width: 720px) {
         .app {
-          padding: 22px 16px 32px;
+          padding: 14px 12px 24px;
+          gap: 14px;
+        }
+
+        .mast {
+          gap: 10px;
+        }
+
+        .mast h1 {
+          margin: 4px 0;
+          font-size: 32px;
+        }
+
+        .tagline,
+        .legend,
+        .tips {
+          display: none;
+        }
+
+        .layout {
+          gap: 12px;
+        }
+
+        .arena {
+          order: -1;
+          gap: 10px;
+        }
+
+        .hud {
+          padding: 12px;
+          gap: 10px;
+          border-radius: 16px;
+        }
+
+        .stat-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .stat,
+        .status-card,
+        .meter-card {
+          padding: 9px;
+          border-radius: 12px;
+        }
+
+        .stat-label,
+        .status-label,
+        .meter-label {
+          font-size: 0.58rem;
+          letter-spacing: 0.14em;
+        }
+
+        .stat-value {
+          font-size: 18px;
+        }
+
+        .meter-note {
+          display: none;
+        }
+
+        .canvas-frame {
+          min-height: min(68vh, 520px);
+          border-radius: 18px;
+        }
+
+        .overlay-card {
+          padding: 16px;
+          border-radius: 14px;
         }
 
         .mast-actions {
@@ -1082,6 +1150,66 @@
 
         resizeCanvas();
         resetGame();
+
+        function renderGameToText() {
+          const current = getSegmentAt(config.cameraDepth);
+          return JSON.stringify({
+            state: state.crashed ? "game-over" : (state.running ? "playing" : "title"),
+            running: state.running,
+            crashed: state.crashed,
+            distance: Math.floor(state.distance),
+            best: state.best,
+            speed: Math.round(state.speed),
+            risk: Math.round(state.risk * 100) / 100,
+            shake: Math.round(state.shake * 10) / 10,
+            coordinateSystem: "track units, x across runway center, z forward from camera",
+            ball: {
+              x: Math.round(state.ballX * 10) / 10,
+              vx: Math.round(state.ballVX * 10) / 10,
+              z: config.cameraDepth,
+              radius: config.ballRadius
+            },
+            input: {
+              left: input.left,
+              right: input.right,
+              pointer: input.pointer,
+              pointerValue: Math.round(input.pointerValue * 100) / 100
+            },
+            currentSegment: current ? {
+              z: Math.round(current.z),
+              width: Math.round(current.width),
+              center: Math.round(current.center * 10) / 10,
+              curve: Math.round(current.curve * 100) / 100,
+              obstacles: current.obstacles.map((obs) => ({
+                x: Math.round(obs.x * 10) / 10,
+                w: Math.round(obs.w * 10) / 10,
+                h: Math.round(obs.h * 10) / 10
+              }))
+            } : null,
+            upcoming: segments.slice(0, 8).map((segment) => ({
+              z: Math.round(segment.z),
+              width: Math.round(segment.width),
+              center: Math.round(segment.center * 10) / 10,
+              obstacles: segment.obstacles.length
+            })),
+            overlay: {
+              visible: overlay.classList.contains("show"),
+              title: overlayTitle.textContent
+            }
+          });
+        }
+
+        window.render_game_to_text = renderGameToText;
+        window.advanceTime = function advanceTime(ms = 0) {
+          const total = Math.max(0, Number(ms) || 0);
+          const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
+          const dt = total / steps / 1000 || 1 / 60;
+          for (let i = 0; i < steps; i += 1) {
+            step(Math.min(dt, 0.033));
+          }
+          render();
+          return renderGameToText();
+        };
 
         let lastTime = null;
         let rafHandle;

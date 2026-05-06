@@ -1627,6 +1627,166 @@
       }
     }
 
+    @media (max-width: 640px) {
+      .app {
+        padding: 14px 10px 28px;
+      }
+
+      .topbar {
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .main-menu {
+        padding: 12px;
+        align-items: start;
+        overflow-y: auto;
+      }
+
+      .menu-card {
+        padding: 16px;
+        gap: 14px;
+        border-radius: 16px;
+      }
+
+      .menu-section h2 {
+        font-size: 18px;
+        margin-bottom: 8px;
+      }
+
+      .slot-card {
+        padding: 11px 12px;
+        padding-right: 78px;
+        border-radius: 12px;
+      }
+
+      .slot-delete {
+        top: 9px;
+        right: 9px;
+        padding: 5px 8px;
+      }
+
+      .stat-tray {
+        position: static;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 10px;
+        margin-bottom: 12px;
+        border-radius: 14px;
+      }
+
+      .stat:nth-child(3),
+      .stat:nth-child(6),
+      .stat:nth-child(7),
+      .stat:nth-child(8) {
+        display: none;
+      }
+
+      .stat .label {
+        font-size: 10px;
+        letter-spacing: 0.12em;
+      }
+
+      .stat .value {
+        font-size: 17px;
+      }
+
+      .stat-actions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+      }
+
+      .stat-actions .btn {
+        flex: 1 1 0;
+        padding: 8px 9px;
+      }
+
+      .grid,
+      .layout,
+      .missions-scroll,
+      .clicker-meta {
+        gap: 12px;
+      }
+
+      .panel {
+        padding: 12px;
+        border-radius: 14px;
+      }
+
+      .panel-head {
+        gap: 5px;
+        margin-bottom: 10px;
+      }
+
+      .panel-head h2 {
+        font-size: 19px;
+      }
+
+      .panel-head p,
+      .panel-tip,
+      .event-card,
+      .insight-card {
+        display: none;
+      }
+
+      .clicker-stage {
+        margin: 6px 0 10px;
+      }
+
+      .clicker {
+        width: min(190px, 54vw);
+      }
+
+      .fact-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .fact,
+      .daily-card,
+      .business-card,
+      .perk-card,
+      .mission-card {
+        border-radius: 12px;
+        padding: 10px;
+      }
+
+      .business-top,
+      .business-stats,
+      .business-actions,
+      .business-kpis,
+      .business-meta {
+        gap: 8px;
+      }
+
+      .business-stats,
+      .business-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .buy-controls {
+        gap: 8px;
+      }
+
+      .buy-toggle,
+      .venture-actions {
+        width: 100%;
+      }
+
+      .buy-toggle .toggle {
+        flex: 1 1 0;
+        padding: 7px 6px;
+      }
+
+      .venture-actions .btn {
+        flex: 1 1 0;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .ambient .blob,
       .clicker-ring,
@@ -4114,9 +4274,7 @@
       });
     }
 
-    function loop(now) {
-      const dt = Math.min(0.1, (now - lastFrame) / 1000);
-      lastFrame = now;
+    function advanceIdleFrame(dt, now = performance.now()) {
       updateMomentum(dt);
       updateEvents(now);
       updateSurgeState(now);
@@ -4125,8 +4283,122 @@
       updateUI();
       updateEventUI(now);
       updateSurgeUI(now);
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.1, (now - lastFrame) / 1000);
+      lastFrame = now;
+      advanceIdleFrame(dt, now);
       requestAnimationFrame(loop);
     }
+
+    function renderGameToText() {
+      const now = performance.now();
+      const topBusinesses = businesses
+        .filter((biz, index) => index < 5 || biz.owned > 0 || isBusinessUnlocked(biz))
+        .slice(0, 8)
+        .map((biz) => ({
+          id: biz.id,
+          name: biz.name,
+          unlocked: isBusinessUnlocked(biz),
+          owned: biz.owned,
+          running: biz.running,
+          manager: biz.manager,
+          progress: Math.round(biz.progress * 100) / 100,
+          cost: Math.round(calcBulkCost(biz, Math.max(1, resolveBuyCount(biz)))),
+          payout: Math.round(calcBusinessPayout(biz)),
+          duration: Math.round(calcBusinessDuration(biz) * 10) / 10,
+          affordable: state.cash >= calcBulkCost(biz, Math.max(1, resolveBuyCount(biz)))
+        }));
+      const canRunAll = businesses.some((biz) => (
+        isBusinessUnlocked(biz) && biz.owned > 0 && !biz.manager && !biz.running
+      ));
+      const canHireAll = businesses.some((biz) => (
+        isBusinessUnlocked(biz) && biz.owned > 0 && !biz.manager && state.cash >= calcManagerCost(biz)
+      ));
+      const claimableQuests = state.quests.reduce((count, quest) => {
+        const progress = getQuestProgress(quest);
+        return count + (progress.current >= progress.target ? 1 : 0);
+      }, 0);
+      const activeQuest = state.quests[0]
+        ? {
+            id: state.quests[0].id,
+            name: state.quests[0].name,
+            progress: getQuestProgress(state.quests[0])
+          }
+        : null;
+      return JSON.stringify({
+        state: gameStarted ? "playing" : "menu",
+        gameStarted,
+        activeSlot,
+        cash: Math.round(state.cash),
+        lifetime: Math.round(state.lifetime),
+        allTime: Math.round(state.allTime),
+        autoIncomePerSecond: Math.round(calcAutoIncomePerSecond()),
+        clickValue: Math.round(currentClickValue(undefined, { now })),
+        buyAmount: state.buyAmount,
+        momentum: Math.round(state.momentum * 100) / 100,
+        surge: {
+          charge: Math.round(state.surgeCharge * 100) / 100,
+          active: isSurgeActive(now),
+          activeMsRemaining: Math.max(0, Math.round(surgeActiveUntil - now)),
+          cooldownMsRemaining: Math.max(0, Math.round(surgeCooldownUntil - now))
+        },
+        event: activeEvent ? {
+          id: activeEvent.id,
+          name: activeEvent.name,
+          secondsRemaining: Math.max(0, Math.round((activeEvent.endsAt - now) / 1000))
+        } : {
+          id: null,
+          secondsUntilNext: Math.max(0, Math.round((nextEventAt - now) / 1000))
+        },
+        businesses: topBusinesses,
+        totals: {
+          clicks: state.totalClicks,
+          cycles: state.totalCycles,
+          purchases: state.totalPurchases,
+          surges: state.totalSurges,
+          events: state.totalEvents,
+          crits: state.totalCrits
+        },
+        quests: {
+          active: activeQuest,
+          count: state.quests.length,
+          claimable: claimableQuests
+        },
+        affordableActions: {
+          click: gameStarted,
+          runAll: canRunAll,
+          hireAll: canHireAll,
+          prestige: calcAngelPotential(state.allTime) > state.angelInvestors,
+          surge: state.surgeCharge >= 1 && !isSurgeActive(now) && !(surgeCooldownUntil && now < surgeCooldownUntil)
+        },
+        overlays: {
+          menuOpen: document.body.classList.contains("menu-open"),
+          tutorialOpen: document.body.classList.contains("tutorial-open"),
+          toastVisible: ui.toast?.classList.contains("show") || false
+        },
+        settings: {
+          soundEnabled: settings.soundEnabled,
+          musicEnabled: settings.musicEnabled,
+          tutorialOnStart: settings.tutorialOnStart
+        }
+      });
+    }
+
+    window.render_game_to_text = renderGameToText;
+    window.advanceTime = function advanceTime(ms = 0) {
+      const total = Math.max(0, Number(ms) || 0);
+      const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
+      const dt = total / steps / 1000 || 1 / 60;
+      let now = performance.now();
+      for (let i = 0; i < steps; i += 1) {
+        now += dt * 1000;
+        if (gameStarted) advanceIdleFrame(Math.min(dt, 0.1), now);
+      }
+      lastFrame = now;
+      return renderGameToText();
+    };
 
     function handleClick() {
       state.momentum = Math.min(1, state.momentum + state.momentumGain);

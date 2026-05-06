@@ -780,18 +780,11 @@ function restartGame() {
 
 /* ----- Main loop (dt-normalized) ----- */
 let lastTime = null; // for dt
-function loop(now) {
-  if (lastTime === null) { lastTime = now; requestAnimationFrame(loop); return; }
-  // seconds since last frame
-  let dt = (now - lastTime) / 1000;
-  lastTime = now;
-  // clamp to avoid big jumps after tab sleep
-  if (dt > 0.1) dt = 0.1;
-  // normalize to 60fps "frame units"
-  const dt60 = dt * 60;
-  
+function tickAndRender(dt) {
+  const safeDt = Number.isFinite(dt) ? Math.max(0, Math.min(0.1, dt)) : 1 / 60;
+  const dt60 = safeDt * 60;
+
   if(helpOpen) {
-    requestAnimationFrame(loop);
     return;
   }
 
@@ -845,8 +838,63 @@ function loop(now) {
 
   updateDifficulty();
   frames++;
+  return safeDt;
+}
+
+function loop(now = performance.now()) {
+  if (lastTime === null || !Number.isFinite(lastTime)) { lastTime = now; requestAnimationFrame(loop); return; }
+  // seconds since last frame
+  let dt = (now - lastTime) / 1000;
+  lastTime = now;
+  // clamp to avoid big jumps after tab sleep
+  if (dt > 0.1) dt = 0.1;
+  tickAndRender(dt);
   requestAnimationFrame(loop);
 }
+
+function renderGameToText() {
+  return JSON.stringify({
+    state: gameOver ? 'game-over' : (started ? 'playing' : 'title'),
+    started,
+    gameOver,
+    helpOpen,
+    score,
+    highScore,
+    newBestThisRun,
+    frames,
+    speedMultiplier: Math.round(speedMultiplier * 100) / 100,
+    coordinateSystem: 'world units, origin top-left, x right, y down',
+    world: { width: WORLD_W, height: WORLD_H, groundHeight: groundH },
+    bird: {
+      x: Math.round(bird.x),
+      y: Math.round(bird.y),
+      velocity: Math.round(bird.velocity * 100) / 100,
+      width: bird.width,
+      height: bird.height
+    },
+    pipes: pipes.slice(0, 5).map((pipe) => ({
+      x: Math.round(pipe.x),
+      top: Math.round(pipe.top),
+      bottom: Math.round(pipe.bottom),
+      scored: !!pipe.scored
+    })),
+    spawnAccumulator: Math.round(spawnAccumulator),
+    musicOn: !!music.isOn,
+    audioReady: !!audioCtx
+  });
+}
+
+window.render_game_to_text = renderGameToText;
+window.advanceTime = function advanceTime(ms = 0) {
+  const total = Math.max(0, Number(ms) || 0);
+  const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
+  const dt = total / steps / 1000 || 1 / 60;
+  for (let i = 0; i < steps; i += 1) {
+    tickAndRender(dt);
+  }
+  lastTime = performance.now();
+  return renderGameToText();
+};
 
 /* ----- Input ----- */
 function doFlapOrStart() {
