@@ -18,6 +18,7 @@
     --gridDark: #0c1220;
     --gridLight: #122034;
   }
+  *, *::before, *::after { box-sizing:border-box; }
   html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; overflow:hidden; }
   #wrap { position:fixed; inset:0; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; overflow-x:hidden; overflow-y:auto; }
   header { display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; padding:10px 14px; background:linear-gradient(180deg, #0d1422, #0b101a); border-bottom:1px solid #142236; min-width:0; }
@@ -42,13 +43,18 @@
   .custom-warn { color: var(--warn); display:none; }
   .help { color: var(--muted); }
   @media (max-width: 640px) {
-    header { gap:6px; padding:8px; justify-content:flex-start; }
-    header .pill, header select, header button { flex:1 1 calc(50% - 8px); min-width:0; padding:7px 8px; font-size:12px; justify-content:center; }
-    header select { max-width:none; }
+    #wrap { grid-template-rows:auto auto auto auto; align-content:start; }
+    header { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; padding:6px 8px; justify-content:stretch; }
+    header .pill, header select, header button { min-width:0; width:100%; padding:6px 6px; font-size:11px; justify-content:center; min-height:31px; }
+    header select { max-width:none; grid-column:span 2; }
+    #helpBtn { grid-column:span 3; }
     .sep, .led { display:none; }
-    .custom-controls { flex:1 1 100%; justify-content:center; flex-wrap:wrap; }
-    #game { margin:10px auto 6px; border-radius:12px; }
-    footer { padding:6px 10px 10px; font-size:11px; line-height:1.45; }
+    .custom-controls { grid-column:1 / -1; justify-content:center; flex-wrap:wrap; }
+    #game { margin:7px auto 4px; border-radius:12px; }
+    footer { display:block; height:24px; max-height:24px; overflow:hidden; padding:4px 10px 8px; font-size:11px; line-height:1.35; }
+    footer .help { display:block; font-size:0; line-height:1.2; }
+    footer .help > * { display:none; }
+    footer .help::before { content:"Tap reveal - use Flag Mode to mark mines."; display:block; font-size:11px; }
     .kbd { padding:1px 4px; }
   }
 </style>
@@ -164,30 +170,34 @@
     const footerH = footerEl ? footerEl.offsetHeight : 0;
     const noticeVisible = noticeEl ? getComputedStyle(noticeEl).display !== 'none' : false;
     const noticeH = noticeVisible ? noticeEl.offsetHeight : 0;
-    const verticalMargins = 36; // canvas margin top/bottom
+    const compactBeginnerMobile = window.innerWidth <= 640 && currentPreset === 'beginner' && cols <= 9 && rows <= 9;
+    const verticalMargins = compactBeginnerMobile ? 18 : 36; // canvas margin top/bottom
     const availableH = Math.max(0, window.innerHeight - headerH - footerH - noticeH - verticalMargins);
-    const extraRatio = 0.9; // extra headroom relative to tile size
+    const extraRatio = compactBeginnerMobile ? 0.45 : 0.9; // extra headroom relative to tile size
+    const padRatio = compactBeginnerMobile ? 0.65 : 1;
 
-    const tileByWidth = Math.floor(maxW / (cols + 2));
-    const tileByHeight = Math.floor(availableH / (rows + 2 + extraRatio));
+    const tileByWidth = Math.floor(maxW / (cols + padRatio * 2));
+    const tileByHeight = Math.floor(availableH / (rows + padRatio * 2 + extraRatio));
     let tileCSS = Math.max(1, Math.min(tileByWidth, tileByHeight, 40));
 
+    let padCSS = Math.round(tileCSS * padRatio);
     let extraTop = Math.round(tileCSS * extraRatio);
-    let cssW = (cols + 2) * tileCSS;
-    let cssH = (rows + 2) * tileCSS + extraTop;
+    let cssW = cols * tileCSS + padCSS * 2;
+    let cssH = rows * tileCSS + padCSS * 2 + extraTop;
 
     if (cssH > availableH) {
-      tileCSS = Math.max(1, Math.floor((availableH - extraTop) / (rows + 2)));
+      tileCSS = Math.max(1, Math.floor(availableH / (rows + padRatio * 2 + extraRatio)));
+      padCSS = Math.round(tileCSS * padRatio);
       extraTop = Math.round(tileCSS * extraRatio);
-      cssW = (cols + 2) * tileCSS;
-      cssH = (rows + 2) * tileCSS + extraTop;
+      cssW = cols * tileCSS + padCSS * 2;
+      cssH = rows * tileCSS + padCSS * 2 + extraTop;
     }
 
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
     canvas.width = Math.floor(cssW * DPR);
     canvas.height = Math.floor(cssH * DPR);
-    return { tile: tileCSS * DPR, pad: tileCSS * DPR };
+    return { tile: tileCSS * DPR, pad: padCSS * DPR };
   }
 
   // ===== Game State =====

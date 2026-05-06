@@ -140,6 +140,8 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
         );
 
         return {
+          id: element.id || "",
+          className: typeof element.className === "string" ? element.className : "",
           tag: element.tagName.toLowerCase(),
           text,
           visible,
@@ -234,6 +236,12 @@ function rankSurface(record) {
   const reasons = [];
   let score = 0;
   const metrics = record.metrics || {};
+  const meaningfulOverflow = (metrics.overflowingTextElements || []).filter((item) => !isBenignTextOverflow(record, item));
+  const buriedPrimaryAction =
+    record.viewport === "mobile" &&
+    metrics.primaryAction &&
+    metrics.primaryAction.y > metrics.viewportHeight * 0.7 &&
+    !isSecondaryResetAction(record);
   const hardIssueCount = record.issues.pageErrors.length + record.issues.network.length;
   const consoleIssueCount = record.issues.console.length;
 
@@ -269,11 +277,11 @@ function rankSurface(record) {
     score += 75 + Math.min(50, metrics.overflowX);
     reasons.push(`mobile horizontal overflow ${metrics.overflowX}px`);
   }
-  if (metrics.overflowingTextElements?.length) {
+  if (meaningfulOverflow.length) {
     score += 35;
-    reasons.push(`${metrics.overflowingTextElements.length} overflowing text element(s)`);
+    reasons.push(`${meaningfulOverflow.length} overflowing text element(s)`);
   }
-  if (record.viewport === "mobile" && metrics.primaryAction && metrics.primaryAction.y > metrics.viewportHeight * 0.7) {
+  if (buriedPrimaryAction) {
     score += 30;
     reasons.push(`primary action buried at y=${metrics.primaryAction.y}`);
   }
@@ -295,6 +303,57 @@ function rankSurface(record) {
   }
 
   return { score, reasons };
+}
+
+function parseRenderState(record) {
+  if (!record.renderText || record.renderError) return null;
+  try {
+    return JSON.parse(record.renderText);
+  } catch {
+    return null;
+  }
+}
+
+function isSecondaryResetAction(record) {
+  const text = record.metrics?.primaryAction?.text || "";
+  if (!/^play again\b/i.test(text)) return false;
+  const state = parseRenderState(record);
+  if (!state) return false;
+
+  return (
+    state.ready === true &&
+    (state.finished === false || state.won === false || state.dialogs?.gameOver === false) &&
+    state.dialogs?.gameOver !== true
+  );
+}
+
+function isBenignTextOverflow(record, item) {
+  if (!item) return false;
+  const metrics = record.metrics || {};
+  const tinyOverlayOverflow =
+    metrics.overflowX === 0 &&
+    item.scrollOverflowX > 0 &&
+    item.scrollOverflowX <= 4 &&
+    item.scrollOverflowY <= 2 &&
+    item.width >= (metrics.viewportWidth || 0) - 4 &&
+    item.height >= (metrics.viewportHeight || 0) - 4;
+
+  if (tinyOverlayOverflow) return true;
+
+  if (record.slug === "solitaire" && item.scrollOverflowX <= 2 && item.scrollOverflowY > 0 && looksLikeCardStackText(item.text)) {
+    return true;
+  }
+
+  if (record.slug === "doodle-jump" && /\bmenu-card\b/.test(item.className || "") && /hidden/i.test(`${item.overflowXStyle} ${item.overflowYStyle}`)) {
+    return true;
+  }
+
+  return false;
+}
+
+function looksLikeCardStackText(text = "") {
+  const compact = text.replace(/\s+/g, "");
+  return compact.length > 0 && compact.length <= 90 && /^[0-9JQKA\u2660-\u2666]+$/i.test(compact);
 }
 
 function observePage(page, rootUrl, label, issues) {

@@ -61,3 +61,14 @@ Original prompt: Do this for me
 - Verified with the required web-game client for 2048, Hero Fact Match, and Idle Tycoon plus direct Playwright assertions for 2048 moves, fact-match hint/correct guess, and Idle Tycoon slot/click/buy state.
 - Local checks passed: `npm run capture:games`, catalog validation, and full 20-game smoke suite.
 - Suggested next pass: refine low-priority harness heuristics around intentional stacked-card DOM and then address the real remaining mobile first-action candidates, especially Neon Snake and Lexica, if screenshots still show buried controls.
+
+## 2026-05-06 Codex pass 8
+
+- Ran the fresh full-catalog rendered ranking baseline in `test-results/render-ranking/2026-05-06T13-59-21-859Z/`, then targeted the remaining real mobile first-screen issues plus ranking noise.
+- Refined `scripts/capture-games.mjs` so tiny overlay overflow, intentional Solitaire card stacks, Arcade Jump decorative menu clipping, and Lexica's playable "Play Again" reset no longer rank as hard visual issues.
+- Improved Neon Snake mobile by adding a visible Start/Pause/Resume/Restart action in the HUD and wrapping the canvas start instructions so they no longer clip on 390px screens.
+- Improved Minesweeper mobile by tightening the control grid/footer and sizing the beginner board to the available mobile width while keeping larger-board fit behavior intact.
+- Final capture in `test-results/render-ranking/2026-05-06T18-30-22-154Z/` showed all ranked surfaces at score 0 with no console/page/network issues or mobile horizontal overflow.
+- Verified with the required web-game client for Snake, Minesweeper, and Lexica plus direct mobile Playwright assertions for Snake start/move, Minesweeper reveal/flag, and Lexica typed guess.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: move from first-screen cleanup to deeper subjective gameplay polish, starting with any zero-score screenshots that still feel sparse or visually dated despite passing the automated rubric.

@@ -10,6 +10,8 @@
   .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:14px; align-items:center; font-weight:700; }
   .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
   .pill.button { cursor:pointer; user-select:none; }
+  button.pill { color:#e6edf3; font:inherit; }
+  .primary-start { display:none; border-color:#1f766b; color:#5eead4; background:#0e2c2a; font-weight:800; }
   .has-hotkey { display:inline-flex; align-items:center; gap:8px; }
   .hotkey { background:#0b1120; border:1px solid #26334a; padding:2px 6px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:0.04em; line-height:1; }
   .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
@@ -20,6 +22,7 @@
     .hud { left:8px; right:8px; transform:none; flex-wrap:wrap; justify-content:center; gap:6px; }
     .pill { padding:6px 8px; font-size:12px; }
     #status { max-width:78px; white-space:normal; text-align:center; }
+    .primary-start { display:inline-flex; align-items:center; justify-content:center; min-width:74px; }
     .has-hotkey { gap:6px; }
     .hotkey { padding:2px 5px; font-size:11px; }
     .btns { left:8px; right:8px; transform:none; bottom:8px; flex-wrap:wrap; justify-content:center; gap:6px; }
@@ -39,10 +42,11 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  <div class="hud" aria-hidden="true">
+  <div class="hud">
     <div class="pill" id="score">Score: 0</div>
     <div class="pill" id="best">Best: 0</div>
     <div class="pill" id="status">Press Space to start</div>
+    <button class="pill button primary-start" id="startMobileBtn" type="button">Start</button>
     <div class="pill button has-hotkey" id="musicPill" title="Toggle music (M)"><span class="label">♪ Music: On</span><span class="hotkey">M</span></div>
     <div class="pill button has-hotkey" id="helpBtn" title="How to Play (H)"><span class="label">❓ How to Play</span><span class="hotkey">H</span></div>
   </div>
@@ -94,6 +98,7 @@
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('best');
   const statusEl = document.getElementById('status');
+  const startMobileBtn = document.getElementById('startMobileBtn');
   const upBtn=document.getElementById('upBtn');
   const leftBtn=document.getElementById('leftBtn');
   const rightBtn=document.getElementById('rightBtn');
@@ -320,6 +325,7 @@
     statusEl.textContent='Press Space to start';
     spawnFood();
     updateHUD();
+    syncStartMobileButton();
     draw();
     // music reset
     Music.setBpm(96);
@@ -346,6 +352,7 @@
     gameWon=true; running=false;
     statusEl.textContent='You Win! — Press Space';
     SFX.eat(); Music.stop();
+    syncStartMobileButton();
     draw();
   }
 
@@ -368,7 +375,7 @@
     }
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
     if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
-      gameOver=true; running=false; statusEl.textContent='Game Over — Press Space'; SFX.die(); Music.stop(); draw(); return;
+      gameOver=true; running=false; statusEl.textContent='Game Over — Press Space'; SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
     }
     snake.unshift(head);
     if(food && head.x===food.x && head.y===food.y){
@@ -498,13 +505,28 @@
       ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='24px system-ui, sans-serif';
       ctx.fillText('Press Space to start', canvas.width/2, canvas.height/2);
       ctx.font='14px system-ui, sans-serif';
-      ctx.fillText('Arrows/WASD to move — Space to pause — M to toggle music', canvas.width/2, canvas.height/2+24);
+      if (canvas.width <= 420) {
+        ctx.fillText('Arrows/WASD or buttons to move', canvas.width/2, canvas.height/2+26);
+        ctx.fillText('Space pauses - M toggles music', canvas.width/2, canvas.height/2+46);
+      } else {
+        ctx.fillText('Arrows/WASD to move — Space to pause — M to toggle music', canvas.width/2, canvas.height/2+24);
+      }
     }
   }
 
-  function start(){ if(running||gameOver||gameWon) return; running=true; statusEl.textContent='Press Space to pause'; SFX.start(); Music.resume(); }
+  function syncStartMobileButton(){
+    if(!startMobileBtn) return;
+    const paused = !running && !gameOver && !gameWon && /^Paused/.test(statusEl.textContent || '');
+    startMobileBtn.textContent = gameOver || gameWon ? 'Restart' : running ? 'Pause' : paused ? 'Resume' : 'Start';
+  }
+  function activateStartMobile(){
+    if(gameOver||gameWon) restart();
+    else if(running) pause();
+    else start();
+  }
+  function start(){ if(running||gameOver||gameWon) return; running=true; statusEl.textContent='Press Space to pause'; SFX.start(); Music.resume(); syncStartMobileButton(); }
   function restart(){ newGame(); }
-  function pause(){ if(!running||gameOver||gameWon) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); }
+  function pause(){ if(!running||gameOver||gameWon) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); syncStartMobileButton(); }
 
   function onKey(e){
     const c=e.code;
@@ -537,6 +559,7 @@
   leftBtn.addEventListener('click', ()=>{ queueDir({x:-1,y:0}); if(!running&&!gameOver) start(); });
   rightBtn.addEventListener('click', ()=>{ queueDir({x:1,y:0}); if(!running&&!gameOver) start(); });
   restartBtn.addEventListener('click', ()=>{ restart(); });
+  if(startMobileBtn) startMobileBtn.addEventListener('click', activateStartMobile);
   musicToggleBtn.addEventListener('click', toggleMusic);
   musicPill.addEventListener('click', toggleMusic);
 
