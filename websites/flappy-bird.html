@@ -554,6 +554,14 @@ function drawCloud(cx, cy, w) {
   ctx.ellipse(cx+w*0.25, cy+6, w*0.3, w*0.2, 0, 0, Math.PI*2);
   ctx.fill();
 }
+function drawDeviceCloud(cx, cy, w) {
+  ctx.fillStyle = "rgba(255,255,255,0.74)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, w*0.46, w*0.24, 0, 0, Math.PI*2);
+  ctx.ellipse(cx-w*0.28, cy+5*dpr, w*0.25, w*0.17, 0, 0, Math.PI*2);
+  ctx.ellipse(cx+w*0.24, cy+8*dpr, w*0.31, w*0.18, 0, 0, Math.PI*2);
+  ctx.fill();
+}
 function updateAndDrawClouds(step) {
   for (const c of clouds) {
     c.x -= step * c.s * 0.3; // slow parallax (step is already dt-scaled)
@@ -596,6 +604,80 @@ function drawGround(step) {
     ctx.fillRect(x+24, WORLD_H - groundH + 34, 24, 10);
     ctx.fillRect(x, WORLD_H - groundH + 54, 24, 10);
   }
+}
+let wideBackdropOffset = 0;
+function drawWideBackdrop(step) {
+  const W = canvas.width, H = canvas.height;
+  const laneW = WORLD_W * viewScale;
+  const laneH = WORLD_H * viewScale;
+  const laneLeft = viewOffsetX;
+  const laneRight = laneLeft + laneW;
+  if (laneLeft < 120 * dpr && W - laneRight < 120 * dpr) return;
+
+  wideBackdropOffset = (wideBackdropOffset + step * viewScale * 0.22) % (120 * viewScale);
+
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#61bbc7");
+  sky.addColorStop(0.55, "#a9e7eb");
+  sky.addColorStop(1, "#d7f2e8");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 10; i++) {
+    const w = (70 + (i % 4) * 18) * viewScale;
+    const x = ((i * 211 * dpr - wideBackdropOffset * (0.7 + i * 0.03)) % (W + w * 2)) - w;
+    const y = (42 + (i % 5) * 38) * dpr;
+    drawDeviceCloud(x, y, w);
+  }
+
+  const hillBase = viewOffsetY + (WORLD_H - groundH - 36) * viewScale;
+  ctx.fillStyle = "#9ed0a7";
+  ctx.beginPath();
+  ctx.moveTo(0, hillBase);
+  for (let x = 0; x <= W; x += 24 * dpr) {
+    ctx.lineTo(x, hillBase - Math.sin((x + frames * 0.8) * 0.004) * 22 * dpr);
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  const nearHill = viewOffsetY + (WORLD_H - groundH - 12) * viewScale;
+  ctx.fillStyle = "#74bf7e";
+  ctx.beginPath();
+  ctx.moveTo(0, nearHill);
+  for (let x = 0; x <= W; x += 24 * dpr) {
+    ctx.lineTo(x, nearHill - Math.cos((x + frames * 1.15) * 0.005) * 26 * dpr);
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  const groundTop = viewOffsetY + (WORLD_H - groundH) * viewScale;
+  ctx.fillStyle = "#589f52";
+  ctx.fillRect(0, groundTop, W, 16 * viewScale);
+  ctx.fillStyle = "#d8a36d";
+  ctx.fillRect(0, groundTop + 16 * viewScale, W, H - groundTop);
+  ctx.fillStyle = "rgba(135, 83, 39, 0.28)";
+  const brickW = 42 * viewScale;
+  for (let x = -brickW + (-wideBackdropOffset % brickW); x < W + brickW; x += brickW) {
+    ctx.fillRect(x, groundTop + 28 * viewScale, brickW * 0.52, 8 * viewScale);
+    ctx.fillRect(x + brickW * 0.48, groundTop + 52 * viewScale, brickW * 0.52, 8 * viewScale);
+  }
+
+  const edgeShade = Math.min(80 * viewScale, laneLeft * 0.35, (W - laneRight) * 0.35);
+  const leftShade = ctx.createLinearGradient(laneLeft - edgeShade, 0, laneLeft, 0);
+  leftShade.addColorStop(0, "rgba(24, 80, 95, 0)");
+  leftShade.addColorStop(1, "rgba(24, 80, 95, 0.24)");
+  ctx.fillStyle = leftShade;
+  ctx.fillRect(Math.max(0, laneLeft - edgeShade), viewOffsetY, edgeShade, laneH);
+
+  const rightShade = ctx.createLinearGradient(laneRight, 0, laneRight + edgeShade, 0);
+  rightShade.addColorStop(0, "rgba(24, 80, 95, 0.24)");
+  rightShade.addColorStop(1, "rgba(24, 80, 95, 0)");
+  ctx.fillStyle = rightShade;
+  ctx.fillRect(laneRight, viewOffsetY, edgeShade, laneH);
 }
 
 /* ----- Bird (animated sprite) ----- */
@@ -797,6 +879,7 @@ function tickAndRender(dt) {
   // distance-per-frame-at-60fps, scaled by dt60 => distance this actual frame
   const baseStepPerFrame = basePipeSpeed * speedMultiplier;
   const scrollStep = (gameOver ? 0 : baseStepPerFrame) * dt60;
+  drawWideBackdrop(scrollStep);
 
   withWorldTransform(() => {
     // Background layers

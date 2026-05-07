@@ -103,3 +103,15 @@ Original prompt: Do this for me
 - Verified with the required web-game client for Snake, Idle Tycoon, and Solitaire plus direct mobile Playwright assertions for Snake board position/head movement, Idle cash and venture visibility, and Solitaire stock/waste/move/tableau sizing.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: run another subjective pass from the interactive contact sheet focused on desktop active-play feel, especially any game whose post-action state is technically correct but visually static or hard to read.
+
+## 2026-05-07 Codex pass 12
+
+- Baseline: `test-results/render-ranking/2026-05-07T05-38-34-564Z/` scored all 40 surfaces at zero, so desktop active-play targets were selected by visual inspection rather than automated score.
+- Selected Sky Hopper, Klondike Solitaire, and 2048 as the weakest desktop post-action feel surfaces: Sky Hopper had inert side letterboxing, Solitaire underused desktop tableau height, and 2048 looked flat compared with newer games.
+- Improved Sky Hopper desktop by drawing a wide parallax backdrop in the letterbox margins while keeping the original world-space play lane, physics, controls, audio, and diagnostics unchanged.
+- Improved Klondike Solitaire desktop by increasing card size/fan spacing, widening the board, and extending tableau drop zones so the post-draw layout uses the available height while preserving DOM cards and rules.
+- Improved 2048 desktop with richer background accents, stronger board depth, larger stage, and tile shadow/highlight rendering without changing movement, scoring, saves, undo, or diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-07T06-03-36-868Z/`, with all 40 desktop/mobile surfaces at zero automated issues; target desktop screenshots were manually inspected.
+- Verified with required web-game clients for Sky Hopper, Solitaire, and 2048 plus direct desktop Playwright assertions for active Sky Hopper state, Solitaire draw/tableau sizing, and 2048 grid changes.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`. A first capture/check attempt hit local timeout/resource noise, then passed on rerun with longer timeout.
+- Suggested next pass: use the interactive contact sheet to make a small shared polish pass for non-game menu/status affordances, especially duplicated or low-priority controls that remain visible during active play.

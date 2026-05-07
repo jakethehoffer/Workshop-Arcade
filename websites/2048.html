@@ -6,13 +6,14 @@
   <title>2048</title>
   <style>
     :root{
-      --bg0:#faf8ef;            /* light base */
-      --bg1:#f3eee0;            /* gradient stop */
+      --bg0:#f9f4e7;            /* light base */
+      --bg1:#dfe9df;            /* gradient stop */
       --board:#bbada0;          /* board background */
       --grid:#cdc1b4;           /* empty cell background */
       --text:#776e65;           /* dark text */
       --text-light:#f9f6f2;     /* light text on dark tiles */
       --accent:#edc22e;         /* brand accent */
+      --accent-2:#4aa7a5;
       --fade: .28s cubic-bezier(.22,.61,.36,1); /* UI fade timing */
     }
 
@@ -29,30 +30,33 @@
 
     /* Page layout */
     html,body{height:100%;margin:0;
-      background:linear-gradient(160deg,var(--bg0),var(--bg1));
+      background:
+        radial-gradient(circle at 16% 12%, rgba(74,167,165,.20), transparent 28%),
+        radial-gradient(circle at 86% 18%, rgba(237,194,46,.22), transparent 24%),
+        linear-gradient(160deg,var(--bg0),var(--bg1));
       color:var(--text);
       overflow-x:hidden;
       font-family:EmbeddedMontserrat, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif}
 
-    .wrap{width:min(94vw,640px);min-height:100dvh;margin:0 auto;padding:clamp(10px,2vw,18px);display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center}
+    .wrap{width:min(94vw,700px);min-height:100dvh;margin:0 auto;padding:clamp(10px,2vw,18px);display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center}
     header{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
-    h1{font-size:clamp(32px,7vw,48px);line-height:1;margin:0;color:#776e65}
+    h1{font-size:clamp(36px,7vw,58px);line-height:1;margin:0;color:#5f574f;text-shadow:0 2px 0 rgba(255,255,255,.55)}
     .badges{margin-left:auto;display:flex;gap:10px}
-    .badge{background:#bbada0;color:#fff;border-radius:10px;padding:8px 12px;min-width:110px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+    .badge{background:linear-gradient(180deg,#b9aa9d,#9f8d7d);color:#fff;border-radius:12px;padding:9px 13px;min-width:112px;text-align:center;box-shadow:0 8px 18px rgba(92,77,61,.16)}
     .badge .label{font-size:12px;opacity:.9}
     .badge .value{font-size:22px;font-weight:700}
 
     .controls{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     .controls-hint{opacity:.7}
-    button{appearance:none;border:0;border-radius:10px;padding:9px 12px;background:#8f7a66;color:white;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    button{appearance:none;border:0;border-radius:10px;padding:9px 12px;background:#8f7a66;color:white;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(74,55,38,.14)}
     button:active{transform:translateY(1px)}
 
     /* Canvas container keeps a square that scales responsively */
-    .board{position:relative;margin-top:12px;aspect-ratio:1/1;width:min(100%,600px);justify-self:center;background:transparent}
-    canvas{width:100%;height:100%;display:block;touch-action:none;}
+    .board{position:relative;margin-top:16px;aspect-ratio:1/1;width:min(100%,620px);justify-self:center;background:transparent;filter:drop-shadow(0 24px 36px rgba(75,61,46,.16))}
+    canvas{width:100%;height:100%;display:block;touch-action:none;border-radius:18px;}
 
     /* Overlay messages (win / game over). Kept in layout but faded by opacity */
-    .overlay{position:absolute;inset:0;display:grid;place-items:center;
+    .overlay{position:absolute;inset:0;display:grid;place-items:center;border-radius:18px;
       background:rgba(238,228,218,.65);backdrop-filter:saturate(1.2) blur(1px);
       opacity:0; pointer-events:none; transition:opacity var(--fade)}
     .overlay.show{opacity:1; pointer-events:auto}
@@ -564,7 +568,23 @@ function checkWinOnly(){
     const ox = Math.round(x + (size - s)/2);
     const oy = Math.round(y + (size - s)/2);
 
+    ctx.save();
+    ctx.shadowColor = value >= 8 ? 'rgba(120, 75, 28, 0.24)' : 'rgba(80, 64, 48, 0.10)';
+    ctx.shadowBlur = value >= 8 ? 16 : 8;
+    ctx.shadowOffsetY = 4;
     roundRect(ctx, ox, oy, s, s, radius, bg);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(ox, oy, s, s, radius);
+    ctx.clip();
+    const shine = ctx.createLinearGradient(ox, oy, ox, oy + s * 0.45);
+    shine.addColorStop(0, 'rgba(255,255,255,0.22)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = shine;
+    ctx.fillRect(ox, oy, s, s * 0.52);
+    ctx.restore();
 
     // Choose font size based on digits; font family prefers the embedded name
     const digits = String(value).length;
