@@ -125,3 +125,12 @@ Original prompt: Do this for me
 - Verified with required web-game clients for Snake, Brick Breaker, and Hero Fact Match plus direct full-page Playwright assertions for active state, chrome sizing, no overflow, and fact-match clue/guess behavior.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: use the contact sheet to pick one deeper gameplay-feel target that is still mechanically correct but could benefit from clearer mid-game feedback or movement readability.
+
+## 2026-05-07 Codex pass 14
+
+- Baseline: `test-results/render-ranking/2026-05-07T21-19-19-247Z/` scored all 40 surfaces at zero; Metro Dash was selected as the mechanically solid game with the weakest mid-game feedback/readability.
+- Strengthened Metro Dash lane depth cues, motion streaks, obstacle danger glow, coin pickup rings/score pops, near-miss callouts, crash flash/shake, and feedback diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-07T21-32-43-254Z/`, with all 40 surfaces at zero automated issues and the Metro Dash desktop/mobile post-action screenshots manually inspected.
+- Verified with the required web-game client plus direct Playwright checks for forced coin pickup, near miss, and mobile crash feedback.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: apply the same mid-game feedback lens to another mechanically solid canvas game, likely Slope Runner danger/risk feedback or Arena hit/collection readability.

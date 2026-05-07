@@ -117,6 +117,16 @@ function projS(z) { return lerp(1, 0.015, z); }
 
 /* ===== PARTICLES ===== */
 const particles = [];
+const scorePops = [];
+const pickupRings = [];
+const feedback = {
+  nearMissCount: 0,
+  dangerCue: 0,
+  dangerLane: 0,
+  crashFlash: 0,
+  lastPickupAge: 999,
+  lastNearMissAge: 999
+};
 function emitParticles(x, y, color, count, spread, life) {
   for (let i = 0; i < count; i++) {
     particles.push({
@@ -125,12 +135,37 @@ function emitParticles(x, y, color, count, spread, life) {
     });
   }
 }
+function emitScorePop(text, x, y, color) {
+  scorePops.push({ text, x, y, vy: -0.9, life: 42, maxLife: 42, color });
+}
+function emitPickupRing(x, y, color) {
+  pickupRings.push({ x, y, r: 10, life: 28, maxLife: 28, color });
+}
 function updateParticles(dt60) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx * dt60; p.y += p.vy * dt60; p.vy += 0.08 * dt60;
     p.life -= dt60;
     if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+function updateFeedback(dt60) {
+  feedback.lastPickupAge += dt60;
+  feedback.lastNearMissAge += dt60;
+  feedback.dangerCue = Math.max(0, feedback.dangerCue - 0.08 * dt60);
+  feedback.crashFlash = Math.max(0, feedback.crashFlash - 0.045 * dt60);
+  for (let i = scorePops.length - 1; i >= 0; i--) {
+    const p = scorePops[i];
+    p.y += p.vy * dt60;
+    p.vy -= 0.015 * dt60;
+    p.life -= dt60;
+    if (p.life <= 0) scorePops.splice(i, 1);
+  }
+  for (let i = pickupRings.length - 1; i >= 0; i--) {
+    const r = pickupRings[i];
+    r.r += 1.7 * dt60;
+    r.life -= dt60;
+    if (r.life <= 0) pickupRings.splice(i, 1);
   }
 }
 function drawParticles() {
@@ -141,6 +176,41 @@ function drawParticles() {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r * a, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
+}
+function drawFeedback() {
+  for (const r of pickupRings) {
+    const a = clamp(r.life / r.maxLife, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = r.color;
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  for (const p of scorePops) {
+    const a = clamp(p.life / p.maxLife, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = `bold ${18 * (0.8 + 0.25 * a)}px system-ui, -apple-system, Segoe UI, Arial`;
+    ctx.textAlign = "center";
+    ctx.strokeStyle = "rgba(0,0,0,0.72)";
+    ctx.lineWidth = 4;
+    ctx.strokeText(p.text, p.x, p.y);
+    ctx.fillStyle = p.color;
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.restore();
+  }
+  if (feedback.crashFlash > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.55, feedback.crashFlash * 0.55);
+    ctx.fillStyle = "#fb3f5c";
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
 }
 
 /* ===== SCREEN SHAKE ===== */
@@ -161,6 +231,7 @@ let tieOffset = 0;
 function drawScene(dt60, speed) {
   const cx = W / 2, vy = vanishY();
   const tbW = W * TRACK_BOT, ttW = W * TRACK_TOP;
+  const speedIntensity = state === "playing" ? clamp((gameSpeed - 3) / 6, 0, 1) : 0;
 
   // Sky / distant tunnel glow
   const skyG = ctx.createRadialGradient(cx, vy, 10, cx, vy, H * 0.8);
@@ -240,6 +311,42 @@ function drawScene(dt60, speed) {
   floorG.addColorStop(0, "#202d4d"); floorG.addColorStop(0.58, "#273858"); floorG.addColorStop(1, "#3c4663");
   ctx.fillStyle = floorG; ctx.fill();
 
+  // Active lane geometry: stronger rails make lateral movement easier to read.
+  if (state === "playing") {
+    const traceLine = (offset, color, width, alpha, dash = []) => {
+      ctx.save();
+      ctx.beginPath();
+      if (dash.length) ctx.setLineDash(dash);
+      for (let z = 0; z <= 1; z += 0.012) {
+        const tw = lerp(tbW, ttW, z);
+        const x = cx + tw * offset;
+        const y = projY(z);
+        z === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = width;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10 + speedIntensity * 14;
+      ctx.stroke();
+      ctx.restore();
+    };
+    traceLine(-0.5, "#46e9ff", 2.8, 0.42 + speedIntensity * 0.18);
+    traceLine(0.5, "#46e9ff", 2.8, 0.42 + speedIntensity * 0.18);
+    traceLine(-1 / 6, "#ffd666", 1.8, 0.48, [10, 12]);
+    traceLine(1 / 6, "#ffd666", 1.8, 0.48, [10, 12]);
+
+    for (let i = 0; i < 18; i++) {
+      const z = (i / 18 + tieOffset * 0.7) % 1;
+      if (z > 0.96) continue;
+      const y = projY(z);
+      const s = projS(z);
+      const tickW = Math.max(4, 42 * s);
+      ctx.fillStyle = `rgba(230,250,255,${0.18 + (1 - z) * 0.24})`;
+      ctx.fillRect(cx - tickW / 2, y - Math.max(1, 2.5 * s), tickW, Math.max(1, 4 * s));
+    }
+  }
+
   // Track ties (scrolling)
   tieOffset = (tieOffset + speed * dt60 * 0.015) % 0.04;
   for (let i = 0; i < 50; i++) {
@@ -266,6 +373,22 @@ function drawScene(dt60, speed) {
     }
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  if (feedback.dangerCue > 0 && state === "playing") {
+    const pulse = 0.5 + Math.sin(performance.now() / 75) * 0.35;
+    const lane = feedback.dangerLane || 0;
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.38, feedback.dangerCue * (0.18 + pulse * 0.16));
+    ctx.fillStyle = "#fb3f5c";
+    ctx.beginPath();
+    ctx.moveTo(projX(lane - 0.5, 0), H);
+    ctx.lineTo(projX(lane - 0.5, 1), vy);
+    ctx.lineTo(projX(lane + 0.5, 1), vy);
+    ctx.lineTo(projX(lane + 0.5, 0), H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   // === CEILING ===
@@ -301,14 +424,27 @@ function drawScene(dt60, speed) {
 
   // === SPEED LINES (during gameplay) ===
   if (state === "playing") {
-    const intensity = clamp((gameSpeed - 3) / 6, 0, 1);
-    ctx.strokeStyle = `rgba(150,180,255,${intensity * 0.15})`;
+    const intensity = speedIntensity;
+    ctx.strokeStyle = `rgba(150,210,255,${0.08 + intensity * 0.22})`;
     ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       const sx = Math.random() * W;
       const sy = H * 0.3 + Math.random() * H * 0.5;
-      const len = 30 + Math.random() * 60;
+      const len = 36 + intensity * 64 + Math.random() * 50;
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy + len); ctx.stroke();
+    }
+    ctx.strokeStyle = `rgba(72,233,255,${0.08 + intensity * 0.2})`;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      const z = (tieOffset + i * 0.13) % 1;
+      const y = projY(z);
+      const tw = lerp(tbW, ttW, z);
+      const side = i % 2 ? -1 : 1;
+      const x = cx + side * tw * (0.38 + 0.08 * Math.sin(i));
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - side * 18, y + 48 + intensity * 40);
+      ctx.stroke();
     }
   }
 }
@@ -436,6 +572,21 @@ function spawnObstacle() {
   obstacles.push({ type, lane, width, z: 1.0 });
 }
 
+function obstacleCoversLane(o, lane) {
+  for (let l = 0; l < o.width; l++) {
+    if (o.lane + l === lane) return true;
+  }
+  return false;
+}
+
+function obstacleThreat(o) {
+  if (state !== "playing" || !obstacleCoversLane(o, player.targetLane)) return 0;
+  if (o.z < PLAYER_Z - 0.04 || o.z > 0.42) return 0;
+  const avoidActive = (o.type === "barrier" && player.isJumping) || (o.type === "overhead" && player.isSliding);
+  const proximity = 1 - clamp(Math.abs(o.z - PLAYER_Z) / 0.34, 0, 1);
+  return proximity * (avoidActive ? 0.35 : 1);
+}
+
 function updateObstacles(dt60) {
   const speed = gameSpeed * 0.004 * dt60;
   spawnTimer += dt60;
@@ -444,8 +595,14 @@ function updateObstacles(dt60) {
 
   for (let i = obstacles.length - 1; i >= 0; i--) {
     const o = obstacles[i];
+    const prevZ = o.z;
     o.z -= speed;
     if (o.z < -0.05) { obstacles.splice(i, 1); continue; }
+    const threat = obstacleThreat(o);
+    if (threat > feedback.dangerCue) {
+      feedback.dangerCue = threat;
+      feedback.dangerLane = player.targetLane;
+    }
     if (o.z > PLAYER_Z - 0.025 && o.z < PLAYER_Z + 0.025) {
       let hit = false;
       for (let l = 0; l < o.width; l++) {
@@ -457,6 +614,22 @@ function updateObstacles(dt60) {
       }
       if (hit) setGameOver();
     }
+    if (!o.nearMissFired && prevZ >= PLAYER_Z && o.z < PLAYER_Z) {
+      const centerLane = o.lane + (o.width - 1) / 2;
+      const closeLane = Math.abs(centerLane - player.targetLane) <= 1.05;
+      if (state === "playing" && closeLane) {
+        o.nearMissFired = true;
+        feedback.nearMissCount++;
+        feedback.lastNearMissAge = 0;
+        feedback.dangerCue = Math.max(feedback.dangerCue, 0.7);
+        feedback.dangerLane = player.targetLane;
+        const px = projX(player.laneX, PLAYER_Z);
+        const py = projY(PLAYER_Z) - 64 * projS(PLAYER_Z);
+        emitScorePop("CLOSE", px, py, "#7dd3fc");
+        emitParticles(px, py, "#7dd3fc", 6, 3, 18);
+        triggerShake(2, 5);
+      }
+    }
   }
 }
 
@@ -466,10 +639,23 @@ function drawObstacles() {
     if (o.z < 0 || o.z > 1) continue;
     const s = projS(o.z), y = projY(o.z);
     const fogA = clamp(1 - o.z * 0.6, 0.3, 1);
+    const threat = obstacleThreat(o);
 
     for (let l = 0; l < o.width; l++) {
       const x = projX(o.lane + l, o.z);
       ctx.globalAlpha = fogA;
+      if (threat > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(0.58, threat * 0.62);
+        ctx.shadowColor = "#fb3f5c";
+        ctx.shadowBlur = 26 * s + 12;
+        ctx.fillStyle = "#fb3f5c";
+        ctx.beginPath();
+        ctx.ellipse(x, y - 28 * s, 42 * s, 28 * s, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.globalAlpha = fogA;
+      }
 
       if (o.type === "barrier") {
         const bw = 44 * s, bh = 28 * s;
@@ -542,6 +728,18 @@ function drawObstacles() {
         ctx.fillStyle = "rgba(255,255,255,0.15)";
         ctx.fillRect(x - ow/2, beamY, ow, 2*s);
       }
+      if (threat > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(0.9, 0.35 + threat * 0.65);
+        ctx.strokeStyle = "#ff6b7f";
+        ctx.lineWidth = Math.max(2, 4 * s);
+        ctx.shadowColor = "#fb3f5c";
+        ctx.shadowBlur = 16 * s + 8;
+        ctx.beginPath();
+        ctx.ellipse(x, y - 30 * s, 48 * s, 32 * s, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
       ctx.globalAlpha = 1;
     }
   }
@@ -570,7 +768,11 @@ function updateCoins(dt60) {
       if (c.lane === player.targetLane) {
         c.collected = true; coins += 10; SFX.coin();
         const cx2 = projX(c.lane, c.z), cy2 = projY(c.z) - 20 * projS(c.z);
-        emitParticles(cx2, cy2, "#ffd700", 8, 4, 20);
+        feedback.lastPickupAge = 0;
+        emitParticles(cx2, cy2, "#ffd700", 12, 4.8, 22);
+        emitPickupRing(cx2, cy2, "#ffd700");
+        emitScorePop("+10", cx2, cy2 - 18 * projS(c.z), "#ffe08a");
+        triggerShake(1.2, 3);
       }
     }
   }
@@ -674,7 +876,8 @@ try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
 function startGame() {
   state = "playing"; distance = 0; coins = 0; gameSpeed = 3;
   Object.assign(player, { lane:0, targetLane:0, laneX:0, y:0, vy:0, isJumping:false, isSliding:false, slideTimer:0, height:1, runPhase:0 });
-  obstacles.length = 0; coinObjects.length = 0; particles.length = 0;
+  obstacles.length = 0; coinObjects.length = 0; particles.length = 0; scorePops.length = 0; pickupRings.length = 0;
+  Object.assign(feedback, { nearMissCount: 0, dangerCue: 0, dangerLane: 0, crashFlash: 0, lastPickupAge: 999, lastNearMissAge: 999 });
   spawnTimer = 0; coinSpawnTimer = 0; newBest = false;
   pauseBtn.style.display = "block";
   resumeAudio(); startMusic();
@@ -683,7 +886,9 @@ function startGame() {
 function setGameOver() {
   if (state === "gameover") return;
   state = "gameover"; stopMusic(); pauseBtn.style.display = "none";
-  triggerShake(10, 15);
+  feedback.crashFlash = 1;
+  feedback.dangerCue = 0;
+  triggerShake(16, 20);
   // Explosion particles at player position
   const px = projX(player.laneX, PLAYER_Z), py = projY(PLAYER_Z) - 40 * projS(PLAYER_Z);
   emitParticles(px, py, "#ff5252", 20, 8, 40);
@@ -882,6 +1087,7 @@ function diagnosticFrame(dt60 = 1) {
   drawHUD();
   if (state === "title") drawTitleScreen();
   if (state === "gameover") drawGameOver();
+  drawFeedback();
 }
 
 function renderGameToText() {
@@ -918,7 +1124,19 @@ function renderGameToText() {
     counts: {
       obstacles: obstacles.length,
       coins: coinObjects.filter(c => !c.collected).length,
-      particles: particles.length
+      particles: particles.length,
+      feedbackParticles: particles.length + scorePops.length + pickupRings.length
+    },
+    feedback: {
+      nearMissCount: feedback.nearMissCount,
+      lastPickupAge: Math.round(feedback.lastPickupAge * 100) / 100,
+      lastNearMissAge: Math.round(feedback.lastNearMissAge * 100) / 100,
+      dangerCue: Math.round(feedback.dangerCue * 100) / 100,
+      dangerLane: feedback.dangerLane,
+      crashFlash: Math.round(feedback.crashFlash * 100) / 100,
+      scorePops: scorePops.length,
+      pickupRings: pickupRings.length,
+      feedbackParticles: particles.length + scorePops.length + pickupRings.length
     },
     timers: {
       spawnTimer: Math.round(spawnTimer * 100) / 100,
@@ -948,6 +1166,7 @@ window.advanceTime = function advanceTime(ms = 0) {
         updateCoins(dt60);
       }
       updateParticles(dt60);
+      updateFeedback(dt60);
     }
   }
   diagnosticFrame(1);
@@ -980,6 +1199,7 @@ function loop(now) {
     updateCoins(dt60);
   }
   updateParticles(dt60);
+  updateFeedback(dt60);
 
   drawScene(dt60, spd);
   if (state === "title") drawTitleRunwayPreview();
@@ -990,6 +1210,7 @@ function loop(now) {
   drawHUD();
   if (state === "title") drawTitleScreen();
   if (state === "gameover") drawGameOver();
+  drawFeedback();
 
   requestAnimationFrame(loop);
 }
