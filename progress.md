@@ -92,3 +92,14 @@ Original prompt: Do this for me
 - Verified with the required web-game client for Arcade Jump, Sky Hopper, Arena, and Hero Fact Match, plus direct Playwright state assertions for start/flap/move/hint changes.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: use the interactive contact sheet to choose the next subjective gameplay-feel targets, likely deeper after-action HUD/readability improvements rather than more harness plumbing.
+
+## 2026-05-07 Codex pass 11
+
+- Baseline: `test-results/render-ranking/2026-05-07T04-56-33-715Z/` again scored all 40 surfaces at zero, so target selection came from mobile post-action feel in the interactive contact sheet.
+- Improved Neon Snake mobile active play by top-biasing the board, measuring HUD/control reserves in `resize()`, and hiding duplicate bottom Music/Help buttons while preserving HUD controls, D-pad, rules, audio, and diagnostics.
+- Improved Idle Tycoon mobile active flow by compacting the title, stats tray, clicker core, meter/facts, and surge card so Ventures, Run All, Hire Managers, and the first venture card appear earlier.
+- Improved Klondike Solitaire mobile active play by increasing mobile card height/fan spacing, expanding tableau drop zones, reducing gaps, and shortening footer help copy while preserving DOM cards, draw/undo/hint/restart/autocomplete behavior, saves, and diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-07T05-11-48-271Z/`, with all 40 desktop/mobile surfaces still at zero automated issues and the three target mobile post-action screenshots manually inspected.
+- Verified with the required web-game client for Snake, Idle Tycoon, and Solitaire plus direct mobile Playwright assertions for Snake board position/head movement, Idle cash and venture visibility, and Solitaire stock/waste/move/tableau sizing.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: run another subjective pass from the interactive contact sheet focused on desktop active-play feel, especially any game whose post-action state is technically correct but visually static or hard to read.

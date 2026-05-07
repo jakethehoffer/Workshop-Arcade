@@ -19,6 +19,8 @@
   .btn:active { transform:translateY(1px); }
   @media (min-width: 860px){ .btns { display:none; } }
   @media (max-width: 640px){
+    html, body { align-items:flex-start; justify-content:center; overflow:hidden; }
+    canvas { margin-top:var(--snake-canvas-top, 112px); }
     .hud { left:8px; right:8px; transform:none; flex-wrap:wrap; justify-content:center; gap:6px; }
     .pill { padding:6px 8px; font-size:12px; }
     #status { max-width:78px; white-space:normal; text-align:center; }
@@ -27,6 +29,8 @@
     .hotkey { padding:2px 5px; font-size:11px; }
     .btns { left:8px; right:8px; transform:none; bottom:8px; flex-wrap:wrap; justify-content:center; gap:6px; }
     .btn { flex:0 0 auto; padding:9px 11px; font-size:12px; }
+    #musicToggle,
+    #helpBtnMobile { display:none; }
   }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.7); }
   .overlay.show { display:grid; pointer-events:auto; }
@@ -113,6 +117,8 @@
   const helpOverlay=document.getElementById('helpOverlay');
   const helpClose=document.getElementById('helpClose');
   const helpCard=helpOverlay ? helpOverlay.querySelector('.help-card') : null;
+  const hudEl=document.querySelector('.hud');
+  const buttonsEl=document.querySelector('.btns');
 
   let audioCtx=null;
   function ensureAC(){
@@ -304,12 +310,16 @@
   let snake=[], prevSnake=[], dir={x:1,y:0}, dirQueue=[], food=null, running=false, gameOver=false, gameWon=false, score=0, acc=0, stepMs=140;
 
   function resize(){
-    const pad=12;
-    const hudH=50; // account for fixed HUD at top
+    const mobile=window.matchMedia('(max-width: 640px)').matches;
+    const pad=mobile ? 8 : 12;
+    const hudH=mobile ? Math.ceil(hudEl?.getBoundingClientRect().height || 0) : 50;
+    const controlsH=mobile ? Math.ceil(buttonsEl?.getBoundingClientRect().height || 0) : 0;
+    const topOffset=mobile ? hudH + pad * 2 : 0;
     const availW=Math.max(320, window.innerWidth - pad*2);
-    const availH=Math.max(320, window.innerHeight - pad*2 - hudH);
+    const availH=Math.max(320, window.innerHeight - topOffset - controlsH - pad * 3);
     const cell=Math.floor(Math.min(availW/COLS, availH/ROWS));
     canvas.width = cell*COLS; canvas.height = cell*ROWS;
+    canvas.style.setProperty('--snake-canvas-top', `${topOffset}px`);
     draw();
   }
   resize();
@@ -506,8 +516,8 @@
       ctx.fillText('Press Space to start', canvas.width/2, canvas.height/2);
       ctx.font='14px system-ui, sans-serif';
       if (canvas.width <= 420) {
-        ctx.fillText('Arrows/WASD or buttons to move', canvas.width/2, canvas.height/2+26);
-        ctx.fillText('Space pauses - M toggles music', canvas.width/2, canvas.height/2+46);
+        ctx.fillText('Swipe or use buttons', canvas.width/2, canvas.height/2+26);
+        ctx.fillText('Space pauses', canvas.width/2, canvas.height/2+46);
       } else {
         ctx.fillText('Arrows/WASD to move — Space to pause — M to toggle music', canvas.width/2, canvas.height/2+24);
       }

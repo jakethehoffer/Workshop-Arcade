@@ -109,20 +109,24 @@
     .hud{width:100%;margin-left:0;justify-content:space-between}
   }
   @media (max-width: 480px){
-    :root{--card-w:clamp(42px,12vw,48px);--card-h:64px;--fan-up:20px;--fan-down:8px;--gap:5px}
-    main{padding:6px 4px 10px}
-    header{padding:10px 8px;gap:8px}
-    header h1{font-size:20px;width:100%}
-    header .controls{gap:6px}
-    button{font-size:12px;padding:8px 9px}
-    .toggle{font-size:12px;padding:7px 9px}
-    .board{gap:var(--gap)}
+    :root{--card-w:clamp(46px,12.7vw,50px);--card-h:76px;--fan-up:30px;--fan-down:16px;--gap:4px}
+    .wrap{gap:4px}
+    main{padding:5px 4px 6px}
+    header{padding:8px 8px;gap:6px}
+    header h1{font-size:19px;width:100%}
+    header .controls{gap:5px}
+    button{font-size:12px;padding:7px 8px}
+    .toggle{font-size:12px;padding:7px 8px}
+    .hud{gap:6px}
+    .board{gap:var(--gap);min-height:min(64vh, 540px);grid-template-rows:calc(var(--card-h) + 4px) minmax(0,1fr)}
+    .bottom{min-height:0}
+    .bottom .pile{min-height:min(43vh, 360px)}
     .pile{width:var(--card-w);min-height:var(--card-h);padding:0;border-radius:10px}
     .label{font-size:9px;left:2px;bottom:2px}
     .card .rank{top:4px;left:5px;font-size:12px}
     .card .suit{top:18px;left:5px;font-size:13px}
     .card .pips{right:5px;bottom:4px;font-size:14px}
-    footer{font-size:11px;padding:8px 10px}
+    footer{font-size:10px;padding:6px 8px;line-height:1.25}
   }
 </style>
   <script src="workshop-runtime.js"></script>
@@ -180,7 +184,7 @@
   </main>
 
   <footer>
-    <strong>How to play</strong>: Drag cards (or runs) with alternating colors onto descending ranks; only Kings may move to empty tableau spaces. Double-click a card to try auto-moving it to a foundation. Click the Stock to draw (1 or 3). <em>Note:</em> Deals are random by default; solvability is not guaranteed.
+    <strong>How to play</strong>: Drag alternating colors down, put Kings on empty tableau spaces, double-click to auto-foundation, and click Stock to draw 1 or 3.
   </footer>
 </div>
 
