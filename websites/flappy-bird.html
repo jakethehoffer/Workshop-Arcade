@@ -791,6 +791,8 @@ function tickAndRender(dt) {
   // reset transform & clear whole canvas (also clears the letterbox)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#70c5ce";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // distance-per-frame-at-60fps, scaled by dt60 => distance this actual frame
   const baseStepPerFrame = basePipeSpeed * speedMultiplier;
@@ -804,7 +806,9 @@ function tickAndRender(dt) {
 
     // Start text
     if (!started && !gameOver) {
-      drawText("Tap or press SPACE to start", WORLD_W/2, WORLD_H/2, 22);
+      drawText("Sky Hopper", WORLD_W/2, WORLD_H/2 - 96, 34);
+      drawText("Tap or press SPACE", WORLD_W/2, WORLD_H/2 + 76, 21);
+      drawText("to start", WORLD_W/2, WORLD_H/2 + 103, 18);
     } else {
       if (!gameOver) {
         bird.update(dt60);

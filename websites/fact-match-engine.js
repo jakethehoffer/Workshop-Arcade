@@ -67,7 +67,7 @@
       .clues{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
       .clue{min-height:auto;padding:10px;border-radius:12px;font-size:14px;line-height:1.25}
       .clue span{font-size:10px;margin-bottom:5px}
-      .guess{grid-template-columns:minmax(0,1fr) 92px;gap:8px;margin-top:8px}
+      .guess{grid-template-columns:minmax(0,1fr) 86px;gap:8px;margin-top:8px}
       input{padding:10px 11px;border-radius:12px}
       button{padding:10px 11px;border-radius:12px}
       .actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -80,6 +80,8 @@
     @media (max-width:420px){
       h1{font-size:clamp(30px,10vw,40px)}
       .panel{padding:12px}
+      .guess{grid-template-columns:minmax(0,1fr) 78px}
+      #guess{font-size:14px}
       .actions{grid-template-columns:repeat(3,minmax(0,1fr))}
       .actions button{font-size:12px;padding:9px 7px}
       .stats{gap:7px}
@@ -109,7 +111,7 @@
           </div>
           <div class="clues" id="clues"></div>
           <div class="guess">
-            <input id="guess" autocomplete="off" placeholder="Type a name or pick from the bank" />
+            <input id="guess" autocomplete="off" placeholder="Type or pick from bank" />
             <button class="primary" id="guessBtn" type="button">Guess</button>
           </div>
           <div class="actions">

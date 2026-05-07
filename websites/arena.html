@@ -664,6 +664,30 @@
       ctx.restore();
     }
 
+    function drawMenuPreview() {
+      const cx = state.vw * 0.5;
+      const cy = Math.max(120, state.vh * 0.3);
+      const orbit = Math.min(state.vw, state.vh) * 0.16;
+      ctx.save();
+      ctx.globalAlpha = 0.82;
+      for (let i = 0; i < 4; i += 1) {
+        const a = state.time * 0.6 + i * Math.PI * 0.5;
+        drawEnemy({
+          x: cx + Math.cos(a) * orbit,
+          y: cy + Math.sin(a) * orbit * 0.62,
+          r: i === 2 ? 18 : 12,
+          vx: Math.cos(a + Math.PI * 0.5),
+          vy: Math.sin(a + Math.PI * 0.5),
+          type: i === 2 ? 'tank' : (i === 1 ? 'fast' : 'basic'),
+          color: i === 2 ? '#9b5de5' : (i === 1 ? '#ff944d' : '#ff4d6d')
+        });
+      }
+      drawGem({ x: cx + orbit * 0.35, y: cy - orbit * 0.18, r: 7, life: 8, maxLife: 8 });
+      drawPlayer({ x: cx, y: cy, r: 17, flash: 0 }, false);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
     function drawPopups(dt){
       for (let i = state.popups.length-1; i>=0; i--) {
         const p = state.popups[i];
@@ -724,6 +748,8 @@
         drawPlayer(p, invulnFlash);
         for (const e of state.enemies) drawEnemy(e);
         for (const g of state.gems) drawGem(g);
+      } else {
+        drawMenuPreview();
       }
       ctx.restore();
       drawXPBar();

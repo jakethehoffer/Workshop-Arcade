@@ -82,3 +82,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client for Block Drop, Metro Dash, and Maze Chase plus state inspection showing Block Drop running with occupied cells, Metro Dash playing with distance/coins/obstacle state, and Maze Chase playing with pellet progress.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: after this polish lands, use the fresh final contact sheet to decide whether to keep improving subjective game feel or add any missing reusable assertions to the capture harness.
+
+## 2026-05-07 Codex pass 10
+
+- Extended `npm run capture:games` into an interactive evidence harness: every catalog game now runs a lightweight recipe, captures post-action screenshots, records pre/post `render_game_to_text` state, scores weak interaction evidence, and shows first/post screenshots in the contact sheet.
+- Baseline interaction ranking exposed Arcade Jump's post-start dead-state evidence; the recipe was refined and Arcade Jump now starts with the same upward bounce used by normal platform contacts, with diagnostics correctly reporting visible game-over state.
+- With all surfaces scoring zero after recipe fixes, applied the fallback visual polish targets: Sky Hopper first screen now fills letterbox space and separates the prompt from the bird, Arena menu now shows live player/enemy/gem preview art, and shared fact-match mobile uses a tighter guess row with unclipped placeholder text.
+- Final capture: `test-results/render-ranking/2026-05-07T02-12-31-284Z/`, with all 40 desktop/mobile surfaces at score 0 and interaction state changes confirmed for the polished targets.
+- Verified with the required web-game client for Arcade Jump, Sky Hopper, Arena, and Hero Fact Match, plus direct Playwright state assertions for start/flap/move/hint changes.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: use the interactive contact sheet to choose the next subjective gameplay-feel targets, likely deeper after-action HUD/readability improvements rather than more harness plumbing.

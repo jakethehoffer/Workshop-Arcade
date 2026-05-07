@@ -60,6 +60,16 @@ try {
       title: record.title,
       viewport: record.viewport,
       screenshot: record.screenshot,
+      interaction: record.interaction
+        ? {
+            name: record.interaction.name,
+            screenshot: record.interaction.screenshot,
+            score: record.interaction.score,
+            changed: record.interaction.changed,
+            signals: record.interaction.signals,
+            reasons: record.interaction.reasons,
+          }
+        : null,
       score: record.ranking.score,
       reasons: record.ranking.reasons,
     })),
@@ -100,6 +110,7 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
   let hasAdvance = false;
   let renderText = null;
   let renderError = null;
+  let interaction = null;
 
   try {
     await page.goto(new URL(game.url, rootUrl).href, { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -203,6 +214,7 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
     });
 
     await page.screenshot({ path: screenshotPath });
+    interaction = await runInteraction(page, game, viewport, renderText, issues);
   } catch (error) {
     issues.pageErrors.push(error instanceof Error ? error.message : String(error));
     try {
@@ -227,6 +239,7 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
     hasAdvance,
     renderText,
     renderError,
+    interaction,
     metrics,
     issues,
   };
@@ -244,6 +257,7 @@ function rankSurface(record) {
     !isSecondaryResetAction(record);
   const hardIssueCount = record.issues.pageErrors.length + record.issues.network.length;
   const consoleIssueCount = record.issues.console.length;
+  const interaction = record.interaction;
 
   if (hardIssueCount) {
     score += 120 + hardIssueCount * 25;
@@ -268,6 +282,13 @@ function rankSurface(record) {
   if (record.renderError) {
     score += 30;
     reasons.push("render_game_to_text throws");
+  }
+  if (!interaction) {
+    score += 20;
+    reasons.push("missing interaction recipe");
+  } else if (interaction.score > 0) {
+    score += interaction.score;
+    reasons.push(...interaction.reasons);
   }
   if (metrics.bodyTextLength < 20 && metrics.canvasCount === 0 && metrics.controlCount === 0) {
     score += 80;
@@ -303,6 +324,441 @@ function rankSurface(record) {
   }
 
   return { score, reasons };
+}
+
+async function runInteraction(page, game, viewport, preRenderText, issues) {
+  const recipe = getInteractionRecipe(game.slug);
+  const screenshot = `shots/${game.slug}-${viewport.name}-after.png`;
+  const screenshotPath = path.join(outputRoot, screenshot);
+  const issueStart = snapshotIssues(issues);
+  const preState = parseRenderText(preRenderText);
+  let postRenderText = null;
+  let postState = null;
+  let error = null;
+  let hasRenderText = false;
+
+  try {
+    if (!recipe) {
+      throw new Error(`No interaction recipe for ${game.slug}`);
+    }
+
+    await recipe.run(page, { game, viewport, preState });
+    await settlePage(page, recipe.settleMs ?? 350);
+
+    hasRenderText = await page.evaluate(() => typeof window.render_game_to_text === "function");
+    if (hasRenderText) {
+      postRenderText = await page.evaluate(() => window.render_game_to_text());
+      postState = parseRenderText(postRenderText);
+    }
+  } catch (caught) {
+    error = caught instanceof Error ? caught.message : String(caught);
+  }
+
+  try {
+    await page.screenshot({ path: screenshotPath });
+  } catch (caught) {
+    if (!error) error = caught instanceof Error ? caught.message : String(caught);
+  }
+
+  const newIssues = diffIssues(issues, issueStart);
+  const signals = summarizeStateChange(preState, postState);
+  const scoreResult = scoreInteraction({
+    recipe,
+    error,
+    hasRenderText,
+    preState,
+    postState,
+    signals,
+    issues: newIssues,
+  });
+
+  return {
+    name: recipe?.name || "missing recipe",
+    available: Boolean(recipe),
+    screenshot,
+    preState,
+    postState,
+    preRenderText,
+    postRenderText,
+    changed: signals.length > 0,
+    signals,
+    issues: newIssues,
+    error,
+    score: scoreResult.score,
+    reasons: scoreResult.reasons,
+  };
+}
+
+function getInteractionRecipe(slug) {
+  const recipes = {
+    "brick-breaker": {
+      name: "start and launch ball",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#startGameBtn");
+        await pressAndAdvance(page, "Space", 900);
+        await holdKeyAdvance(page, "ArrowRight", 450);
+      },
+    },
+    checkers: {
+      name: "make opening checker move",
+      run: async (page) => {
+        await clickBoardDomCell(page, 5, 0);
+        await settlePage(page, 80);
+        await clickBoardDomCell(page, 4, 1);
+        await settlePage(page, 700);
+      },
+    },
+    "2048": {
+      name: "slide tiles",
+      run: async (page) => {
+        await pressAndAdvance(page, "ArrowLeft", 120);
+        await pressAndAdvance(page, "ArrowUp", 120);
+        await pressAndAdvance(page, "ArrowRight", 240);
+      },
+    },
+    chess: {
+      name: "play e2 to e4",
+      run: async (page) => {
+        await clickChessSquare(page, "e2");
+        await settlePage(page, 90);
+        await clickChessSquare(page, "e4");
+        await settlePage(page, 450);
+      },
+    },
+    "doodle-jump": {
+      name: "start and steer",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#startBtn");
+        await pressAndAdvance(page, "ArrowRight", 40);
+      },
+    },
+    "flappy-bird": {
+      name: "start and flap",
+      expectsStart: true,
+      run: async (page) => {
+        await pressAndAdvance(page, "Space", 80);
+        await pressAndAdvance(page, "Space", 80);
+      },
+    },
+    snake: {
+      name: "start and turn",
+      expectsStart: true,
+      run: async (page) => {
+        await pressAndAdvance(page, "Space", 200);
+        await pressAndAdvance(page, "ArrowDown", 180);
+      },
+    },
+    tetris: {
+      name: "start, rotate, and drop",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#playBtn");
+        await pressAndAdvance(page, "ArrowLeft", 80);
+        await pressAndAdvance(page, "ArrowUp", 80);
+        await pressAndAdvance(page, "Space", 450);
+      },
+    },
+    "maze-chase": {
+      name: "start and move",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#start-btn");
+        await holdKeyAdvance(page, "ArrowLeft", 900);
+        await holdKeyAdvance(page, "ArrowUp", 700);
+      },
+    },
+    minesweeper: {
+      name: "reveal a center cell",
+      run: async (page) => {
+        await clickCanvasAt(page, "#game", 0.5, 0.55);
+        await settlePage(page, 250);
+      },
+    },
+    solitaire: {
+      name: "draw from stock",
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#stock");
+        await settlePage(page, 250);
+      },
+    },
+    wordle: {
+      name: "enter a guess prefix",
+      run: async (page) => {
+        await page.keyboard.type("arise", { delay: 15 });
+        await settlePage(page, 250);
+      },
+    },
+    "shape-inlay": {
+      name: "start and steer",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#startBtn");
+        await holdKeyAdvance(page, "ArrowRight", 220);
+      },
+    },
+    "idle-tycoon": {
+      name: "select slot and click earn",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, ".slot-card");
+        await settlePage(page, 250);
+        await clickSelectorIfVisible(page, "#clicker");
+        await settlePage(page, 550);
+      },
+    },
+    "metro-dash": {
+      name: "start and dodge",
+      expectsStart: true,
+      run: async (page) => {
+        await pressAndAdvance(page, "Space", 200);
+        await pressAndAdvance(page, "ArrowRight", 120);
+        await pressAndAdvance(page, "ArrowUp", 180);
+      },
+    },
+    arena: {
+      name: "start and move",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#startBtn");
+        await holdKeyAdvance(page, "ArrowRight", 120);
+        await holdKeyAdvance(page, "ArrowDown", 80);
+      },
+    },
+    "hero-fact-match": {
+      name: "request another clue",
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#hintBtn");
+        await settlePage(page, 200);
+      },
+    },
+    "night-shift-fact-match": {
+      name: "request another clue",
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#hintBtn");
+        await settlePage(page, 200);
+      },
+    },
+    "arena-legend-guesser": {
+      name: "request another clue",
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#hintBtn");
+        await settlePage(page, 200);
+      },
+    },
+    "cosmic-fact-match": {
+      name: "request another clue",
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#hintBtn");
+        await settlePage(page, 200);
+      },
+    },
+  };
+
+  return recipes[slug] || null;
+}
+
+function scoreInteraction({ recipe, error, hasRenderText, preState, postState, signals, issues }) {
+  const reasons = [];
+  let score = 0;
+  const hardIssueCount = issues.pageErrors.length + issues.network.length;
+  const consoleIssueCount = issues.console.length;
+
+  if (!recipe) {
+    return { score: 20, reasons: ["missing interaction recipe"] };
+  }
+  if (hardIssueCount) {
+    score += 120 + hardIssueCount * 25;
+    reasons.push(`${hardIssueCount} interaction page/network issue(s)`);
+  }
+  if (consoleIssueCount) {
+    score += 70 + consoleIssueCount * 10;
+    reasons.push(`${consoleIssueCount} interaction console issue(s)`);
+  }
+  if (error) {
+    score += 80;
+    reasons.push(`interaction failed: ${error}`);
+  }
+  if (!hasRenderText || !postState) {
+    score += 35;
+    reasons.push("missing post-action render state");
+  }
+  if (preState && postState && signals.length === 0) {
+    score += 45;
+    reasons.push("no state change after action");
+  }
+  if (recipe.expectsStart && postState && isGameOverLike(postState)) {
+    score += 35;
+    reasons.push("post-action reached game-over state");
+  }
+  if (recipe.expectsStart && postState && isStillMenuLike(postState)) {
+    score += 35;
+    reasons.push("post-action still menu or ready state");
+  }
+
+  return { score, reasons };
+}
+
+function isGameOverLike(state) {
+  const mode = String(state.mode || state.state || state.phase || state.status || "").toLowerCase();
+  return state.gameOver === true || /game[- ]?over|crashed|dead|lost/.test(mode);
+}
+
+function isStillMenuLike(state) {
+  const mode = String(state.mode || state.state || state.phase || state.status || "").toLowerCase();
+  const runningLike =
+    state.running === true ||
+    state.started === true ||
+    state.gameStarted === true ||
+    state.playing === true ||
+    mode === "playing" ||
+    mode === "running" ||
+    mode === "play";
+
+  if (runningLike) return false;
+  return /menu|title|ready|press .*start|start/.test(mode);
+}
+
+function summarizeStateChange(before, after) {
+  if (!before || !after) return [];
+  const beforeFlat = flattenState(before);
+  const afterFlat = flattenState(after);
+  const paths = Array.from(new Set([...Object.keys(beforeFlat), ...Object.keys(afterFlat)]))
+    .filter((pathKey) => !isNoisyStatePath(pathKey))
+    .filter((pathKey) => beforeFlat[pathKey] !== afterFlat[pathKey]);
+
+  const important = paths.filter(isImportantStatePath);
+  const selected = (important.length ? important : paths).slice(0, 14);
+  return selected.map((pathKey) => ({
+    path: pathKey,
+    before: beforeFlat[pathKey] ?? null,
+    after: afterFlat[pathKey] ?? null,
+  }));
+}
+
+function flattenState(value, prefix = "", out = {}) {
+  if (value === null || typeof value !== "object") {
+    out[prefix || "value"] = normalizeStateValue(value);
+    return out;
+  }
+
+  if (Array.isArray(value)) {
+    out[`${prefix}.length`] = value.length;
+    if (value.length <= 8 && value.every((item) => item === null || typeof item !== "object")) {
+      out[prefix] = normalizeStateValue(value);
+    } else {
+      value.slice(0, 5).forEach((item, index) => {
+        flattenState(item, `${prefix}[${index}]`, out);
+      });
+    }
+    return out;
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    flattenState(child, prefix ? `${prefix}.${key}` : key, out);
+  }
+  return out;
+}
+
+function normalizeStateValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? Number(value.toFixed(3)) : null;
+  if (typeof value === "string" || typeof value === "boolean" || value === null) return value;
+  return JSON.stringify(value);
+}
+
+function isNoisyStatePath(pathKey) {
+  return /(^|\.)(frames|time|timeText|timer|timers|lastAction|highScore|best|newBestThisRun|audioReady|musicOn|sound|muted|sfx|settings|event|surge|bankCount|visibleElementCount)(\.|$)/i.test(pathKey);
+}
+
+function isImportantStatePath(pathKey) {
+  return /(mode|state|phase|running|started|gameStarted|gameOver|won|score|distance|moves|turn|moveCount|stockCount|wasteCount|revealedCount|flagsPlaced|pelletsRemaining|player|bird|ball|head|current|hold|next|occupied|cash|lifetime|cluesShown|streak|result|selected|grid|tiles|pipes|obstacles|platforms|enemies|coins|bodyLength|food|tableau|foundation|currentGuess|rows|lane|action|x|y|velocity)/i.test(pathKey);
+}
+
+function parseRenderText(renderText) {
+  if (!renderText) return null;
+  try {
+    return JSON.parse(renderText);
+  } catch {
+    return { text: String(renderText).slice(0, 500) };
+  }
+}
+
+function snapshotIssues(issues) {
+  return {
+    console: issues.console.length,
+    pageErrors: issues.pageErrors.length,
+    network: issues.network.length,
+  };
+}
+
+function diffIssues(issues, start) {
+  return {
+    console: issues.console.slice(start.console),
+    pageErrors: issues.pageErrors.slice(start.pageErrors),
+    network: issues.network.slice(start.network),
+  };
+}
+
+async function pressAndAdvance(page, key, ms = 100) {
+  await page.keyboard.press(key);
+  await settlePage(page, ms);
+}
+
+async function holdKeyAdvance(page, key, ms = 300) {
+  await page.keyboard.down(key);
+  await settlePage(page, ms);
+  await page.keyboard.up(key);
+  await settlePage(page, 60);
+}
+
+async function settlePage(page, ms = 0) {
+  const waitMs = Math.max(0, Math.min(2500, Number(ms) || 0));
+  const hasAdvance = await page.evaluate(() => typeof window.advanceTime === "function").catch(() => false);
+  if (hasAdvance) {
+    await page.evaluate((amount) => window.advanceTime(amount), waitMs).catch(() => {});
+  }
+  await page.waitForTimeout(Math.min(350, waitMs + 50));
+}
+
+async function clickSelectorIfVisible(page, selector) {
+  const locator = page.locator(selector).first();
+  if ((await locator.count()) === 0) return false;
+  if (!(await locator.isVisible().catch(() => false))) return false;
+  await locator.click({ timeout: 1200 });
+  await settlePage(page, 80);
+  return true;
+}
+
+async function clickBoardDomCell(page, row, col) {
+  const selector = `#board [data-r="${row}"][data-c="${col}"]`;
+  if (await clickSelectorIfVisible(page, selector)) return true;
+  return clickCanvasCell(page, "#board, canvas", 8, 8, col, row);
+}
+
+async function clickChessSquare(page, square) {
+  const file = square.charCodeAt(0) - "a".charCodeAt(0);
+  const rank = Number(square.slice(1));
+  const row = 8 - rank;
+  return clickCanvasCell(page, "#board, canvas", 8, 8, file, row);
+}
+
+async function clickCanvasCell(page, selector, cols, rows, col, row) {
+  const locator = page.locator(selector).first();
+  const box = await locator.boundingBox();
+  if (!box) throw new Error(`Could not find board for ${selector}`);
+  await page.mouse.click(box.x + ((col + 0.5) / cols) * box.width, box.y + ((row + 0.5) / rows) * box.height);
+  await settlePage(page, 80);
+  return true;
+}
+
+async function clickCanvasAt(page, selector, xRatio, yRatio) {
+  const locator = page.locator(selector).first();
+  const box = await locator.boundingBox();
+  if (!box) throw new Error(`Could not find canvas for ${selector}`);
+  await page.mouse.click(box.x + box.width * xRatio, box.y + box.height * yRatio);
+  await settlePage(page, 80);
+  return true;
 }
 
 function parseRenderState(record) {
@@ -408,6 +864,9 @@ async function writeContactSheet(summary) {
   .score { font-weight: 700; color: #6ee7b7; white-space: nowrap; }
   .score.warn { color: #facc15; }
   .score.bad { color: #fb7185; }
+  .evidence { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #203346; }
+  figure { margin: 0; background: #020617; }
+  figcaption { padding: 5px 8px; color: #a9b7c7; font-size: 11px; background: #08111d; border-bottom: 1px solid #203346; }
   img { display: block; width: 100%; background: #020617; }
   .details { padding: 9px 12px 12px; color: #b8c5d4; font-size: 12px; line-height: 1.45; min-height: 62px; }
   code { color: #d8b4fe; }
@@ -427,8 +886,18 @@ async function writeContactSheet(summary) {
           <div><div class="name">${escapeHtml(game.title)} · ${escapeHtml(record.viewport)}</div><div class="sub"><code>${escapeHtml(game.slug)}</code> · ${record.width}x${record.height}</div></div>
           <div class="score ${scoreClass}">${surface.score}</div>
         </div>
-        <img src="${escapeHtml(record.screenshot)}" alt="${escapeHtml(game.title)} ${escapeHtml(record.viewport)} screenshot">
+        <div class="evidence">
+          <figure>
+            <figcaption>First screen</figcaption>
+            <img src="${escapeHtml(record.screenshot)}" alt="${escapeHtml(game.title)} ${escapeHtml(record.viewport)} first screenshot">
+          </figure>
+          <figure>
+            <figcaption>After: ${escapeHtml(record.interaction?.name || "none")}</figcaption>
+            ${record.interaction?.screenshot ? `<img src="${escapeHtml(record.interaction.screenshot)}" alt="${escapeHtml(game.title)} ${escapeHtml(record.viewport)} post-action screenshot">` : ""}
+          </figure>
+        </div>
         <div class="details">${escapeHtml(surface.reasons.join("; ") || "No automated issues.")}
+          <br>Interaction ${record.interaction?.changed ? "changed" : "unchanged"}${record.interaction?.signals?.length ? ` · ${escapeHtml(record.interaction.signals.map((signal) => signal.path).join(", "))}` : ""}
           <br>Text ${record.metrics?.bodyTextLength ?? 0} · controls ${record.metrics?.controlCount ?? 0} · overflow ${record.metrics?.overflowX ?? "n/a"} · hooks ${record.hasRenderText ? "text" : "no text"}/${record.hasAdvance ? "time" : "no time"}
         </div>
       </article>`;
