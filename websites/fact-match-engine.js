@@ -23,49 +23,50 @@
     html,body{min-height:100%}
     body{margin:0;min-height:100vh;background:radial-gradient(circle at 18% 0,#24476d 0,#0a1726 35%,#05080e 76%),linear-gradient(135deg,rgba(80,240,200,.08),rgba(247,198,106,.06));color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
     button,input{font:inherit}
-    .shell{width:min(1180px,100%);min-height:100vh;margin:0 auto;padding:clamp(18px,3vw,34px);display:grid;grid-template-rows:auto minmax(0,1fr);gap:18px;align-content:center}
-    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end}
-    .eyebrow{color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}
-    h1{margin:5px 0 0;font-size:clamp(36px,6vw,72px);line-height:1;text-shadow:0 10px 34px rgba(80,240,200,.16);overflow-wrap:anywhere}
-    .sub{margin:8px 0 0;color:var(--muted);max-width:720px;line-height:1.45;font-size:clamp(15px,2vw,18px)}
-    .round-card{align-self:stretch;display:grid;gap:4px;align-content:center;min-width:180px;border:1px solid rgba(80,240,200,.24);border-radius:18px;background:rgba(5,11,19,.62);padding:14px 16px;box-shadow:0 16px 40px rgba(0,0,0,.26)}
+    .shell{width:min(1180px,100%);min-height:100vh;margin:0 auto;padding:clamp(14px,2.4vw,26px);display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;align-content:start}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
+    .eyebrow{color:var(--accent);font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase}
+    h1{margin:4px 0 0;font-size:clamp(34px,4.8vw,58px);line-height:1;text-shadow:0 10px 34px rgba(80,240,200,.16);overflow-wrap:anywhere}
+    .sub{margin:6px 0 0;color:var(--muted);max-width:720px;line-height:1.38;font-size:clamp(14px,1.7vw,17px)}
+    .round-card{align-self:stretch;display:grid;gap:3px;align-content:center;min-width:150px;border:1px solid rgba(80,240,200,.24);border-radius:16px;background:rgba(5,11,19,.62);padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.26)}
     .round-card span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:900}
     .round-card strong{font-size:28px;color:var(--accent-2)}
-    .board{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:18px;align-items:stretch}
-    .panel{background:linear-gradient(180deg,rgba(17,31,51,.94),rgba(9,19,33,.94));border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.03);padding:18px}
-    .play-panel{display:grid;grid-template-rows:auto 1fr auto auto;min-height:510px}
-    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-    .pill{border:1px solid var(--line);background:#091321;border-radius:14px;padding:10px 12px;color:var(--muted);font-weight:800}
-    .pill strong{display:block;color:var(--ink);font-size:24px;line-height:1.1;margin-top:2px}
-    .clues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0;align-content:start}
-    .clue{border:1px solid rgba(80,240,200,.14);border-radius:16px;background:linear-gradient(180deg,#0c1828,#081321);padding:15px;min-height:104px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+    .board{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:14px;align-items:stretch}
+    .panel{background:linear-gradient(180deg,rgba(17,31,51,.94),rgba(9,19,33,.94));border:1px solid var(--line);border-radius:16px;box-shadow:0 22px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.03);padding:16px}
+    .play-panel{display:grid;grid-template-rows:auto 1fr auto auto;min-height:470px}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .pill{border:1px solid var(--line);background:#091321;border-radius:12px;padding:8px 10px;color:var(--muted);font-weight:800}
+    .pill strong{display:block;color:var(--ink);font-size:22px;line-height:1.05;margin-top:1px}
+    .clues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0;align-content:start}
+    .clue{border:1px solid rgba(80,240,200,.14);border-radius:14px;background:linear-gradient(180deg,#0c1828,#081321);padding:12px;min-height:88px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
     .clue:first-child{grid-column:1/-1;background:linear-gradient(135deg,rgba(80,240,200,.12),rgba(247,198,106,.08)),#0a1727}
     .clue span{display:block;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;font-weight:900}
-    .guess{display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:10px;margin-top:12px}
-    input{min-width:0;border:1px solid var(--line);border-radius:14px;background:#050b13;color:var(--ink);padding:13px 14px;outline:0}
+    .guess{display:grid;grid-template-columns:minmax(0,1fr) 118px;gap:9px;margin-top:10px}
+    input{min-width:0;border:1px solid var(--line);border-radius:12px;background:#050b13;color:var(--ink);padding:11px 12px;outline:0}
     input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(80,240,200,.18)}
-    button{border:1px solid var(--line);border-radius:14px;background:#102033;color:var(--ink);font-weight:900;padding:12px 14px;cursor:pointer}
+    button{border:1px solid var(--line);border-radius:12px;background:#102033;color:var(--ink);font-weight:900;padding:10px 12px;cursor:pointer}
     button.primary{background:linear-gradient(180deg,#5cf2cc,#26cbb6);color:#042524;border:0}
     button:hover{border-color:#335f82}
-    .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
-    .result{min-height:30px;margin-top:12px;color:var(--warn);font-weight:900}
+    .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+    .actions button{background:rgba(16,32,51,.72);color:#cfe3f3;padding:9px 10px;font-size:14px}
+    .result{min-height:26px;margin-top:10px;color:var(--warn);font-weight:900}
     .bank-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
     .bank-head strong{font-size:18px}
-    .bank{display:grid;gap:8px;max-height:536px;overflow:auto;padding-right:4px}
-    .bank button{text-align:left;background:#07111d;border-radius:12px;padding:10px 11px;font-weight:800}
+    .bank{display:grid;gap:8px;max-height:500px;overflow:auto;padding-right:4px}
+    .bank button{text-align:left;background:#07111d;border-radius:12px;padding:9px 10px;font-weight:800}
     .bank small{display:block;color:var(--muted);font-weight:600;margin-top:4px}
     @media (max-width:820px){
-      .shell{padding:12px;gap:12px;align-content:start}
+      .shell{padding:10px;gap:10px;align-content:start}
       .hero{grid-template-columns:1fr}
       .eyebrow{font-size:10px;letter-spacing:.18em}
-      h1{font-size:clamp(30px,9vw,42px);line-height:1.02}
+      h1{font-size:clamp(28px,8.8vw,38px);line-height:1.02}
       .sub{font-size:14px;line-height:1.35;margin-top:5px}
       .round-card{display:none}
       .board{grid-template-columns:1fr}
-      .panel{padding:14px;border-radius:16px}
+      .panel{padding:12px;border-radius:15px}
       .play-panel{min-height:auto}
       .clues{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
-      .clue{min-height:auto;padding:10px;border-radius:12px;font-size:14px;line-height:1.25}
+      .clue{min-height:auto;padding:9px;border-radius:12px;font-size:14px;line-height:1.24}
       .clue span{font-size:10px;margin-bottom:5px}
       .guess{grid-template-columns:minmax(0,1fr) 86px;gap:8px;margin-top:8px}
       input{padding:10px 11px;border-radius:12px}
@@ -74,11 +75,11 @@
       .bank{max-height:260px}
       .bank button{padding:9px 10px}
       .stats{grid-template-columns:repeat(3,1fr)}
-      .pill{padding:9px}
-      .pill strong{font-size:20px}
+      .pill{padding:8px}
+      .pill strong{font-size:18px}
     }
     @media (max-width:420px){
-      h1{font-size:clamp(30px,10vw,40px)}
+      h1{font-size:clamp(28px,9vw,36px)}
       .panel{padding:12px}
       .guess{grid-template-columns:minmax(0,1fr) 78px}
       #guess{font-size:14px}

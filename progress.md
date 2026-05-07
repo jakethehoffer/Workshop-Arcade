@@ -115,3 +115,13 @@ Original prompt: Do this for me
 - Verified with required web-game clients for Sky Hopper, Solitaire, and 2048 plus direct desktop Playwright assertions for active Sky Hopper state, Solitaire draw/tableau sizing, and 2048 grid changes.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`. A first capture/check attempt hit local timeout/resource noise, then passed on rerun with longer timeout.
 - Suggested next pass: use the interactive contact sheet to make a small shared polish pass for non-game menu/status affordances, especially duplicated or low-priority controls that remain visible during active play.
+
+## 2026-05-07 Codex pass 13
+
+- Baseline: `test-results/render-ranking/2026-05-07T20-47-22-791Z/` scored all 40 surfaces at zero, so active-play chrome targets were selected by visual inspection.
+- Selected Neon Snake, Brick Breaker, and the shared Fact Match engine because their active-play screens still let status or low-priority controls compete with the actual game/action surface.
+- Implemented compact Snake utility pills, split Brick Breaker stats from utility controls, and tightened shared Fact Match header/panel/action density while preserving gameplay, saves, audio, diagnostics, and manifest data.
+- Final capture: `test-results/render-ranking/2026-05-07T21-01-59-864Z/`, with all 40 surfaces at zero automated issues; target first/post screenshots were manually inspected.
+- Verified with required web-game clients for Snake, Brick Breaker, and Hero Fact Match plus direct full-page Playwright assertions for active state, chrome sizing, no overflow, and fact-match clue/guess behavior.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: use the contact sheet to pick one deeper gameplay-feel target that is still mechanically correct but could benefit from clearer mid-game feedback or movement readability.

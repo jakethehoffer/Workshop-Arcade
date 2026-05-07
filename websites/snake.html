@@ -7,12 +7,16 @@
 <style>
   html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display:flex; align-items:center; justify-content:center; }
   canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
-  .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:14px; align-items:center; font-weight:700; }
-  .pill { background:#111827; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
+  .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:8px; align-items:center; font-weight:700; }
+  .pill { background:#111827; border:1px solid #26334a; padding:5px 8px; border-radius:10px; }
   .pill.button { cursor:pointer; user-select:none; }
   button.pill { color:#e6edf3; font:inherit; }
   .primary-start { display:none; border-color:#1f766b; color:#5eead4; background:#0e2c2a; font-weight:800; }
   .has-hotkey { display:inline-flex; align-items:center; gap:8px; }
+  .utility-pill { width:38px; height:34px; padding:0; justify-content:center; position:relative; }
+  .utility-pill .icon { font-size:16px; line-height:1; }
+  .utility-pill .label,
+  .utility-pill .hotkey { display:none; }
   .hotkey { background:#0b1120; border:1px solid #26334a; padding:2px 6px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:0.04em; line-height:1; }
   .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
@@ -26,6 +30,7 @@
     #status { max-width:78px; white-space:normal; text-align:center; }
     .primary-start { display:inline-flex; align-items:center; justify-content:center; min-width:74px; }
     .has-hotkey { gap:6px; }
+    .utility-pill { width:34px; height:32px; }
     .hotkey { padding:2px 5px; font-size:11px; }
     .btns { left:8px; right:8px; transform:none; bottom:8px; flex-wrap:wrap; justify-content:center; gap:6px; }
     .btn { flex:0 0 auto; padding:9px 11px; font-size:12px; }
@@ -51,8 +56,8 @@
     <div class="pill" id="best">Best: 0</div>
     <div class="pill" id="status">Press Space to start</div>
     <button class="pill button primary-start" id="startMobileBtn" type="button">Start</button>
-    <div class="pill button has-hotkey" id="musicPill" title="Toggle music (M)"><span class="label">♪ Music: On</span><span class="hotkey">M</span></div>
-    <div class="pill button has-hotkey" id="helpBtn" title="How to Play (H)"><span class="label">❓ How to Play</span><span class="hotkey">H</span></div>
+    <button class="pill button utility-pill has-hotkey" id="musicPill" type="button" title="Toggle music (M)" aria-label="Toggle music"><span class="icon" aria-hidden="true">♪</span><span class="label">Music: On</span><span class="hotkey">M</span></button>
+    <button class="pill button utility-pill has-hotkey" id="helpBtn" type="button" title="How to Play (H)" aria-label="How to Play"><span class="icon" aria-hidden="true">?</span><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
   <div class="btns">
     <button class="btn" id="upBtn">⬆︎</button>
@@ -259,7 +264,11 @@
     function updateLabels(){
       const label = enabled ? "Music: On" : "Music: Off";
       if(musicToggleLabel) musicToggleLabel.textContent=label;
-      if(musicPillLabel) musicPillLabel.textContent='♪ '+label;
+      if(musicPillLabel) musicPillLabel.textContent=label;
+      if(musicPill) {
+        musicPill.setAttribute('aria-label', `Toggle music, currently ${enabled ? 'on' : 'off'}`);
+        musicPill.title = `Toggle music (${enabled ? 'on' : 'off'}) (M)`;
+      }
     }
     function start(){
       const ac=ensureAC(); if(!ac || !enabled) { updateLabels(); return; }
