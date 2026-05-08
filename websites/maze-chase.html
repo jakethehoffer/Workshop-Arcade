@@ -557,6 +557,30 @@
           thresholds: [],
         };
 
+        const feedback = {
+          time: 0,
+          particles: [],
+          rings: [],
+          pops: [],
+          screenFlash: 0,
+          screenShake: 0,
+          dangerCue: 0,
+          nearestGhost: null,
+          powerPulse: 0,
+          lastPelletAge: null,
+          lastPowerAge: null,
+          lastFruitAge: null,
+          lastGhostEatAge: null,
+          lastHitAge: null,
+          counters: {
+            pellet: 0,
+            power: 0,
+            fruit: 0,
+            ghostEat: 0,
+            hit: 0,
+          },
+        };
+
         const audioLevels = {
           master: 0.6,
           music: 0.24,
@@ -827,6 +851,224 @@
           setMuted(!audio.muted);
         }
 
+        function clamp(value, min, max) {
+          return Math.max(min, Math.min(max, value));
+        }
+
+        function round(value, places = 2) {
+          const scale = Math.pow(10, places);
+          return Math.round(value * scale) / scale;
+        }
+
+        function ageForDiagnostics(value) {
+          return value === null ? null : round(value);
+        }
+
+        function boardPixelSize() {
+          return tileSize * width;
+        }
+
+        function resetFeedback(resetCounters = false) {
+          feedback.particles = [];
+          feedback.rings = [];
+          feedback.pops = [];
+          feedback.screenFlash = 0;
+          feedback.screenShake = 0;
+          feedback.dangerCue = 0;
+          feedback.nearestGhost = null;
+          feedback.powerPulse = 0;
+          feedback.lastPelletAge = null;
+          feedback.lastPowerAge = null;
+          feedback.lastFruitAge = null;
+          feedback.lastGhostEatAge = null;
+          feedback.lastHitAge = null;
+          if (resetCounters) {
+            feedback.counters.pellet = 0;
+            feedback.counters.power = 0;
+            feedback.counters.fruit = 0;
+            feedback.counters.ghostEat = 0;
+            feedback.counters.hit = 0;
+          }
+        }
+
+        function pushFeedbackRing(x, y, color, options = {}) {
+          feedback.rings.push({
+            x,
+            y,
+            color,
+            age: 0,
+            ttl: options.ttl ?? 0.55,
+            radius: options.radius ?? 0.35,
+            grow: options.grow ?? 0.75,
+            lineWidth: options.lineWidth ?? 0.08,
+            fill: options.fill ?? false,
+          });
+          if (feedback.rings.length > 18) {
+            feedback.rings.splice(0, feedback.rings.length - 18);
+          }
+        }
+
+        function pushFeedbackPop(x, y, text, color, options = {}) {
+          feedback.pops.push({
+            x,
+            y,
+            text,
+            color,
+            age: 0,
+            ttl: options.ttl ?? 0.7,
+            vy: options.vy ?? -1.15,
+            size: options.size ?? 0.62,
+          });
+          if (feedback.pops.length > 10) {
+            feedback.pops.splice(0, feedback.pops.length - 10);
+          }
+        }
+
+        function pushFeedbackParticles(x, y, color, count, options = {}) {
+          const baseSpeed = options.speed ?? 2.3;
+          const ttl = options.ttl ?? 0.42;
+          const size = options.size ?? 0.07;
+          const seed = feedback.time * 7.13 + feedback.particles.length * 0.31 + feedback.counters.pellet * 0.17;
+          for (let i = 0; i < count; i += 1) {
+            const angle = (Math.PI * 2 * i) / Math.max(1, count) + Math.sin(seed + i * 12.989) * 0.32;
+            const speed = baseSpeed * (0.75 + (i % 4) * 0.13);
+            feedback.particles.push({
+              x,
+              y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color,
+              size,
+              age: 0,
+              ttl,
+            });
+          }
+          if (feedback.particles.length > 90) {
+            feedback.particles.splice(0, feedback.particles.length - 90);
+          }
+        }
+
+        function distanceToGhost(ghost) {
+          let dx = Math.abs(pacman.pos.x - ghost.pos.x);
+          dx = Math.min(dx, width - dx);
+          const dy = pacman.pos.y - ghost.pos.y;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function isHarmfulGhost(ghost) {
+          return ghost.state !== "frightened" && ghost.state !== "eyes" && ghost.state !== "waiting";
+        }
+
+        function updateThreatDiagnostics() {
+          let nearest = null;
+          let nearestDistance = Infinity;
+          let nearestHarmfulDistance = Infinity;
+          ghosts.forEach((ghost) => {
+            if (ghost.state === "eyes" || ghost.state === "waiting") {
+              return;
+            }
+            const distance = distanceToGhost(ghost);
+            if (distance < nearestDistance) {
+              nearestDistance = distance;
+              nearest = {
+                name: ghost.name,
+                state: ghost.state,
+                distance: round(distance),
+                tile: { col: Math.floor(ghost.pos.x), row: Math.floor(ghost.pos.y) },
+                harmful: isHarmfulGhost(ghost),
+              };
+            }
+            if (isHarmfulGhost(ghost)) {
+              nearestHarmfulDistance = Math.min(nearestHarmfulDistance, distance);
+            }
+          });
+          feedback.nearestGhost = nearest;
+          feedback.dangerCue =
+            state.phase === "playing" && Number.isFinite(nearestHarmfulDistance)
+              ? round(clamp((4.2 - nearestHarmfulDistance) / 3.4, 0, 1), 3)
+              : 0;
+        }
+
+        function updateFeedback(dt) {
+          feedback.time += dt;
+          feedback.screenFlash = Math.max(0, feedback.screenFlash - dt * 2.6);
+          feedback.screenShake = Math.max(0, feedback.screenShake - dt * 2.8);
+          feedback.powerPulse = Math.max(0, feedback.powerPulse - dt * 1.4);
+          ["lastPelletAge", "lastPowerAge", "lastFruitAge", "lastGhostEatAge", "lastHitAge"].forEach((key) => {
+            if (feedback[key] !== null) {
+              feedback[key] += dt;
+              if (feedback[key] > 6) {
+                feedback[key] = null;
+              }
+            }
+          });
+
+          feedback.particles = feedback.particles
+            .map((particle) => ({
+              ...particle,
+              x: particle.x + particle.vx * dt,
+              y: particle.y + particle.vy * dt,
+              age: particle.age + dt,
+            }))
+            .filter((particle) => particle.age < particle.ttl);
+          feedback.rings = feedback.rings
+            .map((ring) => ({ ...ring, age: ring.age + dt }))
+            .filter((ring) => ring.age < ring.ttl);
+          feedback.pops = feedback.pops
+            .map((pop) => ({ ...pop, y: pop.y + pop.vy * dt, age: pop.age + dt }))
+            .filter((pop) => pop.age < pop.ttl);
+          updateThreatDiagnostics();
+        }
+
+        function recordPellet(col, row) {
+          const x = col + 0.5;
+          const y = row + 0.5;
+          feedback.lastPelletAge = 0;
+          feedback.counters.pellet += 1;
+          pushFeedbackParticles(x, y, "#ffd166", 5, { speed: 1.4, ttl: 0.3, size: 0.045 });
+          pushFeedbackPop(x, y - 0.2, "+10", "#ffd166", { ttl: 0.45, size: 0.46, vy: -0.72 });
+        }
+
+        function recordPower(col, row) {
+          const x = col + 0.5;
+          const y = row + 0.5;
+          feedback.lastPowerAge = 0;
+          feedback.counters.power += 1;
+          feedback.powerPulse = 1;
+          feedback.screenFlash = Math.max(feedback.screenFlash, 0.28);
+          pushFeedbackRing(x, y, "#ffd166", { radius: 0.35, grow: 1.35, ttl: 0.9, lineWidth: 0.11 });
+          pushFeedbackRing(pacman.pos.x, pacman.pos.y, "#4cc9f0", { radius: 0.55, grow: 1.1, ttl: 0.75 });
+          pushFeedbackParticles(x, y, "#ffd166", 16, { speed: 2.4, ttl: 0.62, size: 0.075 });
+          pushFeedbackPop(x, y - 0.45, "POWER", "#f6f5ff", { ttl: 0.9, size: 0.72, vy: -0.78 });
+        }
+
+        function recordFruit(points) {
+          const fruit = fruitTypes[fruitState.kindIndex];
+          feedback.lastFruitAge = 0;
+          feedback.counters.fruit += 1;
+          pushFeedbackRing(fruitSpawn.x, fruitSpawn.y, fruit.color, { radius: 0.45, grow: 1, ttl: 0.72, lineWidth: 0.1 });
+          pushFeedbackParticles(fruitSpawn.x, fruitSpawn.y, fruit.color, 14, { speed: 2.2, ttl: 0.55, size: 0.07 });
+          pushFeedbackPop(fruitSpawn.x, fruitSpawn.y - 0.45, `+${points}`, fruit.color, { ttl: 0.9, size: 0.68 });
+        }
+
+        function recordGhostEat(ghost, points) {
+          feedback.lastGhostEatAge = 0;
+          feedback.counters.ghostEat += 1;
+          pushFeedbackRing(ghost.pos.x, ghost.pos.y, "#6ee7b7", { radius: 0.45, grow: 0.95, ttl: 0.72, lineWidth: 0.1 });
+          pushFeedbackParticles(ghost.pos.x, ghost.pos.y, "#6ee7b7", 12, { speed: 2.3, ttl: 0.52, size: 0.07 });
+          pushFeedbackPop(ghost.pos.x, ghost.pos.y - 0.42, `+${points}`, "#6ee7b7", { ttl: 0.85, size: 0.68 });
+        }
+
+        function recordHit(ghost) {
+          feedback.lastHitAge = 0;
+          feedback.counters.hit += 1;
+          feedback.screenFlash = Math.max(feedback.screenFlash, 0.9);
+          feedback.screenShake = Math.max(feedback.screenShake, 0.8);
+          pushFeedbackRing(pacman.pos.x, pacman.pos.y, "#ff4d6d", { radius: 0.5, grow: 1.2, ttl: 0.82, lineWidth: 0.14 });
+          pushFeedbackParticles(pacman.pos.x, pacman.pos.y, "#ff4d6d", 18, { speed: 2.8, ttl: 0.65, size: 0.08 });
+          pushFeedbackPop(pacman.pos.x, pacman.pos.y - 0.45, ghost ? "HIT" : "MISS", "#ff8fa3", { ttl: 0.8, size: 0.74 });
+        }
+
         function resetPellets() {
           pellets = new Set(basePellets);
           powerPellets = new Set(basePower);
@@ -921,6 +1163,7 @@
           resetGhostModes();
           resetDotCountersForLevel();
           resetPositions();
+          resetFeedback(true);
           setPhase("ready", "Ready", "Press Enter or tap Start.");
           updateHud();
         }
@@ -1343,7 +1586,9 @@
           const dx = pacman.pos.x - fruitSpawn.x;
           const dy = pacman.pos.y - fruitSpawn.y;
           if (dx * dx + dy * dy < 0.45 * 0.45) {
-            state.score += getFruitScore();
+            const points = getFruitScore();
+            state.score += points;
+            recordFruit(points);
             fruitState.active = false;
             fruitState.timer = 0;
             playFruitSound();
@@ -1364,6 +1609,7 @@
             pellets.delete(index);
             pelletsRemaining -= 1;
             state.score += 10;
+            recordPellet(col, row);
             playPelletSound();
             updateHud();
             checkFruitSpawn();
@@ -1371,6 +1617,7 @@
             powerPellets.delete(index);
             pelletsRemaining -= 1;
             state.score += 50;
+            recordPower(col, row);
             activatePower();
             playPowerSound();
             updateHud();
@@ -1597,11 +1844,16 @@
               if (ghost.state === "frightened") {
                 ghost.state = "eyes";
                 ghost.dir = (ghost.dir + 2) % DIRS.length;
-                state.score += getGhostComboScore();
+                const points = getGhostComboScore();
+                state.score += points;
                 state.eatStreak += 1;
+                recordGhostEat(ghost, points);
                 playGhostEatSound();
                 updateHud();
               } else if (ghost.state !== "eyes" && ghost.state !== "waiting") {
+                if (state.phase === "playing") {
+                  recordHit(ghost);
+                }
                 loseLife();
               }
             }
@@ -1648,6 +1900,7 @@
           checkFruitPickup();
           ghosts.forEach((ghost) => updateGhost(ghost, dt));
           checkCollisions();
+          updateFeedback(dt);
 
           if (pelletsRemaining <= 0 && !state.pendingNextLevel) {
             state.pendingNextLevel = true;
@@ -1696,9 +1949,10 @@
             const col = index % width;
             const x = (col + 0.5) * tileSize;
             const y = (row + 0.5) * tileSize;
+            const twinkle = 0.75 + Math.abs(Math.sin(time * 3.4 + index)) * 0.25;
             ctx.fillStyle = "rgba(255, 214, 128, 0.9)";
             ctx.beginPath();
-            ctx.arc(x, y, tileSize * 0.09, 0, Math.PI * 2);
+            ctx.arc(x, y, tileSize * 0.075 * twinkle, 0, Math.PI * 2);
             ctx.fill();
           });
 
@@ -1708,10 +1962,19 @@
             const col = index % width;
             const x = (col + 0.5) * tileSize;
             const y = (row + 0.5) * tileSize;
+            ctx.save();
+            ctx.shadowColor = "rgba(255, 209, 102, 0.9)";
+            ctx.shadowBlur = tileSize * 0.45;
+            ctx.strokeStyle = "rgba(255, 209, 102, 0.42)";
+            ctx.lineWidth = tileSize * 0.05;
+            ctx.beginPath();
+            ctx.arc(x, y, tileSize * (pulse + 0.13), 0, Math.PI * 2);
+            ctx.stroke();
             ctx.fillStyle = "rgba(255, 209, 102, 1)";
             ctx.beginPath();
             ctx.arc(x, y, tileSize * pulse, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
           });
           ctx.restore();
         }
@@ -1727,6 +1990,15 @@
 
           ctx.save();
           ctx.translate(x, y + bob);
+          const pulse = 0.72 + Math.abs(Math.sin(time * 4.6)) * 0.28;
+          ctx.strokeStyle = `${fruit.color}aa`;
+          ctx.lineWidth = tileSize * 0.06;
+          ctx.shadowColor = fruit.color;
+          ctx.shadowBlur = tileSize * 0.36;
+          ctx.beginPath();
+          ctx.arc(0, 0, tileSize * (0.4 + pulse * 0.08), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
           ctx.fillStyle = fruit.color;
           ctx.beginPath();
           ctx.arc(0, 0, tileSize * 0.28, 0, Math.PI * 2);
@@ -1763,6 +2035,30 @@
           }
 
           ctx.save();
+          if (feedback.dangerCue > 0) {
+            const alpha = 0.18 + feedback.dangerCue * 0.34;
+            ctx.strokeStyle = `rgba(255, 77, 109, ${alpha})`;
+            ctx.lineWidth = tileSize * (0.06 + feedback.dangerCue * 0.05);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, tileSize * (0.72 + Math.sin(time * 9) * 0.05), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          if (feedback.powerPulse > 0 || state.frightenedTimer > 0) {
+            const pulse = Math.max(feedback.powerPulse, Math.min(1, state.frightenedTimer / getPowerDuration()));
+            ctx.strokeStyle = `rgba(76, 201, 240, ${0.18 + pulse * 0.36})`;
+            ctx.lineWidth = tileSize * 0.08;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, tileSize * (0.7 + (1 - pulse) * 0.35), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          if (feedback.lastHitAge !== null && feedback.lastHitAge < 0.45) {
+            const hitAlpha = 1 - feedback.lastHitAge / 0.45;
+            ctx.strokeStyle = `rgba(255, 77, 109, ${hitAlpha * 0.7})`;
+            ctx.lineWidth = tileSize * 0.11;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, tileSize * (0.55 + (1 - hitAlpha) * 0.55), 0, Math.PI * 2);
+            ctx.stroke();
+          }
           ctx.fillStyle = "#ffd166";
           ctx.beginPath();
           ctx.moveTo(centerX, centerY);
@@ -1786,13 +2082,35 @@
           }
 
           let bodyColor = ghost.color;
+          const distance = distanceToGhost(ghost);
+          const harmful = isHarmfulGhost(ghost);
+          if (harmful && distance < 4.2) {
+            const cue = clamp((4.2 - distance) / 3.4, 0, 1);
+            ctx.strokeStyle = `rgba(255, 77, 109, ${0.18 + cue * 0.35})`;
+            ctx.lineWidth = tileSize * (0.05 + cue * 0.05);
+            ctx.beginPath();
+            ctx.arc(x, y, tileSize * (0.66 + Math.sin(time * 7) * 0.04), 0, Math.PI * 2);
+            ctx.stroke();
+          }
           if (ghost.state === "frightened") {
+            const blinkAlpha = getFrightenedBlinkOn() ? 0.72 : 0.42;
+            ctx.strokeStyle = `rgba(246, 245, 255, ${blinkAlpha})`;
+            ctx.lineWidth = tileSize * 0.08;
+            ctx.shadowColor = "rgba(76, 201, 240, 0.85)";
+            ctx.shadowBlur = tileSize * 0.38;
+            ctx.beginPath();
+            ctx.arc(x, y, tileSize * (0.62 + Math.sin(time * 6) * 0.04), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
             if (state.frightenedTimer <= getFrightenedBlinkStart()) {
               const blinkOn = getFrightenedBlinkOn();
               bodyColor = blinkOn ? "#f6f5ff" : "#3b5bff";
             } else {
               bodyColor = "#3b5bff";
             }
+          } else if (harmful) {
+            ctx.shadowColor = ghost.color;
+            ctx.shadowBlur = tileSize * 0.22;
           }
           ctx.fillStyle = bodyColor;
           ctx.beginPath();
@@ -1805,6 +2123,7 @@
           }
           ctx.closePath();
           ctx.fill();
+          ctx.shadowBlur = 0;
 
           drawGhostEyes(ghost, x, y, size);
           ctx.restore();
@@ -1827,17 +2146,82 @@
           ctx.fill();
         }
 
+        function drawFeedbackEffects() {
+          ctx.save();
+          feedback.rings.forEach((ring) => {
+            const progress = ring.age / ring.ttl;
+            const alpha = Math.max(0, 1 - progress);
+            const x = ring.x * tileSize;
+            const y = ring.y * tileSize;
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = ring.color;
+            ctx.lineWidth = Math.max(1, tileSize * ring.lineWidth);
+            ctx.beginPath();
+            ctx.arc(x, y, tileSize * (ring.radius + ring.grow * progress), 0, Math.PI * 2);
+            if (ring.fill) {
+              ctx.fillStyle = ring.color;
+              ctx.fill();
+            }
+            ctx.stroke();
+          });
+
+          feedback.particles.forEach((particle) => {
+            const alpha = Math.max(0, 1 - particle.age / particle.ttl);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = particle.color;
+            ctx.beginPath();
+            ctx.arc(particle.x * tileSize, particle.y * tileSize, tileSize * particle.size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          feedback.pops.forEach((pop) => {
+            const alpha = Math.max(0, 1 - pop.age / pop.ttl);
+            const x = pop.x * tileSize;
+            const y = pop.y * tileSize;
+            ctx.globalAlpha = alpha;
+            ctx.font = `800 ${Math.max(11, tileSize * pop.size)}px system-ui, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.lineWidth = Math.max(2, tileSize * 0.12);
+            ctx.strokeStyle = "rgba(8, 12, 24, 0.82)";
+            ctx.fillStyle = pop.color;
+            ctx.strokeText(pop.text, x, y);
+            ctx.fillText(pop.text, x, y);
+          });
+          ctx.restore();
+        }
+
+        function drawScreenFeedback() {
+          if (feedback.screenFlash <= 0) {
+            return;
+          }
+          ctx.save();
+          ctx.fillStyle = `rgba(255, 77, 109, ${Math.min(0.28, feedback.screenFlash * 0.22)})`;
+          ctx.fillRect(0, 0, boardPixelSize(), boardPixelSize());
+          ctx.restore();
+        }
+
         function render(time) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.save();
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.restore();
 
+          const shakeAmount = feedback.screenShake > 0 ? feedback.screenShake * tileSize * 0.16 : 0;
+          const shakeX = shakeAmount ? Math.sin(feedback.time * 61) * shakeAmount : 0;
+          const shakeY = shakeAmount ? Math.cos(feedback.time * 47) * shakeAmount : 0;
+          ctx.save();
+          if (shakeAmount) {
+            ctx.translate(shakeX, shakeY);
+          }
           drawWalls();
           drawPellets(time);
           drawFruit(time);
           drawPacman(time);
           ghosts.forEach((ghost) => drawGhost(ghost, time));
+          drawFeedbackEffects();
+          ctx.restore();
+          drawScreenFeedback();
         }
 
         function loop(timestamp) {
@@ -1851,6 +2235,8 @@
               update(step);
               accumulator -= step;
             }
+          } else {
+            updateFeedback(dt);
           }
 
           render(now / 1000);
@@ -1873,27 +2259,29 @@
             pendingNextLevel: !!state.pendingNextLevel,
             pelletsRemaining,
             powerPelletsRemaining: powerPellets.size,
-            frightenedTimer: Math.round(state.frightenedTimer * 100) / 100,
+            frightenedTimer: round(state.frightenedTimer),
             eatStreak: state.eatStreak,
-            mode: { index: modeState.index, timer: Math.round(modeState.timer * 100) / 100, name: getGlobalMode() },
+            dangerCue: feedback.dangerCue,
+            nearestGhost: feedback.nearestGhost,
+            mode: { index: modeState.index, timer: round(modeState.timer), name: getGlobalMode() },
             pacman: {
-              x: Math.round(pacman.pos.x * 100) / 100,
-              y: Math.round(pacman.pos.y * 100) / 100,
+              x: round(pacman.pos.x),
+              y: round(pacman.pos.y),
               tile: { col: Math.floor(pacman.pos.x), row: Math.floor(pacman.pos.y) },
               dir: dirName(pacman.dir),
               nextDir: dirName(pacman.nextDir)
             },
             fruit: {
               active: !!fruitState.active,
-              timer: Math.round(fruitState.timer * 100) / 100,
+              timer: round(fruitState.timer),
               spawned: fruitState.spawned,
               kind: fruitTypes[fruitState.kindIndex]?.name || null
             },
             ghosts: ghosts.map(ghost => ({
               name: ghost.name,
               state: ghost.state,
-              x: Math.round(ghost.pos.x * 100) / 100,
-              y: Math.round(ghost.pos.y * 100) / 100,
+              x: round(ghost.pos.x),
+              y: round(ghost.pos.y),
               tile: { col: Math.floor(ghost.pos.x), row: Math.floor(ghost.pos.y) },
               dir: dirName(ghost.dir),
               inHouse: !!ghost.inHouse,
@@ -1904,6 +2292,22 @@
               globalCounterActive: !!house.globalCounterActive,
               globalCounter: house.globalCounter,
               pendingRelease: house.pendingRelease
+            },
+            feedback: {
+              lastPelletAge: ageForDiagnostics(feedback.lastPelletAge),
+              lastPowerAge: ageForDiagnostics(feedback.lastPowerAge),
+              lastFruitAge: ageForDiagnostics(feedback.lastFruitAge),
+              lastGhostEatAge: ageForDiagnostics(feedback.lastGhostEatAge),
+              lastHitAge: ageForDiagnostics(feedback.lastHitAge),
+              pelletCount: feedback.counters.pellet,
+              powerCount: feedback.counters.power,
+              fruitCount: feedback.counters.fruit,
+              ghostEatCount: feedback.counters.ghostEat,
+              hitCount: feedback.counters.hit,
+              feedbackParticles: feedback.particles.length + feedback.rings.length,
+              popupCount: feedback.pops.length,
+              screenFlash: round(feedback.screenFlash, 3),
+              screenShake: round(feedback.screenShake, 3)
             },
             audio: { muted: !!audio.muted, unlocked: !!audio.unlocked, musicOn: !!audio.musicOn },
             overlay: { visible: overlay.classList.contains("show"), title: overlayTitle.textContent },
@@ -1917,6 +2321,8 @@
           for (let i = 0; i < steps; i++) {
             if (state.phase === "playing") {
               update(step);
+            } else {
+              updateFeedback(step);
             }
           }
           render(performance.now() / 1000);

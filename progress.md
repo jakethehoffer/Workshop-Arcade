@@ -164,3 +164,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client plus direct Playwright checks for brick impact, life-loss feedback, powerup spawn, FIRE collection feedback/effect state, diagnostics updates, and no console/page errors.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue the same single-game feedback approach on Maze Chase pellet/power-state readability, or shift to catalog-level tuning if contact-sheet evidence shows a broader pattern.
+
+## 2026-05-08 Codex pass 18
+
+- Baseline: `test-results/render-ranking/2026-05-08T16-09-54-898Z/` scored all 40 surfaces at zero; Maze Chase was selected because pellet consumption, power state, ghost danger, ghost-eat feedback, and life loss still read flatter than the recent Arena/Brick Breaker feedback passes.
+- Strengthened `websites/maze-chase.html` with visual-only feedback state for pellet sparkles, score/status pops, power-pellet board/player pulses, frightened ghost auras, harmful ghost threat rings, fruit/ghost-eat rings, life-loss flash, and short screen shake.
+- Extended Maze Chase diagnostics with `dangerCue`, `nearestGhost`, compact event ages/counters, feedback particle/ring counts, popup count, `screenFlash`, and `screenShake`, while keeping `advanceTime(ms)` deterministic for feedback timers and non-playing settle states.
+- Final capture: `test-results/render-ranking/2026-05-08T16-24-40-362Z/`, with all 40 desktop/mobile surfaces still at zero automated issues and Maze Chase desktop/mobile post-action screenshots manually inspected.
+- Verified with the required web-game client for Maze Chase plus direct Playwright checks for pellet feedback and harmful collision/life-loss feedback; the focused client state also confirmed power-pellet and ghost-eat diagnostics.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue single-game mid-play feedback polish on Tetris line/lock/clear readability or Minesweeper reveal/flag feedback, depending on the next contact-sheet review.
