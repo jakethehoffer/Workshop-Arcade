@@ -154,3 +154,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client plus direct Playwright checks for danger cue, dust pickup feedback, hit/pending-over feedback, restart flow, no overflow, and no console/page errors.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue single-game mid-play feedback polish on another mechanically solid title, likely Brick Breaker powerup/collision feedback or Maze Chase pellet/power-state readability.
+
+## 2026-05-08 Codex pass 17
+
+- Baseline: `test-results/render-ranking/2026-05-08T05-04-08-082Z/` scored all 40 surfaces at zero; Brick Breaker was selected because active play worked but ball hits, brick breaks, drops, powerups, and misses still read quietly compared with newer feedback passes.
+- Strengthened `websites/brick-breaker.html` with visual-only feedback state for ball trails/launch cues, brick hit flashes, break particles/rings, bomb warning glow, paddle contact rings, powerup auras/collection pops, shield/life-loss flash, and short screen shake.
+- Extended Brick Breaker diagnostics with compact `feedback` fields for last hit/break/paddle/powerup/life/shield ages, last powerup type, impact/break/collection counters, particle/ring count, popup count, screen flash, and screen shake.
+- Final capture: `test-results/render-ranking/2026-05-08T15-45-11-949Z/`, with all 40 desktop/mobile surfaces still at zero automated issues and Brick Breaker desktop/mobile post-action screenshots manually inspected.
+- Verified with the required web-game client plus direct Playwright checks for brick impact, life-loss feedback, powerup spawn, FIRE collection feedback/effect state, diagnostics updates, and no console/page errors.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue the same single-game feedback approach on Maze Chase pellet/power-state readability, or shift to catalog-level tuning if contact-sheet evidence shows a broader pattern.
