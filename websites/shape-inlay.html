@@ -618,6 +618,20 @@
           shake: 0
         };
 
+        const feedback = {
+          dangerCue: 0,
+          dangerObstacle: null,
+          nearMissCount: 0,
+          lastNearMissAge: null,
+          crashFlash: 0,
+          edgePulse: 0
+        };
+
+        const feedbackParticles = [];
+        const feedbackRings = [];
+        const feedbackPops = [];
+        let nextObstacleId = 1;
+
         const input = {
           left: false,
           right: false,
@@ -713,10 +727,12 @@
           const edgeBuffer = width * 0.22;
           const x = randRange(-width / 2 + edgeBuffer, width / 2 - edgeBuffer);
           obstacles.push({
+            id: nextObstacleId,
             x,
             w: obstacleWidth,
             h: obstacleWidth * randRange(0.8, 1.2)
           });
+          nextObstacleId += 1;
           return obstacles;
         }
 
@@ -737,6 +753,7 @@
             z,
             center: profile.center,
             width: profile.width,
+            curve: profile.curve,
             obstacles,
             stripe
           };
@@ -772,6 +789,7 @@
             : 0;
           segment.center = profile.center;
           segment.width = profile.width;
+          segment.curve = profile.curve;
           segment.stripe = last ? !last.stripe : segment.stripe;
           segment.obstacles = createObstacles(profile.width, difficulty);
           return segment;
@@ -813,7 +831,134 @@
           };
         }
 
+        function obstacleCollisionRange(obs) {
+          return (config.ballRadius + obs.w * 0.5) * 0.85;
+        }
+
+        function obstacleThreat(segment, obs) {
+          const worldX = segment.center + obs.x;
+          const distance = segment.z - config.ballZ;
+          const lateral = Math.abs(worldX - state.ballX);
+          const hitRange = obstacleCollisionRange(obs);
+          const laneProximity = clamp(1 - Math.max(0, lateral - hitRange) / (hitRange + 48), 0, 1);
+          const approach = distance >= -24 && distance <= 380
+            ? clamp(1 - Math.max(0, distance) / 380, 0, 1)
+            : 0;
+          return approach * laneProximity;
+        }
+
+        function scanDangerCue() {
+          let strongest = null;
+          segments.forEach((segment) => {
+            if (segment.z < config.ballZ - 42 || segment.z > config.ballZ + 420) {
+              return;
+            }
+            segment.obstacles.forEach((obs) => {
+              const threat = obstacleThreat(segment, obs);
+              if (threat <= 0.04) {
+                return;
+              }
+              const candidate = {
+                id: obs.id,
+                cue: threat,
+                distance: segment.z - config.ballZ,
+                x: segment.center + obs.x,
+                lateralOffset: segment.center + obs.x - state.ballX,
+                width: obs.w
+              };
+              if (!strongest || candidate.cue > strongest.cue) {
+                strongest = candidate;
+              }
+            });
+          });
+          return strongest;
+        }
+
+        function emitParticles(x, z, color, count, intensity = 1) {
+          for (let i = 0; i < count; i += 1) {
+            const angle = (i / Math.max(count, 1)) * Math.PI * 2;
+            const speed = (28 + (i % 5) * 8) * intensity;
+            feedbackParticles.push({
+              x,
+              z,
+              vx: Math.cos(angle) * speed,
+              vz: Math.sin(angle) * speed * 0.45,
+              size: 2 + (i % 3),
+              age: 0,
+              ttl: 0.42 + (i % 4) * 0.05,
+              color
+            });
+          }
+        }
+
+        function emitRing(x, z, color, ttl = 0.45) {
+          feedbackRings.push({ x, z, color, age: 0, ttl });
+        }
+
+        function emitPop(text, x, z, color) {
+          feedbackPops.push({ text, x, z, color, age: 0, ttl: 0.62 });
+        }
+
+        function emitNearMiss(worldX) {
+          feedback.nearMissCount += 1;
+          feedback.lastNearMissAge = 0;
+          state.shake = Math.max(state.shake, 3.2);
+          emitParticles(worldX, config.ballZ, "#ffd46a", 12, 0.9);
+          emitRing(worldX, config.ballZ, "rgba(255, 212, 106, 0.95)", 0.5);
+          emitPop("CLOSE", worldX, config.ballZ, "#ffd46a");
+        }
+
+        function resetFeedback() {
+          feedback.dangerCue = 0;
+          feedback.dangerObstacle = null;
+          feedback.nearMissCount = 0;
+          feedback.lastNearMissAge = null;
+          feedback.crashFlash = 0;
+          feedback.edgePulse = 0;
+          feedbackParticles.length = 0;
+          feedbackRings.length = 0;
+          feedbackPops.length = 0;
+        }
+
+        function updateFeedback(dt) {
+          const danger = state.running ? scanDangerCue() : null;
+          feedback.dangerCue += ((danger ? danger.cue : 0) - feedback.dangerCue) * Math.min(1, dt * 12);
+          feedback.dangerObstacle = danger ? {
+            id: danger.id,
+            cue: Math.round(danger.cue * 100) / 100,
+            distance: Math.round(danger.distance),
+            x: Math.round(danger.x * 10) / 10,
+            lateralOffset: Math.round(danger.lateralOffset * 10) / 10,
+            width: Math.round(danger.width * 10) / 10
+          } : null;
+          feedback.edgePulse += ((state.running ? clamp((state.risk - 0.66) / 0.34, 0, 1) : 0) - feedback.edgePulse) * Math.min(1, dt * 10);
+          if (feedback.lastNearMissAge !== null) {
+            feedback.lastNearMissAge += dt;
+            if (feedback.lastNearMissAge > 3) {
+              feedback.lastNearMissAge = null;
+            }
+          }
+          feedback.crashFlash = Math.max(0, feedback.crashFlash - dt * 1.9);
+
+          [feedbackParticles, feedbackRings, feedbackPops].forEach((items) => {
+            for (let i = items.length - 1; i >= 0; i -= 1) {
+              const item = items[i];
+              item.age += dt;
+              if (item.vx || item.vz) {
+                item.x += item.vx * dt;
+                item.z += item.vz * dt;
+              }
+              if (item.age >= item.ttl) {
+                items.splice(i, 1);
+              }
+            }
+          });
+        }
+
         function drawBackground() {
+          const speedFactor = state.running
+            ? clamp((state.speed - config.baseSpeed) / (config.maxSpeed - config.baseSpeed), 0, 1)
+            : 0;
           const gradient = ctx.createLinearGradient(0, 0, 0, view.height);
           gradient.addColorStop(0, "#08101f");
           gradient.addColorStop(0.5, "#0d2240");
@@ -824,10 +969,44 @@
           ctx.fillStyle = "rgba(70, 240, 255, 0.12)";
           ctx.fillRect(0, view.horizon - 30, view.width, 80);
 
+          const fog = ctx.createRadialGradient(
+            view.midX,
+            view.horizon + 20,
+            10,
+            view.midX,
+            view.horizon + 20,
+            Math.max(view.width, view.height) * 0.55
+          );
+          fog.addColorStop(0, `rgba(83, 245, 255, ${0.28 + feedback.dangerCue * 0.16})`);
+          fog.addColorStop(0.45, "rgba(70, 240, 255, 0.08)");
+          fog.addColorStop(1, "rgba(5, 8, 20, 0)");
+          ctx.fillStyle = fog;
+          ctx.fillRect(0, 0, view.width, view.height);
+
           stars.forEach((star) => {
             ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
             ctx.fillRect(star.x, star.y, star.size, star.size);
           });
+
+          if (state.running) {
+            const streaks = 14 + Math.floor(speedFactor * 18);
+            ctx.lineCap = "round";
+            for (let i = 0; i < streaks; i += 1) {
+              const phase = (state.distance * 0.003 + i * 0.137) % 1;
+              const y = view.horizon + phase * view.cameraHeight * 1.04;
+              const side = i % 2 === 0 ? -1 : 1;
+              const spread = 0.18 + (i % 7) * 0.06;
+              const x = view.midX + side * view.width * spread;
+              const len = 18 + speedFactor * 54 + phase * 28;
+              const alpha = (0.08 + speedFactor * 0.14) * phase;
+              ctx.strokeStyle = `rgba(96, 244, 255, ${alpha})`;
+              ctx.lineWidth = 1 + phase * 2;
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+              ctx.lineTo(x + side * len * 0.28, y + len);
+              ctx.stroke();
+            }
+          }
         }
 
         function drawTrack() {
@@ -848,11 +1027,20 @@
             ctx.lineTo(nearProj.x + nearHalf, nearProj.y);
             ctx.lineTo(nearProj.x - nearHalf, nearProj.y);
             ctx.closePath();
-            ctx.fillStyle = far.stripe ? "rgba(18, 34, 62, 0.95)" : "rgba(10, 24, 44, 0.95)";
+            const depth = clamp(farProj.scale * 2.8, 0, 1);
+            const dangerShade = feedback.dangerCue * depth;
+            ctx.fillStyle = far.stripe
+              ? `rgba(${18 + dangerShade * 30}, ${34 - dangerShade * 8}, ${62 + dangerShade * 8}, 0.96)`
+              : `rgba(${10 + dangerShade * 24}, ${24 - dangerShade * 6}, ${44 + dangerShade * 6}, 0.96)`;
             ctx.fill();
 
-            ctx.strokeStyle = "rgba(66, 242, 255, 0.15)";
-            ctx.lineWidth = 2;
+            const railHeat = Math.max(feedback.edgePulse, feedback.dangerCue * 0.7);
+            ctx.strokeStyle = railHeat > 0.2
+              ? `rgba(255, 107, 143, ${0.24 + railHeat * 0.54})`
+              : `rgba(66, 242, 255, ${0.18 + depth * 0.12})`;
+            ctx.lineWidth = 1.5 + depth * 3 + railHeat * 3;
+            ctx.shadowBlur = 10 + railHeat * 18;
+            ctx.shadowColor = railHeat > 0.2 ? "rgba(255, 107, 143, 0.65)" : "rgba(66, 242, 255, 0.35)";
             ctx.beginPath();
             ctx.moveTo(farProj.x - farHalf, farProj.y);
             ctx.lineTo(nearProj.x - nearHalf, nearProj.y);
@@ -862,12 +1050,15 @@
             ctx.moveTo(farProj.x + farHalf, farProj.y);
             ctx.lineTo(nearProj.x + nearHalf, nearProj.y);
             ctx.stroke();
+            ctx.shadowBlur = 0;
 
-            if (i % 6 === 0) {
-              ctx.strokeStyle = "rgba(255, 214, 106, 0.25)";
+            if (i % 4 === 0) {
+              const tickAlpha = 0.18 + depth * 0.22 + feedback.dangerCue * 0.16;
+              ctx.strokeStyle = `rgba(255, 214, 106, ${tickAlpha})`;
+              ctx.lineWidth = 1 + depth * 2;
               ctx.beginPath();
-              ctx.moveTo(farProj.x, farProj.y);
-              ctx.lineTo(nearProj.x, nearProj.y);
+              ctx.moveTo(nearProj.x - nearHalf * 0.08, nearProj.y);
+              ctx.lineTo(nearProj.x + nearHalf * 0.08, nearProj.y);
               ctx.stroke();
             }
           }
@@ -882,15 +1073,39 @@
             const proj = projectPoint(segment.center, segment.z);
             segment.obstacles.forEach((obs) => {
               const obsProj = projectPoint(segment.center + obs.x, segment.z);
+              const threat = obstacleThreat(segment, obs);
+              const isDanger = feedback.dangerObstacle && feedback.dangerObstacle.id === obs.id;
               const width = obs.w * obsProj.scale;
               const height = obs.h * obsProj.scale;
               const x = obsProj.x - width / 2;
               const y = proj.y - height;
-              ctx.fillStyle = "rgba(255, 107, 143, 0.9)";
+              const glowAlpha = isDanger ? 0.8 : threat * 0.55;
+              if (glowAlpha > 0.05) {
+                ctx.fillStyle = `rgba(255, 107, 143, ${0.12 + glowAlpha * 0.18})`;
+                ctx.beginPath();
+                ctx.ellipse(obsProj.x, y + height * 0.58, width * (1.2 + threat), height * (0.75 + threat * 0.3), 0, 0, Math.PI * 2);
+                ctx.fill();
+              }
+              ctx.shadowBlur = 8 + glowAlpha * 26;
+              ctx.shadowColor = "rgba(255, 107, 143, 0.72)";
+              ctx.fillStyle = isDanger
+                ? "rgba(255, 74, 118, 0.98)"
+                : `rgba(255, ${107 + threat * 38}, ${143 + threat * 28}, 0.92)`;
               ctx.fillRect(x, y, width, height);
-              ctx.strokeStyle = "rgba(255, 210, 230, 0.7)";
-              ctx.lineWidth = 2;
+              ctx.shadowBlur = 0;
+              ctx.fillStyle = `rgba(255, 244, 250, ${0.16 + threat * 0.3})`;
+              ctx.fillRect(x + width * 0.16, y + height * 0.14, width * 0.68, Math.max(2, height * 0.13));
+              ctx.strokeStyle = isDanger ? "rgba(255, 245, 252, 0.95)" : "rgba(255, 210, 230, 0.76)";
+              ctx.lineWidth = 1.8 + threat * 2.8;
               ctx.strokeRect(x, y, width, height);
+              if (threat > 0.28) {
+                ctx.strokeStyle = `rgba(255, 212, 106, ${0.18 + threat * 0.52})`;
+                ctx.lineWidth = 1.5 + threat * 1.5;
+                ctx.beginPath();
+                ctx.moveTo(x - width * 0.28, y + height * 1.05);
+                ctx.lineTo(x + width * 1.28, y + height * 1.05);
+                ctx.stroke();
+              }
             });
           }
         }
@@ -925,6 +1140,56 @@
           ctx.beginPath();
           ctx.arc(proj.x, centerY, radius, 0, Math.PI * 2);
           ctx.fill();
+
+          const riskPulse = Math.max(feedback.edgePulse, feedback.dangerCue * 0.35);
+          if (riskPulse > 0.04) {
+            ctx.strokeStyle = `rgba(255, 107, 143, ${0.2 + riskPulse * 0.48})`;
+            ctx.lineWidth = 2 + riskPulse * 4;
+            ctx.beginPath();
+            ctx.arc(proj.x, centerY, radius * (1.35 + riskPulse * 0.45), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+
+        function drawFeedback() {
+          feedbackRings.forEach((ring) => {
+            const proj = projectPoint(ring.x, ring.z);
+            const progress = ring.age / ring.ttl;
+            const radius = (22 + progress * 72) * proj.scale;
+            ctx.strokeStyle = ring.color.replace("0.95", String(Math.max(0, 0.72 * (1 - progress))));
+            ctx.lineWidth = Math.max(1, (5 * (1 - progress)) * proj.scale);
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y - radius * 0.35, radius, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+
+          feedbackParticles.forEach((particle) => {
+            const proj = projectPoint(particle.x, particle.z);
+            const alpha = Math.max(0, 1 - particle.age / particle.ttl);
+            ctx.fillStyle = particle.color === "#ffd46a"
+              ? `rgba(255, 212, 106, ${alpha})`
+              : `rgba(255, 107, 143, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, particle.size * proj.scale * (1 + alpha), 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          feedbackPops.forEach((pop) => {
+            const proj = projectPoint(pop.x, pop.z);
+            const progress = pop.age / pop.ttl;
+            const y = proj.y - 28 - progress * 36;
+            ctx.font = `700 ${Math.max(12, 18 * proj.scale)}px Segoe UI, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.fillStyle = pop.color === "#ffd46a"
+              ? `rgba(255, 212, 106, ${1 - progress})`
+              : `rgba(255, 107, 143, ${1 - progress})`;
+            ctx.fillText(pop.text, proj.x, y);
+          });
+
+          if (feedback.crashFlash > 0) {
+            ctx.fillStyle = `rgba(255, 73, 112, ${feedback.crashFlash * 0.32})`;
+            ctx.fillRect(0, 0, view.width, view.height);
+          }
         }
 
         function getSteer() {
@@ -948,8 +1213,9 @@
           statusEl.textContent = state.running ? "RUNNING" : state.crashed ? "CRASHED" : "READY";
           const nerve = Math.max(6, state.risk * 100);
           nerveFill.style.width = `${nerve}%`;
-          frameEl.style.setProperty("--risk", state.risk.toFixed(2));
-          frameEl.classList.toggle("danger", state.risk > 0.85 && state.running);
+          const visualRisk = Math.max(state.risk, feedback.dangerCue * 0.9);
+          frameEl.style.setProperty("--risk", visualRisk.toFixed(2));
+          frameEl.classList.toggle("danger", visualRisk > 0.72 && state.running);
         }
 
         function showOverlay(title, message, buttonText) {
@@ -970,6 +1236,7 @@
           state.ballVX = 0;
           state.risk = 0;
           state.shake = 0;
+          resetFeedback();
           initTrack();
         }
 
@@ -995,7 +1262,11 @@
           }
           state.running = false;
           state.crashed = true;
-          state.shake = 10;
+          state.shake = 18;
+          feedback.crashFlash = 1;
+          emitParticles(state.ballX, config.ballZ, "#ff6b8f", 24, 1.35);
+          emitRing(state.ballX, config.ballZ, "rgba(255, 107, 143, 0.95)", 0.62);
+          emitPop("BREAK", state.ballX, config.ballZ, "#ff6b8f");
           const distance = Math.floor(state.distance / 10);
           if (distance > state.best) {
             state.best = distance;
@@ -1039,8 +1310,17 @@
                 triggerCrash("Dropped off track.");
               } else {
                 segment.obstacles.forEach((obs) => {
-                  if (Math.abs(localX - obs.x) < (config.ballRadius + obs.w * 0.5) * 0.85) {
+                  const missDistance = Math.abs(localX - obs.x);
+                  const hitRange = obstacleCollisionRange(obs);
+                  if (missDistance < hitRange) {
                     triggerCrash("Hit a barrier.");
+                  } else if (
+                    !obs.nearMissed &&
+                    Math.abs(segment.z - config.ballZ) < 22 &&
+                    missDistance < hitRange + config.ballRadius * 1.45
+                  ) {
+                    obs.nearMissed = true;
+                    emitNearMiss(segment.center + obs.x);
                   }
                 });
               }
@@ -1052,6 +1332,8 @@
           if (state.shake > 0) {
             state.shake = Math.max(0, state.shake - dt * 14);
           }
+
+          updateFeedback(dt);
 
           updateHud();
         }
@@ -1069,6 +1351,7 @@
           drawTrack();
           drawObstacles();
           drawBall();
+          drawFeedback();
           ctx.restore();
         }
 
@@ -1152,7 +1435,7 @@
         resetGame();
 
         function renderGameToText() {
-          const current = getSegmentAt(config.cameraDepth);
+          const current = getSegmentAt(config.ballZ);
           return JSON.stringify({
             state: state.crashed ? "game-over" : (state.running ? "playing" : "title"),
             running: state.running,
@@ -1166,8 +1449,17 @@
             ball: {
               x: Math.round(state.ballX * 10) / 10,
               vx: Math.round(state.ballVX * 10) / 10,
-              z: config.cameraDepth,
+              z: config.ballZ,
               radius: config.ballRadius
+            },
+            feedback: {
+              dangerCue: Math.round(feedback.dangerCue * 100) / 100,
+              dangerObstacle: feedback.dangerObstacle,
+              nearMissCount: feedback.nearMissCount,
+              lastNearMissAge: feedback.lastNearMissAge === null ? null : Math.round(feedback.lastNearMissAge * 100) / 100,
+              crashFlash: Math.round(feedback.crashFlash * 100) / 100,
+              edgePulse: Math.round(feedback.edgePulse * 100) / 100,
+              feedbackParticles: feedbackParticles.length + feedbackRings.length + feedbackPops.length
             },
             input: {
               left: input.left,
@@ -1179,18 +1471,21 @@
               z: Math.round(current.z),
               width: Math.round(current.width),
               center: Math.round(current.center * 10) / 10,
-              curve: Math.round(current.curve * 100) / 100,
+              curve: Math.round((current.curve || 0) * 100) / 100,
               obstacles: current.obstacles.map((obs) => ({
+                id: obs.id,
                 x: Math.round(obs.x * 10) / 10,
                 w: Math.round(obs.w * 10) / 10,
-                h: Math.round(obs.h * 10) / 10
+                h: Math.round(obs.h * 10) / 10,
+                threat: Math.round(obstacleThreat(current, obs) * 100) / 100
               }))
             } : null,
             upcoming: segments.slice(0, 8).map((segment) => ({
               z: Math.round(segment.z),
               width: Math.round(segment.width),
               center: Math.round(segment.center * 10) / 10,
-              obstacles: segment.obstacles.length
+              obstacles: segment.obstacles.length,
+              threat: Math.round(segment.obstacles.reduce((max, obs) => Math.max(max, obstacleThreat(segment, obs)), 0) * 100) / 100
             })),
             overlay: {
               visible: overlay.classList.contains("show"),

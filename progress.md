@@ -134,3 +134,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client plus direct Playwright checks for forced coin pickup, near miss, and mobile crash feedback.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: apply the same mid-game feedback lens to another mechanically solid canvas game, likely Slope Runner danger/risk feedback or Arena hit/collection readability.
+
+## 2026-05-08 Codex pass 15
+
+- Baseline: `test-results/render-ranking/2026-05-08T03-46-00-643Z/` scored all 40 surfaces at zero; Slope Runner was selected for mid-game risk feedback because obstacle threat, edge danger, and speed read softly despite solid mechanics.
+- Strengthened Slope Runner active play with brighter risk rails, center guide ticks, horizon fog, speed streaks, obstacle warning glow, near-miss particles/ring/`CLOSE` pop, and stronger crash flash/shake.
+- Extended diagnostics in `websites/shape-inlay.html`: fixed ball/current-segment reporting to use `config.ballZ`, added `dangerCue`, `dangerObstacle`, `nearMissCount`, `lastNearMissAge`, `crashFlash`, `edgePulse`, and feedback particle counts.
+- Final capture: `test-results/render-ranking/2026-05-08T03-56-39-090Z/`, with all 40 surfaces at zero automated issues and Slope Runner desktop/mobile post-action screenshots manually inspected.
+- Verified with the required web-game client plus direct Playwright checks for danger cue, near miss feedback, mobile crash feedback, no overflow, and no console/page errors.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: apply the same movement/readability lens to Arena hit/collection feedback, especially active combat/collision clarity.
