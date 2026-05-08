@@ -144,3 +144,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client plus direct Playwright checks for danger cue, near miss feedback, mobile crash feedback, no overflow, and no console/page errors.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: apply the same movement/readability lens to Arena hit/collection feedback, especially active combat/collision clarity.
+
+## 2026-05-08 Codex pass 16
+
+- Baseline: `test-results/render-ranking/2026-05-08T04-23-44-679Z/` scored all 40 surfaces at zero; Arena was selected because active play was mechanically healthy but hit danger, enemy intent, dust pickup, invulnerability, and game-over feedback read quietly.
+- Strengthened `websites/arena.html` active play with enemy intent rings/trails, type-specific threat outlines/glow, player danger rings, stronger hit flash/shake, dust pickup rings/particles, clearer `+1 XP` pop text, and a more visible invulnerability aura.
+- Extended Arena diagnostics with nearest enemy distance/type, `dangerCue`, pickup and hit ages, pending game-over state, invulnerability time, and compact feedback particle/ring/popup counts while keeping `advanceTime(ms)` on the existing deterministic step path.
+- Final capture: `test-results/render-ranking/2026-05-08T04-38-56-153Z/`, with all 40 desktop/mobile surfaces still at zero automated issues and Arena desktop/mobile post-action screenshots manually inspected.
+- Verified with the required web-game client plus direct Playwright checks for danger cue, dust pickup feedback, hit/pending-over feedback, restart flow, no overflow, and no console/page errors.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue single-game mid-play feedback polish on another mechanically solid title, likely Brick Breaker powerup/collision feedback or Maze Chase pellet/power-state readability.
