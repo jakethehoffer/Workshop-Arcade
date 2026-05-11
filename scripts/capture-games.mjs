@@ -63,10 +63,13 @@ try {
       interaction: record.interaction
         ? {
             name: record.interaction.name,
+            eventScreenshot: record.interaction.eventScreenshot,
             screenshot: record.interaction.screenshot,
             score: record.interaction.score,
             changed: record.interaction.changed,
+            eventSignals: record.interaction.eventSignals,
             signals: record.interaction.signals,
+            feedbackActive: record.interaction.feedbackActive,
             reasons: record.interaction.reasons,
           }
         : null,
@@ -328,10 +331,16 @@ function rankSurface(record) {
 
 async function runInteraction(page, game, viewport, preRenderText, issues) {
   const recipe = getInteractionRecipe(game.slug);
+  const eventScreenshot = `shots/${game.slug}-${viewport.name}-event.png`;
+  const eventScreenshotPath = path.join(outputRoot, eventScreenshot);
   const screenshot = `shots/${game.slug}-${viewport.name}-after.png`;
   const screenshotPath = path.join(outputRoot, screenshot);
   const issueStart = snapshotIssues(issues);
   const preState = parseRenderText(preRenderText);
+  let eventRenderText = null;
+  let eventState = null;
+  let eventSignals = [];
+  let feedbackActive = { active: false, keys: [] };
   let postRenderText = null;
   let postState = null;
   let error = null;
@@ -343,9 +352,17 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
     }
 
     await recipe.run(page, { game, viewport, preState });
+    hasRenderText = await page.evaluate(() => typeof window.render_game_to_text === "function");
+    if (hasRenderText) {
+      eventRenderText = await page.evaluate(() => window.render_game_to_text());
+      eventState = parseRenderText(eventRenderText);
+      eventSignals = summarizeStateChange(preState, eventState);
+      feedbackActive = extractFeedbackActive(eventState);
+    }
+
+    await page.screenshot({ path: eventScreenshotPath });
     await settlePage(page, recipe.settleMs ?? 350);
 
-    hasRenderText = await page.evaluate(() => typeof window.render_game_to_text === "function");
     if (hasRenderText) {
       postRenderText = await page.evaluate(() => window.render_game_to_text());
       postState = parseRenderText(postRenderText);
@@ -367,21 +384,29 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
     error,
     hasRenderText,
     preState,
+    eventState,
     postState,
+    eventSignals,
     signals,
+    feedbackActive,
     issues: newIssues,
   });
 
   return {
     name: recipe?.name || "missing recipe",
     available: Boolean(recipe),
+    eventScreenshot,
     screenshot,
     preState,
+    eventState,
     postState,
     preRenderText,
+    eventRenderText,
     postRenderText,
     changed: signals.length > 0,
+    eventSignals,
     signals,
+    feedbackActive,
     issues: newIssues,
     error,
     score: scoreResult.score,
@@ -511,10 +536,11 @@ function getInteractionRecipe(slug) {
     "metro-dash": {
       name: "start and dodge",
       expectsStart: true,
+      settleMs: 140,
       run: async (page) => {
-        await pressAndAdvance(page, "Space", 200);
-        await pressAndAdvance(page, "ArrowRight", 120);
-        await pressAndAdvance(page, "ArrowUp", 180);
+        await clickSelectorIfVisible(page, "#startBtn");
+        await pressAndAdvance(page, "ArrowRight", 100);
+        await pressAndAdvance(page, "ArrowUp", 80);
       },
     },
     arena: {
@@ -559,7 +585,7 @@ function getInteractionRecipe(slug) {
   return recipes[slug] || null;
 }
 
-function scoreInteraction({ recipe, error, hasRenderText, preState, postState, signals, issues }) {
+function scoreInteraction({ recipe, error, hasRenderText, preState, eventState, postState, eventSignals, signals, feedbackActive, issues }) {
   const reasons = [];
   let score = 0;
   const hardIssueCount = issues.pageErrors.length + issues.network.length;
@@ -588,6 +614,14 @@ function scoreInteraction({ recipe, error, hasRenderText, preState, postState, s
     score += 45;
     reasons.push("no state change after action");
   }
+  if (preState && eventState && eventSignals.length === 0 && signals.length > 0) {
+    score += 10;
+    reasons.push("event frame has no immediate state change");
+  }
+  if (eventSignals.length > 0 && recipe.expectsFeedback !== false && !feedbackActive.active) {
+    score += 8;
+    reasons.push("event frame lacks feedback diagnostic signal");
+  }
   if (recipe.expectsStart && postState && isGameOverLike(postState)) {
     score += 35;
     reasons.push("post-action reached game-over state");
@@ -598,6 +632,55 @@ function scoreInteraction({ recipe, error, hasRenderText, preState, postState, s
   }
 
   return { score, reasons };
+}
+
+function extractFeedbackActive(state) {
+  if (!state || typeof state !== "object") return { active: false, keys: [] };
+
+  const keys = [];
+  const roots = [];
+  if (state.feedback && typeof state.feedback === "object") roots.push(["feedback", state.feedback]);
+  for (const rootKey of ["effects", "particles", "rings", "pops", "popups", "animations", "lastMove", "moveFeedback"]) {
+    if (state[rootKey] !== undefined) roots.push([rootKey, state[rootKey]]);
+  }
+
+  for (const [rootKey, root] of roots) {
+    collectFeedbackSignals(root, rootKey, keys);
+  }
+
+  return { active: keys.length > 0, keys: Array.from(new Set(keys)).slice(0, 12) };
+}
+
+function collectFeedbackSignals(value, pathKey, keys) {
+  if (value === null || value === undefined || keys.length >= 20) return;
+  if (typeof value === "number") {
+    const path = pathKey.toLowerCase();
+    const isAge = /age$/.test(path);
+    const isTransient = /(particle|popup|pop|ring|flash|shake|pulse|trail|burst|spark|cue|glow|active|count|last)/i.test(pathKey);
+    if ((isAge && value >= 0 && value <= 1.25) || (!isAge && isTransient && value > 0)) {
+      keys.push(pathKey);
+    }
+    return;
+  }
+  if (typeof value === "boolean") {
+    if (value && /(feedback|active|flash|shake|pulse|cue|glow)/i.test(pathKey)) keys.push(pathKey);
+    return;
+  }
+  if (typeof value === "string") {
+    if (value && /(feedback|last|move|capture|check|promo|king|type|label)/i.test(pathKey)) keys.push(pathKey);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length > 0 && /(effect|particle|ring|pop|animation|trail|last|feedback|move)/i.test(pathKey)) keys.push(`${pathKey}.length`);
+    value.slice(0, 4).forEach((item, index) => collectFeedbackSignals(item, `${pathKey}[${index}]`, keys));
+    return;
+  }
+  if (typeof value === "object") {
+    for (const [key, child] of Object.entries(value)) {
+      collectFeedbackSignals(child, `${pathKey}.${key}`, keys);
+      if (keys.length >= 20) return;
+    }
+  }
 }
 
 function isGameOverLike(state) {
@@ -864,7 +947,7 @@ async function writeContactSheet(summary) {
   .score { font-weight: 700; color: #6ee7b7; white-space: nowrap; }
   .score.warn { color: #facc15; }
   .score.bad { color: #fb7185; }
-  .evidence { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #203346; }
+  .evidence { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #203346; }
   figure { margin: 0; background: #020617; }
   figcaption { padding: 5px 8px; color: #a9b7c7; font-size: 11px; background: #08111d; border-bottom: 1px solid #203346; }
   img { display: block; width: 100%; background: #020617; }
@@ -892,11 +975,16 @@ async function writeContactSheet(summary) {
             <img src="${escapeHtml(record.screenshot)}" alt="${escapeHtml(game.title)} ${escapeHtml(record.viewport)} first screenshot">
           </figure>
           <figure>
-            <figcaption>After: ${escapeHtml(record.interaction?.name || "none")}</figcaption>
+            <figcaption>Event: ${escapeHtml(record.interaction?.name || "none")}</figcaption>
+            ${record.interaction?.eventScreenshot ? `<img src="${escapeHtml(record.interaction.eventScreenshot)}" alt="${escapeHtml(game.title)} ${escapeHtml(record.viewport)} event screenshot">` : ""}
+          </figure>
+          <figure>
+            <figcaption>Settled</figcaption>
             ${record.interaction?.screenshot ? `<img src="${escapeHtml(record.interaction.screenshot)}" alt="${escapeHtml(game.title)} ${escapeHtml(record.viewport)} post-action screenshot">` : ""}
           </figure>
         </div>
         <div class="details">${escapeHtml(surface.reasons.join("; ") || "No automated issues.")}
+          <br>Event ${record.interaction?.eventSignals?.length ? escapeHtml(record.interaction.eventSignals.map((signal) => signal.path).join(", ")) : "no immediate signal"} · feedback ${record.interaction?.feedbackActive?.active ? escapeHtml(record.interaction.feedbackActive.keys.join(", ")) : "none"}
           <br>Interaction ${record.interaction?.changed ? "changed" : "unchanged"}${record.interaction?.signals?.length ? ` · ${escapeHtml(record.interaction.signals.map((signal) => signal.path).join(", "))}` : ""}
           <br>Text ${record.metrics?.bodyTextLength ?? 0} · controls ${record.metrics?.controlCount ?? 0} · overflow ${record.metrics?.overflowX ?? "n/a"} · hooks ${record.hasRenderText ? "text" : "no text"}/${record.hasAdvance ? "time" : "no time"}
         </div>

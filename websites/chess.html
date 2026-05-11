@@ -454,6 +454,23 @@ let moveHistory = [];
 // Animation state
 let currentAnimation = null; // { pieces:[{piece,col0,row0,col1,row1}], start, dur, onDone }
 const ANIM_DURATION = 180; // ms
+const feedback = {
+  lastMove: null,
+  lastMoveAge: null,
+  lastCaptureAge: null,
+  lastCheckAge: null,
+  lastCastleAge: null,
+  lastPromotionAge: null,
+  moveCount: 0,
+  captureCount: 0,
+  checkCount: 0,
+  castleCount: 0,
+  promotionCount: 0,
+  activeRingCount: 0,
+  popupCount: 0,
+};
+let feedbackFrame = null;
+let feedbackLastTick = 0;
 
 function newGame() {
   // Reset board orientation
@@ -467,6 +484,7 @@ function newGame() {
   movesEl.innerHTML = '';
   statusEl.textContent = 'White to move.';
   aiThinking = false;
+  resetFeedback();
   draw();
 }
 
@@ -631,11 +649,180 @@ function squareCenter(col, row) {
 }
 function easeInOutQuad(t){ return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
 
+function resetFeedback() {
+  feedback.lastMove = null;
+  feedback.lastMoveAge = null;
+  feedback.lastCaptureAge = null;
+  feedback.lastCheckAge = null;
+  feedback.lastCastleAge = null;
+  feedback.lastPromotionAge = null;
+  feedback.moveCount = 0;
+  feedback.captureCount = 0;
+  feedback.checkCount = 0;
+  feedback.castleCount = 0;
+  feedback.promotionCount = 0;
+  feedback.activeRingCount = 0;
+  feedback.popupCount = 0;
+  if (feedbackFrame) {
+    cancelAnimationFrame(feedbackFrame);
+    feedbackFrame = null;
+  }
+}
+
+function activeFeedbackCount() {
+  if (!feedback.lastMove) return 0;
+  const active = ['lastMoveAge', 'lastCaptureAge', 'lastCheckAge', 'lastCastleAge', 'lastPromotionAge']
+    .some(key => feedback[key] !== null && feedback[key] < 1.35);
+  return active ? 1 : 0;
+}
+
+function stepFeedback(ms = 0) {
+  const dt = Math.max(0, Math.min(2.5, Number(ms) || 0)) / 1000;
+  for (const key of ['lastMoveAge', 'lastCaptureAge', 'lastCheckAge', 'lastCastleAge', 'lastPromotionAge']) {
+    if (feedback[key] !== null) feedback[key] += dt;
+  }
+  feedback.activeRingCount = activeFeedbackCount();
+  feedback.popupCount = activeFeedbackCount();
+}
+
+function scheduleFeedbackDraw() {
+  if (feedbackFrame) return;
+  feedbackLastTick = performance.now();
+  const tick = (now) => {
+    feedbackFrame = null;
+    const dt = Math.min(80, Math.max(0, now - feedbackLastTick));
+    feedbackLastTick = now;
+    stepFeedback(dt);
+    draw();
+    if (activeFeedbackCount()) {
+      feedbackFrame = requestAnimationFrame(tick);
+    }
+  };
+  feedbackFrame = requestAnimationFrame(tick);
+}
+
+function recordMoveFeedback(mv, movedPiece, capturedPiece, captureSquare, givesCheck, promotedTo = null) {
+  const lastLogged = moveHistory.length ? moveHistory[moveHistory.length - 1] : null;
+  const isCastle = !!mv.castle;
+  const promoted = !!promotedTo;
+  const captured = !!(capturedPiece || mv.enPassant);
+  feedback.moveCount++;
+  if (captured) feedback.captureCount++;
+  if (givesCheck) feedback.checkCount++;
+  if (isCastle) feedback.castleCount++;
+  if (promoted) feedback.promotionCount++;
+  feedback.lastMoveAge = 0;
+  feedback.lastCaptureAge = captured ? 0 : feedback.lastCaptureAge;
+  feedback.lastCheckAge = givesCheck ? 0 : feedback.lastCheckAge;
+  feedback.lastCastleAge = isCastle ? 0 : feedback.lastCastleAge;
+  feedback.lastPromotionAge = promoted ? 0 : feedback.lastPromotionAge;
+  feedback.activeRingCount = 1;
+  feedback.popupCount = 1;
+  feedback.lastMove = {
+    color: movedPiece?.color === 'w' ? 'white' : 'black',
+    piece: movedPiece ? movedPiece.type : null,
+    display: lastLogged ? lastLogged.display : null,
+    from: toAlgebraic(mv.fromCol, mv.fromRow),
+    to: toAlgebraic(mv.toCol, mv.toRow),
+    fromCol: mv.fromCol,
+    fromRow: mv.fromRow,
+    toCol: mv.toCol,
+    toRow: mv.toRow,
+    captured,
+    captureSquare: captureSquare ? { ...captureSquare, square: toAlgebraic(captureSquare.col, captureSquare.row) } : null,
+    check: !!givesCheck,
+    castle: mv.castle || null,
+    promotion: promotedTo,
+  };
+  scheduleFeedbackDraw();
+}
+
+function drawMoveFeedback() {
+  const last = feedback.lastMove;
+  if (!last) return;
+  const moveAge = feedback.lastMoveAge ?? 99;
+  if (moveAge > 1.6) return;
+  const from = squareCenter(last.fromCol, last.fromRow);
+  const to = squareCenter(last.toCol, last.toRow);
+  const alpha = Math.max(0, 1 - moveAge / 1.4);
+  const pulse = 0.65 + Math.sin(moveAge * 18) * 0.12;
+  const fromX = (flipped ? 7 - last.fromCol : last.fromCol) * SQ;
+  const fromY = (flipped ? (7 - last.fromRow) : last.fromRow) * SQ;
+  const toX = (flipped ? 7 - last.toCol : last.toCol) * SQ;
+  const toY = (flipped ? (7 - last.toRow) : last.toRow) * SQ;
+
+  ctx.save();
+  ctx.globalAlpha = 0.25 * alpha;
+  ctx.fillStyle = '#f6d35f';
+  ctx.fillRect(fromX, fromY, SQ, SQ);
+  ctx.globalAlpha = 0.38 * alpha;
+  ctx.fillStyle = last.captured ? '#fb7185' : '#38bdf8';
+  ctx.fillRect(toX, toY, SQ, SQ);
+
+  ctx.globalAlpha = 0.85 * alpha;
+  ctx.strokeStyle = last.captured ? '#f43f5e' : '#0ea5e9';
+  ctx.lineWidth = Math.max(4, SQ * 0.08);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const head = Math.max(13, SQ * 0.18);
+  ctx.beginPath();
+  ctx.moveTo(to.x, to.y);
+  ctx.lineTo(to.x - Math.cos(angle - 0.55) * head, to.y - Math.sin(angle - 0.55) * head);
+  ctx.lineTo(to.x - Math.cos(angle + 0.55) * head, to.y - Math.sin(angle + 0.55) * head);
+  ctx.closePath();
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.fill();
+
+  if (last.captured && feedback.lastCaptureAge !== null && feedback.lastCaptureAge < 1.15) {
+    const ringAge = feedback.lastCaptureAge;
+    ctx.globalAlpha = Math.max(0, 1 - ringAge / 1.15);
+    ctx.strokeStyle = '#fb7185';
+    ctx.lineWidth = Math.max(3, SQ * 0.045);
+    ctx.beginPath();
+    ctx.arc(to.x, to.y, SQ * (0.26 + ringAge * 0.28), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (last.check && feedback.lastCheckAge !== null && feedback.lastCheckAge < 1.25) {
+    const king = findKing(state, state.turn);
+    if (king) {
+      const center = squareCenter(king.col, king.row);
+      ctx.globalAlpha = Math.max(0, 1 - feedback.lastCheckAge / 1.25);
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = Math.max(4, SQ * 0.06);
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, SQ * (0.44 + 0.08 * pulse), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  if (feedback.popupCount) {
+    const label = last.check ? 'CHECK' : last.captured ? 'CAPTURE' : last.castle ? 'CASTLE' : 'MOVE';
+    ctx.globalAlpha = 0.92 * alpha;
+    ctx.font = `700 ${Math.max(13, SQ * 0.18)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4;
+    const y = to.y - SQ * (0.42 + moveAge * 0.16);
+    ctx.strokeStyle = 'rgba(8, 13, 31, 0.8)';
+    ctx.fillStyle = last.check ? '#fed7aa' : last.captured ? '#fecdd3' : '#bae6fd';
+    ctx.strokeText(label, to.x, y);
+    ctx.fillText(label, to.x, y);
+  }
+  ctx.restore();
+}
+
 function draw() {
   drawBoard();
   drawCheckHighlights();
   drawHighlights();
   drawPieces();
+  drawMoveFeedback();
   drawCoordsOverlay();
 }
 
@@ -735,6 +922,13 @@ undoBtn.addEventListener('click', () => {
   legalMovesForSelected = [];
   state.gameOver = false;
   state.result = null;
+  feedback.lastMove = null;
+  feedback.activeRingCount = 0;
+  feedback.popupCount = 0;
+  if (feedbackFrame) {
+    cancelAnimationFrame(feedbackFrame);
+    feedbackFrame = null;
+  }
 
   // Update status line
   const inCheck = isKingInCheck(state, state.turn);
@@ -995,6 +1189,11 @@ function applyMove(mv, promotionChoice) {
   const st = state;
   const fromPiece = st.board[mv.fromRow][mv.fromCol];
   const toPiece = st.board[mv.toRow][mv.toCol];
+  const capturedPiece = toPiece || (mv.enPassant ? { type: 'p', color: fromPiece.color === 'w' ? 'b' : 'w' } : null);
+  const captureSquare = mv.enPassant
+    ? { col: mv.toCol, row: mv.toRow + (fromPiece.color === 'w' ? 1 : -1) }
+    : (toPiece ? { col: mv.toCol, row: mv.toRow } : null);
+  let promotedTo = null;
 
   if (fromPiece.type === 'p' || toPiece) st.halfmove = 0; else st.halfmove++;
 
@@ -1017,6 +1216,7 @@ function applyMove(mv, promotionChoice) {
       choice = (choice || 'q').toLowerCase();
       if (!['q','r','b','n'].includes(choice)) choice = 'q';
     }
+    promotedTo = choice;
     st.board[mv.toRow][mv.toCol] = { type: choice, color: fromPiece.color };
   }
 
@@ -1044,6 +1244,7 @@ function applyMove(mv, promotionChoice) {
   if (st.turn === 'w') st.fullmove++;
 
   logMove(mv, toPiece);
+  recordMoveFeedback(mv, fromPiece, capturedPiece, captureSquare, isKingInCheck(st, st.turn), promotedTo);
 }
 
 function updateCastlingRightsOnMove(st, mv, capturedPiece) {
@@ -1405,6 +1606,7 @@ function currentBoardOccupancy(){
 
 function renderGameToText(){
   if (!state?.board) return JSON.stringify({ game: 'Chess', ready: false });
+  const age = value => value === null ? null : Number(value.toFixed(2));
   return JSON.stringify({
     game: 'Chess',
     ready: true,
@@ -1426,12 +1628,28 @@ function renderGameToText(){
       enabled: !!vsComputer,
       thinking: !!aiThinking,
       depth: Number(depthEl.value || 3)
+    },
+    feedback: {
+      lastMoveAge: age(feedback.lastMoveAge),
+      lastCaptureAge: age(feedback.lastCaptureAge),
+      lastCheckAge: age(feedback.lastCheckAge),
+      lastCastleAge: age(feedback.lastCastleAge),
+      lastPromotionAge: age(feedback.lastPromotionAge),
+      moveCount: feedback.moveCount,
+      captureCount: feedback.captureCount,
+      checkCount: feedback.checkCount,
+      castleCount: feedback.castleCount,
+      promotionCount: feedback.promotionCount,
+      activeRingCount: feedback.activeRingCount,
+      popupCount: feedback.popupCount,
+      lastMove: feedback.lastMove
     }
   });
 }
 
 window.render_game_to_text = renderGameToText;
-window.advanceTime = function advanceTime(){
+window.advanceTime = function advanceTime(ms = 0){
+  stepFeedback(ms);
   draw();
   return renderGameToText();
 };

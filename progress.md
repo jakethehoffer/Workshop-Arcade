@@ -195,3 +195,15 @@ Original prompt: Do this for me
 - Verified with the required develop-web-game client plus direct Playwright checks for reveal, flag, chord-bump, mine-hit/game-over, restart, and deterministic custom-board win feedback.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: review the latest interactive contact sheet for remaining mechanically solid games whose short-lived feedback is hard to see in the broad capture, or add a targeted capture recipe that records immediate event-feedback frames.
+
+## 2026-05-11 Codex pass 21
+
+- Baseline: `test-results/render-ranking/2026-05-11T15-15-31-676Z/`; the catalog was clean but the broad capture did not preserve short-lived event feedback.
+- Extended `scripts/capture-games.mjs` to capture first, immediate event, and settled post-action screenshots, write `eventScreenshot`, `eventState`, `eventSignals`, and `feedbackActive` into `summary.json`, and render all three evidence frames in the contact sheet.
+- Updated interaction scoring so hard failures still lead, while state-changing actions without event-frame feedback diagnostics receive a low-grade ranking signal. Refined the Metro Dash recipe after the final harness exposed a deterministic recipe-caused game-over.
+- Polished `websites/checkers.html` with last-move from/to highlights, move trail, capture burst/ring, crown pulse, move/capture pops, and compact feedback diagnostics.
+- Polished `websites/chess.html` with stronger from/to highlights, move arrow, capture/check pulse, label pops, deterministic `advanceTime(ms)` feedback stepping, and compact feedback diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-11T15-40-39-439Z/`; Checkers and Chess desktop/mobile score zero with active feedback metadata. The top remaining low-grade signals are 2048, fact-match clue actions, Arcade Jump, and Sky Hopper missing event-frame feedback diagnostics.
+- Verified with the required develop-web-game client for Chess/Checkers plus direct Playwright capture paths for Chess `e2-e4 d7-d5 e4xd5` and Checkers `c3-d4 b6-c5 d4xb6`, confirming diagnostics, screenshots, no console/page errors, and no horizontal overflow.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: use the new event-frame ranking to add compact feedback diagnostics to the low-score deterministic targets, starting with 2048 tile slide/merge feedback or shared Fact Match clue/action feedback.

@@ -105,6 +105,36 @@
 
   .sq.hl{ outline:3px solid var(--ring); outline-offset:-3px }
   .sq.move{ box-shadow: inset 0 0 0 3px var(--accent) }
+  .sq.last-from{ box-shadow: inset 0 0 0 3px rgba(94,234,212,.34), inset 0 0 18px rgba(94,234,212,.16); }
+  .sq.last-to{ box-shadow: inset 0 0 0 3px rgba(96,165,250,.52), 0 0 20px rgba(96,165,250,.22); }
+  .sq.move-trail::after{
+    content:""; position:absolute; inset:18%; border-radius:999px;
+    background:radial-gradient(circle, rgba(94,234,212,.34), rgba(94,234,212,0) 70%);
+    animation: trailFade .72s ease-out both; pointer-events:none;
+  }
+  .sq.capture-hit::before{
+    content:""; position:absolute; inset:5%; border-radius:14px;
+    border:3px solid rgba(251,113,133,.85);
+    box-shadow:0 0 18px rgba(251,113,133,.55), inset 0 0 16px rgba(251,113,133,.22);
+    animation: captureBurst .82s ease-out both; pointer-events:none;
+  }
+  .piece.crown-pulse{
+    animation: crownGlow 1.05s ease-out both;
+  }
+  .move-pop{
+    position:absolute; left:50%; top:18%; transform:translate(-50%,-50%);
+    color:#fef3c7; font-weight:900; font-size:clamp(10px, calc(var(--tile) * .22), 18px);
+    letter-spacing:.04em; text-shadow:0 2px 6px #020617, 0 0 12px rgba(251,191,36,.65);
+    animation: popRise .9s ease-out both; pointer-events:none; z-index:4;
+  }
+  @keyframes trailFade{ from{opacity:.9; transform:scale(.55)} to{opacity:0; transform:scale(1.45)} }
+  @keyframes captureBurst{ from{opacity:1; transform:scale(.45)} to{opacity:0; transform:scale(1.28)} }
+  @keyframes crownGlow{
+    0%{ box-shadow: inset 0 4px 10px rgba(255,255,255,.12), inset 0 -6px 14px rgba(0,0,0,.5), 0 0 0 rgba(251,191,36,0); }
+    45%{ box-shadow: inset 0 4px 10px rgba(255,255,255,.2), inset 0 -6px 14px rgba(0,0,0,.45), 0 0 24px rgba(251,191,36,.78); }
+    100%{ box-shadow: inset 0 4px 10px rgba(255,255,255,.12), inset 0 -6px 14px rgba(0,0,0,.5), 0 2px 10px rgba(0,0,0,.55); }
+  }
+  @keyframes popRise{ from{opacity:1; transform:translate(-50%, 8px) scale(.88)} to{opacity:0; transform:translate(-50%, -18px) scale(1.08)} }
 
   /* Mandatory-capture hints (human only) */
   .sq.force-src{ outline:3px solid var(--warn); outline-offset:-3px; }
@@ -304,6 +334,16 @@ let board = [];
 let history = [];
 let locked = false;
 let mustContinueFrom = null;
+const feedback = {
+  lastMove: null,
+  lastMoveAge: null,
+  lastCaptureAge: null,
+  lastCrownAge: null,
+  moveCount: 0,
+  captureCount: 0,
+  crownCount: 0,
+  activePopCount: 0,
+};
 
 const elBoard   = document.getElementById('board');
 const elTurnText= document.getElementById('turnText');
@@ -691,6 +731,63 @@ function alphabeta(B, side, depth, alpha, beta, t0, limit){
 let selected=null;
 let legalDest = [];
 
+function resetFeedback(){
+  feedback.lastMove = null;
+  feedback.lastMoveAge = null;
+  feedback.lastCaptureAge = null;
+  feedback.lastCrownAge = null;
+  feedback.moveCount = 0;
+  feedback.captureCount = 0;
+  feedback.crownCount = 0;
+  feedback.activePopCount = 0;
+}
+
+function stepFeedback(ms = 0){
+  const dt = Math.max(0, Math.min(2.5, Number(ms) || 0)) / 1000;
+  for(const key of ['lastMoveAge','lastCaptureAge','lastCrownAge']){
+    if(feedback[key] !== null) feedback[key] += dt;
+  }
+  feedback.activePopCount = feedback.lastMove && (
+    (feedback.lastMoveAge !== null && feedback.lastMoveAge < 1.2) ||
+    (feedback.lastCaptureAge !== null && feedback.lastCaptureAge < 1.2) ||
+    (feedback.lastCrownAge !== null && feedback.lastCrownAge < 1.4)
+  ) ? 1 : 0;
+}
+
+function recordMoveFeedback(move, piece, capturedSquares, crowned){
+  const end = move.steps[move.steps.length - 1];
+  feedback.moveCount++;
+  if(capturedSquares.length) feedback.captureCount += capturedSquares.length;
+  if(crowned) feedback.crownCount++;
+  feedback.lastMoveAge = 0;
+  feedback.lastCaptureAge = capturedSquares.length ? 0 : feedback.lastCaptureAge;
+  feedback.lastCrownAge = crowned ? 0 : feedback.lastCrownAge;
+  feedback.activePopCount = 1;
+  feedback.lastMove = {
+    side: colorOf(piece) === RED ? 'red' : 'black',
+    piece: pieceName(crowned ? promote(piece) : piece),
+    from: squareName(move.from[0], move.from[1]),
+    to: squareName(end[0], end[1]),
+    fromRow: move.from[0],
+    fromCol: move.from[1],
+    toRow: end[0],
+    toCol: end[1],
+    path: move.steps.map(([r,c]) => ({ square: squareName(r,c), row: r, col: c })),
+    captures: capturedSquares.map(([r,c]) => ({ square: squareName(r,c), row: r, col: c })),
+    crowned: !!crowned,
+  };
+}
+
+function lastMoveHasSquare(r, c, kind){
+  const last = feedback.lastMove;
+  if(!last) return false;
+  if(kind === 'from') return last.fromRow === r && last.fromCol === c;
+  if(kind === 'to') return last.toRow === r && last.toCol === c;
+  if(kind === 'path') return last.path.some(step => step.row === r && step.col === c);
+  if(kind === 'capture') return last.captures.some(step => step.row === r && step.col === c);
+  return false;
+}
+
 function render(){
   // ⬅️ compute forced-capture hints for the current (human) turn
   updateForcedHighlights();
@@ -703,17 +800,30 @@ function render(){
       sq.className = 'sq ' + (isDark?'dark':'light');
       sq.dataset.r=r; sq.dataset.c=c;
       if(isDark) sq.addEventListener('click', onSquareClick, {passive:true});
+      if(lastMoveHasSquare(r, c, 'from')) sq.classList.add('last-from');
+      if(lastMoveHasSquare(r, c, 'to')) sq.classList.add('last-to');
+      if(lastMoveHasSquare(r, c, 'path')) sq.classList.add('move-trail');
+      if(lastMoveHasSquare(r, c, 'capture')) sq.classList.add('capture-hit');
       elBoard.appendChild(sq);
 
       const v = board[r][c];
       if(v!==0){
         const p = document.createElement('div');
         p.className = 'piece ' + (v>0?'red':'black') + (isKing(v)?' king':'');
+        if(feedback.lastMove && feedback.lastMove.crowned && feedback.lastMove.toRow === r && feedback.lastMove.toCol === c){
+          p.classList.add('crown-pulse');
+        }
         p.dataset.r=r; p.dataset.c=c;
         sq.appendChild(p);
         if(isDark && selected && selected.r===r && selected.c===c){
           sq.classList.add('hl');
         }
+      }
+      if(feedback.lastMove && feedback.lastMove.toRow === r && feedback.lastMove.toCol === c && feedback.activePopCount){
+        const pop = document.createElement('div');
+        pop.className = 'move-pop';
+        pop.textContent = feedback.lastMove.crowned ? 'KING' : (feedback.lastMove.captures.length ? `+${feedback.lastMove.captures.length}` : 'MOVE');
+        sq.appendChild(pop);
       }
 
       // ⬅️ If no selection is active, show capture-source hints (human only)
@@ -876,6 +986,9 @@ await animateApplyMove(mv);
 async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
   let [r,c] = move.from;
   let v = board[r][c];
+  const originalPiece = v;
+  const capturedSquares = [];
+  let crowned = false;
 
   for(let i=0;i<move.steps.length;i++){
     const [nr,nc] = move.steps[i];
@@ -888,6 +1001,7 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
     if(move.caps[i]){
       const [cr,cc] = move.caps[i];
       board[cr][cc] = 0;
+      capturedSquares.push([cr, cc]);
       Sound.capture?.();
     }
 
@@ -901,10 +1015,13 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
   // crown at the end (American rules end the sequence)
   if(move.crownAtEnd && willCrown(v, r)){
     board[r][c] = promote(v);
+    crowned = true;
     Sound.crown?.();
-    render();
-    await sleep(120);
   }
+
+  recordMoveFeedback(move, originalPiece, capturedSquares, crowned);
+  render();
+  if(crowned) await sleep(120);
 }
 
 
@@ -923,6 +1040,8 @@ function undo(){
   mustContinueFrom = state.must;
   selected = null; 
   legalDest = [];
+  feedback.lastMove = null;
+  feedback.activePopCount = 0;
 
   // If we're vs AI and the snapshot we restored is the AI's turn,
   // pop one more so it's the human's turn again.
@@ -969,6 +1088,7 @@ function boardPieces(){
 function renderGameToText(){
   const legal = generateMoves(board, turn);
   const captures = legal.filter(m => m.caps.length);
+  const age = (value) => value === null ? null : Number(value.toFixed(2));
   const selectedMoves = selected
     ? legalDest.map(m => ({
         to: squareName(m.steps[m.steps.length - 1][0], m.steps[m.steps.length - 1][1]),
@@ -1004,12 +1124,23 @@ function renderGameToText(){
     historyCount: history.length,
     gameOver: elGameOver.classList.contains('show'),
     winner: elGameOver.classList.contains('show') ? elGoWinner.textContent : null,
-    ai: { side: aiPlays === RED ? 'red' : 'black', depth: aiDepth, active: mode === 'SP' }
+    ai: { side: aiPlays === RED ? 'red' : 'black', depth: aiDepth, active: mode === 'SP' },
+    feedback: {
+      lastMoveAge: age(feedback.lastMoveAge),
+      lastCaptureAge: age(feedback.lastCaptureAge),
+      lastCrownAge: age(feedback.lastCrownAge),
+      moveCount: feedback.moveCount,
+      captureCount: feedback.captureCount,
+      crownCount: feedback.crownCount,
+      activePopCount: feedback.activePopCount,
+      lastMove: feedback.lastMove
+    }
   });
 }
 
 window.render_game_to_text = renderGameToText;
 window.advanceTime = function advanceTime(ms = 0){
+  stepFeedback(ms);
   render();
   return new Promise(resolve => {
     setTimeout(() => {
@@ -1032,6 +1163,7 @@ function newGame(){
   mustContinueFrom=null;
   selected=null; legalDest=[];
   turn=RED;
+  resetFeedback();
   initBoard();
   render();
   Sound.start(); /* 🔊 ADDED */
