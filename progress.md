@@ -218,3 +218,14 @@ Original prompt: Do this for me
 - Verified with required develop-web-game clients for 2048 and Hero Fact Match plus direct Playwright checks for 2048 merge/spawn feedback and all four Fact Match clue feedback paths, including Hero wrong-guess feedback and mobile no-overflow checks.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, `node --check scripts/capture-games.mjs`, and `git diff --check`.
 - Suggested next pass: continue clearing low-grade event-feedback signals for Arcade Jump and Sky Hopper first, then Idle Tycoon, Metro Dash, and Slope Runner if the event-frame contact sheet still shows quiet but correct interactions.
+
+## 2026-05-11 Codex pass 23
+
+- Baseline: `test-results/render-ranking/2026-05-11T18-15-36-967Z/`; no hard failures, with Arcade Jump and Sky Hopper ranking only for missing immediate event-frame feedback diagnostics.
+- Added Arcade Jump feedback diagnostics and visual-only canvas cues for run start, steering input, bounce/landing, double-jump, powerup pickup, enemy/shield hits, shield rescue, and game over while preserving physics, scoring, saves, audio preferences, layout, and metadata.
+- Added Sky Hopper feedback diagnostics and visual-only cues for start, flap, pipe score, hit/game-over, active cue count, nearest pipe, and danger cue without changing flap physics, scoring, saves, audio preferences, layout, or metadata.
+- Fixed an Arcade Jump deterministic test-hook edge where `advanceTime()` could make the following RAF delta negative and feed a negative cue radius into canvas drawing.
+- Final capture: `test-results/render-ranking/2026-05-11T21-37-54-450Z/`; Arcade Jump and Sky Hopper desktop/mobile now score zero with active event-feedback metadata.
+- Verified with focused desktop/mobile Playwright clients for Arcade Jump start/steer/double-jump and Sky Hopper start/flap, confirming feedback diagnostics, no console/page errors, and no horizontal overflow.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue clearing low-grade event-frame diagnostics for Idle Tycoon, Metro Dash, Slope Runner, Neon Snake, and Klondike Solitaire, choosing the first target after inspecting the latest contact sheet for actual player-feel impact.

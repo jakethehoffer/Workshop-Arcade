@@ -116,6 +116,61 @@ let highScore = 0;
 try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
 let newBestThisRun = false;
 
+const feedback = {};
+function resetFeedback() {
+  feedback.lastEvent = null;
+  feedback.lastEventAge = null;
+  feedback.eventCount = 0;
+  feedback.startCount = 0;
+  feedback.flapCount = 0;
+  feedback.scoreEventCount = 0;
+  feedback.hitCount = 0;
+  feedback.gameOverCount = 0;
+  feedback.cues = [];
+}
+resetFeedback();
+
+function feedbackColor(type) {
+  return {
+    start: '#fef3c7',
+    flap: '#facc15',
+    score: '#34d399',
+    hit: '#fb7185'
+  }[type] || '#ffffff';
+}
+
+function recordFeedback(type, options = {}) {
+  feedback.lastEvent = type;
+  feedback.lastEventAge = 0;
+  feedback.eventCount += 1;
+  if (type === 'start') feedback.startCount += 1;
+  if (type === 'flap') feedback.flapCount += 1;
+  if (type === 'score') feedback.scoreEventCount += 1;
+  if (type === 'hit') {
+    feedback.hitCount += 1;
+    feedback.gameOverCount += 1;
+  }
+  const label = options.label || (type === 'start' ? 'GO' : type === 'flap' ? 'FLAP' : type === 'score' ? '+1' : 'HIT');
+  feedback.cues.push({
+    type,
+    label,
+    color: feedbackColor(type),
+    x: options.x ?? bird.x,
+    y: options.y ?? bird.y,
+    age: 0,
+    life: options.life || (type === 'flap' ? 0.42 : 0.7)
+  });
+  if (feedback.cues.length > 14) feedback.cues.splice(0, feedback.cues.length - 14);
+}
+
+function stepFeedback(dt) {
+  if (feedback.lastEventAge !== null) feedback.lastEventAge += dt;
+  feedback.cues = feedback.cues.filter((cue) => {
+    cue.age += dt;
+    return cue.age < cue.life;
+  });
+}
+
 /* ----- Audio (enhanced music + SFX) ----- */
 let audioCtx = null;
 let masterGain = null;
@@ -531,6 +586,82 @@ function drawText(txt, x, y, size=24, align="center", color="#fff") {
   ctx.fillText(txt, x, y);
 }
 
+function drawFeedbackCues() {
+  if (!feedback.cues.length) return;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const cue of feedback.cues) {
+    const t = Math.min(1, cue.age / cue.life);
+    const alpha = 1 - t;
+    const radius = cue.type === 'flap' ? 20 + t * 34 : 16 + t * 42;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = cue.color;
+    ctx.lineWidth = cue.type === 'hit' ? 4 : 2.5;
+    ctx.beginPath();
+    ctx.arc(cue.x, cue.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    if (cue.type === 'flap') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cue.x - 18 - t * 8, cue.y + 4);
+      ctx.quadraticCurveTo(cue.x - 30 - t * 10, cue.y - 14, cue.x - 8, cue.y - 22);
+      ctx.moveTo(cue.x + 12, cue.y + 3);
+      ctx.quadraticCurveTo(cue.x + 31 + t * 8, cue.y - 8, cue.x + 18, cue.y - 21);
+      ctx.stroke();
+    }
+    ctx.fillStyle = cue.color;
+    ctx.font = '700 14px system-ui, -apple-system, Segoe UI, Arial';
+    ctx.fillText(cue.label, cue.x, cue.y - 34 - t * 12);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function getNearestPipeInfo() {
+  let nearest = null;
+  for (const pipe of pipes) {
+    if (pipe.x + pipeWidth >= bird.x - bird.width / 2) {
+      nearest = pipe;
+      break;
+    }
+  }
+  if (!nearest) return { nearestPipe: null, dangerCue: 0 };
+  const gapBottom = WORLD_H - groundH - nearest.bottom - 10;
+  const distance = Math.round(nearest.x - bird.x);
+  const verticalRisk = bird.y < nearest.top || bird.y > gapBottom ? 1 : 0.35;
+  const proximity = Math.max(0, Math.min(1, 1 - Math.max(0, distance) / 150));
+  return {
+    nearestPipe: {
+      x: Math.round(nearest.x),
+      distance,
+      top: Math.round(nearest.top),
+      gapBottom: Math.round(gapBottom),
+      scored: !!nearest.scored
+    },
+    dangerCue: Math.round((started && !gameOver ? proximity * verticalRisk : 0) * 100) / 100
+  };
+}
+
+function getFeedbackDiagnostics() {
+  const pipeInfo = getNearestPipeInfo();
+  return {
+    lastEvent: feedback.lastEvent,
+    lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 1000) / 1000,
+    eventCount: feedback.eventCount,
+    startCount: feedback.startCount,
+    flapCount: feedback.flapCount,
+    scoreEventCount: feedback.scoreEventCount,
+    hitCount: feedback.hitCount,
+    gameOverCount: feedback.gameOverCount,
+    activeCueCount: feedback.cues.length,
+    nearestPipe: pipeInfo.nearestPipe,
+    dangerCue: pipeInfo.dangerCue
+  };
+}
+
 /* ----- Background: sky, clouds, hills, ground ----- */
 const groundH = 96;
 const clouds = Array.from({length: 7}, (_,i)=>({
@@ -813,6 +944,7 @@ function updatePipes(step) {
     if (!gameOver && !p.scored && px2 < bird.x - bird.width/2) {
       p.scored = true; score += 1; SFX.score();
       if (firstPassTime === null) firstPassTime = performance.now();
+      recordFeedback('score', { x: bird.x + 26, y: bird.y - 30, label: '+1' });
     }
   }
   // prune
@@ -833,6 +965,7 @@ function drawPipes() {
 function setGameOver() {
   if (gameOver) return;
   gameOver = true;
+  recordFeedback('hit', { label: 'HIT', life: 0.85 });
   stopMusic();
   if (score > highScore) {
     highScore = score; newBestThisRun = true;
@@ -844,6 +977,7 @@ function setGameOver() {
 }
 
 function restartGame() {
+  resetFeedback();
   score = 0;
   bird.y = WORLD_H * 0.5;
   bird.velocity = 0;
@@ -865,6 +999,7 @@ let lastTime = null; // for dt
 function tickAndRender(dt) {
   const safeDt = Number.isFinite(dt) ? Math.max(0, Math.min(0.1, dt)) : 1 / 60;
   const dt60 = safeDt * 60;
+  stepFeedback(safeDt);
 
   if(helpOpen) {
     return;
@@ -911,6 +1046,7 @@ function tickAndRender(dt) {
 
     // Bird & ground always on top
     bird.draw();
+    drawFeedbackCues();
     drawGround(scrollStep);
 
     // Game over overlay
@@ -966,6 +1102,7 @@ function renderGameToText() {
       scored: !!pipe.scored
     })),
     spawnAccumulator: Math.round(spawnAccumulator),
+    feedback: getFeedbackDiagnostics(),
     musicOn: !!music.isOn,
     audioReady: !!audioCtx
   });
@@ -986,9 +1123,14 @@ window.advanceTime = function advanceTime(ms = 0) {
 /* ----- Input ----- */
 function doFlapOrStart() {
   resumeAudio();
-  if (!started) { started = true; startMusic(true); }
+  if (!started) {
+    started = true;
+    recordFeedback('start', { label: 'GO', life: 0.65 });
+    startMusic(true);
+  }
   if (gameOver) { restartGame(); return; } // early return — don't flap on restart
   bird.flap();
+  recordFeedback('flap');
   SFX.flap();
 }
 // Help menu - declare first so it can be used in keydown handler

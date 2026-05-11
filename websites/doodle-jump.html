@@ -734,6 +734,12 @@ function closeHelp(){ helpPanel.style.display = 'none'; }
     if (e.code === 'KeyP') togglePause();
     if (['ArrowLeft','KeyA','ArrowRight','KeyD','Space'].includes(e.code)) e.preventDefault();
     keys.add(e.code);
+    if (running && !paused && (e.code === 'ArrowLeft' || e.code === 'KeyA')) {
+      recordFeedback('steer', { direction: -1 });
+    }
+    if (running && !paused && (e.code === 'ArrowRight' || e.code === 'KeyD')) {
+      recordFeedback('steer', { direction: 1 });
+    }
 
 // Double-jump trigger (Space in mid-air)
 if (e.code === 'Space' && running && !paused) {
@@ -752,6 +758,7 @@ if (e.code === 'Space' && running && !paused) {
     P.canDouble = false;
     sound.beep(780, .07, 'triangle', .07);
     addParticles(P.x + P.w/2, P.y + P.h, 10, 'spring');
+    recordFeedback('double-jump');
   }
 }
 
@@ -767,8 +774,8 @@ window.addEventListener('keyup', (e) => {
   let touchLeft = false, touchRight = false;
   const zoneLeft = document.getElementById('zoneLeft');
   const zoneRight = document.getElementById('zoneRight');
-  zoneLeft.addEventListener('pointerdown', (e)=>{ e.preventDefault(); touchLeft = true; });
-  zoneRight.addEventListener('pointerdown',(e)=>{ e.preventDefault(); touchRight = true; });
+  zoneLeft.addEventListener('pointerdown', (e)=>{ e.preventDefault(); touchLeft = true; if (running && !paused) recordFeedback('steer', { direction: -1 }); });
+  zoneRight.addEventListener('pointerdown',(e)=>{ e.preventDefault(); touchRight = true; if (running && !paused) recordFeedback('steer', { direction: 1 }); });
   const endTouchLeft = ()=>{ touchLeft=false; };
   const endTouchRight = ()=>{ touchRight=false; };
   zoneLeft.addEventListener('pointerup', endTouchLeft);
@@ -1205,7 +1212,164 @@ function isTypeUnlocked(type, score){
   bestEl.textContent = best;
   if (menuBestEl) menuBestEl.textContent = best;
 
+  const feedback = {};
+  function resetFeedback() {
+    feedback.lastEvent = null;
+    feedback.lastEventAge = null;
+    feedback.eventCount = 0;
+    feedback.startCount = 0;
+    feedback.steerCount = 0;
+    feedback.bounceCount = 0;
+    feedback.doubleJumpCount = 0;
+    feedback.powerupCount = 0;
+    feedback.hitCount = 0;
+    feedback.shieldSaveCount = 0;
+    feedback.gameOverCount = 0;
+    feedback.lastDirection = 0;
+    feedback.lastPowerupType = null;
+    feedback.lastPlatformType = null;
+    feedback.lastHitType = null;
+    feedback.cues = [];
+  }
+  resetFeedback();
+
+  function feedbackColor(type) {
+    return {
+      start: '#fde68a',
+      steer: '#38bdf8',
+      bounce: '#34d399',
+      'double-jump': '#c084fc',
+      powerup: '#f472b6',
+      'enemy-hit': '#fb7185',
+      'shield-hit': '#60a5fa',
+      'shield-save': '#93c5fd',
+      'game-over': '#f87171'
+    }[type] || '#e5e7eb';
+  }
+
+  function feedbackLabel(type, options = {}) {
+    if (options.label) return options.label;
+    if (type === 'start') return 'GO';
+    if (type === 'steer') return options.direction < 0 ? 'LEFT' : 'RIGHT';
+    if (type === 'bounce') return 'BOUNCE';
+    if (type === 'double-jump') return 'DOUBLE';
+    if (type === 'powerup') return String(options.powerupType || 'POWER').toUpperCase();
+    if (type === 'shield-save') return 'SHIELD';
+    if (type === 'game-over') return 'DROP';
+    return 'HIT';
+  }
+
+  function recordFeedback(type, options = {}) {
+    feedback.lastEvent = type;
+    feedback.lastEventAge = 0;
+    feedback.eventCount += 1;
+    if (type === 'start') feedback.startCount += 1;
+    if (type === 'steer') {
+      feedback.steerCount += 1;
+      feedback.lastDirection = options.direction || 0;
+    }
+    if (type === 'bounce') {
+      feedback.bounceCount += 1;
+      feedback.lastPlatformType = options.platformType || null;
+    }
+    if (type === 'double-jump') feedback.doubleJumpCount += 1;
+    if (type === 'powerup') {
+      feedback.powerupCount += 1;
+      feedback.lastPowerupType = options.powerupType || null;
+    }
+    if (type === 'enemy-hit' || type === 'shield-hit') {
+      feedback.hitCount += 1;
+      feedback.lastHitType = options.hitType || type;
+    }
+    if (type === 'shield-save') feedback.shieldSaveCount += 1;
+    if (type === 'game-over') feedback.gameOverCount += 1;
+
+    const P = state?.player;
+    if (!P) return;
+    const cx = options.x ?? (P.x + P.w / 2);
+    const cy = options.y ?? (P.y + P.h / 2);
+    feedback.cues.push({
+      type,
+      label: feedbackLabel(type, options),
+      color: feedbackColor(type),
+      x: cx,
+      y: cy,
+      direction: options.direction || 0,
+      age: 0,
+      life: options.life || (type === 'steer' ? 0.28 : 0.62)
+    });
+    if (feedback.cues.length > 18) feedback.cues.splice(0, feedback.cues.length - 18);
+  }
+
+  function stepFeedback(dt) {
+    if (feedback.lastEventAge !== null) feedback.lastEventAge += dt;
+    feedback.cues = feedback.cues.filter((cue) => {
+      cue.age += dt;
+      return cue.age < cue.life;
+    });
+  }
+
+  function drawFeedbackCues(g) {
+    if (!feedback.cues.length) return;
+    g.save();
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    for (const cue of feedback.cues) {
+      const life = Math.max(0.001, cue.life || 0.5);
+      const t = Math.max(0, Math.min(1, cue.age / life));
+      const alpha = 1 - t;
+      const radius = Math.max(0.1, 12 + t * 34);
+      g.save();
+      g.globalAlpha = alpha;
+      g.strokeStyle = cue.color;
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.arc(cue.x, cue.y, radius, 0, Math.PI * 2);
+      g.stroke();
+      if (cue.type === 'steer') {
+        const dir = cue.direction || 1;
+        const ax = cue.x + dir * (24 + t * 18);
+        g.fillStyle = cue.color;
+        g.beginPath();
+        g.moveTo(ax + dir * 10, cue.y);
+        g.lineTo(ax - dir * 4, cue.y - 7);
+        g.lineTo(ax - dir * 4, cue.y + 7);
+        g.closePath();
+        g.fill();
+      } else {
+        g.fillStyle = cue.color;
+        g.font = '700 12px system-ui, sans-serif';
+        g.fillText(cue.label, cue.x, cue.y - 24 - t * 10);
+      }
+      g.restore();
+    }
+    g.restore();
+  }
+
+  function getFeedbackDiagnostics() {
+    return {
+      lastEvent: feedback.lastEvent,
+      lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 1000) / 1000,
+      eventCount: feedback.eventCount,
+      startCount: feedback.startCount,
+      steerCount: feedback.steerCount,
+      bounceCount: feedback.bounceCount,
+      doubleJumpCount: feedback.doubleJumpCount,
+      powerupCount: feedback.powerupCount,
+      hitCount: feedback.hitCount,
+      shieldSaveCount: feedback.shieldSaveCount,
+      gameOverCount: feedback.gameOverCount,
+      lastDirection: feedback.lastDirection,
+      lastPowerupType: feedback.lastPowerupType,
+      lastPlatformType: feedback.lastPlatformType,
+      lastHitType: feedback.lastHitType,
+      activeCueCount: feedback.cues.length,
+      particleCount: state?.particles?.length || 0
+    };
+  }
+
   function reset() {
+    resetFeedback();
     state = {
       score: 0,
       cameraY: 0,
@@ -1324,6 +1488,7 @@ space.ufoT = 0;
 
     paused = false;
     running = true;
+    recordFeedback('start', { label: 'GO' });
     lastT = performance.now();
     if (!restarting) {
       sound.beep(880, .09, 'triangle', .08);
@@ -1334,6 +1499,7 @@ space.ufoT = 0;
   function gameOver() {
     running = false;
     paused = false;
+    recordFeedback('game-over');
     const s = Math.round(state.score);
     best = Math.max(best, s);
     localStorage.setItem('doodle_best', best);
@@ -1610,6 +1776,7 @@ function updateEnemies(dt){
         e.alive = false;
         addParticles(e.x+e.w/2, e.y+e.h/2, 26, 'breakExplode');
         sound.beep(980,.06,'triangle',.1);
+        recordFeedback('enemy-hit', { hitType: 'stomp', label: 'STOMP', x: e.x + e.w / 2, y: e.y + e.h / 2 });
       } else {
         // hit from side/front
         if (P.shield > 0) {
@@ -1618,6 +1785,7 @@ function updateEnemies(dt){
           addParticles(e.x+e.w/2, e.y+e.h/2, 18, 'breakExplode');
           sound.beep(400,.08,'sawtooth',.12);
           updateBuffHUD();
+          recordFeedback('shield-hit', { hitType: 'shield', label: 'SHIELD', x: e.x + e.w / 2, y: e.y + e.h / 2 });
         } else if (e.type === 'lethal') {
           gameOver();
           return;
@@ -1628,6 +1796,7 @@ function updateEnemies(dt){
           P.vx += (P.x + P.w/2 < e.x + e.w/2 ? -kb : kb);
           P.vy = -420;
           sound.beep(260,.08,'square',.12);
+          recordFeedback('enemy-hit', { hitType: 'stun', label: 'STUN', x: e.x + e.w / 2, y: e.y + e.h / 2 });
         }
       }
     }
@@ -1741,7 +1910,7 @@ function handleUnlocks(){
     requestAnimationFrame(loop);
     if (!running || paused) return;
 
-    let dt = Math.min(0.033, (t - lastT) / 1000);
+    let dt = Math.max(0, Math.min(0.033, (t - lastT) / 1000));
     lastT = t;
 
     update(dt);
@@ -1750,6 +1919,7 @@ function handleUnlocks(){
   requestAnimationFrame(loop);
 
 function update(dt) {
+  stepFeedback(dt);
   const P = state.player;
 
   // --- animation clocks (NEW) ---
@@ -1968,6 +2138,7 @@ if (space.active) updateSpace(dt);
             addParticles(pl.x + pl.w/2, pl.y + pl.h/2, 36, 'breakExplode');
             pl.alive = false;
           }
+          recordFeedback('bounce', { platformType: pl.type, x: P.x + P.w / 2, y: top });
           break;
         }
 
@@ -1980,6 +2151,7 @@ if (space.active) updateSpace(dt);
           pl.springStretch = .7;
           sound.beep(980, .08, 'triangle', .08);
           addParticles(P.x+P.w/2, top, 16, 'spring');
+          recordFeedback('bounce', { platformType: pl.type, label: 'SPRING', x: P.x + P.w / 2, y: top });
           break;
         }
 
@@ -1991,6 +2163,7 @@ if (space.active) updateSpace(dt);
           P.canDouble = true;
           sound.beep(520, .05, 'sine', .05);
           addParticles(P.x + P.w/2, top, 16, 'vanish');
+          recordFeedback('bounce', { platformType: pl.type, x: P.x + P.w / 2, y: top });
           break;
         }
 
@@ -2002,6 +2175,7 @@ if (space.active) updateSpace(dt);
           P.canDouble = true;
           sound.beep(560, .05, 'sine', .06);
           addParticles(P.x + P.w/2, top, 12, 'vanish');
+          recordFeedback('bounce', { platformType: pl.type, x: P.x + P.w / 2, y: top });
           break;
         }
 
@@ -2012,6 +2186,7 @@ if (space.active) updateSpace(dt);
         P.canDouble = true;
         sound.beep(700, .05, 'sine', .08);
         addParticles(P.x+P.w/2, top, 10, 'bounce');
+        recordFeedback('bounce', { platformType: pl.type, x: P.x + P.w / 2, y: top });
         break;
       }
     }
@@ -2109,6 +2284,7 @@ if (space.active) updateSpace(dt);
         sound.beep(820,.10,'triangle',.12);
         setTimeout(()=>sound.beep(1200,.08,'sine',.10), 80);
         updateBuffHUD();
+        recordFeedback('shield-save', { x: P.x + P.w / 2, y: P.y + P.h });
       }
     } else {
       gameOver();
@@ -2841,6 +3017,7 @@ function drawHillBandG(g, xOff, y, h, colTop, colBot, a=1, tight=1){
 
 
 function drawTreeG(g, x, y, s=1){
+  s = Math.max(0.05, Math.abs(s) || 1);
   g.save();
   g.globalAlpha = 0.25;
   g.beginPath(); g.ellipse(x, y+10*s, 10*s, 3.5*s, 0, 0, Math.PI*2);
@@ -2948,6 +3125,7 @@ function activatePowerup(type){
   if (type === 'boots')    { P.jumpBoostT = DURATION.boots; sound.beep(900,.10,'sine',.10); }
   if (type === 'slow')     { P.slowT = DURATION.slow; sound.beep(600,.08,'square',.10); }
   if (type === 'shield')   { P.shield = 1; sound.beep(500,.08,'sine',.10); setTimeout(()=>sound.beep(1000,.08,'sine',.10),80); }
+  recordFeedback('powerup', { powerupType: type });
   updateBuffHUD();
 }
 
@@ -3100,6 +3278,7 @@ else if (it.type === 'slow'){
       ctx.globalAlpha = 1;
     }
     drawEnemies(ctx);
+    drawFeedbackCues(ctx);
 
         // Storm visuals (flash + blackout)
     if (storm.active) {
@@ -3606,6 +3785,7 @@ function drawToast() {
         touchLeft,
         touchRight
       },
+      feedback: getFeedbackDiagnostics(),
       audio: {
         muted: sound.muted,
         ready: !!sound.ctx,
@@ -3620,8 +3800,11 @@ function drawToast() {
     const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
     const dt = total / steps / 1000 || 1 / 60;
     for (let i = 0; i < steps; i += 1) {
+      const step = Math.min(dt, 0.033);
       if (running && !paused && state?.player) {
-        update(Math.min(dt, 0.033));
+        update(step);
+      } else {
+        stepFeedback(step);
       }
     }
     if (state?.player) draw();
