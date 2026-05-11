@@ -462,9 +462,9 @@ function getInteractionRecipe(slug) {
     "flappy-bird": {
       name: "start and flap",
       expectsStart: true,
+      settleMs: 120,
       run: async (page) => {
-        await pressAndAdvance(page, "Space", 80);
-        await pressAndAdvance(page, "Space", 80);
+        await pressAndAdvance(page, "Space", 60);
       },
     },
     snake: {
@@ -518,9 +518,10 @@ function getInteractionRecipe(slug) {
     "shape-inlay": {
       name: "start and steer",
       expectsStart: true,
+      settleMs: 140,
       run: async (page) => {
         await clickSelectorIfVisible(page, "#startBtn");
-        await holdKeyAdvance(page, "ArrowRight", 220);
+        await holdKeyAdvance(page, "ArrowRight", 80);
       },
     },
     "idle-tycoon": {

@@ -207,3 +207,14 @@ Original prompt: Do this for me
 - Verified with the required develop-web-game client for Chess/Checkers plus direct Playwright capture paths for Chess `e2-e4 d7-d5 e4xd5` and Checkers `c3-d4 b6-c5 d4xb6`, confirming diagnostics, screenshots, no console/page errors, and no horizontal overflow.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: use the new event-frame ranking to add compact feedback diagnostics to the low-score deterministic targets, starting with 2048 tile slide/merge feedback or shared Fact Match clue/action feedback.
+
+## 2026-05-11 Codex pass 22
+
+- Baseline: `test-results/render-ranking/2026-05-11T17-42-36-367Z/`; no hard failures, with 2048 and shared Fact Match pages ranking only for missing event-frame feedback diagnostics.
+- Added compact 2048 feedback diagnostics for move direction, moved tile count, merge count, score gained, largest merged tile, spawned tile, merge targets, event age, active pops, and event counters; added small visual merge/spawn/score cues without changing rules, undo, saves, random spawn behavior, or layout.
+- Added shared Fact Match feedback diagnostics and non-layout-shifting clue/result pulse cues for clue reveal, guess submit, correct/wrong guess, reveal, and new round across all four fact-match games.
+- Refined only the Sky Hopper and Slope Runner capture recipes after final captures showed recipe-caused settled-frame game-over false positives; global scoring stayed unchanged.
+- Final capture: `test-results/render-ranking/2026-05-11T18-15-36-967Z/`; 2048 and all Fact Match desktop/mobile surfaces score zero with active event feedback metadata.
+- Verified with required develop-web-game clients for 2048 and Hero Fact Match plus direct Playwright checks for 2048 merge/spawn feedback and all four Fact Match clue feedback paths, including Hero wrong-guess feedback and mobile no-overflow checks.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, `node --check scripts/capture-games.mjs`, and `git diff --check`.
+- Suggested next pass: continue clearing low-grade event-feedback signals for Arcade Jump and Sky Hopper first, then Idle Tycoon, Metro Dash, and Slope Runner if the event-frame contact sheet still shows quiet but correct interactions.

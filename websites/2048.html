@@ -210,6 +210,19 @@
 
   let idCounter = 1;
   const cell = (r,c)=>({r,c});
+  const feedback = {
+    lastMoveDirection: null,
+    lastEventAt: null,
+    movedTileCount: 0,
+    mergeCount: 0,
+    scoreGained: 0,
+    largestMergedTile: 0,
+    spawnedTile: null,
+    mergeTargets: [],
+    moveCount: 0,
+    mergeMoveCount: 0,
+    spawnCount: 0
+  };
 
   // --- Input queue so fast swipes/keys aren't dropped -------------------------
 const inputQ = [];
@@ -283,6 +296,7 @@ function clearQueue(){ inputQ.length = 0; }
     board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
     tiles = [];
     score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null;
+    resetFeedback();
     for(let i=0;i<START_TILES;i++) spawnRandomTile(true); // true => spawn immediately
     updateHUD();
     hideOverlay();
@@ -317,6 +331,7 @@ function clearQueue(){ inputQ.length = 0; }
     restore(lastState);
     lastState = null;
     undoBtn.disabled = true;
+    resetFeedback();
     updateHUD();
     draw();
   }
@@ -343,7 +358,7 @@ function clearQueue(){ inputQ.length = 0; }
     tiles.push(t);
     board[spot.r][spot.c] = t.id;
 if(!immediate) animatePop(t, effectivePopTime());  // was POP_TIME
-    return true;
+    return t;
   }
 
   function tileAt(r,c){ const id = board[r]?.[c]; return id? tiles.find(t=>t.id===id): null; }
@@ -356,6 +371,7 @@ function move(dir){
 
   lastState = snapshot();
   undoBtn.disabled = false;
+  const mergeTargets = [];
 
   // Reset per-move flags/targets
   tiles.forEach(t=>{
@@ -400,6 +416,7 @@ function move(dir){
         place(b, pos, fixed);
         a.mergedInto = true;             // will double on commit
         b.removing   = true;             // disappears on commit
+        mergeTargets.push({ row: a.toR, col: a.toC, value: a.value * 2 });
         gained += a.value * 2;
         pos += step;
         i++; // skip b (consumed in the merge)
@@ -420,6 +437,8 @@ function move(dir){
   for(const t of tiles){
     if(t.r!==t.toR || t.c!==t.toC){ moved = true; break; }
   }
+
+  const movedTileCount = tiles.filter(t => t.r!==t.toR || t.c!==t.toC || t.removing).length;
 
   if(!moved){
     lastState = null; undoBtn.disabled = true;
@@ -455,8 +474,15 @@ function move(dir){
       score += gained; updateHUD();
 // Show win immediately if this move created the WIN_VALUE tile
 checkWinOnly && checkWinOnly();
-      if(!over) spawnRandomTile();
+      const spawnedTile = !over ? spawnRandomTile() : null;
 if(!over) checkEndStates();
+      recordMoveFeedback({
+        direction: dir,
+        movedTileCount,
+        mergeTargets,
+        scoreGained: gained,
+        spawnedTile
+      });
 
       moving = false;
       draw();
@@ -466,6 +492,45 @@ if(!over) checkEndStates();
   requestAnimationFrame(frame);
   return true;
 }
+
+  function resetFeedback(){
+    feedback.lastMoveDirection = null;
+    feedback.lastEventAt = null;
+    feedback.movedTileCount = 0;
+    feedback.mergeCount = 0;
+    feedback.scoreGained = 0;
+    feedback.largestMergedTile = 0;
+    feedback.spawnedTile = null;
+    feedback.mergeTargets = [];
+    feedback.moveCount = 0;
+    feedback.mergeMoveCount = 0;
+    feedback.spawnCount = 0;
+  }
+
+  function recordMoveFeedback(info){
+    feedback.lastMoveDirection = info.direction;
+    feedback.lastEventAt = performance.now();
+    feedback.movedTileCount = info.movedTileCount;
+    feedback.mergeCount = info.mergeTargets.length;
+    feedback.scoreGained = info.scoreGained;
+    feedback.largestMergedTile = info.mergeTargets.reduce((max, item) => Math.max(max, item.value), 0);
+    feedback.spawnedTile = info.spawnedTile ? { row: info.spawnedTile.r, col: info.spawnedTile.c, value: info.spawnedTile.value } : null;
+    feedback.mergeTargets = info.mergeTargets.map(item => ({ ...item }));
+    feedback.moveCount++;
+    if(feedback.mergeCount) feedback.mergeMoveCount++;
+    if(feedback.spawnedTile) feedback.spawnCount++;
+  }
+
+  function feedbackAge(){
+    return feedback.lastEventAt === null ? null : Math.max(0, (performance.now() - feedback.lastEventAt) / 1000);
+  }
+
+  function activeFeedbackCount(){
+    const age = feedbackAge();
+    const eventActive = age !== null && age < 1.25 ? 1 : 0;
+    const tilePops = tiles.filter(t => t.popStart != null).length;
+    return eventActive + tilePops;
+  }
 
 
   function checkEndStates(){
@@ -556,8 +621,60 @@ function checkWinOnly(){
       drawTile(x,y,cellSize, radius, t.value, scale);
     }
 
+    drawFeedbackOverlay({ boardX, boardY, cellSize, gap, radius });
+
     // If any tile still has an active pop, schedule another draw frame
     if(tiles.some(t=>t.popStart != null)) requestAnimationFrame(()=>draw());
+  }
+
+  function drawFeedbackOverlay(metrics){
+    const age = feedbackAge();
+    if(age === null || age > 1.2) return;
+    const { boardX, boardY, cellSize, gap, radius } = metrics;
+    const fade = Math.max(0, 1 - age / 1.2);
+    const cellCenter = (row, col) => ({
+      x: boardX + col * (cellSize + gap) + cellSize / 2,
+      y: boardY + row * (cellSize + gap) + cellSize / 2
+    });
+
+    ctx.save();
+    for(const target of feedback.mergeTargets){
+      const center = cellCenter(target.row, target.col);
+      ctx.globalAlpha = 0.72 * fade;
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = Math.max(3, cellSize * 0.055);
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, cellSize * (0.34 + age * 0.2), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if(feedback.spawnedTile){
+      const { row, col } = feedback.spawnedTile;
+      const x = boardX + col * (cellSize + gap);
+      const y = boardY + row * (cellSize + gap);
+      ctx.globalAlpha = 0.52 * fade;
+      ctx.strokeStyle = '#50f0c8';
+      ctx.lineWidth = Math.max(3, cellSize * 0.045);
+      roundRectStroke(ctx, x + 3, y + 3, cellSize - 6, cellSize - 6, radius, ctx.strokeStyle);
+    }
+
+    const label = feedback.scoreGained > 0
+      ? `+${feedback.scoreGained}`
+      : feedback.lastMoveDirection ? feedback.lastMoveDirection.toUpperCase() : '';
+    if(label){
+      ctx.globalAlpha = 0.92 * fade;
+      ctx.font = `800 ${Math.max(18, cellSize * 0.32)}px EmbeddedMontserrat, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5;
+      const x = boardX + (cellSize * SIZE + gap * (SIZE - 1)) / 2;
+      const y = boardY + Math.max(18, cellSize * 0.22) - age * cellSize * 0.08;
+      ctx.strokeStyle = 'rgba(80,64,48,.45)';
+      ctx.fillStyle = feedback.scoreGained > 0 ? '#f59e0b' : '#6d635c';
+      ctx.strokeText(label, x, y);
+      ctx.fillText(label, x, y);
+    }
+    ctx.restore();
   }
 
   function drawTile(x,y,size,radius,value,scale){
@@ -605,6 +722,18 @@ function checkWinOnly(){
     ctx.arcTo(x, y, x+w, y, r);
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
+  }
+
+  function roundRectStroke(ctx, x, y, w, h, r, stroke){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
   }
 
   function easeOutCubic(p){ return 1 - Math.pow(1-p,3); }
@@ -729,6 +858,7 @@ function checkWinOnly(){
     const matrix = valueMatrix();
     const flat = matrix.flat();
     const largestTile = flat.reduce((max, value) => Math.max(max, value), 0);
+    const eventAge = feedbackAge();
     return JSON.stringify({
       game: '2048',
       ready: Array.isArray(board),
@@ -746,7 +876,21 @@ function checkWinOnly(){
       tiles: tiles.map(t => ({ row: t.r, col: t.c, value: t.value })),
       grid: matrix,
       overlay: overlay.classList.contains('show') ? overlayTitle.textContent : null,
-      helpOpen
+      helpOpen,
+      feedback: {
+        lastMoveDirection: feedback.lastMoveDirection,
+        eventAge: eventAge === null ? null : Number(eventAge.toFixed(2)),
+        movedTileCount: feedback.movedTileCount,
+        mergeCount: feedback.mergeCount,
+        scoreGained: feedback.scoreGained,
+        largestMergedTile: feedback.largestMergedTile,
+        spawnedTile: feedback.spawnedTile,
+        mergeTargets: feedback.mergeTargets,
+        moveCount: feedback.moveCount,
+        mergeMoveCount: feedback.mergeMoveCount,
+        spawnCount: feedback.spawnCount,
+        activePopCount: activeFeedbackCount()
+      }
     });
   }
 

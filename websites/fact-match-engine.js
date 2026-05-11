@@ -15,6 +15,19 @@
     best: Number(localStorage.getItem(storageKey) || 0),
     revealed: false
   };
+  var feedback = {
+    lastEvent: null,
+    lastEventAt: null,
+    eventCount: 0,
+    clueRevealCount: 0,
+    guessSubmitCount: 0,
+    correctCount: 0,
+    wrongCount: 0,
+    revealCount: 0,
+    newRoundCount: 0,
+    cluesAdded: 0,
+    resultState: null
+  };
 
   var style = document.createElement("style");
   style.textContent = `
@@ -50,6 +63,18 @@
     .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
     .actions button{background:rgba(16,32,51,.72);color:#cfe3f3;padding:9px 10px;font-size:14px}
     .result{min-height:26px;margin-top:10px;color:var(--warn);font-weight:900}
+    .result.feedback-pulse{animation:feedbackPulse .68s ease-out both}
+    .clue.feedback-new{animation:cluePulse .7s ease-out both}
+    @keyframes feedbackPulse{
+      0%{text-shadow:0 0 0 rgba(80,240,200,0);transform:translateY(0)}
+      35%{text-shadow:0 0 18px rgba(80,240,200,.72);transform:translateY(-1px)}
+      100%{text-shadow:0 0 0 rgba(80,240,200,0);transform:translateY(0)}
+    }
+    @keyframes cluePulse{
+      0%{box-shadow:0 0 0 rgba(80,240,200,0),inset 0 1px 0 rgba(255,255,255,.03)}
+      45%{box-shadow:0 0 24px rgba(80,240,200,.3),inset 0 0 0 2px rgba(80,240,200,.38)}
+      100%{box-shadow:0 0 0 rgba(80,240,200,0),inset 0 1px 0 rgba(255,255,255,.03)}
+    }
     .bank-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
     .bank-head strong{font-size:18px}
     .bank{display:grid;gap:8px;max-height:500px;overflow:auto;padding-right:4px}
@@ -161,7 +186,8 @@
     return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
   }
 
-  function pickAnswer() {
+  function pickAnswer(options) {
+    options = options || {};
     state.answer = config.items[Math.floor(Math.random() * config.items.length)];
     state.cluesShown = Math.min(3, config.fields.length);
     state.revealed = false;
@@ -172,6 +198,9 @@
     renderClues();
     renderBank();
     els.guess.focus();
+    if (options.record !== false) {
+      recordFeedback("new-round", { resultState: "new-round" });
+    }
   }
 
   function renderClues() {
@@ -204,11 +233,59 @@
     });
   }
 
+  function pulseElement(el, className) {
+    if (!el) return;
+    el.classList.remove(className);
+    void el.offsetWidth;
+    el.classList.add(className);
+  }
+
+  function pulseNewestClue() {
+    var clues = els.clues.querySelectorAll(".clue");
+    pulseElement(clues[clues.length - 1], "feedback-new");
+  }
+
+  function feedbackAge() {
+    return feedback.lastEventAt === null ? null : Math.max(0, (performance.now() - feedback.lastEventAt) / 1000);
+  }
+
+  function activeCueCount() {
+    var age = feedbackAge();
+    return age !== null && age < 1.25 ? 1 : 0;
+  }
+
+  function recordFeedback(type, details) {
+    details = details || {};
+    feedback.lastEvent = type;
+    feedback.lastEventAt = performance.now();
+    feedback.eventCount += 1;
+    feedback.resultState = details.resultState || type;
+    if (type === "clue-reveal") {
+      feedback.clueRevealCount += 1;
+      feedback.cluesAdded += Number(details.cluesAdded || 0);
+      pulseNewestClue();
+    } else if (type === "correct") {
+      feedback.guessSubmitCount += 1;
+      feedback.correctCount += 1;
+    } else if (type === "wrong") {
+      feedback.guessSubmitCount += 1;
+      feedback.wrongCount += 1;
+    } else if (type === "empty-guess") {
+      feedback.guessSubmitCount += 1;
+    } else if (type === "reveal") {
+      feedback.revealCount += 1;
+    } else if (type === "new-round") {
+      feedback.newRoundCount += 1;
+    }
+    pulseElement(els.result, "feedback-pulse");
+  }
+
   function submitGuess() {
     if (state.revealed) return;
     var guessed = normalize(els.guess.value);
     if (!guessed) {
       els.result.textContent = "Enter a guess first.";
+      recordFeedback("empty-guess", { resultState: "empty" });
       return;
     }
     if (guessed === normalize(state.answer.name)) {
@@ -219,11 +296,13 @@
       }
       els.result.textContent = "Correct: " + state.answer.name;
       updateStats();
-      setTimeout(pickAnswer, 900);
+      recordFeedback("correct", { resultState: "correct" });
+      setTimeout(function () { pickAnswer({ record: true }); }, 900);
     } else {
       state.streak = 0;
       els.result.textContent = "Not it. Try another clue or a bank pick.";
       updateStats();
+      recordFeedback("wrong", { resultState: "wrong" });
     }
   }
 
@@ -245,7 +324,21 @@
       }),
       answer: state.answer ? state.answer.name : null,
       result: els.result.textContent,
-      bankCount: config.items.length
+      bankCount: config.items.length,
+      feedback: {
+        lastEvent: feedback.lastEvent,
+        eventAge: feedbackAge() === null ? null : Number(feedbackAge().toFixed(2)),
+        eventCount: feedback.eventCount,
+        clueRevealCount: feedback.clueRevealCount,
+        guessSubmitCount: feedback.guessSubmitCount,
+        correctCount: feedback.correctCount,
+        wrongCount: feedback.wrongCount,
+        revealCount: feedback.revealCount,
+        newRoundCount: feedback.newRoundCount,
+        cluesAdded: feedback.cluesAdded,
+        resultState: feedback.resultState,
+        activeCueCount: activeCueCount()
+      }
     });
   };
 
@@ -261,17 +354,23 @@
     if (state.cluesShown < config.fields.length) {
       state.cluesShown += 1;
       renderClues();
+      els.result.textContent = "Clue added.";
+      recordFeedback("clue-reveal", { cluesAdded: 1, resultState: "clue" });
+    } else {
+      els.result.textContent = "All clues are showing.";
+      recordFeedback("clue-reveal", { cluesAdded: 0, resultState: "max-clues" });
     }
   });
-  els.newBtn.addEventListener("click", pickAnswer);
+  els.newBtn.addEventListener("click", function () { pickAnswer({ record: true }); });
   els.revealBtn.addEventListener("click", function () {
     state.revealed = true;
     state.streak = 0;
     els.result.textContent = "Answer: " + state.answer.name;
     updateStats();
+    recordFeedback("reveal", { resultState: "revealed" });
   });
   els.filter.addEventListener("input", renderBank);
 
   updateStats();
-  pickAnswer();
+  pickAnswer({ record: false });
 })();
