@@ -224,6 +224,30 @@
     flagMode: false,
   };
 
+  const feedback = {
+    particles: [],
+    rings: [],
+    pops: [],
+    screenFlash: 0,
+    screenFlashColor: '251,113,133',
+    screenShake: 0,
+    lastRevealAge: null,
+    lastFlagAge: null,
+    lastChordAge: null,
+    lastBumpAge: null,
+    lastMineHitAge: null,
+    lastWinAge: null,
+    revealCount: 0,
+    flagToggleCount: 0,
+    chordCount: 0,
+    bumpCount: 0,
+    mineHitCount: 0,
+    winCount: 0,
+    lastRevealCells: [],
+    lastFlagCell: null,
+    lastChordCell: null,
+  };
+
   // Cell structure: { mine:boolean, adj:int, revealed:boolean, flagged:boolean, boom:boolean }
 
   function initGrid(cols, rows) {
@@ -241,6 +265,7 @@
     state.started = false;
     state.timer = 0; updateTimer();
     stopTimer();
+    resetFeedback();
   }
 
   function placeMines(exceptC, exceptR) {
@@ -278,10 +303,191 @@
     }
   }
 
+  function resetFeedback() {
+    feedback.particles = [];
+    feedback.rings = [];
+    feedback.pops = [];
+    feedback.screenFlash = 0;
+    feedback.screenFlashColor = '251,113,133';
+    feedback.screenShake = 0;
+    feedback.lastRevealAge = null;
+    feedback.lastFlagAge = null;
+    feedback.lastChordAge = null;
+    feedback.lastBumpAge = null;
+    feedback.lastMineHitAge = null;
+    feedback.lastWinAge = null;
+    feedback.revealCount = 0;
+    feedback.flagToggleCount = 0;
+    feedback.chordCount = 0;
+    feedback.bumpCount = 0;
+    feedback.mineHitCount = 0;
+    feedback.winCount = 0;
+    feedback.lastRevealCells = [];
+    feedback.lastFlagCell = null;
+    feedback.lastChordCell = null;
+  }
+
+  function cellCenter(c, r) {
+    return {
+      x: state.pad + (c + 0.5) * state.tile,
+      y: state.pad + (r + 0.5) * state.tile,
+    };
+  }
+
+  function addRing(c, r, color, life = 0.42, radiusScale = 0.72) {
+    const center = cellCenter(c, r);
+    feedback.rings.push({
+      x: center.x,
+      y: center.y,
+      color,
+      life,
+      maxLife: life,
+      radius: state.tile * 0.22,
+      radiusEnd: state.tile * radiusScale,
+      width: Math.max(1.5 * DPR, state.tile * 0.055),
+    });
+  }
+
+  function addPopup(c, r, text, color, life = 0.72) {
+    const center = cellCenter(c, r);
+    feedback.pops.push({
+      x: center.x,
+      y: center.y - state.tile * 0.18,
+      text,
+      color,
+      life,
+      maxLife: life,
+      vy: -state.tile * 0.42,
+    });
+  }
+
+  function addParticles(c, r, color, count = 8, spread = 1) {
+    const center = cellCenter(c, r);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = state.tile * (0.75 + Math.random() * 1.4) * spread;
+      feedback.particles.push({
+        x: center.x + (Math.random() - 0.5) * state.tile * 0.25,
+        y: center.y + (Math.random() - 0.5) * state.tile * 0.25,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: Math.max(1.5 * DPR, state.tile * (0.035 + Math.random() * 0.035)),
+        color,
+        life: 0.42 + Math.random() * 0.2,
+        maxLife: 0.62,
+      });
+    }
+  }
+
+  function rememberAge(key) {
+    feedback[key] = 0;
+  }
+
+  function addRevealFeedback(cells) {
+    if (!cells.length) return;
+    rememberAge('lastRevealAge');
+    feedback.revealCount += cells.length;
+    feedback.lastRevealCells = cells.slice(0, 30).map((cell) => ({
+      c: cell.c,
+      r: cell.r,
+      adj: cell.adj,
+      mine: !!cell.mine,
+    }));
+
+    const sampled = cells.slice(0, 18);
+    sampled.forEach((cell, index) => {
+      const color = cell.adj > 0 ? '96,165,250' : '52,211,153';
+      if (index < 8) addRing(cell.c, cell.r, color, 0.36, cell.adj > 0 ? 0.58 : 0.72);
+      addParticles(cell.c, cell.r, color, cell.adj > 0 ? 4 : 6, 0.75);
+    });
+    const anchor = cells[Math.min(2, cells.length - 1)];
+    addPopup(anchor.c, anchor.r, cells.length > 1 ? `+${cells.length} OPEN` : 'OPEN', '125,211,252', 0.58);
+  }
+
+  function addFlagFeedback(c, r, flagged) {
+    rememberAge('lastFlagAge');
+    feedback.flagToggleCount++;
+    feedback.lastFlagCell = { c, r, flagged: !!flagged };
+    addRing(c, r, flagged ? '244,63,94' : '148,163,184', 0.48, 0.66);
+    addParticles(c, r, flagged ? '244,63,94' : '148,163,184', 7, 0.85);
+    addPopup(c, r, flagged ? 'FLAG' : 'CLEAR', flagged ? '251,113,133' : '203,213,225', 0.62);
+  }
+
+  function addChordFeedback(c, r, success, hiddenCount) {
+    feedback.lastChordCell = { c, r, success: !!success, hiddenCount };
+    if (success) {
+      rememberAge('lastChordAge');
+      feedback.chordCount++;
+      addRing(c, r, '34,211,238', 0.52, 0.86);
+      addPopup(c, r, hiddenCount ? `SWEEP ${hiddenCount}` : 'CLEAR', '103,232,249', 0.66);
+    } else {
+      rememberAge('lastBumpAge');
+      feedback.bumpCount++;
+      feedback.screenShake = Math.max(feedback.screenShake, 0.14);
+      addRing(c, r, '251,191,36', 0.34, 0.54);
+      addPopup(c, r, 'CHECK FLAGS', '251,191,36', 0.58);
+    }
+  }
+
+  function addMineHitFeedback(c, r) {
+    rememberAge('lastMineHitAge');
+    feedback.mineHitCount++;
+    feedback.screenFlashColor = '251,113,133';
+    feedback.screenFlash = Math.max(feedback.screenFlash, 0.38);
+    feedback.screenShake = Math.max(feedback.screenShake, 0.42);
+    addRing(c, r, '251,113,133', 0.7, 1.05);
+    addParticles(c, r, '251,113,133', 18, 1.5);
+    addPopup(c, r, 'BOOM', '251,113,133', 0.8);
+  }
+
+  function addWinFeedback() {
+    rememberAge('lastWinAge');
+    feedback.winCount++;
+    feedback.screenFlashColor = '52,211,153';
+    feedback.screenFlash = Math.max(feedback.screenFlash, 0.22);
+    const c = Math.floor(state.cols / 2);
+    const r = Math.floor(state.rows / 2);
+    addRing(c, r, '52,211,153', 0.82, 1.35);
+    addParticles(c, r, '52,211,153', 28, 1.65);
+    addPopup(c, r, 'CLEARED', '52,211,153', 0.92);
+  }
+
+  function stepFeedback(dt) {
+    if (!Number.isFinite(dt) || dt < 0) dt = 0;
+    dt = Math.min(dt, 0.25);
+    const ageKeys = ['lastRevealAge','lastFlagAge','lastChordAge','lastBumpAge','lastMineHitAge','lastWinAge'];
+    ageKeys.forEach((key) => {
+      if (feedback[key] !== null) feedback[key] += dt;
+    });
+    feedback.screenFlash = Math.max(0, feedback.screenFlash - dt * 1.9);
+    feedback.screenShake = Math.max(0, feedback.screenShake - dt * 2.4);
+
+    feedback.rings = feedback.rings
+      .map((ring) => ({ ...ring, life: ring.life - dt }))
+      .filter((ring) => ring.life > 0);
+    feedback.pops = feedback.pops
+      .map((pop) => ({ ...pop, life: pop.life - dt, y: pop.y + pop.vy * dt }))
+      .filter((pop) => pop.life > 0);
+    feedback.particles = feedback.particles
+      .map((p) => ({
+        ...p,
+        life: p.life - dt,
+        x: p.x + p.vx * dt,
+        y: p.y + p.vy * dt,
+        vy: p.vy + state.tile * 1.1 * dt,
+      }))
+      .filter((p) => p.life > 0);
+
+    if (feedback.particles.length > 140) feedback.particles = feedback.particles.slice(-140);
+    if (feedback.rings.length > 42) feedback.rings = feedback.rings.slice(-42);
+    if (feedback.pops.length > 18) feedback.pops = feedback.pops.slice(-18);
+  }
+
   function reveal(c, r) {
     if (state.over) return;
     const cell = state.grid[r][c];
     if (cell.revealed || cell.flagged) return;
+    const revealedCells = [];
 
     if (!state.started) {
       // First click: build board avoiding the cell & neighbors
@@ -291,11 +497,17 @@
       startMusicOnFirstInteraction();
     }
 
-    cell.revealed = true;
-    state.revealedCount++;
+    function markRevealed(targetCell, tc, tr) {
+      targetCell.revealed = true;
+      state.revealedCount++;
+      revealedCells.push({ c: tc, r: tr, adj: targetCell.adj, mine: !!targetCell.mine });
+    }
+
+    markRevealed(cell, c, r);
 
     if (cell.mine) {
       cell.boom = true;
+      addMineHitFeedback(c, r);
       gameOver(false);
       sfx('boom');
       return;
@@ -311,13 +523,14 @@
         forEachNbr(cc, rr, (nc, nr) => {
           const ncell = state.grid[nr][nc];
           if (!ncell.revealed && !ncell.flagged && !ncell.mine) {
-            ncell.revealed = true; state.revealedCount++;
+            markRevealed(ncell, nc, nr);
             if (ncell.adj === 0) q.push([nc,nr]);
           }
         });
       }
     }
 
+    addRevealFeedback(revealedCells);
     checkWin();
   }
 
@@ -327,6 +540,7 @@
     if (cell.revealed) return;
     cell.flagged = !cell.flagged;
     state.flagsPlaced += cell.flagged ? 1 : -1;
+    addFlagFeedback(c, r, cell.flagged);
     sfx(cell.flagged ? 'flag' : 'unflag');
     checkWin();
   }
@@ -341,8 +555,10 @@
       if (n.flagged) flags++; else if (!n.revealed) hidden.push([nc,nr]);
     });
     if (flags === cell.adj) {
+      addChordFeedback(c, r, true, hidden.length);
       hidden.forEach(([nc,nr]) => reveal(nc,nr));
     } else {
+      addChordFeedback(c, r, false, hidden.length);
       sfx('bump');
     }
   }
@@ -352,6 +568,7 @@
     const total = state.cols * state.rows;
     if (state.revealedCount === total - state.mines) {
       gameOver(true);
+      addWinFeedback();
       sfx('win');
     }
   }
@@ -444,9 +661,26 @@
     8: '#94a3b8', // slate
   };
 
-  function draw() {
+  let lastDrawTime = performance.now();
+
+  function draw(now = performance.now()) {
+    const dt = clamp((now - lastDrawTime) / 1000, 0, 0.05);
+    lastDrawTime = now;
+    stepFeedback(dt);
+    renderFrame();
+    rafId = requestAnimationFrame(draw);
+  }
+
+  function renderFrame() {
     const { cols, rows, tile, pad } = state;
     ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.save();
+
+    const shake = feedback.screenShake > 0 ? feedback.screenShake * 5 * DPR : 0;
+    if (shake > 0) {
+      const t = performance.now() * 0.028;
+      ctx.translate(Math.sin(t) * shake, Math.cos(t * 1.23) * shake * 0.72);
+    }
 
     // Board area origin
     const ox = pad, oy = pad;
@@ -500,6 +734,8 @@
     }
 
     ctx.restore();
+
+    drawFeedbackOverlay(ox, oy, w, h);
 
     // Game state banners
     if (state.over) {
@@ -556,7 +792,58 @@
       ctx.restore();
     }
 
-    rafId = requestAnimationFrame(draw);
+    ctx.restore();
+    drawScreenFlash();
+  }
+
+  function drawFeedbackOverlay(ox, oy, w, h) {
+    ctx.save();
+    ctx.beginPath();
+    roundRect(ctx, ox, oy, w, h, 10 * DPR);
+    ctx.clip();
+
+    feedback.rings.forEach((ring) => {
+      const progress = 1 - ring.life / ring.maxLife;
+      const alpha = Math.max(0, 1 - progress);
+      const radius = ring.radius + (ring.radiusEnd - ring.radius) * progress;
+      ctx.strokeStyle = `rgba(${ring.color},${alpha * 0.85})`;
+      ctx.lineWidth = ring.width * (1 - progress * 0.45);
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    feedback.particles.forEach((particle) => {
+      const alpha = Math.max(0, particle.life / particle.maxLife);
+      ctx.fillStyle = `rgba(${particle.color},${alpha})`;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size * (0.65 + alpha * 0.55), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    feedback.pops.forEach((pop) => {
+      const alpha = Math.max(0, Math.min(1, pop.life / pop.maxLife));
+      const size = Math.max(11 * DPR, state.tile * 0.34);
+      ctx.font = `800 ${size}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = Math.max(2 * DPR, size * 0.16);
+      ctx.strokeStyle = `rgba(3,7,18,${alpha * 0.85})`;
+      ctx.fillStyle = `rgba(${pop.color},${alpha})`;
+      ctx.strokeText(pop.text, pop.x, pop.y);
+      ctx.fillText(pop.text, pop.x, pop.y);
+    });
+
+    ctx.restore();
+  }
+
+  function drawScreenFlash() {
+    if (feedback.screenFlash <= 0) return;
+    const alpha = Math.min(0.42, feedback.screenFlash);
+    ctx.save();
+    ctx.fillStyle = `rgba(${feedback.screenFlashColor},${alpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -948,6 +1235,7 @@ function drawRaisedTile(x, y, s, hovered) {
     updateMinesLeft();
     updateBestDisplay();
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    lastDrawTime = performance.now();
     draw();
   }
 
@@ -1063,6 +1351,7 @@ function drawRaisedTile(x, y, s, hovered) {
 
   function renderGameToText(){
     const summary = visibleCellSummary();
+    const age = (value) => value === null ? null : Number(value.toFixed(2));
     return JSON.stringify({
       game: 'Minesweeper',
       coordinateSystem: 'grid cells, origin top-left, c right, r down',
@@ -1080,13 +1369,41 @@ function drawRaisedTile(x, y, s, hovered) {
       hover: { c: state.hover.c, r: state.hover.r },
       helpOpen: !!helpOpen,
       preset: currentPreset,
+      feedback: {
+        lastRevealAge: age(feedback.lastRevealAge),
+        lastFlagAge: age(feedback.lastFlagAge),
+        lastChordAge: age(feedback.lastChordAge),
+        lastBumpAge: age(feedback.lastBumpAge),
+        lastMineHitAge: age(feedback.lastMineHitAge),
+        lastWinAge: age(feedback.lastWinAge),
+        revealCount: feedback.revealCount,
+        flagToggleCount: feedback.flagToggleCount,
+        chordCount: feedback.chordCount,
+        bumpCount: feedback.bumpCount,
+        mineHitCount: feedback.mineHitCount,
+        winCount: feedback.winCount,
+        lastRevealCells: feedback.lastRevealCells,
+        lastFlagCell: feedback.lastFlagCell,
+        lastChordCell: feedback.lastChordCell,
+        feedbackParticles: feedback.particles.length,
+        ringCount: feedback.rings.length,
+        popupCount: feedback.pops.length,
+        screenFlash: Number(feedback.screenFlash.toFixed(2)),
+        screenFlashColor: feedback.screenFlashColor,
+        screenShake: Number(feedback.screenShake.toFixed(2)),
+      },
       visible: summary
     });
   }
 
   window.render_game_to_text = renderGameToText;
-  window.advanceTime = function advanceTime(){
-    draw();
+  window.advanceTime = function advanceTime(ms = 0){
+    const seconds = Math.max(0, Math.min(5, Number(ms) || 0) / 1000);
+    const steps = Math.max(1, Math.ceil(seconds / (1 / 60)));
+    const dt = seconds > 0 ? seconds / steps : 0;
+    for (let i = 0; i < steps; i++) stepFeedback(dt);
+    renderFrame();
+    lastDrawTime = performance.now();
     return renderGameToText();
   };
 

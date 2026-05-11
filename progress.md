@@ -185,3 +185,13 @@ Original prompt: Do this for me
 - Verified with the required web-game client plus direct Playwright checks for mobile non-overlap/no overflow, hard-drop/lock feedback, a bounded bot-produced real line clear, and top-out/game-over feedback.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue single-game feedback polish on Minesweeper reveal/flag/chord feedback, or review the latest contact sheet for another mechanically solid game whose mid-play events still read quietly.
+
+## 2026-05-11 Codex pass 20
+
+- Baseline: `test-results/render-ranking/2026-05-11T05-58-18-676Z/` scored all 40 surfaces at zero; Minesweeper was selected because reveals, flags, chord attempts, mine hits, and wins still read quietly compared with the newer feedback-polished games.
+- Strengthened `websites/minesweeper.html` with visual-only reveal waves, flag rings, chord success/bump cues, mine-hit flash/shake, win pulse, compact particles, and short pop labels while preserving board rules, first-click safety, timer, difficulty controls, audio preferences, and layout.
+- Extended Minesweeper diagnostics with compact feedback ages, counters, last affected cells, active particle/ring/popup counts, screen flash color, and screen shake; `advanceTime(ms)` now steps feedback deterministically and redraws without audio or preference side effects.
+- Final capture: `test-results/render-ranking/2026-05-11T06-12-30-008Z/`, with all 40 desktop/mobile surfaces still at zero automated issues and Minesweeper desktop/mobile post-action screenshots manually inspected.
+- Verified with the required develop-web-game client plus direct Playwright checks for reveal, flag, chord-bump, mine-hit/game-over, restart, and deterministic custom-board win feedback.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: review the latest interactive contact sheet for remaining mechanically solid games whose short-lived feedback is hard to see in the broad capture, or add a targeted capture recipe that records immediate event-feedback frames.
