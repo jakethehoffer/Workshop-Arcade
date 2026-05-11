@@ -174,3 +174,14 @@ Original prompt: Do this for me
 - Verified with the required web-game client for Maze Chase plus direct Playwright checks for pellet feedback and harmful collision/life-loss feedback; the focused client state also confirmed power-pellet and ghost-eat diagnostics.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue single-game mid-play feedback polish on Tetris line/lock/clear readability or Minesweeper reveal/flag feedback, depending on the next contact-sheet review.
+
+## 2026-05-10 Codex pass 19
+
+- Baseline: `test-results/render-ranking/2026-05-11T01-08-06-609Z/` scored all 40 surfaces at zero; Block Drop was selected because mobile Hold/Next chrome overlapped the spawn lane and active play feedback for lock, hard drop, line clear, and top-out was too quiet.
+- Fixed `websites/tetris.html` mobile spawn-lane readability by increasing the mobile top reserve and reducing bottom reserve so Hold/Next end above the canvas without shrinking the board below current readability.
+- Added visual-only feedback state for movement/rotation/drop/lock, hard-drop trails, lock-warning outlines, row flashes, line-clear/level/top-out pops, particles, screen flash, and screen shake.
+- Refactored line clearing to return original cleared row indexes, then extended diagnostics with compact feedback ages, counters, last clear rows/count/label, lock warning, particle/popup counts, screen flash, and screen shake.
+- Final capture: `test-results/render-ranking/2026-05-11T01-20-10-698Z/`, with all 40 desktop/mobile surfaces still at zero automated issues and Block Drop desktop/mobile post-action screenshots manually inspected.
+- Verified with the required web-game client plus direct Playwright checks for mobile non-overlap/no overflow, hard-drop/lock feedback, a bounded bot-produced real line clear, and top-out/game-over feedback.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue single-game feedback polish on Minesweeper reveal/flag/chord feedback, or review the latest contact sheet for another mechanically solid game whose mid-play events still read quietly.
