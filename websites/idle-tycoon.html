@@ -2367,6 +2367,15 @@
       tutorialOnStart: DEFAULT_SETTINGS.tutorialOnStart,
       hasPlayed: DEFAULT_SETTINGS.hasPlayed
     };
+    const interactionFeedback = {
+      lastEvent: null,
+      lastEventAge: null,
+      activeCueCount: 0,
+      slotSelectCount: 0,
+      clickEarnCount: 0,
+      lastSlot: null,
+      lastEarnAmount: 0
+    };
 
     let pendingTutorial = false;
     let audioCtx = null;
@@ -4105,6 +4114,7 @@
     }
 
     function handleSlotSelection(slot) {
+      recordInteractionFeedback("slot-select", { slot });
       playSfx("menu");
       if (!gameStarted) {
         startWithSlot(slot);
@@ -4367,6 +4377,7 @@
     }
 
     function advanceIdleFrame(dt, now = performance.now()) {
+      stepInteractionFeedback(dt);
       updateMomentum(dt);
       updateEvents(now);
       updateSurgeState(now);
@@ -4474,8 +4485,43 @@
           soundEnabled: settings.soundEnabled,
           musicEnabled: settings.musicEnabled,
           tutorialOnStart: settings.tutorialOnStart
+        },
+        feedback: {
+          lastEvent: interactionFeedback.lastEvent,
+          lastEventAge: feedbackAge(interactionFeedback.lastEventAge),
+          activeCueCount: interactionFeedback.activeCueCount,
+          slotSelectCount: interactionFeedback.slotSelectCount,
+          clickEarnCount: interactionFeedback.clickEarnCount,
+          lastSlot: interactionFeedback.lastSlot,
+          lastEarnAmount: Math.round(interactionFeedback.lastEarnAmount)
         }
       });
+    }
+
+    function recordInteractionFeedback(type, details = {}) {
+      interactionFeedback.lastEvent = type;
+      interactionFeedback.lastEventAge = 0;
+      interactionFeedback.activeCueCount = 1;
+      if (type === "slot-select") {
+        interactionFeedback.slotSelectCount += 1;
+        interactionFeedback.lastSlot = details.slot ?? null;
+      }
+      if (type === "click-earn") {
+        interactionFeedback.clickEarnCount += 1;
+        interactionFeedback.lastEarnAmount = Number(details.amount) || 0;
+      }
+    }
+
+    function stepInteractionFeedback(dt) {
+      if (interactionFeedback.lastEventAge === null) {
+        return;
+      }
+      interactionFeedback.lastEventAge += Math.max(0, Number(dt) || 0);
+      interactionFeedback.activeCueCount = interactionFeedback.lastEventAge <= 1.25 ? 1 : 0;
+    }
+
+    function feedbackAge(value) {
+      return value === null ? null : Math.round(value * 1000) / 1000;
     }
 
     window.render_game_to_text = renderGameToText;
@@ -4505,6 +4551,7 @@
       if (isCrit) state.totalCrits += 1;
       addSurgeCharge(SURGE_CHARGE_CLICK);
       earn(amount, false);
+      recordInteractionFeedback("click-earn", { amount });
       spawnFloat(amount, { critical: isCrit });
       playSfx("click");
       if (isCrit) {

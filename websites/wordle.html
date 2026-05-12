@@ -91,6 +91,8 @@
   @keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
   .shake{animation:shake .45s linear}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .row.input-pulse{animation:inputPulse .34s ease}
+  @keyframes inputPulse{0%,100%{filter:none}45%{filter:drop-shadow(0 0 10px rgba(125,211,252,.55))}}
   .keyboard{user-select:none;touch-action:manipulation;display:grid;gap:7px;width:min(100%,480px);margin:0 auto 8px}
   .keys{display:grid;grid-template-columns:repeat(10,1fr);gap:8px}
   .keys.row2{grid-template-columns:repeat(9,1fr);margin:0 18px}
@@ -350,6 +352,16 @@ const AudioFX = (() => {                               // ADDED
   let guesses = [];
   let current = '';
   let finished = false;
+  const inputFeedback = {
+    lastEvent: null,
+    lastEventAge: null,
+    activeCueCount: 0,
+    letterEntryCount: 0,
+    backspaceCount: 0,
+    submitCount: 0,
+    invalidCount: 0,
+    lastInput: null
+  };
 
   // Persist/resume per settings + day
   function storageKey(){
@@ -407,6 +419,16 @@ const AudioFX = (() => {                               // ADDED
     guesses = [];
     current = '';
     finished = false;
+    Object.assign(inputFeedback, {
+      lastEvent: null,
+      lastEventAge: null,
+      activeCueCount: 0,
+      letterEntryCount: 0,
+      backspaceCount: 0,
+      submitCount: 0,
+      invalidCount: 0,
+      lastInput: null
+    });
 
     // Close overlays if we came from them // ADDED
     if (fromOverlay) { // ADDED
@@ -446,6 +468,30 @@ const AudioFX = (() => {                               // ADDED
     checkbox.checked = !checkbox.checked;
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
   }
+  function recordInputFeedback(type, value = null){
+    inputFeedback.lastEvent = type;
+    inputFeedback.lastEventAge = 0;
+    inputFeedback.activeCueCount = 1;
+    inputFeedback.lastInput = value;
+    if(type === 'letter-entry') inputFeedback.letterEntryCount += 1;
+    if(type === 'backspace') inputFeedback.backspaceCount += 1;
+    if(type === 'guess-submit') inputFeedback.submitCount += 1;
+    if(type === 'invalid-input') inputFeedback.invalidCount += 1;
+    pulseActiveRow();
+  }
+  function stepInputFeedback(ms){
+    if(inputFeedback.lastEventAge === null) return;
+    inputFeedback.lastEventAge += Math.max(0, Number(ms) || 0) / 1000;
+    inputFeedback.activeCueCount = inputFeedback.lastEventAge <= 1.1 ? 1 : 0;
+  }
+  function pulseActiveRow(){
+    const row = board.children[Math.min(guesses.length, board.children.length - 1)];
+    if(!row) return;
+    row.classList.remove('input-pulse');
+    void row.offsetWidth;
+    row.classList.add('input-pulse');
+    setTimeout(()=>row.classList.remove('input-pulse'), 360);
+  }
   function onKey(k){
   if(finished || isDialogOpen()) return;
   if(k==='enter'){ AudioFX.enter(); submit(); return; }       // CHANGED
@@ -454,6 +500,7 @@ const AudioFX = (() => {                               // ADDED
   if(/^[a-zA-Z]$/.test(k)){
     if(current.length<COLS){
       current += k.toLowerCase();
+      recordInputFeedback('letter-entry', current);
       AudioFX.key();                                          // ADDED
       repaint(); save();
     }
@@ -462,7 +509,7 @@ const AudioFX = (() => {                               // ADDED
 }
 
   function backspace(){
-    if(current.length>0){ current=current.slice(0,-1); repaint(); save(); }
+    if(current.length>0){ current=current.slice(0,-1); recordInputFeedback('backspace', current); repaint(); save(); }
   }
   document.addEventListener('keydown', (e)=>{
     const tag = (e.target && e.target.tagName) || '';
@@ -516,7 +563,7 @@ const AudioFX = (() => {                               // ADDED
   // ===== Guess submission (STRICT always on) =====
   function submit(){
     if(finished) return;
-    if(current.length!==COLS){ flashRow('Not enough letters.'); return; }
+    if(current.length!==COLS){ recordInputFeedback('invalid-input', current); flashRow('Not enough letters.'); return; }
 
     if(guesses.includes(current)){ flashRow('Already guessed that word.'); return; }
 
@@ -546,6 +593,7 @@ const AudioFX = (() => {                               // ADDED
     }
 
     guesses.push(current);
+    recordInputFeedback('guess-submit', guesses[guesses.length-1]);
     const evals = evaluate(guesses[guesses.length-1], secret);    // ADDED
 evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
     current='';
@@ -669,12 +717,23 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
         start: !!start.open,
         help: !!help.open,
         gameOver: !!over.open
+      },
+      feedback: {
+        lastEvent: inputFeedback.lastEvent,
+        lastEventAge: inputFeedback.lastEventAge === null ? null : Math.round(inputFeedback.lastEventAge * 1000) / 1000,
+        activeCueCount: inputFeedback.activeCueCount,
+        letterEntryCount: inputFeedback.letterEntryCount,
+        backspaceCount: inputFeedback.backspaceCount,
+        submitCount: inputFeedback.submitCount,
+        invalidCount: inputFeedback.invalidCount,
+        lastInput: inputFeedback.lastInput
       }
     });
   }
 
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms = 0){
+    stepInputFeedback(ms);
     repaint();
     return new Promise(resolve => {
       setTimeout(() => {

@@ -125,7 +125,15 @@ const feedback = {
   dangerLane: 0,
   crashFlash: 0,
   lastPickupAge: 999,
-  lastNearMissAge: 999
+  lastNearMissAge: 999,
+  lastEvent: null,
+  lastEventAge: null,
+  activeCueCount: 0,
+  startCount: 0,
+  laneChangeCount: 0,
+  jumpCount: 0,
+  slideCount: 0,
+  lastLaneDelta: 0
 };
 function emitParticles(x, y, color, count, spread, life) {
   for (let i = 0; i < count; i++) {
@@ -152,6 +160,10 @@ function updateParticles(dt60) {
 function updateFeedback(dt60) {
   feedback.lastPickupAge += dt60;
   feedback.lastNearMissAge += dt60;
+  if (feedback.lastEventAge !== null) {
+    feedback.lastEventAge += dt60;
+    feedback.activeCueCount = feedback.lastEventAge <= 42 ? 1 : 0;
+  }
   feedback.dangerCue = Math.max(0, feedback.dangerCue - 0.08 * dt60);
   feedback.crashFlash = Math.max(0, feedback.crashFlash - 0.045 * dt60);
   for (let i = scorePops.length - 1; i >= 0; i--) {
@@ -166,6 +178,29 @@ function updateFeedback(dt60) {
     r.r += 1.7 * dt60;
     r.life -= dt60;
     if (r.life <= 0) pickupRings.splice(i, 1);
+  }
+}
+function recordActionFeedback(type, details = {}) {
+  feedback.lastEvent = type;
+  feedback.lastEventAge = 0;
+  feedback.activeCueCount = 1;
+  if (type === "start") feedback.startCount += 1;
+  if (type === "lane-change") {
+    feedback.laneChangeCount += 1;
+    feedback.lastLaneDelta = details.delta || 0;
+  }
+  if (type === "jump") feedback.jumpCount += 1;
+  if (type === "slide") feedback.slideCount += 1;
+  const px = projX(player.laneX, PLAYER_Z);
+  const py = projY(PLAYER_Z) - 44 * projS(PLAYER_Z);
+  if (type === "lane-change") {
+    emitPickupRing(px, py, "#65e6ff");
+  } else if (type === "jump") {
+    emitPickupRing(px, py, "#ffe26d");
+    emitScorePop("JUMP", px, py - 12, "#ffe26d");
+  } else if (type === "slide") {
+    emitPickupRing(px, py + 10, "#ffae72");
+    emitScorePop("SLIDE", px, py - 4, "#ffae72");
   }
 }
 function drawParticles() {
@@ -877,9 +912,25 @@ function startGame() {
   state = "playing"; distance = 0; coins = 0; gameSpeed = 3;
   Object.assign(player, { lane:0, targetLane:0, laneX:0, y:0, vy:0, isJumping:false, isSliding:false, slideTimer:0, height:1, runPhase:0 });
   obstacles.length = 0; coinObjects.length = 0; particles.length = 0; scorePops.length = 0; pickupRings.length = 0;
-  Object.assign(feedback, { nearMissCount: 0, dangerCue: 0, dangerLane: 0, crashFlash: 0, lastPickupAge: 999, lastNearMissAge: 999 });
+  Object.assign(feedback, {
+    nearMissCount: 0,
+    dangerCue: 0,
+    dangerLane: 0,
+    crashFlash: 0,
+    lastPickupAge: 999,
+    lastNearMissAge: 999,
+    lastEvent: null,
+    lastEventAge: null,
+    activeCueCount: 0,
+    startCount: 0,
+    laneChangeCount: 0,
+    jumpCount: 0,
+    slideCount: 0,
+    lastLaneDelta: 0
+  });
   spawnTimer = 0; coinSpawnTimer = 0; newBest = false;
   pauseBtn.style.display = "block";
+  recordActionFeedback("start");
   resumeAudio(); startMusic();
 }
 
@@ -906,10 +957,28 @@ function togglePause() {
 }
 
 /* ===== INPUT ===== */
-function moveLeft() { if (state === "playing" && player.targetLane > -1) player.targetLane--; }
-function moveRight() { if (state === "playing" && player.targetLane < 1) player.targetLane++; }
-function doJump() { if (state !== "playing" || player.isJumping || player.isSliding) return; player.isJumping = true; player.vy = JUMP_VEL; SFX.jump(); }
-function doSlide() { if (state !== "playing" || player.isJumping || player.isSliding) return; player.isSliding = true; player.slideTimer = SLIDE_DUR; SFX.slide(); }
+function moveLeft() {
+  if (state !== "playing" || player.targetLane <= -1) return;
+  player.targetLane--;
+  recordActionFeedback("lane-change", { delta: -1 });
+}
+function moveRight() {
+  if (state !== "playing" || player.targetLane >= 1) return;
+  player.targetLane++;
+  recordActionFeedback("lane-change", { delta: 1 });
+}
+function doJump() {
+  if (state !== "playing" || player.isJumping || player.isSliding) return;
+  player.isJumping = true; player.vy = JUMP_VEL;
+  recordActionFeedback("jump");
+  SFX.jump();
+}
+function doSlide() {
+  if (state !== "playing" || player.isJumping || player.isSliding) return;
+  player.isSliding = true; player.slideTimer = SLIDE_DUR;
+  recordActionFeedback("slide");
+  SFX.slide();
+}
 
 document.addEventListener("keydown", e => {
   if (e.repeat) return;
@@ -1131,6 +1200,14 @@ function renderGameToText() {
       nearMissCount: feedback.nearMissCount,
       lastPickupAge: Math.round(feedback.lastPickupAge * 100) / 100,
       lastNearMissAge: Math.round(feedback.lastNearMissAge * 100) / 100,
+      lastEvent: feedback.lastEvent,
+      lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 100) / 100,
+      activeCueCount: feedback.activeCueCount,
+      startCount: feedback.startCount,
+      laneChangeCount: feedback.laneChangeCount,
+      jumpCount: feedback.jumpCount,
+      slideCount: feedback.slideCount,
+      lastLaneDelta: feedback.lastLaneDelta,
       dangerCue: Math.round(feedback.dangerCue * 100) / 100,
       dangerLane: feedback.dangerLane,
       crashFlash: Math.round(feedback.crashFlash * 100) / 100,

@@ -229,3 +229,13 @@ Original prompt: Do this for me
 - Verified with focused desktop/mobile Playwright clients for Arcade Jump start/steer/double-jump and Sky Hopper start/flap, confirming feedback diagnostics, no console/page errors, and no horizontal overflow.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue clearing low-grade event-frame diagnostics for Idle Tycoon, Metro Dash, Slope Runner, Neon Snake, and Klondike Solitaire, choosing the first target after inspecting the latest contact sheet for actual player-feel impact.
+
+## 2026-05-12 Codex pass 24
+
+- Baseline: `test-results/render-ranking/2026-05-12T04-35-05-286Z/`; the remaining 12 rendered surfaces were the six planned targets at desktop/mobile, each ranking only for missing immediate event-frame feedback diagnostics.
+- Added compact event-feedback diagnostics to `websites/idle-tycoon.html`, `websites/metro-dash.html`, `websites/shape-inlay.html`, `websites/snake.html`, `websites/solitare.html`, and `websites/wordle.html` for slot/click, runner actions, steer/start, snake turns, stock draw/recycle, and Lexica text input.
+- Reused existing visual systems for small non-layout-shifting cues: clicker cash feedback, runner action rings/pops, Slope start/steer cues, a Snake head ring, Solitaire stock/waste pile pulse, and a Lexica active-row input pulse.
+- Final capture: `test-results/render-ranking/2026-05-12T04-47-50-314Z/`; all 40 rendered surfaces now score zero, with the six target groups exposing active `feedback` metadata in the immediate event frame.
+- Verified with the develop-web-game client for Snake, Metro Dash, Slope Runner, and Solitaire plus direct Playwright coverage for all six targets, confirming feedback counters/state changes, no new console/page errors, and no gameplay regressions in the scripted flows.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: treat the zero-score contact sheet as a qualitative review tool and pick any remaining improvement by actual player feel rather than diagnostic debt; the automated event-frame closure backlog is cleared.

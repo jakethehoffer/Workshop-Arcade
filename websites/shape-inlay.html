@@ -624,7 +624,13 @@
           nearMissCount: 0,
           lastNearMissAge: null,
           crashFlash: 0,
-          edgePulse: 0
+          edgePulse: 0,
+          lastEvent: null,
+          lastEventAge: null,
+          activeCueCount: 0,
+          startCount: 0,
+          steerCount: 0,
+          lastSteerDirection: null
         };
 
         const feedbackParticles = [];
@@ -915,9 +921,31 @@
           feedback.lastNearMissAge = null;
           feedback.crashFlash = 0;
           feedback.edgePulse = 0;
+          feedback.lastEvent = null;
+          feedback.lastEventAge = null;
+          feedback.activeCueCount = 0;
+          feedback.startCount = 0;
+          feedback.steerCount = 0;
+          feedback.lastSteerDirection = null;
           feedbackParticles.length = 0;
           feedbackRings.length = 0;
           feedbackPops.length = 0;
+        }
+
+        function recordActionFeedback(type, details = {}) {
+          feedback.lastEvent = type;
+          feedback.lastEventAge = 0;
+          feedback.activeCueCount = 1;
+          if (type === "start") {
+            feedback.startCount += 1;
+            emitRing(state.ballX, config.ballZ, "rgba(101, 230, 255, 0.95)", 0.46);
+          }
+          if (type === "steer") {
+            feedback.steerCount += 1;
+            feedback.lastSteerDirection = details.direction || null;
+            emitRing(state.ballX, config.ballZ, "rgba(255, 226, 109, 0.95)", 0.38);
+            emitPop(details.direction === "left" ? "LEFT" : "RIGHT", state.ballX, config.ballZ, "#ffe26d");
+          }
         }
 
         function updateFeedback(dt) {
@@ -932,6 +960,10 @@
             width: Math.round(danger.width * 10) / 10
           } : null;
           feedback.edgePulse += ((state.running ? clamp((state.risk - 0.66) / 0.34, 0, 1) : 0) - feedback.edgePulse) * Math.min(1, dt * 10);
+          if (feedback.lastEventAge !== null) {
+            feedback.lastEventAge += dt;
+            feedback.activeCueCount = feedback.lastEventAge <= 1.2 ? 1 : 0;
+          }
           if (feedback.lastNearMissAge !== null) {
             feedback.lastNearMissAge += dt;
             if (feedback.lastNearMissAge > 3) {
@@ -1253,6 +1285,7 @@
           state.running = true;
           state.crashed = false;
           hideOverlay();
+          recordActionFeedback("start");
           updateHud();
         }
 
@@ -1371,9 +1404,15 @@
 
         window.addEventListener("keydown", (event) => {
           if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+            if (!input.left) {
+              recordActionFeedback("steer", { direction: "left" });
+            }
             input.left = true;
           }
           if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+            if (!input.right) {
+              recordActionFeedback("steer", { direction: "right" });
+            }
             input.right = true;
           }
         });
@@ -1459,6 +1498,12 @@
               lastNearMissAge: feedback.lastNearMissAge === null ? null : Math.round(feedback.lastNearMissAge * 100) / 100,
               crashFlash: Math.round(feedback.crashFlash * 100) / 100,
               edgePulse: Math.round(feedback.edgePulse * 100) / 100,
+              lastEvent: feedback.lastEvent,
+              lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 100) / 100,
+              activeCueCount: feedback.activeCueCount,
+              startCount: feedback.startCount,
+              steerCount: feedback.steerCount,
+              lastSteerDirection: feedback.lastSteerDirection,
               feedbackParticles: feedbackParticles.length + feedbackRings.length + feedbackPops.length
             },
             input: {

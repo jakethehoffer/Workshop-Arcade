@@ -317,6 +317,17 @@
   bestEl.textContent='Best: '+best;
 
   let snake=[], prevSnake=[], dir={x:1,y:0}, dirQueue=[], food=null, running=false, gameOver=false, gameWon=false, score=0, acc=0, stepMs=140;
+  const feedback = {
+    lastEvent: null,
+    lastEventAge: null,
+    activeCueCount: 0,
+    startCount: 0,
+    resumeCount: 0,
+    queuedTurnCount: 0,
+    acceptedTurnCount: 0,
+    lastQueuedDirection: null,
+    lastAcceptedDirection: null
+  };
 
   function resize(){
     const mobile=window.matchMedia('(max-width: 640px)').matches;
@@ -341,6 +352,17 @@
     dir={x:1,y:0}; dirQueue=[];
     score=0; stepMs=140; acc=0;
     running=false; gameOver=false; gameWon=false;
+    Object.assign(feedback, {
+      lastEvent: null,
+      lastEventAge: null,
+      activeCueCount: 0,
+      startCount: 0,
+      resumeCount: 0,
+      queuedTurnCount: 0,
+      acceptedTurnCount: 0,
+      lastQueuedDirection: null,
+      lastAcceptedDirection: null
+    });
     statusEl.textContent='Press Space to start';
     spawnFood();
     updateHUD();
@@ -378,6 +400,7 @@
   function curSpeed(){ return Math.max(60, stepMs - Math.floor(score/5)*6); }
 
   function tick(dt){
+    stepSnakeFeedback(dt);
     if(!running||gameOver) return;
     acc+=dt;
     const speed=curSpeed();
@@ -391,6 +414,7 @@
     prevSnake = snake.map(p=>({...p}));
     if(dirQueue.length){
       dir = dirQueue.shift();
+      recordSnakeFeedback('turn-accepted', { direction: directionLabel(dir) });
     }
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
     if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
@@ -411,6 +435,36 @@
     if(sameDir(n,last) || isOpposite(n,last)) return;
     if(dirQueue.length >= 2) return;
     dirQueue.push(n);
+    recordSnakeFeedback('turn-queued', { direction: directionLabel(n) });
+  }
+
+  function recordSnakeFeedback(type, detail = {}){
+    feedback.lastEvent = type;
+    feedback.lastEventAge = 0;
+    feedback.activeCueCount = 1;
+    if(type === 'start') feedback.startCount += 1;
+    if(type === 'resume') feedback.resumeCount += 1;
+    if(type === 'turn-queued'){
+      feedback.queuedTurnCount += 1;
+      feedback.lastQueuedDirection = detail.direction || null;
+    }
+    if(type === 'turn-accepted'){
+      feedback.acceptedTurnCount += 1;
+      feedback.lastAcceptedDirection = detail.direction || null;
+    }
+  }
+
+  function stepSnakeFeedback(dt){
+    if(feedback.lastEventAge === null) return;
+    feedback.lastEventAge += Math.max(0, Number(dt) || 0) / 1000;
+    feedback.activeCueCount = feedback.lastEventAge <= 1.1 ? 1 : 0;
+  }
+
+  function directionLabel(value){
+    if(value.x === 1) return 'right';
+    if(value.x === -1) return 'left';
+    if(value.y === 1) return 'down';
+    return 'up';
   }
 
   function roundRect(x,y,w,h,r){
@@ -503,6 +557,15 @@
       else if(look.x===0&&look.y===1){ ex1=hx+cw*0.35; ey1=hy+ch*0.62; ex2=hx+cw*0.65; ey2=hy+ch*0.62; }
       else { ex1=hx+cw*0.35; ey1=hy+ch*0.38; ex2=hx+cw*0.65; ey2=hy+ch*0.38; }
       drawEye(ex1,ey1,eyeR); drawEye(ex2,ey2,eyeR);
+      if(feedback.activeCueCount){
+        ctx.save();
+        ctx.strokeStyle='rgba(255, 226, 109, 0.9)';
+        ctx.lineWidth=Math.max(2, Math.min(cw,ch)*0.08);
+        ctx.beginPath();
+        ctx.arc(hx+cw/2, hy+ch/2, Math.min(cw,ch)*0.52, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     if(gameWon){
@@ -543,7 +606,7 @@
     else if(running) pause();
     else start();
   }
-  function start(){ if(running||gameOver||gameWon) return; running=true; statusEl.textContent='Press Space to pause'; SFX.start(); Music.resume(); syncStartMobileButton(); }
+  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; statusEl.textContent='Press Space to pause'; recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); }
   function restart(){ newGame(); }
   function pause(){ if(!running||gameOver||gameWon) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); syncStartMobileButton(); }
 
@@ -649,6 +712,17 @@
       music: {
         label: musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent,
         playing: !Music.paused()
+      },
+      feedback: {
+        lastEvent: feedback.lastEvent,
+        lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 1000) / 1000,
+        activeCueCount: feedback.activeCueCount,
+        startCount: feedback.startCount,
+        resumeCount: feedback.resumeCount,
+        queuedTurnCount: feedback.queuedTurnCount,
+        acceptedTurnCount: feedback.acceptedTurnCount,
+        lastQueuedDirection: feedback.lastQueuedDirection,
+        lastAcceptedDirection: feedback.lastAcceptedDirection
       }
     });
   }

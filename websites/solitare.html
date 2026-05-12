@@ -239,6 +239,22 @@ function flashPile(el){  // quick visual pulse
   setTimeout(()=> el.classList.remove('drop-ok'), 120);
 }
 
+function recordStockFeedback(type, cardsMoved){
+  stockFeedback.lastEvent = type;
+  stockFeedback.lastEventAge = 0;
+  stockFeedback.activeCueCount = 1;
+  stockFeedback.lastCardsMoved = cardsMoved;
+  stockFeedback.lastStockAction = type;
+  if(type === 'stock-draw') stockFeedback.drawCount += 1;
+  if(type === 'stock-recycle') stockFeedback.recycleCount += 1;
+}
+
+function stepStockFeedback(ms){
+  if(stockFeedback.lastEventAge === null) return;
+  stockFeedback.lastEventAge += Math.max(0, Number(ms) || 0) / 1000;
+  stockFeedback.activeCueCount = stockFeedback.lastEventAge <= 1.1 ? 1 : 0;
+}
+
 let autoRunning = false;
 
 function runAutoCompleteStep(){
@@ -352,6 +368,15 @@ function startAutoComplete(){
     t: [el('#t0'), el('#t1'), el('#t2'), el('#t3'), el('#t4'), el('#t5'), el('#t6')]
   };
   let lastAction = 'Ready';
+  const stockFeedback = {
+    lastEvent: null,
+    lastEventAge: null,
+    activeCueCount: 0,
+    drawCount: 0,
+    recycleCount: 0,
+    lastCardsMoved: 0,
+    lastStockAction: null
+  };
 
   function cardEl(card){
     const div = document.createElement('div');
@@ -504,16 +529,23 @@ updateAutoCompleteVisibility();   // <-- add this line
       if(state.piles.waste.length===0) return;
       if(!state.unlimited && state.stockCycles>=1) return; // only one pass allowed (never hits because unlimited=true)
       pushHistory('recycle');
+      const recycled = state.piles.waste.length;
       state.piles.stock = state.piles.waste.reverse();
       state.piles.waste = [];
       state.stockCycles++;
+      recordStockFeedback('stock-recycle', recycled);
       render();
+      flashPile(pilesEls.stock);
+      flashPile(pilesEls.waste);
       return;
     }
     pushHistory('draw');
     const drawN = state.drawOne? 1 : Math.min(3, state.piles.stock.length);
     for(let i=0;i<drawN;i++) state.piles.waste.push(state.piles.stock.pop());
+    recordStockFeedback('stock-draw', drawN);
     render();
+    flashPile(pilesEls.stock);
+    flashPile(pilesEls.waste);
   })
 
   // ===== Drag & Drop =====
@@ -888,12 +920,22 @@ function doHint(){
       won: isWon(),
       stuck: !isWon() && noMoves && stockEmpty && noWaste,
       status: el('#status').textContent,
-      lastAction
+      lastAction,
+      feedback: {
+        lastEvent: stockFeedback.lastEvent,
+        lastEventAge: stockFeedback.lastEventAge === null ? null : Math.round(stockFeedback.lastEventAge * 1000) / 1000,
+        activeCueCount: stockFeedback.activeCueCount,
+        drawCount: stockFeedback.drawCount,
+        recycleCount: stockFeedback.recycleCount,
+        lastCardsMoved: stockFeedback.lastCardsMoved,
+        lastStockAction: stockFeedback.lastStockAction
+      }
     });
   }
 
   window.render_game_to_text = renderGameToText;
-  window.advanceTime = function advanceTime(){
+  window.advanceTime = function advanceTime(ms = 0){
+    stepStockFeedback(ms);
     render();
     updateTimeHud();
     return renderGameToText();
