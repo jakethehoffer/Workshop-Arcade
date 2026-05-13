@@ -239,3 +239,12 @@ Original prompt: Do this for me
 - Verified with the develop-web-game client for Snake, Metro Dash, Slope Runner, and Solitaire plus direct Playwright coverage for all six targets, confirming feedback counters/state changes, no new console/page errors, and no gameplay regressions in the scripted flows.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: treat the zero-score contact sheet as a qualitative review tool and pick any remaining improvement by actual player feel rather than diagnostic debt; the automated event-frame closure backlog is cleared.
+
+## 2026-05-13 Codex pass 25
+
+- Baseline: `test-results/render-ranking/2026-05-13T15-23-19-108Z/`; all 40 surfaces scored zero, so this pass targeted qualitative mobile scanability in the four shared Fact Match games.
+- Polished `websites/fact-match-engine.js` mobile layout: tighter hero/subtitle, compact stat pills, clearer clue hierarchy, stronger Guess affordance, quieter secondary actions, and denser answer-bank rows/filter styling.
+- Added small shared answer-bank affordances and diagnostics for `visibleBankCount`, `filterText`, and `lastBankPick` while preserving datasets, scoring, local best score, event feedback, metadata, and static-site behavior.
+- Final capture: `test-results/render-ranking/2026-05-13T15-41-15-855Z/`; all 40 surfaces still score zero, and all Fact Match desktop/mobile surfaces have zero overflow and active interaction feedback.
+- Verified with the required develop-web-game client for Hero Fact Match, direct Playwright shared-engine smoke across all four Fact Match pages, catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: keep using the zero-score contact sheet for qualitative selection; likely targets are remaining player-feel refinements in mobile board/card density or first-screen clarity rather than diagnostics.

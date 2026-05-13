@@ -13,7 +13,9 @@
     cluesShown: 3,
     streak: 0,
     best: Number(localStorage.getItem(storageKey) || 0),
-    revealed: false
+    revealed: false,
+    visibleBankCount: 0,
+    lastBankPick: null
   };
   var feedback = {
     lastEvent: null,
@@ -78,39 +80,57 @@
     .bank-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
     .bank-head strong{font-size:18px}
     .bank{display:grid;gap:8px;max-height:500px;overflow:auto;padding-right:4px}
-    .bank button{text-align:left;background:#07111d;border-radius:12px;padding:9px 10px;font-weight:800}
+    .bank button{text-align:left;background:#07111d;border-radius:12px;padding:9px 10px;font-weight:800;transition:border-color .12s ease,background .12s ease,transform .12s ease,box-shadow .12s ease}
+    .bank button:active{transform:translateY(1px);background:#0e1d2f}
+    .bank button.bank-picked{border-color:rgba(80,240,200,.75);box-shadow:0 0 0 2px rgba(80,240,200,.14),0 0 18px rgba(80,240,200,.12)}
     .bank small{display:block;color:var(--muted);font-weight:600;margin-top:4px}
     @media (max-width:820px){
-      .shell{padding:10px;gap:10px;align-content:start}
-      .hero{grid-template-columns:1fr}
-      .eyebrow{font-size:10px;letter-spacing:.18em}
-      h1{font-size:clamp(28px,8.8vw,38px);line-height:1.02}
-      .sub{font-size:14px;line-height:1.35;margin-top:5px}
+      .shell{padding:9px;gap:8px;align-content:start}
+      .hero{grid-template-columns:1fr;gap:4px}
+      .eyebrow{font-size:9px;letter-spacing:.16em}
+      h1{font-size:clamp(25px,7.6vw,34px);line-height:1.02;margin-top:2px}
+      .sub{font-size:13px;line-height:1.28;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
       .round-card{display:none}
-      .board{grid-template-columns:1fr}
-      .panel{padding:12px;border-radius:15px}
+      .board{grid-template-columns:1fr;gap:9px}
+      .panel{padding:10px;border-radius:14px}
       .play-panel{min-height:auto}
-      .clues{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
-      .clue{min-height:auto;padding:9px;border-radius:12px;font-size:14px;line-height:1.24}
-      .clue span{font-size:10px;margin-bottom:5px}
-      .guess{grid-template-columns:minmax(0,1fr) 86px;gap:8px;margin-top:8px}
-      input{padding:10px 11px;border-radius:12px}
-      button{padding:10px 11px;border-radius:12px}
-      .actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-      .bank{max-height:260px}
-      .bank button{padding:9px 10px}
-      .stats{grid-template-columns:repeat(3,1fr)}
-      .pill{padding:8px}
-      .pill strong{font-size:18px}
+      .stats{grid-template-columns:repeat(3,1fr);gap:6px}
+      .pill{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:10px;font-size:11px}
+      .pill strong{font-size:17px;margin:0}
+      .clues{grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}
+      .clue{min-height:auto;padding:8px;border-radius:11px;font-size:13px;line-height:1.2}
+      .clue:first-child{border-color:rgba(80,240,200,.34);font-size:14px}
+      .clue span{font-size:9px;margin-bottom:4px;letter-spacing:.1em}
+      .guess{grid-template-columns:minmax(0,1fr) 98px;gap:8px;margin-top:7px}
+      #guessBtn{min-height:44px;font-size:15px;box-shadow:0 8px 18px rgba(38,203,182,.16)}
+      input{padding:10px;border-radius:11px}
+      button{padding:9px 10px;border-radius:11px}
+      .actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+      .actions button{font-size:12px;padding:7px 6px;background:rgba(9,19,33,.76);color:#9fb8cb;border-color:rgba(80,240,200,.14)}
+      .result{min-height:22px;margin-top:7px;font-size:13px}
+      .bank-panel{padding:9px 10px}
+      .bank-head{margin-bottom:7px}
+      .bank-head strong{font-size:16px}
+      .bank-head small{font-size:12px;color:var(--accent)}
+      #filter{width:100%;margin-bottom:8px;border-color:rgba(80,240,200,.24);background:linear-gradient(180deg,#071321,#050b13)}
+      .bank{max-height:min(34vh,250px);gap:6px;padding-right:2px}
+      .bank button{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;padding:7px 8px;border-radius:10px;font-size:13px}
+      .bank small{margin-top:1px;font-size:11px;line-height:1.15}
     }
     @media (max-width:420px){
-      h1{font-size:clamp(28px,9vw,36px)}
-      .panel{padding:12px}
-      .guess{grid-template-columns:minmax(0,1fr) 78px}
+      h1{font-size:clamp(24px,8.2vw,32px)}
+      .sub{font-size:12px;line-height:1.24}
+      .panel{padding:9px}
+      .guess{grid-template-columns:minmax(0,1fr) 92px}
       #guess{font-size:14px}
       .actions{grid-template-columns:repeat(3,minmax(0,1fr))}
-      .actions button{font-size:12px;padding:9px 7px}
-      .stats{gap:7px}
+      .actions button{font-size:11px;padding:7px 5px}
+      .stats{gap:5px}
+      .pill{padding:6px 7px;font-size:10px}
+      .pill strong{font-size:16px}
+      .clues{gap:6px}
+      .clue{padding:7px}
+      .bank{max-height:min(32vh,230px)}
     }
   `;
   document.head.appendChild(style);
@@ -147,7 +167,7 @@
           </div>
           <div class="result" id="result" aria-live="polite"></div>
         </div>
-        <aside class="panel">
+        <aside class="panel bank-panel">
           <div class="bank-head">
             <strong>Answer Bank</strong>
             <small id="bankCount"></small>
@@ -192,6 +212,7 @@
     state.cluesShown = Math.min(3, config.fields.length);
     state.revealed = false;
     state.round = (state.round || 0) + 1;
+    state.lastBankPick = null;
     els.guess.value = "";
     els.result.textContent = "";
     if (els.caseNumber) els.caseNumber.textContent = String(state.round).padStart(2, "0");
@@ -219,13 +240,22 @@
     var items = config.items.filter(function (item) {
       return !filter || normalize(item.name).includes(filter) || normalize(item.role || "").includes(filter);
     });
+    state.visibleBankCount = items.length;
     els.bankCount.textContent = items.length + "/" + config.items.length;
     els.bank.innerHTML = "";
     items.forEach(function (item) {
       var button = document.createElement("button");
       button.type = "button";
       button.innerHTML = escapeHtml(item.name) + "<small>" + escapeHtml(item.role || item.origin || "") + "</small>";
+      if (state.lastBankPick === item.name) {
+        button.classList.add("bank-picked");
+      }
       button.addEventListener("click", function () {
+        state.lastBankPick = item.name;
+        Array.prototype.forEach.call(els.bank.querySelectorAll(".bank-picked"), function (picked) {
+          picked.classList.remove("bank-picked");
+        });
+        button.classList.add("bank-picked");
         els.guess.value = item.name;
         submitGuess();
       });
@@ -325,6 +355,9 @@
       answer: state.answer ? state.answer.name : null,
       result: els.result.textContent,
       bankCount: config.items.length,
+      visibleBankCount: state.visibleBankCount,
+      filterText: els.filter.value,
+      lastBankPick: state.lastBankPick,
       feedback: {
         lastEvent: feedback.lastEvent,
         eventAge: feedbackAge() === null ? null : Number(feedbackAge().toFixed(2)),
