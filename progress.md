@@ -303,3 +303,12 @@ Original prompt: Do this for me
 - Verified with Claude Preview load of `/websites/chess.html` and direct DOM/style inspection of the new toggle, status card, and move-history heading.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; likely Checkers top bar/controls polish or Lexica's empty start state, depending on the next contact-sheet review.
+
+## 2026-05-14 Claude pass 31
+
+- Baseline: `test-results/render-ranking/2026-05-14T04-35-01-621Z/`; all 40 surfaces scored zero, but Lexica's desktop view still felt empty - the board and keyboard floated in vast horizontal whitespace with a plain bare-bones header and a buried bottom-left status line.
+- Polished `websites/wordle.html` visual cohesion: added an ambient teal radial backdrop, gave the page header a Workshop Arcade eyebrow with a tighter LEXICA title, wrapped the board and keyboard in a centered `.play-card` panel with a teal-tinted gradient border and a "Daily Word - 5 Letters - 6 Tries" status row, upgraded `.key` and `.pill` and `.btn` chrome with subtle gradients/shadows/hover states, and tuned the mobile breakpoint for the new card so the board, keyboard, and footer still fit a 390px viewport.
+- Preserved Lexica gameplay rules, strict dictionary validation, hard mode, sound toggle, hotkeys (1/2/3, Esc, Ctrl+Enter, Ctrl+Backspace), board states/animations, key/tile coloring logic, dialogs (help/start/over), saves, and existing render_game_to_text/advanceTime diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T04-45-25-341Z/`; 40 ranked surfaces, max score 0, with Lexica desktop and mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Checkers top bar/controls polish or any older game still missing eyebrow/card-frame chrome (Arena/Brick Breaker first screens).

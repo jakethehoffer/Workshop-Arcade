@@ -36,35 +36,37 @@
   --warn:#f87171;         /* red warning text */
   }
 
-  /* NEW: clearer default key look */
-.key{                     /* ADDED */
-  background:#111827;     /* darker than panel for separation */
+.key{
+  background:linear-gradient(180deg,#162033,#0e1626);
   border:1px solid #3b4a65;
   color:var(--ink);
+  box-shadow:0 4px 10px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  transition:transform 0.1s ease,border-color 0.15s ease,background 0.15s ease;
 }
+.key:hover{border-color:rgba(34,211,238,0.45)}
+.key:active{transform:translateY(1px)}
 
-/* NEW: make unused/absent keys readable */
-.key.k-a{                 /* ADDED */
+.key.k-a{
   background:var(--absent);
   border-color:var(--absent);
   color:var(--ink);
+  box-shadow:none;
 }
 
-/* Optional: buttons more legible */
-.btn{                     /* CHANGED */
-  background:#1f2937;
+.btn{
+  background:linear-gradient(180deg,#212c44,#16213a);
   border:1px solid #3b4a65;
   color:var(--ink);
+  font-weight:600;
 }
-.btn.primary{             /* CHANGED */
-  background:var(--accent);
-  border-color:var(--accent);
-  color:#06242a;          /* dark text on cyan for contrast */
+.btn.primary{
+  background:linear-gradient(180deg,#3de2f5,#22d3ee);
+  border-color:rgba(34,211,238,0.7);
+  color:#06242a;
 }
 
-/* Optional: pills more legible */
-.pill{                    /* CHANGED */
-  background:#111827;
+.pill{
+  background:linear-gradient(180deg,#162033,#0e1626);
   border:1px solid #3b4a65;
   color:var(--ink);
 }
@@ -72,14 +74,46 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
     font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
-  .wrap{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid var(--stroke);flex-wrap:wrap}
-  header h1{margin:0;font-size:20px;letter-spacing:.8px}
+  body{
+    background:
+      radial-gradient(900px 600px at 12% -6%,rgba(34,211,238,0.16),transparent 60%),
+      radial-gradient(700px 480px at 90% 10%,rgba(34,211,238,0.10),transparent 60%),
+      linear-gradient(180deg,var(--bg),#070d18 80%);
+  }
+  .wrap{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;position:relative;z-index:1}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 22px;border-bottom:1px solid rgba(34,211,238,0.16);flex-wrap:wrap;backdrop-filter:blur(2px)}
+  header h1{margin:0;font-size:22px;letter-spacing:0.16em;font-weight:800}
+  .brand{display:flex;flex-direction:column;gap:2px;line-height:1}
+  .brand .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(34,211,238,0.85);font-weight:700}
   .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .pill{background:#0f172a;border:1px solid var(--stroke);padding:6px 10px;border-radius:999px;color:var(--ink);font-size:12px}
   select,button,input[type=checkbox]{accent-color:var(--accent)}
   button{cursor:pointer}
-  main{display:grid;justify-items:center;align-content:center;padding:6px 10px;gap:10px}
+  main{display:grid;justify-items:center;align-content:center;padding:18px 14px;gap:14px}
+  .play-card{
+    width:min(100%,560px);
+    background:linear-gradient(180deg,rgba(20,32,52,0.75),rgba(10,18,32,0.92));
+    border:1px solid rgba(34,211,238,0.22);
+    border-radius:18px;
+    padding:18px 18px 16px;
+    box-shadow:0 22px 50px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.04);
+    display:grid;
+    gap:12px;
+    justify-items:center;
+  }
+  .play-status{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:rgba(34,211,238,0.85);
+    font-weight:700;
+  }
+  .play-status .play-row{color:var(--muted);letter-spacing:0.18em}
   .board{display:grid;grid-template-rows:repeat(6,1fr);gap:7px;width:min(100%,440px);aspect-ratio: 5 / 6}
   .row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .tile{border:2px solid var(--stroke);display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:clamp(22px,6vw,30px);text-transform:uppercase;background:var(--panel)}
@@ -119,11 +153,14 @@
   .sr{position:absolute;left:-10000px}
   @media (max-width: 480px){
     .wrap{gap:6px}
-    header{padding:9px 10px}
+    header{padding:10px 12px}
     header h1{font-size:18px}
+    .brand .eyebrow{font-size:9px;letter-spacing:0.28em}
     .controls{gap:6px}
     .pill{font-size:11px;padding:6px 8px}
-    main{padding:6px 6px;align-content:start}
+    main{padding:8px 6px;align-content:start}
+    .play-card{padding:12px 10px 10px;border-radius:14px;gap:10px}
+    .play-status{font-size:10px;letter-spacing:0.16em}
     .board{width:min(100%,330px);gap:5px}
     .keyboard{width:min(100%,370px);gap:5px;margin-bottom:6px}
     .row,.keys{gap:5px}
@@ -138,7 +175,10 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>LEXICA</h1>
+    <div class="brand">
+      <span class="eyebrow">Workshop Arcade</span>
+      <h1>LEXICA</h1>
+    </div>
     <div class="controls">
       <!-- Length + Strict controls removed; fixed 5-letter, strict always on -->
       <label class="pill" data-hotkey="1"><input id="hard" type="checkbox"> Hard</label>
@@ -148,11 +188,17 @@
   </header>
 
   <main>
-    <div id="board" class="board" aria-label="Guess grid" aria-live="polite"></div>
-    <div class="keyboard">
-      <div class="keys row1" id="row1"></div>
-      <div class="keys row2" id="row2"></div>
-      <div class="keys row3" id="row3"></div>
+    <div class="play-card">
+      <div class="play-status">
+        <span>Daily Word</span>
+        <span class="play-row">5 Letters &middot; 6 Tries</span>
+      </div>
+      <div id="board" class="board" aria-label="Guess grid" aria-live="polite"></div>
+      <div class="keyboard">
+        <div class="keys row1" id="row1"></div>
+        <div class="keys row2" id="row2"></div>
+        <div class="keys row3" id="row3"></div>
+      </div>
     </div>
   </main>
 
