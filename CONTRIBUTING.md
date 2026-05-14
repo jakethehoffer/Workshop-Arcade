@@ -36,3 +36,5 @@ Then run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate
 Use the catalog's `Improve` button to generate an AI-ready brief. Submitting it opens a pre-filled GitHub issue with the `workshop-request` label already attached, which surfaces it in the Improvement Queue on the catalog.
 
 The `Workshop Request Triage` workflow adds implementation labels and a checklist comment with deep links to the affected game file. It does not run AI code generation or require API keys.
+
+When you're ready to start work, run the `Workshop Draft PR` workflow manually (`Actions → Workshop Draft PR → Run workflow`) with the issue number. It scaffolds a `codex/workshop-<N>` branch from main, opens a draft PR titled `[Workshop #N] <title>` that closes the issue, and comments the PR link back on the issue. The PR body references the triage checklist and the validation suite the implementer must run before flipping to ready-for-review. Re-running the workflow against the same issue is a no-op once the branch and PR exist.

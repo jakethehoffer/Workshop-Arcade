@@ -523,3 +523,24 @@ Original prompt: Do this for me
   - Expected Checks now lists the full validation suite + requires every captured surface in `capture:games` to score 0.
 - Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, `git diff --check` clean (only CRLF normalization warnings on touched docs).
 - Suggested next pass: with brief + triage + human docs now aligned, the natural follow-ups are either smaller polish (Recently empty state inside queue chrome, `<link rel="alternate">` Atom discovery in `<head>`) or moving toward issue-to-PR automation as the next ambitious feature.
+
+## 2026-05-14 Claude pass 48
+
+- Took the long-deferred move that multiple past handoffs suggested: issue-to-PR automation. With the queue + triage + brief + human docs all aligned (passes 40, 42, 44, 47), the catalog loop was the only tier ending with manual work — a user could open an issue and get a triage comment, then had to manually create the branch and open the PR. The new `Workshop Draft PR` workflow closes that loop without needing AI code-gen.
+- Added `.github/workflows/workshop-draft-pr.yml`:
+  - `workflow_dispatch` only with required `issue_number` input.
+  - Permissions: `contents: write` (branch + commit), `pull-requests: write` (PR), `issues: write` (link comment).
+  - Validates the input is a positive integer, the issue exists and is open (not a PR or closed), and is labeled `workshop-request`. Each failure path calls `core.setFailed()` with a useful message.
+  - Computes branch `codex/workshop-<N>`. Checks for existing branch and existing PR; if both exist, exits as a no-op (idempotent re-run is safe).
+  - Otherwise: fetches main's tree SHA via `git.getCommit`, creates the branch ref off main, creates an empty placeholder commit (using the same tree as main), updates the new ref to that commit, opens a draft PR titled `[Workshop #N] <title>` with `Closes #N` plus pointers to the triage checklist and the validation suite, comments back on the issue with the PR link (marker-deduped so re-runs update the existing comment).
+- Validated the embedded github-script JS locally against 7 mocked scenarios:
+  - Happy path (open issue + label, no existing branch): creates ref + commit + PR + issue comment exactly once each.
+  - Closed issue: fails loudly with "Re-open it before scaffolding a draft PR."
+  - Missing label: fails with "not labeled workshop-request" hint that triage should attach it.
+  - Already a PR (not issue): fails with "#N is a pull request, not an issue."
+  - Issue not found (404): fails with "Issue #N not found: Not Found."
+  - Branch + PR already exist: zero side effects, exits cleanly.
+  - No input: fails with "issue_number must be a positive integer."
+- Updated `CONTRIBUTING.md` Workshop Requests section to describe the new workflow: how to run it, what it scaffolds, and that re-running against the same issue is a no-op.
+- Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games.
+- Suggested next pass: with the catalog + workshop loop now fully automated (open issue → labels + triage comment → on-demand draft PR), future moves can focus on the smaller polish items (Recently empty state inside queue chrome, `<link rel="alternate">` Atom discovery) or actually exercise the new workflow end-to-end by creating a test workshop-request issue and running the draft-PR workflow against it.
