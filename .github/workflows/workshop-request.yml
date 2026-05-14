@@ -2,7 +2,10 @@ name: Workshop Request Triage
 
 on:
   issues:
-    types: [opened, edited, labeled, reopened]
+    # NOTE: 'labeled' is intentionally excluded — when this workflow itself
+    # calls addLabels, it fires the labeled event and races with the original
+    # opened event, producing duplicate triage comments.
+    types: [opened, edited, reopened]
   workflow_dispatch:
     inputs:
       issue_number:
