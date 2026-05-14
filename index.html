@@ -100,7 +100,9 @@
       transition:border-color 0.18s ease,transform 0.18s ease,box-shadow 0.18s ease}
     .card:hover{border-color:rgba(94,234,212,0.38);transform:translateY(-2px);
       box-shadow:0 22px 40px rgba(0,0,0,0.4), 0 0 18px rgba(94,234,212,0.10), inset 0 1px 0 rgba(255,255,255,0.06)}
-    .thumb{aspect-ratio: 16/9; background:linear-gradient(180deg,#0e1a2b,#0b1220);border-bottom:1px solid rgba(94,234,212,0.10)}
+    .thumb{aspect-ratio: 16/9; width:100%;display:block;padding:0;border:0;cursor:pointer;appearance:none;
+      background:linear-gradient(180deg,#0e1a2b,#0b1220);border-bottom:1px solid rgba(94,234,212,0.10);
+      overflow:hidden;text-align:inherit}
     .thumb img{width:100%;height:100%;object-fit:cover}
     .meta{padding:12px 12px 14px;display:grid;gap:8px}
     .title{font-weight:800;font-size:16px;letter-spacing:.2px}
@@ -154,17 +156,18 @@
     .queue-head h2{margin:0;font-size:20px;letter-spacing:0.04em}
     .queue-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .queue-list{display:grid;gap:8px}
-    .queue-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+    .queue-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;width:100%;
       background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));
       border:1px solid rgba(94,234,212,0.16);border-radius:12px;padding:12px;
       box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
-      transition:border-color 0.15s ease}
+      transition:border-color 0.15s ease;color:inherit;font:inherit;text-align:left}
     .queue-row:hover{border-color:rgba(94,234,212,0.36)}
     .queue-row strong{display:block;font-size:14px;line-height:1.3}
     .queue-row span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
     .queue-row .queue-action{align-self:center;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
       font-weight:700;color:rgba(94,234,212,0.85);margin:0;white-space:nowrap}
     .queue-row.queue-empty{cursor:default;background:transparent;border-style:dashed;border-color:rgba(94,234,212,0.18);box-shadow:none}
+    .queue-row.queue-empty.queue-actionable{cursor:pointer}
     .queue-row.queue-empty:hover{border-color:rgba(94,234,212,0.18)}
     .queue-state{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(94,234,212,0.78);min-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
 
@@ -232,7 +235,8 @@
 
     /* Focus outlines for accessibility */
     .chip:focus-visible, .btn:focus-visible, .play:focus-visible, .improve:focus-visible,
-    .icon-btn:focus-visible, .mini-btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+    .icon-btn:focus-visible, .mini-btn:focus-visible, .thumb:focus-visible,
+    .queue-row:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
   </style>
 </head>
 <body>
@@ -247,7 +251,7 @@
         </div>
       </a>
       <div class="search" role="search">
-        <input id="q" type="search" placeholder="Search games… (Ctrl+/)" autocomplete="off" />
+        <input id="q" type="search" placeholder="Search games… (Ctrl+/)" autocomplete="off" aria-label="Search games" />
         <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-3.8-3.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
       </div>
       <a class="btn primary" href="#" id="submitGameBtn">Workshop</a>
@@ -272,7 +276,7 @@
     <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
     <template id="cardT">
       <article class="card">
-        <div class="thumb"><img alt="" loading="lazy" /></div>
+        <button class="thumb" type="button"><img alt="" loading="lazy" /></button>
         <div class="meta">
           <div class="title"></div>
           <div class="subtitle"></div>
@@ -303,9 +307,9 @@
     </section>
   </main>
 
-  <div class="modal" id="workshopModal" hidden>
+  <div class="modal" id="workshopModal" role="dialog" aria-modal="true" aria-labelledby="workshopTitle" tabindex="-1" hidden>
     <div class="modal-backdrop" data-close-workshop></div>
-    <section class="workshop-card" role="dialog" aria-modal="true" aria-labelledby="workshopTitle" tabindex="-1">
+    <section class="workshop-card">
       <div class="workshop-head">
         <div class="workshop-heading">
           <span class="eyebrow">Workshop Arcade</span>
@@ -362,7 +366,7 @@
     </section>
   </div>
 
-  <section class="player-modal" id="playerModal" aria-labelledby="playerTitle" hidden>
+  <section class="player-modal" id="playerModal" role="dialog" aria-modal="true" aria-labelledby="playerTitle" tabindex="-1" hidden>
     <div class="player-bar">
       <div class="player-title" id="playerTitle">Game</div>
       <div class="player-actions">
@@ -374,6 +378,7 @@
       class="player-frame"
       id="playerFrame"
       title="Game player"
+      tabindex="-1"
       sandbox="allow-scripts allow-forms allow-pointer-lock"
       referrerpolicy="no-referrer"
       loading="eager"></iframe>
@@ -433,6 +438,9 @@ const state = {
 };
 
 const els = {
+  header: document.querySelector('header'),
+  main: document.querySelector('main'),
+  footer: document.querySelector('footer'),
   grid: document.getElementById('grid'),
   cardT: document.getElementById('cardT'),
   q: document.getElementById('q'),
@@ -468,6 +476,99 @@ const els = {
 };
 
 loadDrafts();
+
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'iframe:not([tabindex="-1"])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',');
+
+const modalFocus = {
+  active: null,
+  trigger: null
+};
+
+function isVisibleFocusable(el){
+  return !!el && !el.hasAttribute('disabled') && el.getClientRects().length > 0;
+}
+
+function focusableWithin(root){
+  return [...root.querySelectorAll(FOCUSABLE_SELECTOR)].filter(isVisibleFocusable);
+}
+
+function setPageChromeHidden(hidden){
+  for(const el of [els.header, els.main, els.footer]){
+    if(!el) continue;
+    if(hidden) el.setAttribute('aria-hidden', 'true');
+    else el.removeAttribute('aria-hidden');
+  }
+}
+
+function focusModalTarget(modal, preferred){
+  const focusables = focusableWithin(modal);
+  const target = isVisibleFocusable(preferred) ? preferred : (focusables[0] || modal);
+  target.focus({ preventScroll: true });
+}
+
+function showManagedModal(modal, trigger, preferredFocus){
+  modalFocus.active = modal;
+  modalFocus.trigger = trigger && typeof trigger.focus === 'function' ? trigger : document.activeElement;
+  setPageChromeHidden(true);
+  modal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => focusModalTarget(modal, preferredFocus), 0);
+}
+
+function hideManagedModal(modal, { restoreFocus = true } = {}){
+  modal.hidden = true;
+  if(modalFocus.active === modal) modalFocus.active = null;
+  const restoreTarget = modalFocus.trigger;
+  modalFocus.trigger = null;
+  if(els.playerModal.hidden && els.workshopModal.hidden){
+    setPageChromeHidden(false);
+    document.body.style.overflow = '';
+  }
+  if(restoreFocus && restoreTarget && restoreTarget.isConnected && isVisibleFocusable(restoreTarget)){
+    setTimeout(() => restoreTarget.focus({ preventScroll: true }), 0);
+  }
+}
+
+function trapModalFocus(e){
+  const modal = modalFocus.active;
+  if(!modal || modal.hidden) return false;
+
+  if(e.key === 'Escape'){
+    e.preventDefault();
+    if(modal === els.playerModal) closePlayer();
+    else if(modal === els.workshopModal) closeWorkshop();
+    return true;
+  }
+
+  if(e.key !== 'Tab') return false;
+  const focusables = focusableWithin(modal);
+  if(!focusables.length){
+    e.preventDefault();
+    modal.focus({ preventScroll: true });
+    return true;
+  }
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if(e.shiftKey && document.activeElement === first){
+    e.preventDefault();
+    last.focus({ preventScroll: true });
+  } else if(!e.shiftKey && document.activeElement === last){
+    e.preventDefault();
+    first.focus({ preventScroll: true });
+  } else if(!modal.contains(document.activeElement)){
+    e.preventDefault();
+    first.focus({ preventScroll: true });
+  }
+  return true;
+}
 
 // Load games manifest (backend can generate this later)
 (async function load(){
@@ -518,6 +619,7 @@ function buildFilters(){
     chip.type = 'button';
     chip.textContent = name;
     chip.setAttribute('data-active', name === state.category);
+    chip.setAttribute('aria-pressed', name === state.category ? 'true' : 'false');
     chip.addEventListener('click', ()=>{ state.category = name; update(); });
     els.filters.appendChild(chip);
   }
@@ -525,13 +627,15 @@ function buildFilters(){
 
 // Search helpers
 els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim().toLowerCase(); update(); });
-window.addEventListener('keydown', (e)=>{ if((e.ctrlKey||e.metaKey) && e.key === '/'){ els.q.focus(); e.preventDefault(); }});
+window.addEventListener('keydown', (e)=>{ if(modalFocus.active) return; if((e.ctrlKey||e.metaKey) && e.key === '/'){ els.q.focus(); e.preventDefault(); }});
 els.sort.addEventListener('change', ()=>{ state.sort = els.sort.value; update(); });
 
 function update(){
   // active chip UI
   for(const chip of els.filters.children){
-    chip.setAttribute('data-active', chip.textContent === state.category);
+    const active = chip.textContent === state.category;
+    chip.setAttribute('data-active', active);
+    chip.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
 
   const q = state.query;
@@ -567,9 +671,15 @@ function render(){
       span.className = 'tag'; span.textContent = t; tags.appendChild(span);
     }
 
-    card.querySelector('.play').addEventListener('click', ()=> openPlayer(g));
-    card.querySelector('.improve').addEventListener('click', ()=> openWorkshop(g.id));
-    card.querySelector('.thumb').addEventListener('click', ()=> openPlayer(g));
+    const playBtn = card.querySelector('.play');
+    const improveBtn = card.querySelector('.improve');
+    const thumbBtn = card.querySelector('.thumb');
+    playBtn.setAttribute('aria-label', `Play ${g.title}`);
+    improveBtn.setAttribute('aria-label', `Improve ${g.title}`);
+    thumbBtn.setAttribute('aria-label', `Play ${g.title}`);
+    playBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
+    improveBtn.addEventListener('click', e => openWorkshop(g.id, e.currentTarget));
+    thumbBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
 
     frag.appendChild(card);
   }
@@ -658,8 +768,10 @@ function renderQueueIssues(issues){
 function renderQueueEmpty(){
   els.queueList.innerHTML = '';
   els.queueStatus.textContent = 'Queue is clear';
-  const row = document.createElement('div');
-  row.className = 'queue-row queue-empty';
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'queue-row queue-empty queue-actionable';
+  row.setAttribute('aria-label', 'Create a new workshop request');
   const meta = document.createElement('div');
   const title = document.createElement('strong');
   title.textContent = 'No open workshop requests yet';
@@ -673,7 +785,6 @@ function renderQueueEmpty(){
   row.addEventListener('click', () => {
     if(els.newQueueRequestBtn) els.newQueueRequestBtn.click();
   });
-  row.style.cursor = 'pointer';
   els.queueList.appendChild(row);
 }
 
@@ -726,23 +837,21 @@ function placeholderCover(title){
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='${c1}'/%3E%3Cstop offset='1' stop-color='${c2}'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='640' height='360' fill='url(%23g)'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial' font-size='36' font-weight='800' fill='white' opacity='.9'%3E${text}%3C/text%3E%3C/svg%3E`;
 }
 
-function openPlayer(g){
+function openPlayer(g, trigger = document.activeElement){
   if(!g || !isSafeGameUrl(g.url)) return;
+  if(modalFocus.active === els.workshopModal) closeWorkshop({ restoreFocus: false });
   try { history.replaceState(null, '', `#play=${encodeURIComponent(g.slug)}`); } catch {}
   els.playerTitle.textContent = g.title;
   els.playerExternalLink.href = g.url;
   els.playerFrame.src = g.url;
   els.playerFrame.title = `${g.title} player`;
-  els.playerModal.hidden = false;
-  document.body.style.overflow = 'hidden';
-  setTimeout(()=> els.playerClose.focus(), 0);
+  showManagedModal(els.playerModal, trigger, els.playerClose);
 }
 
-function closePlayer(){
-  els.playerModal.hidden = true;
+function closePlayer(options = {}){
+  hideManagedModal(els.playerModal, options);
   els.playerFrame.removeAttribute('src');
   els.playerFrame.title = 'Game player';
-  document.body.style.overflow = els.workshopModal.hidden ? '' : 'hidden';
   if(location.hash.startsWith('#play=')) {
     try { history.replaceState(null, '', location.pathname + location.search); } catch {}
   }
@@ -779,21 +888,20 @@ function selectedWorkshopGame(){
   return state.games.find(g => g.id === els.workshopGame.value) || null;
 }
 
-function openWorkshop(gameId = ''){
+function openWorkshop(gameId = '', trigger = document.activeElement){
+  if(modalFocus.active === els.playerModal) closePlayer({ restoreFocus: false });
   if(!els.workshopGame.options.length) populateWorkshopGames();
   if(gameId) els.workshopGame.value = gameId;
   if(!els.workshopGame.value && state.games[0]) els.workshopGame.value = state.games[0].id;
   if(!els.workshopGame.value) els.workshopGame.value = '__new__';
   updateWorkshopMode();
   if(!els.briefOutput.value) generateBrief();
-  els.workshopModal.hidden = false;
-  document.body.style.overflow = 'hidden';
-  setTimeout(()=> els.workshopCard.focus(), 0);
+  const initialFocus = els.workshopGame.value === '__new__' ? els.newGameTitle : els.workshopGame;
+  showManagedModal(els.workshopModal, trigger, initialFocus);
 }
 
-function closeWorkshop(){
-  els.workshopModal.hidden = true;
-  document.body.style.overflow = '';
+function closeWorkshop(options = {}){
+  hideManagedModal(els.workshopModal, options);
 }
 
 function updateWorkshopMode(){
@@ -990,8 +1098,8 @@ function setStatus(message){
   setStatus.timer = setTimeout(()=>{ els.workshopStatus.textContent = ''; }, 3000);
 }
 
-els.submitGameBtn.addEventListener('click', e => { e.preventDefault(); openWorkshop(); });
-els.workshopClose.addEventListener('click', closeWorkshop);
+els.submitGameBtn.addEventListener('click', e => { e.preventDefault(); openWorkshop('', e.currentTarget); });
+els.workshopClose.addEventListener('click', () => closeWorkshop());
 els.workshopModal.addEventListener('click', e => {
   if(e.target && e.target.hasAttribute('data-close-workshop')) closeWorkshop();
 });
@@ -1001,19 +1109,17 @@ els.saveDraftBtn.addEventListener('click', saveDraft);
 els.copyBriefBtn.addEventListener('click', copyBrief);
 els.downloadBriefBtn.addEventListener('click', downloadBrief);
 els.openIssueBtn.addEventListener('click', openGitHubIssue);
-els.newQueueRequestBtn.addEventListener('click', () => openWorkshop('__new__'));
+els.newQueueRequestBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
 els.openSelectedGameBtn.addEventListener('click', () => {
   const game = selectedWorkshopGame();
-  if(game) openPlayer(game);
+  if(game) openPlayer(game, els.submitGameBtn);
 });
-els.playerClose.addEventListener('click', closePlayer);
+els.playerClose.addEventListener('click', () => closePlayer());
 els.playerFrame.addEventListener('load', () => {
-  if(!els.playerModal.hidden) els.playerClose.focus();
+  if(!els.playerModal.hidden && modalFocus.active === els.playerModal) els.playerClose.focus({ preventScroll: true });
 });
 document.addEventListener('keydown', e => {
-  if(e.key !== 'Escape') return;
-  if(!els.playerModal.hidden) closePlayer();
-  else if(!els.workshopModal.hidden) closeWorkshop();
+  if(trapModalFocus(e)) return;
 });
 renderDrafts();
 </script>
