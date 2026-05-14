@@ -380,3 +380,13 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T06-06-14-858Z/`; 40 ranked surfaces, max score 0, with Arena desktop/mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; the remaining catalog is now largely cohesive - any further passes should focus on subjective player-feel details rather than chrome.
+
+## 2026-05-14 Claude pass 39
+
+- Stepped back from the per-game polish wave (passes 28-38) and noticed the catalog page itself (`index.html`) had not been touched since the 2026-05-03 hardening pass while every individual game received the new Workshop Arcade brand mark + teal/cyan chrome treatment. The catalog was the visual outlier and the first impression users get.
+- Polished `index.html` to match the per-game design language: ambient teal/indigo radial backdrop on the body, eyebrow ("Play & Workshop") + bold "Workshop Arcade" name brand mark with conic-glow dot, refreshed search input/select/chip chrome with teal-tinted gradient borders and active-state glow, restyled cards with teal-tinted gradient borders and lift-on-hover, refreshed Play (gradient teal CTA) and Improve (uppercase chip) buttons, uppercase teal eyebrow on the result count and tag pills, Improvement Queue header rebuilt as eyebrow + title with refreshed row chrome, Workshop modal head rebuilt as eyebrow + title with refreshed card border glow, gradient icon-btn close, and teal-bordered player bar.
+- Preserved catalog functionality: 20-game manifest load, search, filter chips, sort, fallback catalog, Workshop modal flow (draft save/load, brief generation, copy/download, GitHub issue URL), Improvement Queue link, player iframe sandbox.
+- Added a `<=560px` breakpoint that hides the brand eyebrow and tightens the name so the header stays compact on phones.
+- Final capture: `test-results/render-ranking/2026-05-14T06-22-21-972Z/`; all 40 game surfaces still scored 0.
+- Local checks passed: catalog validation, full 20-game smoke suite, `git diff --check` clean, DOM inspection at desktop 1265px and mobile 375px confirmed zero horizontal overflow and the new chrome rendered as designed.
+- Suggested next pass: with the catalog and individual games now visually coherent, future passes can focus on the Improvement Queue interaction (currently a stub that links to GitHub issues) or on issue-to-PR automation that was deferred earlier in the project history.
