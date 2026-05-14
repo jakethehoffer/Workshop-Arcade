@@ -312,3 +312,13 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T04-45-25-341Z/`; 40 ranked surfaces, max score 0, with Lexica desktop and mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Checkers top bar/controls polish or any older game still missing eyebrow/card-frame chrome (Arena/Brick Breaker first screens).
+
+## 2026-05-14 Claude pass 32
+
+- Baseline: `test-results/render-ranking/2026-05-14T04-45-25-341Z/`; all 40 surfaces scored zero, but Checkers' top bar still mixed a dated "Checkers — Singleplayer & Two-Player" emoji title with a flat single-row controls strip that had no visual hierarchy.
+- Polished `websites/checkers.html` header cohesion: added an ambient teal/indigo radial backdrop, replaced the title row with a Workshop Arcade eyebrow + CHECKERS title plus a right-aligned Singleplayer/Two-Player segmented toggle with a teal active state, split the action buttons into grouped panels (New Game/Undo/Flip and Sound/Help), gave the AI Strength label a small uppercase treatment, and upgraded `.btn`/`.seg`/`.select` chrome with gradients and teal hover/pressed accents.
+- Tuned the mobile breakpoint so the new grouped controls collapse cleanly: tighter brand, smaller title, condensed control groups, and a compact AI Strength row.
+- Preserved Checkers gameplay rules, AI difficulty selection, sound toggle, undo/restart/flip/help wiring, modal dialogs, mandatory-capture cues, animations, saves, and all existing diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T04-53-35-976Z/`; 40 ranked surfaces, max score 0, with Checkers desktop/mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Brick Breaker top bar HUD or older games still missing eyebrow/card-frame chrome.
