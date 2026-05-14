@@ -83,7 +83,9 @@ function observePage(page, baseUrl, label) {
   page.on("console", (message) => {
     if (message.type() !== "error") return;
     const text = message.text();
+    const locationUrl = message.location()?.url || "";
     if (/favicon\.ico/i.test(text)) return;
+    if (/api\.github\.com/i.test(text) || /api\.github\.com/i.test(locationUrl)) return;
     addFailure(label, `console error: ${text}`);
   });
   page.on("pageerror", (error) => {

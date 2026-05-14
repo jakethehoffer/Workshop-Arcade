@@ -160,9 +160,13 @@
       box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
       transition:border-color 0.15s ease}
     .queue-row:hover{border-color:rgba(94,234,212,0.36)}
-    .queue-row strong{display:block;font-size:14px;line-height:1.25}
+    .queue-row strong{display:block;font-size:14px;line-height:1.3}
     .queue-row span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
-    .queue-state{font-size:12px;color:var(--muted);min-height:18px}
+    .queue-row .queue-action{align-self:center;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+      font-weight:700;color:rgba(94,234,212,0.85);margin:0;white-space:nowrap}
+    .queue-row.queue-empty{cursor:default;background:transparent;border-style:dashed;border-color:rgba(94,234,212,0.18);box-shadow:none}
+    .queue-row.queue-empty:hover{border-color:rgba(94,234,212,0.18)}
+    .queue-state{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(94,234,212,0.78);min-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
 
     /* Workshop modal */
     [hidden]{display:none!important}
@@ -480,7 +484,7 @@ loadDrafts();
   buildFilters();
   populateWorkshopGames();
   update();
-  renderIssueQueueSummary();
+  loadIssueQueue();
   // If the URL has #play=slug, auto-open in the sandboxed player.
   syncHash();
 })();
@@ -577,27 +581,139 @@ function render(){
   els.empty.hidden = n !== 0;
 }
 
-function renderIssueQueueSummary(){
-  els.queueStatus.textContent = 'Tracked in GitHub issues';
-  els.queueList.innerHTML = '';
+const ISSUE_QUEUE_API = 'https://api.github.com/repos/jakethehoffer/Workshop-Arcade/issues?state=open&labels=workshop-request&per_page=10';
+const ISSUE_QUEUE_HTML = 'https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request';
+const ISSUE_QUEUE_CACHE_KEY = 'workshop-arcade:issueQueue:v1';
+const ISSUE_QUEUE_CACHE_TTL_MS = 5 * 60 * 1000;
+const ISSUE_QUEUE_MAX_ROWS = 6;
 
+function relativeTime(iso){
+  const t = new Date(iso).getTime();
+  if(!Number.isFinite(t)) return '';
+  const diff = Math.max(0, Date.now() - t);
+  const min = 60 * 1000, hour = 60 * min, day = 24 * hour, week = 7 * day;
+  if(diff < hour) return `${Math.max(1, Math.round(diff/min))}m ago`;
+  if(diff < day) return `${Math.round(diff/hour)}h ago`;
+  if(diff < week) return `${Math.round(diff/day)}d ago`;
+  if(diff < 4*week) return `${Math.round(diff/week)}w ago`;
+  const months = Math.round(diff / (30*day));
+  if(months < 12) return `${months}mo ago`;
+  return `${Math.round(months/12)}y ago`;
+}
+
+function readIssueQueueCache(){
+  try {
+    const raw = sessionStorage.getItem(ISSUE_QUEUE_CACHE_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed.fetchedAt !== 'number' || !Array.isArray(parsed.issues)) return null;
+    if(Date.now() - parsed.fetchedAt > ISSUE_QUEUE_CACHE_TTL_MS) return null;
+    return parsed.issues;
+  } catch { return null; }
+}
+
+function writeIssueQueueCache(issues){
+  try {
+    sessionStorage.setItem(ISSUE_QUEUE_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), issues }));
+  } catch { /* storage unavailable */ }
+}
+
+function makeQueueRow(href, titleText, subtitleText, actionText){
   const row = document.createElement('a');
   row.className = 'queue-row';
-  row.href = 'https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request';
+  row.href = href;
   row.target = '_blank';
   row.rel = 'noopener';
-
   const meta = document.createElement('div');
   const title = document.createElement('strong');
-  title.textContent = 'Open workshop-request issues';
-  const detail = document.createElement('span');
-  detail.textContent = 'Review, prioritize, and close game improvement requests in GitHub.';
-  meta.append(title, detail);
-
+  title.textContent = titleText;
+  meta.appendChild(title);
+  if(subtitleText){
+    const sub = document.createElement('span');
+    sub.textContent = subtitleText;
+    meta.appendChild(sub);
+  }
   const action = document.createElement('span');
-  action.textContent = 'View';
+  action.className = 'queue-action';
+  action.textContent = actionText;
   row.append(meta, action);
+  return row;
+}
+
+function renderQueueIssues(issues){
+  els.queueList.innerHTML = '';
+  const visible = issues.slice(0, ISSUE_QUEUE_MAX_ROWS);
+  for(const issue of visible){
+    const subtitle = `Opened ${relativeTime(issue.created_at)} · #${issue.number}`;
+    els.queueList.appendChild(makeQueueRow(issue.html_url, issue.title, subtitle, 'View →'));
+  }
+  if(issues.length > ISSUE_QUEUE_MAX_ROWS){
+    const remaining = issues.length - ISSUE_QUEUE_MAX_ROWS;
+    els.queueList.appendChild(makeQueueRow(ISSUE_QUEUE_HTML, `+${remaining} more open request${remaining===1?'':'s'}`, 'See the full queue on GitHub.', 'All →'));
+  }
+  const n = issues.length;
+  els.queueStatus.textContent = `${n} open request${n===1?'':'s'}`;
+}
+
+function renderQueueEmpty(){
+  els.queueList.innerHTML = '';
+  els.queueStatus.textContent = 'Queue is clear';
+  const row = document.createElement('div');
+  row.className = 'queue-row queue-empty';
+  const meta = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = 'No open workshop requests yet';
+  const sub = document.createElement('span');
+  sub.textContent = 'Be the first — describe an upgrade and open a request.';
+  meta.append(title, sub);
+  const action = document.createElement('span');
+  action.className = 'queue-action';
+  action.textContent = 'New →';
+  row.append(meta, action);
+  row.addEventListener('click', () => {
+    if(els.newQueueRequestBtn) els.newQueueRequestBtn.click();
+  });
+  row.style.cursor = 'pointer';
   els.queueList.appendChild(row);
+}
+
+function renderQueueFallback(){
+  els.queueList.innerHTML = '';
+  els.queueStatus.textContent = 'Tracked in GitHub issues';
+  els.queueList.appendChild(makeQueueRow(
+    ISSUE_QUEUE_HTML,
+    'Open workshop-request issues',
+    'Review and prioritize game improvement requests on GitHub.',
+    'View →'
+  ));
+}
+
+async function fetchIssueQueue(){
+  const res = await fetch(ISSUE_QUEUE_API, { headers: { 'Accept': 'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if(!Array.isArray(data)) throw new Error('Unexpected response');
+  return data
+    .filter(it => !it.pull_request)
+    .map(it => ({ number: it.number, title: it.title, html_url: it.html_url, created_at: it.created_at }));
+}
+
+async function loadIssueQueue(){
+  const cached = readIssueQueueCache();
+  if(cached){
+    if(cached.length) renderQueueIssues(cached); else renderQueueEmpty();
+    return;
+  }
+  els.queueStatus.textContent = 'Loading queue…';
+  els.queueList.innerHTML = '';
+  try {
+    const issues = await fetchIssueQueue();
+    writeIssueQueueCache(issues);
+    if(issues.length) renderQueueIssues(issues); else renderQueueEmpty();
+  } catch (err) {
+    console.warn('Issue queue fetch failed:', err);
+    renderQueueFallback();
+  }
 }
 
 function placeholderCover(title){
