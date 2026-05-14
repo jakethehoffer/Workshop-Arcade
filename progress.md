@@ -282,3 +282,13 @@ Original prompt: Do this for me
 - Verified with the required develop-web-game client for Sky Hopper plus direct desktop/mobile Playwright checks for active pipes, danger feedback, help gating, restart flow, crash feedback, no console/page errors, and no horizontal overflow.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue qualitative zero-score review; likely pick a remaining older game whose visual style or active-play feedback still feels less cohesive than the newest polished titles.
+
+## 2026-05-14 Claude pass 29
+
+- Baseline: `test-results/render-ranking/2026-05-14T04-13-10-622Z/`; all 40 surfaces scored zero, but the Idle Tycoon main menu still felt jarring next to the polished 2048/Sky Hopper aesthetic (bright yellow Sound/Music toggles, oversized Impact section headings).
+- Polished `websites/idle-tycoon.html` menu cohesion: tightened the menu card chrome with a teal-tinted dark gradient and inset highlight, retyped `.menu-section h2` (Save Files/Options) as compact uppercase teal labels matching the eyebrow style, and rebuilt `.menu-toggle` so the active state shows a teal accent edge and an On/Off status pill instead of a full bright-yellow fill.
+- Preserved Idle Tycoon save data, audio preferences, tutorial toggle behavior, ventures/economy logic, in-game HUD, mobile layout breakpoints, and all existing diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T04-21-32-728Z/`; 40 ranked surfaces, max score 0, with Idle Tycoon desktop/mobile menu manually inspected and the in-game post-action screenshot unchanged.
+- Verified with Claude Preview running the page and inspecting `.menu-toggle.active` computed styles to confirm the new teal accent edge and On pill, plus the smaller uppercase teal h2 typography on Save Files/Options.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include older menu surfaces like Chess/Checkers controls or Lexica's start state.
