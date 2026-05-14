@@ -341,3 +341,12 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T05-09-17-954Z/`; 40 ranked surfaces, max score 0, with Neon Snake desktop/mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; candidates include Block Drop HUD chrome cohesion or remaining games lacking branded eyebrow chrome.
+
+## 2026-05-14 Claude pass 35
+
+- Baseline: `test-results/render-ranking/2026-05-14T05-09-17-954Z/`; all 40 surfaces scored zero, but Block Drop's centered HUD still used flat single-line "Score: 0" pills with no brand identity outside the centered start overlay.
+- Polished `websites/tetris.html` HUD visual cohesion: added a fixed Workshop Arcade + BLOCK DROP brand mark in the top-left (hidden on mobile), refreshed `.hud .pill` chrome with a cyan-tinted gradient/border and tabular-numeric numbers, gave the dynamic `#status` pill a cyan-accent color, upgraded `.btn` chrome with matching gradient/shadow/hover treatment, gave the canvas a cyan rounded border, and added an ambient cyan/teal radial backdrop to fill the empty desktop space.
+- Preserved Block Drop gameplay rules, score/lines/level/best wiring, hold/next preview canvases, status text updates, start panel overlay, audio toggle, reset/help wiring, mobile bottom controls, and all existing visual-only feedback and diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T05-36-57-253Z/`; 40 ranked surfaces, max score 0, with Block Drop desktop/mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; candidates include Minesweeper top bar cohesion or remaining games still lacking branded eyebrow chrome.

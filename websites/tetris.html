@@ -6,12 +6,27 @@
 <title>Block Drop</title>
 <style>
   html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; overflow:hidden; }
-  body { min-height:100%; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:110px 12px 10px; }
-  canvas { display:block; margin:0 auto; background:#0e1522; border:1px solid #223047; border-radius:10px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  body {
+    min-height:100%; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:110px 12px 10px;
+    background:
+      radial-gradient(900px 600px at 12% -6%,rgba(125,211,252,0.13),transparent 60%),
+      radial-gradient(700px 500px at 88% 6%,rgba(94,234,212,0.08),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+  }
+  canvas { display:block; margin:0 auto; background:#0e1522; border:1px solid rgba(125,211,252,0.22); border-radius:14px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+
+  .brand{
+    position:fixed; top:12px; left:16px;
+    display:flex; flex-direction:column; gap:2px; line-height:1;
+    user-select:none; pointer-events:none;
+    z-index:45;
+  }
+  .brand .eyebrow{ font-size:10px; letter-spacing:0.32em; text-transform:uppercase; color:rgba(125,211,252,0.85); font-weight:700; }
+  .brand .title{ font-size:20px; letter-spacing:0.16em; font-weight:800; color:#e6edf3; text-shadow:0 0 18px rgba(125,211,252,0.22); }
 
   .hud{
-    position:fixed; top:8px; left:50%; transform:translateX(-50%);
-    display:flex; gap:8px; align-items:center; font-weight:700; letter-spacing:.2px;
+    position:fixed; top:10px; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px; align-items:stretch;
     flex-wrap:nowrap; width:calc(100vw - 16px); justify-content:center;
     overflow-x:auto; -webkit-overflow-scrolling:touch;
     scrollbar-width:none;
@@ -19,11 +34,32 @@
   }
   .hud::-webkit-scrollbar{ display:none; }
   .hud > *{ flex:0 0 auto; }
-  .hud .pill { background:rgba(17,24,39,.86); border:1px solid #26334a; padding:5px 8px; border-radius:10px; display:flex; flex-direction:column; align-items:center; min-height:32px; justify-content:center; }
+  .hud .pill {
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(125,211,252,0.22);
+    padding:6px 11px; border-radius:10px;
+    display:flex; flex-direction:column; align-items:center; min-height:32px; justify-content:center;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    backdrop-filter:blur(4px);
+    font-weight:700; font-size:13px; color:#e6edf3;
+    letter-spacing:0.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .hud .pill#status{
+    color:rgba(125,211,252,0.95);
+    font-size:12px; letter-spacing:0.04em;
+  }
   .keynote { display:none; }
 
   .btns { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; width:min(100vw - 16px, 520px); justify-content:center; z-index:45; }
-  .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; }
+  .btn {
+    background:linear-gradient(180deg,rgba(20,30,50,0.95),rgba(11,17,32,0.95));
+    border:1px solid rgba(125,211,252,0.22);
+    color:#e6edf3; padding:9px 14px; border-radius:11px; font-weight:700; cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition:border-color 0.15s ease, transform 0.12s ease, background 0.15s ease;
+  }
+  .btn:hover{ border-color:rgba(125,211,252,0.55); }
   .btn:active { transform:translateY(1px); }
   .btns .btn { touch-action: none; flex:1 1 0; min-width:0; padding:10px 8px; }
   @media (min-width: 860px){ .btns { display:none; } }
@@ -63,6 +99,7 @@
   .help-actions { display:flex; justify-content:center; gap:10px; margin-top:14px; }
   @media (max-width: 720px){
     body { padding:128px 8px 84px; }
+    .brand { display:none; }
     .hud { top:6px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; overflow:visible; align-items:stretch; }
     .hud > *{ min-width:0; }
     .hud .pill { padding:4px 5px; font-size:12px; border-radius:9px; }
@@ -79,6 +116,11 @@
 </head>
 <body>
   <canvas id="game"></canvas>
+
+  <div class="brand">
+    <span class="eyebrow">Workshop Arcade</span>
+    <span class="title">BLOCK DROP</span>
+  </div>
 
   <div id="startPanel" class="start-panel" role="group" aria-label="Block Drop start controls">
     <div class="start-title">Block Drop</div>
