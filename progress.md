@@ -248,3 +248,14 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-13T15-41-15-855Z/`; all 40 surfaces still score zero, and all Fact Match desktop/mobile surfaces have zero overflow and active interaction feedback.
 - Verified with the required develop-web-game client for Hero Fact Match, direct Playwright shared-engine smoke across all four Fact Match pages, catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: keep using the zero-score contact sheet for qualitative selection; likely targets are remaining player-feel refinements in mobile board/card density or first-screen clarity rather than diagnostics.
+
+## 2026-05-13 Codex pass 26
+
+- Baseline: `test-results/render-ranking/2026-05-14T01-22-47-834Z/`; all 40 surfaces scored zero, so this pass targeted qualitative Klondike Solitaire mobile touch readability.
+- Polished `websites/solitare.html` mobile CSS by enlarging the 390px card footprint, rank/suit/pip text, fan spacing, and tableau drop-zone height while preserving horizontal fit and desktop stability.
+- Tightened mobile header/footer density and added stronger non-layout-shifting touch feedback for active cards, stock/waste presses, hints, and valid/invalid drop targets.
+- Extended Klondike diagnostics with a compact `layout` object reporting viewport, mobile mode, card size, fan spacing, board width, and horizontal overflow for focused mobile assertions.
+- Final capture: `test-results/render-ranking/2026-05-14T01-33-44-852Z/`; all 40 surfaces still score zero, and Klondike mobile renders larger 51x80 cards with zero overflow.
+- Verified with the required develop-web-game client for Solitaire stock draw plus direct mobile Playwright checks for stock draw, hint, a legal drag when available, undo/restart, no clipped card text, and no horizontal overflow.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue qualitative zero-score review; likely choose another mobile board/card interaction surface only if actual contact-sheet evidence shows player friction.
