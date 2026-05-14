@@ -350,3 +350,14 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T05-36-57-253Z/`; 40 ranked surfaces, max score 0, with Block Drop desktop/mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; candidates include Minesweeper top bar cohesion or remaining games still lacking branded eyebrow chrome.
+
+## 2026-05-14 Claude pass 36
+
+- Baseline: `test-results/render-ranking/2026-05-14T05-36-57-253Z/`; all 40 surfaces scored zero, but Minesweeper's top bar was still one cramped row of emoji controls with no brand identity, floating LED dots that lived outside their toggle buttons, and inconsistent pill/button chrome.
+- Polished `websites/minesweeper.html` header cohesion: added a Workshop Arcade + MINESWEEPER brand on the left, grouped the right-side controls into stat, action, flag-mode, and toggle clusters via a new `.control-group` chrome, refreshed `.pill`/`.btn`/`select` chrome with matching teal-tinted gradients and shadows, embedded the SFX/Music status LEDs as inline dots inside their toggle buttons via a new `.led-inline` element and `.is-on` button state, and added a subtle teal/red-pink ambient backdrop.
+- Updated `toggleSfx`, `toggleMusic`, and `updateFlagButton` JS to keep the new `.is-on` button class and `.led on/off` state in sync without touching audio, save data, or gameplay paths.
+- Rebuilt the mobile breakpoint so the brand stacks above a 3-column grid of grouped controls without overflow on a 390px viewport.
+- Preserved Minesweeper gameplay rules, board generation, custom difficulty controls, flag mode, audio state, help overlay, and all existing render_game_to_text/advanceTime diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T05-50-04-323Z/`; 40 ranked surfaces, max score 0, with Minesweeper desktop/mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Metro Dash menu chrome or any older first-screen still missing branded eyebrow framing.
