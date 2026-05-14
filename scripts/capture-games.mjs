@@ -523,6 +523,21 @@ function getInteractionRecipe(slug) {
         await settlePage(page, 250);
       },
     },
+    "reflex-spark": {
+      name: "arm a round and tap on green",
+      run: async (page) => {
+        // First tap starts the round (waiting phase).
+        await clickSelectorIfVisible(page, "#stage");
+        await settlePage(page, 120);
+        // Skip the random wait period deterministically via advanceTime so the
+        // stage transitions to the green "ready" state without real-time waiting.
+        await page.evaluate(() => { if (typeof window.advanceTime === "function") window.advanceTime(4500); });
+        await settlePage(page, 60);
+        // Second tap measures the reaction.
+        await clickSelectorIfVisible(page, "#stage");
+        await settlePage(page, 200);
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {

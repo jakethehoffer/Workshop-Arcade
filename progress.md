@@ -603,3 +603,26 @@ Original prompt: Do this for me
 - Updated `docs/game-contract.md` Accessibility section with the new rule and its rationale, parallel to the canvas/iframe/dialog rules already documented.
 - Final checks: `npm run test:a11y` clean across 22 HTML files (now enforcing all 4 rules), catalog validation passed for 21 games, `npm run test:games` passed for 21 games, `npm run capture:games` max score 0 across 42 surfaces, `git diff --check` clean (CRLF normalization warnings only on touched HTML).
 - Suggested next pass: the a11y check now covers canvas / iframe / dialog / button-type — the four highest-value cheap-to-enforce rules. Future moves can continue with another new game, Memory Match play-feel polish, or a Lighthouse audit for measured performance/SEO/a11y scores.
+
+## 2026-05-14 Claude pass 53
+
+- Second new game in three passes. The catalog had 21 games after pass 51 but no game tested pure reflexes — an arcade staple. Reflex Spark fills that genre gap.
+- `websites/reflex-spark.html`:
+  - Five-round reaction test. Each round: tap to start → "Wait…" (red panel, 1500-4000ms randomized) → "CLICK!" (green panel) → measure reaction in ms.
+  - False-start penalty: tapping during the wait phase counts the round but records no time. Slot renders as "FALSE" with a coral border.
+  - Personal best persistence in `localStorage` under `reflex-spark.best.v1` — keyed to lowest average across valid rounds.
+  - Full visual cohesion: Workshop Arcade eyebrow + bold REFLEX SPARK title, teal/cyan gradient HUD pills (Round / Last / Avg / Best), large stage panel that recolors per state (idle/waiting/ready/result/false-start/done), result strip showing all 5 rounds with hit/false/pending kinds, gradient New Run button, segmented Help.
+  - Accessibility: stage is a real `<button type="button">` with `aria-label` that updates per state for screen readers, supports keyboard activation via Space/Enter, focus-visible outline. Help overlay uses `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + focus trap + Escape close.
+  - Diagnostic hooks: `render_game_to_text()` returns `{phase, round, totalRounds, results[], avgMs, falseStartCount, bestAvg, feedback}` where `feedback` has `flashAge` / `resultAge` / `falseStartAge` transient ages + `flashCount` / `resultCount` / `falseStartCount` counters + `flashActive` boolean (true during the green ready phase). `advanceTime(ms)` deterministically skips the random wait so capture tests don't have to real-time wait.
+- `covers/reflex-spark.svg` (640×360): dark-theme branded card showing the stage mid-flash with "CLICK!" headline and a five-slot result strip (two recorded hits, one false start, two pending). Matches catalog visual language.
+- Added manifest entry (Arcade + Action tags, 55 popularity). `validate-catalog.ps1 -Fix` synced FALLBACK_GAMES to 22 games.
+- `scripts/capture-games.mjs` recipe `reflex-spark`: clicks stage → calls `window.advanceTime(4500)` to skip the random wait deterministically → clicks stage again to record a reaction. Captures the green-flash event frame.
+- Verified end-to-end at desktop and mobile:
+  - Initial state: phase=idle, headline "Tap to Start", round 0/5.
+  - Click → phase=waiting, headline "Wait…". `advanceTime(4500)` → phase=ready, headline "CLICK!". `advanceTime(250)` + click → phase=result, last=250ms, round 1/5.
+  - False-start: clicked during waiting → phase=false-start, results includes `{falseStart: true}`, `falseStartCount: 1`.
+  - 5-round completion: 4 valid rounds (250, 200, 210, 220 ms) + 1 false start → avg=220, phase=done, localStorage written `{"avg":220,"count":4,"ts":...}`.
+  - Mobile 375×812: zero overflow, no console errors, stage width 355px.
+  - Catalog grid shows 22 cards including Reflex Spark with SVG cover and Arcade/Action tags.
+- Final checks passed: catalog validation for 22 games, `npm run test:a11y` clean across 23 HTML files (4 rules enforced), `npm run test:games` passed for 22 games, `npm run capture:games` max score 0 across all 44 rendered surfaces (Reflex Spark desktop+mobile included).
+- Suggested next pass: catalog now has 22 games. With a clear new-game template proven twice in three passes (Memory Match, Reflex Spark — both used all conventions cleanly), future passes can either keep adding genres (rhythm tap, sliding puzzle, Simon-style sequence memory) or shift back to polish (Memory Match play-feel polish, Lighthouse audit, Recently empty state inside queue chrome).

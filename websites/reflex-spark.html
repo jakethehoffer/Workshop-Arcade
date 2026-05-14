@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Reflex Spark</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100%;
+    background:
+      radial-gradient(900px 600px at 10% -6%,rgba(94,234,212,0.13),transparent 60%),
+      radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+    display:flex;flex-direction:column;align-items:center;padding:24px 16px 32px;
+  }
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .brand .title{font-size:22px;letter-spacing:0.16em;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.2);text-transform:uppercase}
+
+  .panel{
+    width:100%;max-width:640px;display:flex;flex-direction:column;align-items:stretch;gap:14px;
+  }
+
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:stretch}
+  .pill{
+    display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);
+    padding:8px 14px;border-radius:12px;line-height:1.05;min-width:78px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill .label{font-size:9px;letter-spacing:0.26em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+
+  .stage{
+    position:relative;width:100%;aspect-ratio:5/3;min-height:220px;
+    border-radius:18px;border:1px solid rgba(94,234,212,0.32);
+    background:linear-gradient(180deg,rgba(15,22,38,0.94),rgba(10,16,28,0.94));
+    color:#e6edf3;cursor:pointer;font:inherit;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 18px 38px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition:background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    -webkit-tap-highlight-color:transparent;letter-spacing:0.02em;
+    overflow:hidden;
+  }
+  .stage:focus-visible{outline:3px solid rgba(124,158,255,0.7);outline-offset:3px}
+  .stage[data-state="idle"]{background:linear-gradient(180deg,rgba(15,22,38,0.94),rgba(10,16,28,0.94));border-color:rgba(94,234,212,0.32)}
+  .stage[data-state="waiting"]{background:linear-gradient(180deg,#4a1f24,#2a1318);border-color:rgba(251,113,133,0.55);color:#ffd6d6;cursor:default}
+  .stage[data-state="ready"]{background:linear-gradient(180deg,#0f6f4a,#08402a);border-color:rgba(94,234,212,0.85);color:#dbfff3;box-shadow:0 0 32px rgba(94,234,212,0.35), inset 0 1px 0 rgba(255,255,255,0.08)}
+  .stage[data-state="result"]{background:linear-gradient(180deg,rgba(15,22,38,0.94),rgba(10,16,28,0.94));border-color:rgba(94,234,212,0.55)}
+  .stage[data-state="false-start"]{background:linear-gradient(180deg,#5a1414,#2a0d0d);border-color:rgba(251,113,133,0.85);color:#ffe2e2}
+  .stage[data-state="done"]{background:linear-gradient(180deg,rgba(15,22,38,0.94),rgba(10,16,28,0.94));border-color:rgba(94,234,212,0.55)}
+
+  .stage .headline{font-size:clamp(28px,7vw,52px);font-weight:800;letter-spacing:0.08em;text-transform:uppercase;line-height:1}
+  .stage .sub{font-size:13px;color:rgba(230,237,243,0.72);letter-spacing:0.04em}
+  .stage .ms{font-size:clamp(36px,8vw,68px);font-weight:800;letter-spacing:0.02em;font-variant-numeric:tabular-nums}
+
+  .results{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
+  }
+  .results .slot{
+    aspect-ratio:1/1;border-radius:10px;border:1px solid rgba(94,234,212,0.22);
+    background:linear-gradient(180deg,rgba(20,30,50,0.65),rgba(11,17,32,0.65));
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:6px;font-size:11px;font-weight:800;letter-spacing:0.02em;color:#e6edf3;
+    font-variant-numeric:tabular-nums;line-height:1.1;
+  }
+  .results .slot[data-kind="pending"]{color:rgba(230,237,243,0.35);font-weight:600}
+  .results .slot[data-kind="hit"]{border-color:rgba(94,234,212,0.55);color:#dbfff3}
+  .results .slot[data-kind="false"]{border-color:rgba(251,113,133,0.55);color:#ffd6d6}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .btn{
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
+    padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .btn:hover{border-color:rgba(94,234,212,0.55)}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .overlay.show{display:flex}
+  .overlay-card{
+    width:min(440px,100%);
+    background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
+    border:1px solid rgba(94,234,212,0.32);border-radius:16px;padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 24px rgba(94,234,212,0.12);
+  }
+  .overlay-card h3{margin:0 0 8px;font-size:20px;letter-spacing:0.04em}
+  .overlay-card .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .overlay-card p,.overlay-card ul{margin:8px 0;color:#b6c4dc;font-size:14px;line-height:1.5}
+  .overlay-card ul{padding-left:18px}
+  .overlay-card .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+  @media (max-width:560px){
+    body{padding:14px 10px 24px}
+    .brand .title{font-size:18px;letter-spacing:0.14em}
+    .results{grid-template-columns:repeat(5,1fr);gap:5px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand">
+  <span class="eyebrow">Workshop Arcade</span>
+  <span class="title">REFLEX SPARK</span>
+</div>
+<div class="panel">
+  <div class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">0/5</span></div>
+    <div class="pill"><span class="label">Last</span><span class="value" id="lastValue">—</span></div>
+    <div class="pill"><span class="label">Avg</span><span class="value" id="avgValue">—</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
+  </div>
+
+  <button class="stage" id="stage" type="button" data-state="idle" aria-live="polite" aria-label="Tap to start. When the panel turns green, tap as fast as you can.">
+    <span class="headline" id="stageHeadline">Tap to Start</span>
+    <span class="sub" id="stageSub">Wait for the spark. Tap when the panel turns green.</span>
+  </button>
+
+  <div class="results" id="results" aria-label="Round results">
+    <div class="slot" data-kind="pending">1</div>
+    <div class="slot" data-kind="pending">2</div>
+    <div class="slot" data-kind="pending">3</div>
+    <div class="slot" data-kind="pending">4</div>
+    <div class="slot" data-kind="pending">5</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" type="button" id="newRunBtn">New Run</button>
+    <button class="btn" type="button" id="helpBtn">❓ Help</button>
+  </div>
+</div>
+
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="overlay-card">
+    <span class="eyebrow">Workshop Arcade</span>
+    <h3 id="helpTitle">How to Play</h3>
+    <p>Test your reflexes across five rounds. Tap the stage to start a round, then wait for it to flash green — tap as fast as you can.</p>
+    <ul>
+      <li>Tapping during the red "Wait…" phase is a false start (it counts as a round but no time is recorded).</li>
+      <li>Best run is your lowest average across five rounds.</li>
+      <li>Keyboard: <kbd>Space</kbd> or <kbd>Enter</kbd> while the stage has focus.</li>
+      <li>Press <kbd>Esc</kbd> to close this dialog.</li>
+    </ul>
+    <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const ROUNDS = 5;
+  const WAIT_MIN_MS = 1500;
+  const WAIT_MAX_MS = 4000;
+  const BEST_KEY = 'reflex-spark.best.v1';
+
+  const els = {
+    round:      document.getElementById('roundValue'),
+    last:       document.getElementById('lastValue'),
+    avg:        document.getElementById('avgValue'),
+    best:       document.getElementById('bestValue'),
+    stage:      document.getElementById('stage'),
+    headline:   document.getElementById('stageHeadline'),
+    sub:        document.getElementById('stageSub'),
+    results:    document.getElementById('results'),
+    slots:      Array.from(document.querySelectorAll('#results .slot')),
+    newRun:     document.getElementById('newRunBtn'),
+    help:       document.getElementById('helpBtn'),
+    helpOverlay:document.getElementById('helpOverlay'),
+    helpClose:  document.getElementById('helpClose')
+  };
+
+  // 'idle' (pre-run) | 'waiting' (round armed, waiting for green) | 'ready' (green, awaiting tap)
+  // | 'result' (just measured) | 'false-start' (tapped during wait) | 'done' (run complete)
+  const state = {
+    phase: 'idle',
+    round: 0,
+    results: [],          // array of {ms, falseStart}
+    readyAt: 0,           // performance.now() of the green flash
+    waitDeadline: 0,      // performance.now() when we should flip to ready
+    falseStartCount: 0,
+    now: 0,
+    bestAvg: null,
+    // event-frame feedback
+    lastFlashAt: 0,
+    lastResultAt: 0,
+    lastFalseStartAt: 0,
+    flashCount: 0
+  };
+
+  function loadBest(){
+    try { const raw = localStorage.getItem(BEST_KEY); if (!raw) return null;
+      const p = JSON.parse(raw);
+      if (!p || typeof p.avg !== 'number') return null;
+      return p;
+    } catch { return null; }
+  }
+  function saveBest(record){ try { localStorage.setItem(BEST_KEY, JSON.stringify(record)); } catch {} }
+
+  function nowMs(){ return state.now; }
+  function fmtMs(v){ return Math.round(v) + ' ms'; }
+
+  function updateHud(){
+    els.round.textContent = state.round + '/' + ROUNDS;
+    const valid = state.results.filter(r => !r.falseStart && typeof r.ms === 'number');
+    const last = state.results[state.results.length - 1];
+    els.last.textContent = !last ? '—'
+      : last.falseStart ? 'FALSE'
+      : fmtMs(last.ms);
+    if (valid.length){
+      const avg = valid.reduce((a,b)=>a+b.ms,0) / valid.length;
+      els.avg.textContent = fmtMs(avg);
+    } else {
+      els.avg.textContent = '—';
+    }
+    const best = state.bestAvg;
+    els.best.textContent = best ? fmtMs(best) : '—';
+  }
+
+  function renderResults(){
+    state.results.forEach((r,i)=>{
+      const slot = els.slots[i]; if (!slot) return;
+      if (r.falseStart){ slot.dataset.kind = 'false'; slot.textContent = 'FALSE'; }
+      else { slot.dataset.kind = 'hit'; slot.textContent = Math.round(r.ms) + ' ms'; }
+    });
+    for (let i = state.results.length; i < ROUNDS; i++){
+      const slot = els.slots[i]; if (!slot) continue;
+      slot.dataset.kind = 'pending'; slot.textContent = String(i+1);
+    }
+  }
+
+  function setStage(phase, headline, sub){
+    state.phase = phase;
+    els.stage.dataset.state = phase;
+    els.headline.textContent = headline;
+    els.sub.textContent = sub || '';
+    // aria-label updates so screen readers announce the new state
+    els.stage.setAttribute('aria-label', headline + (sub ? '. ' + sub : ''));
+  }
+
+  function newRun(){
+    state.phase = 'idle';
+    state.round = 0;
+    state.results = [];
+    state.readyAt = 0;
+    state.waitDeadline = 0;
+    state.falseStartCount = 0;
+    setStage('idle', 'Tap to Start', 'Wait for the spark. Tap when the panel turns green.');
+    renderResults();
+    updateHud();
+  }
+
+  function startRound(){
+    if (state.phase === 'idle' || state.phase === 'result' || state.phase === 'false-start' || state.phase === 'done'){
+      if (state.phase === 'done') { newRun(); }
+      state.round += 1;
+      const wait = WAIT_MIN_MS + Math.random() * (WAIT_MAX_MS - WAIT_MIN_MS);
+      state.waitDeadline = state.now + wait;
+      setStage('waiting', 'Wait…', 'Tap when the panel turns green.');
+      updateHud();
+    }
+  }
+
+  function arm(){
+    state.readyAt = state.now;
+    state.lastFlashAt = state.now;
+    state.flashCount += 1;
+    setStage('ready', 'CLICK!', 'Tap now.');
+  }
+
+  function record(ms){
+    state.results.push({ ms, falseStart: false });
+    state.lastResultAt = state.now;
+    setStage('result', fmtMs(ms), state.round < ROUNDS ? 'Tap to start the next round.' : 'Run complete.');
+    renderResults();
+    updateHud();
+    if (state.round >= ROUNDS) finishRun();
+  }
+
+  function recordFalseStart(){
+    state.results.push({ ms: null, falseStart: true });
+    state.falseStartCount += 1;
+    state.lastFalseStartAt = state.now;
+    setStage('false-start', 'False Start', state.round < ROUNDS ? 'Tap to start the next round.' : 'Run complete.');
+    renderResults();
+    updateHud();
+    if (state.round >= ROUNDS) finishRun();
+  }
+
+  function finishRun(){
+    const valid = state.results.filter(r => !r.falseStart && typeof r.ms === 'number');
+    if (valid.length){
+      const avg = valid.reduce((a,b)=>a+b.ms,0) / valid.length;
+      const prev = loadBest();
+      if (!prev || avg < prev.avg){
+        const record = { avg, count: valid.length, ts: Date.now() };
+        saveBest(record);
+        state.bestAvg = avg;
+      } else {
+        state.bestAvg = prev.avg;
+      }
+    }
+    setStage('done', 'Run Complete', valid.length ? 'Avg ' + fmtMs(state.results.filter(r=>!r.falseStart).reduce((a,b)=>a+b.ms,0)/Math.max(1,valid.length)) + ' over ' + valid.length + ' valid rounds. Tap to start a new run.' : 'No valid rounds. Tap to start a new run.');
+    updateHud();
+  }
+
+  function onStageActivate(){
+    if (state.phase === 'idle' || state.phase === 'result' || state.phase === 'false-start' || state.phase === 'done'){
+      startRound();
+    } else if (state.phase === 'waiting'){
+      recordFalseStart();
+    } else if (state.phase === 'ready'){
+      record(state.now - state.readyAt);
+    }
+  }
+
+  els.stage.addEventListener('click', onStageActivate);
+  els.stage.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); onStageActivate(); }
+  });
+  els.newRun.addEventListener('click', () => { newRun(); });
+
+  // Help overlay
+  let activeOverlay = null;
+  let returnFocus = null;
+  function openOverlay(o, focus){ if(activeOverlay) closeOverlay(activeOverlay,false); o.classList.add('show'); activeOverlay = o; returnFocus = document.activeElement; setTimeout(()=>(focus||o.querySelector('button')).focus(),0); }
+  function closeOverlay(o, restore){ o.classList.remove('show'); if(activeOverlay===o) activeOverlay=null; if(restore!==false && returnFocus && document.contains(returnFocus)) returnFocus.focus({preventScroll:true}); returnFocus=null; }
+  document.addEventListener('keydown',(e)=>{
+    if(!activeOverlay) return;
+    if(e.key==='Escape'){ e.preventDefault(); closeOverlay(activeOverlay); return; }
+    if(e.key==='Tab'){
+      const f=activeOverlay.querySelectorAll('button,[href],input,[tabindex]:not([tabindex="-1"])');
+      if(!f.length) return; const first=f[0], last=f[f.length-1];
+      if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+    }
+  });
+  els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
+  els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
+  els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
+
+  // RAF tick — drives the wait → ready transition
+  let lastFrame = 0;
+  function tick(t){
+    if (!lastFrame) lastFrame = t;
+    const dt = t - lastFrame; lastFrame = t;
+    state.now += dt;
+    if (state.phase === 'waiting' && state.now >= state.waitDeadline){
+      arm();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // Diagnostic hooks
+  function ageSeconds(at){
+    if (!at) return null;
+    const sec = (state.now - at) / 1000;
+    return sec >= 0 && sec <= 1.25 ? sec : null;
+  }
+  window.render_game_to_text = function render_game_to_text(){
+    const valid = state.results.filter(r => !r.falseStart && typeof r.ms === 'number');
+    const avgMs = valid.length ? valid.reduce((a,b)=>a+b.ms,0)/valid.length : null;
+    return JSON.stringify({
+      phase: state.phase,
+      round: state.round,
+      totalRounds: ROUNDS,
+      results: state.results.map(r => r.falseStart ? { falseStart: true } : { ms: Math.round(r.ms) }),
+      avgMs: avgMs ? Math.round(avgMs) : null,
+      falseStartCount: state.falseStartCount,
+      bestAvg: state.bestAvg ? Math.round(state.bestAvg) : null,
+      feedback: {
+        flashAge: ageSeconds(state.lastFlashAt),
+        resultAge: ageSeconds(state.lastResultAt),
+        falseStartAge: ageSeconds(state.lastFalseStartAt),
+        flashCount: state.flashCount,
+        resultCount: state.results.filter(r => !r.falseStart).length,
+        falseStartCount: state.falseStartCount,
+        flashActive: state.phase === 'ready'
+      }
+    });
+  };
+  window.advanceTime = function advanceTime(ms){
+    const dt = Math.max(0, Number(ms) || 0);
+    state.now += dt;
+    if (state.phase === 'waiting' && state.now >= state.waitDeadline) arm();
+    return state.now;
+  };
+
+  // Init
+  state.now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const initialBest = loadBest();
+  state.bestAvg = initialBest ? initialBest.avg : null;
+  newRun();
+})();
+</script>
+</body>
+</html>
