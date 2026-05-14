@@ -57,31 +57,41 @@ canvas{
 .side{
   width:min(330px, 28vw);
   min-width:300px;
-  background:linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005)), var(--panel);
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:12px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  background:linear-gradient(180deg, rgba(92,230,153,0.04), rgba(255,255,255,0.005)), var(--panel);
+  border:1px solid rgba(92,230,153,0.18);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 12px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,0.04);
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:12px;
   max-height:calc(100vh - 24px);
   overflow:auto;
 }
 
-  h2 {
+  .side h2 {
     margin: 0;
-    font-size: 17px;
-    letter-spacing: .2px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(92,230,153,0.85);
+  }
+  .side h2:first-child {
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--text);
   }
   .status {
     font-size: 13px;
     line-height:1.35;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 8px 9px;
+    background: linear-gradient(180deg, rgba(92,230,153,0.06), rgba(15,21,31,0.96));
+    border: 1px solid rgba(92,230,153,0.22);
+    border-radius: 10px;
+    padding: 10px 12px;
     min-height: 34px;
+    font-weight: 600;
   }
   .controls, .mode {
     display: flex;
@@ -89,20 +99,88 @@ canvas{
     flex-wrap: wrap;
     align-items: center;
   }
-  .mode label { font-size: 12px; display: flex; gap: 6px; align-items: center; }
-  .mode select { background:#1a2230; color:var(--text); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:5px 7px; }
+  .mode {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    background: rgba(11,15,20,0.55);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .mode label {
+    font-size: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .mode label > input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 38px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+    flex: none;
+    margin: 0;
+    order: 2;
+  }
+  .mode label > input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #cdd6e0;
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  .mode label > input[type="checkbox"]:checked {
+    background: rgba(92,230,153,0.4);
+    border-color: rgba(92,230,153,0.55);
+  }
+  .mode label > input[type="checkbox"]:checked::after {
+    transform: translateX(16px);
+    background: #5ce699;
+  }
+  .mode label > input[type="checkbox"]:focus-visible {
+    outline: 2px solid rgba(92,230,153,0.6);
+    outline-offset: 2px;
+  }
+  .mode select {
+    background:#1a2230;
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:8px;
+    padding:6px 9px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .mode select:hover { border-color: rgba(92,230,153,0.4); }
   button {
     appearance: none;
     border: 1px solid rgba(255,255,255,0.12);
-    background: #1a2230;
+    background: linear-gradient(180deg, #1d2737, #141c2a);
     color: var(--text);
-    padding: 7px 9px;
-    border-radius: 8px;
+    padding: 8px 11px;
+    border-radius: 9px;
     cursor: pointer;
     font-size:12px;
+    font-weight: 600;
+    transition: border-color 0.15s ease, transform 0.12s ease, background 0.15s ease;
   }
-  button:hover { background: #1f293b; }
-  button[disabled] { opacity: .6; cursor: not-allowed; }
+  button:hover { background: linear-gradient(180deg, #243049, #182233); border-color: rgba(92,230,153,0.32); }
+  button:active { transform: translateY(1px); }
+  button[disabled] { opacity: .55; cursor: not-allowed; }
   ol.moves {
     margin: 0;
     padding-left: 18px;
@@ -187,7 +265,7 @@ canvas{
     align-items:center;
     overflow-x:hidden;
     padding:10px;
-    gap:10px;
+    gap:8px;
   }
   .left{width:100%;}
   canvas{max-width:100%;height:auto}
@@ -195,13 +273,20 @@ canvas{
     width:100%;
     min-width:0;
     max-height:none;
-    padding:12px;
-    gap:9px;
+    padding:10px;
+    gap:8px;
   }
-  .mode,.controls{gap:7px}
+  .side h2:first-child {
+    font-size: 16px;
+  }
+  .mode{
+    gap:6px;
+    padding: 8px 10px;
+  }
+  .controls{gap:6px}
   .mode label{font-size:13px}
-  button{font-size:13px;padding:8px 10px}
-  .status{min-height:0;font-size:14px}
+  button{font-size:13px;padding:7px 10px}
+  .status{min-height:0;font-size:13px;padding:7px 10px}
   ol.moves{max-height:126px;min-height:34px}
 }
 

@@ -292,3 +292,14 @@ Original prompt: Do this for me
 - Verified with Claude Preview running the page and inspecting `.menu-toggle.active` computed styles to confirm the new teal accent edge and On pill, plus the smaller uppercase teal h2 typography on Save Files/Options.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include older menu surfaces like Chess/Checkers controls or Lexica's start state.
+
+## 2026-05-14 Claude pass 30
+
+- Baseline: `test-results/render-ranking/2026-05-14T04-21-32-728Z/`; all 40 surfaces scored zero, but the Chess right sidebar still used plain native checkboxes and a flat status box that felt disconnected from the polished board and the rest of the catalog.
+- Polished `websites/chess.html` sidebar visual cohesion: gave `.side` a teal-tinted border and inset highlight, retyped non-leading `.side h2` (Move History) as a compact uppercase teal label while keeping the leading Chess heading prominent, grouped the vsComputer/depth/auto-flip controls inside a `.mode` card with custom-styled toggle-pill checkboxes, refined `.status` into a teal-edged status card, and gave the action buttons a richer gradient pill style.
+- Tightened the mobile breakpoint (.wrap gap, .side padding, .mode padding, status/button density, and a smaller leading h2) so the primary Restart Game action stays above the fold on a 390px viewport.
+- Preserved chess gameplay rules, move history, AI depth options, auto-flip behavior, undo/restart/help/flip wiring, saves, and existing render_game_to_text/advanceTime diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T04-35-01-621Z/`; 40 ranked surfaces, max score 0, with Chess desktop/mobile sidebar manually inspected.
+- Verified with Claude Preview load of `/websites/chess.html` and direct DOM/style inspection of the new toggle, status card, and move-history heading.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; likely Checkers top bar/controls polish or Lexica's empty start state, depending on the next contact-sheet review.
