@@ -142,17 +142,23 @@ async function checkCatalog(browser, baseUrl) {
   await page.waitForSelector("#workshopModal:not([hidden])");
   await page.locator("#workshopGoal").fill("Smoke-test the issue generation flow.");
   await page.locator("#workshopForm button[type='submit']").click();
-  const popupPromise = page.waitForEvent("popup");
+  // Stub window.open so we capture the catalog-generated URL exactly, instead
+  // of racing GitHub's unauthenticated-login redirect on a real popup.
+  await page.evaluate(() => {
+    window.__lastIssueUrl = null;
+    window.open = (url) => {
+      window.__lastIssueUrl = String(url || "");
+      return { focus() {}, close() {} };
+    };
+  });
   await page.locator("#openIssueBtn").click();
-  const popup = await popupPromise;
-  const issueUrl = popup.url();
-  if (!issueUrl.startsWith("https://github.com/jakethehoffer/Workshop-Arcade/issues/new")) {
+  const issueUrl = await page.evaluate(() => window.__lastIssueUrl);
+  if (!issueUrl || !issueUrl.startsWith("https://github.com/jakethehoffer/Workshop-Arcade/issues/new")) {
     addFailure("catalog", `unexpected issue URL: ${issueUrl}`);
   }
-  if (!issueUrl.includes("template=workshop-request.md") || !issueUrl.includes("workshop-request")) {
+  if (!issueUrl || !issueUrl.includes("template=workshop-request.md") || !issueUrl.includes("workshop-request")) {
     addFailure("catalog", `issue URL is missing template or label: ${issueUrl}`);
   }
-  await popup.close();
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => document.getElementById("workshopModal").hidden);
 
