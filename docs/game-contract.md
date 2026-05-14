@@ -21,6 +21,7 @@ The static `npm run test:a11y` check enforces these rules:
 - Interactive canvases also need `tabindex="0"` so keyboard users can focus them.
 - Every `<iframe>` must declare a non-empty `title` attribute.
 - Every element with `role="dialog"` or `role="alertdialog"` must also declare `aria-modal="true"` and an accessible name via `aria-labelledby` or `aria-label`. Modals must trap focus, restore focus on close, and respond to `Escape`.
+- Every `<button>` must declare a `type` attribute. The HTML default is `"submit"`, which silently submits any enclosing `<form>` — a real footgun for action buttons that happen to live near a form. Use `type="button"` for plain action buttons and `type="submit"` only when actually submitting a form.
 
 ## Visual Cohesion
 

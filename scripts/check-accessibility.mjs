@@ -7,6 +7,9 @@
 //   2. Every <iframe> must declare a non-empty title.
 //   3. Every element with role="dialog" or role="alertdialog" must also set
 //      aria-modal="true" and an accessible name via aria-labelledby or aria-label.
+//   4. Every <button> must declare a type attribute. The HTML default is
+//      "submit", which silently submits any enclosing <form> — a real footgun
+//      for action buttons that happen to live near a form.
 //
 // The script is intentionally regex-based and dependency-free so it can run
 // in CI without an HTML parser dep. <script> and <style> blocks plus HTML
@@ -97,6 +100,14 @@ async function checkFile(rel) {
     }
     if (!hasAttr(attrs, "aria-labelledby") && !hasAttr(attrs, "aria-label")) {
       record(rel, lineOf(rawSrc, match.index), `role="${role}" element missing aria-labelledby or aria-label`);
+    }
+  }
+
+  // Rule 4: <button> must declare a type attribute (the HTML default is "submit").
+  for (const match of src.matchAll(/<button\b([^>]*?)>/gi)) {
+    const attrs = match[1] || "";
+    if (!hasAttr(attrs, "type")) {
+      record(rel, lineOf(rawSrc, match.index), "<button> missing type attribute (defaults to submit)");
     }
   }
 }

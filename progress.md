@@ -592,3 +592,14 @@ Original prompt: Do this for me
   - Catalog grid shows 21 games with Memory Match card rendering its SVG cover, subtitle, Puzzle tag.
 - Final checks passed: catalog validation for 21 games, `npm run test:a11y` clean across 22 HTML files, `npm run test:games` passed for 21 games, `npm run capture:games` max score 0 across all 42 rendered surfaces (Memory Match desktop & mobile included), `git diff --check` clean.
 - Suggested next pass: Memory Match could get its own play-feel polish (match streak/combo, sound effects honoring SFX toggle) or another new game in a missing genre (reaction/whack-a-mole, rhythm tap, simple platformer).
+
+## 2026-05-14 Claude pass 52
+
+- Mechanical button-type sweep + lint extension. Many `<button>` elements across the game pages lacked an explicit `type` attribute and defaulted to `submit` — a real footgun if any future code wraps them in a `<form>`. Pass 41's a11y check enforced canvas/iframe/dialog rules; this pass extends it with the missing button-type rule and brings the existing pages into compliance.
+- Counted 39 buttons missing `type` across 6 files: `2048.html` (6), `brick-breaker.html` (5), `checkers.html` (9), `chess.html` (7), `solitare.html` (5), `wordle.html` (7). Memory Match (pass 51) already used `type="button"` everywhere so it was already compliant.
+- Wrote a one-off node sweep that for each `<button` opening tag without a `type=` attribute, added `type="button"`. Skipped buttons inside `<script>` or `<style>` blocks via a parens-balanced offset check. Added 39 attributes total, exactly matching the count.
+- Reviewed the diff: every change was `<button …>` → `<button type="button" …>`. No intentional `type="submit"` was touched (the only existing one is in `index.html`'s workshop form's `Generate Brief` button, which the script left alone since it already had `type`).
+- Extended `scripts/check-accessibility.mjs` with rule 4: every `<button>` must declare a `type` attribute. Updated the file's header comment to describe the new rule and its rationale (HTML default `submit` is a footgun for action buttons near a form).
+- Updated `docs/game-contract.md` Accessibility section with the new rule and its rationale, parallel to the canvas/iframe/dialog rules already documented.
+- Final checks: `npm run test:a11y` clean across 22 HTML files (now enforcing all 4 rules), catalog validation passed for 21 games, `npm run test:games` passed for 21 games, `npm run capture:games` max score 0 across 42 surfaces, `git diff --check` clean (CRLF normalization warnings only on touched HTML).
+- Suggested next pass: the a11y check now covers canvas / iframe / dialog / button-type — the four highest-value cheap-to-enforce rules. Future moves can continue with another new game, Memory Match play-feel polish, or a Lighthouse audit for measured performance/SEO/a11y scores.
