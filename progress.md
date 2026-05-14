@@ -681,3 +681,19 @@ Original prompt: Do this for me
   - Mobile 375×812: zero overflow, all 4 pads visible at the correct size, no console errors.
 - Final checks passed: catalog validation for 23 games, `npm run test:a11y` clean across 24 HTML files (4 rules), `npm run test:games` passed for 23 games, `npm run capture:games` max score 0 across all 46 surfaces.
 - Suggested next pass: catalog now has 23 games. With three new games shipped in six passes (Memory Match → Reflex Spark → Echo Mimic) each using all conventions cleanly, future moves can continue with another genre, or polish older games to bring them up to the audio standard, or finally tackle Lighthouse.
+
+## 2026-05-14 Claude pass 57
+
+- Stepped back from content/polish work to address infrastructure latency. Pass 50 added Open Graph + Twitter Card + Atom-feed `<head>` infrastructure assuming the catalog would be hosted publicly; pass 46 wired footer "About" / "GitHub" / "RSS" links; pass 45 added the Recent Updates feed; pass 40 wired the live issue queue. All of that latent work assumed a real URL someone could share. The catalog wasn't actually hosted anywhere — README said "run a static server locally." Enabling GitHub Pages unlocks all of it with one API call and zero ongoing cost.
+- Enabled GitHub Pages on `main` branch, root path via `gh api -X POST repos/.../pages` with `{"source":{"branch":"main","path":"/"}}` body. Initial Pages deployment workflow ran in ~25s and succeeded (run 25879308401). Live URL: **https://jakethehoffer.github.io/Workshop-Arcade/** — `curl -sI` returns `HTTP 200 OK`, 63KB body, GitHub.com server.
+- Added the missing canonical/url tags to `index.html`:
+  - `<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/">` — tells search engines and feed readers the authoritative URL.
+  - `<meta property="og:url" content="...">` — completes the Open Graph block from pass 50; some platforms (Slack especially) want `og:url` to render previews correctly.
+- Updated `README.md` to prominently link the live URL at the top and note that pushes to `main` auto-redeploy via Pages.
+- Local checks passed: catalog validation for 23 games, `npm run test:a11y` clean across 24 HTML files, `npm run test:games` passed for 23 games.
+- Effects unlocked by going live:
+  - Pass 50's social meta tags now render real previews when the URL is shared (Discord, Slack, iMessage, modern browsers).
+  - Pass 46's footer "About" / "GitHub" / "RSS" links + pass 45's commits-feed link are reachable in the live environment.
+  - Pass 40's live Improvement Queue (fetches `api.github.com`) and pass 45's Recent Updates feed already work since the repo is public — they continue to work on the Pages-hosted site too.
+  - Anyone can play any of the 23 games without cloning the repo.
+- Suggested next pass: with the site live, the long-deferred Lighthouse audit can be run against a real URL for canonical scores. Or continue with another new game / older-game polish.
