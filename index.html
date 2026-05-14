@@ -305,6 +305,19 @@
       </div>
       <div class="queue-list" id="queueList"></div>
     </section>
+    <section class="queue updates" id="updatesSection" aria-labelledby="updatesTitle" hidden>
+      <div class="queue-head">
+        <div class="queue-heading">
+          <span class="eyebrow">Workshop Arcade</span>
+          <h2 id="updatesTitle">Recent Updates</h2>
+          <div class="queue-state" id="updatesStatus" aria-live="polite"></div>
+        </div>
+        <div class="queue-actions">
+          <a class="btn" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main" target="_blank" rel="noopener">All Commits</a>
+        </div>
+      </div>
+      <div class="queue-list" id="updatesList"></div>
+    </section>
   </main>
 
   <div class="modal" id="workshopModal" role="dialog" aria-modal="true" aria-labelledby="workshopTitle" tabindex="-1" hidden>
@@ -470,6 +483,9 @@ const els = {
   empty: document.getElementById('empty'),
   queueStatus: document.getElementById('queueStatus'),
   queueList: document.getElementById('queueList'),
+  updatesSection: document.getElementById('updatesSection'),
+  updatesStatus: document.getElementById('updatesStatus'),
+  updatesList: document.getElementById('updatesList'),
   newQueueRequestBtn: document.getElementById('newQueueRequestBtn'),
   workshopModal: document.getElementById('workshopModal'),
   workshopCard: document.querySelector('.workshop-card'),
@@ -607,6 +623,7 @@ function trapModalFocus(e){
   populateWorkshopGames();
   update();
   loadIssueQueue();
+  loadRecentUpdates();
   // If the URL has #play=slug, auto-open in the sandboxed player.
   syncHash();
 })();
@@ -864,6 +881,82 @@ async function loadIssueQueue(){
   } catch (err) {
     console.warn('Issue queue fetch failed:', err);
     renderQueueFallback();
+  }
+}
+
+const UPDATES_API = 'https://api.github.com/repos/jakethehoffer/Workshop-Arcade/commits?per_page=5';
+const UPDATES_CACHE_KEY = 'workshop-arcade:recentUpdates:v1';
+const UPDATES_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function readUpdatesCache(){
+  try {
+    const raw = sessionStorage.getItem(UPDATES_CACHE_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed.fetchedAt !== 'number' || !Array.isArray(parsed.commits)) return null;
+    if(Date.now() - parsed.fetchedAt > UPDATES_CACHE_TTL_MS) return null;
+    return parsed.commits;
+  } catch { return null; }
+}
+
+function writeUpdatesCache(commits){
+  try {
+    sessionStorage.setItem(UPDATES_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), commits }));
+  } catch { /* storage unavailable */ }
+}
+
+function renderUpdates(commits){
+  els.updatesList.innerHTML = '';
+  for(const c of commits){
+    const row = document.createElement('a');
+    row.className = 'queue-row';
+    row.href = c.html_url;
+    row.target = '_blank';
+    row.rel = 'noopener';
+    const meta = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = c.title;
+    meta.appendChild(title);
+    const sub = document.createElement('span');
+    sub.textContent = `${relativeTime(c.date)} · ${c.sha.slice(0, 7)}`;
+    meta.appendChild(sub);
+    const action = document.createElement('span');
+    action.className = 'queue-action';
+    action.textContent = 'Diff →';
+    row.append(meta, action);
+    els.updatesList.appendChild(row);
+  }
+  els.updatesStatus.textContent = `${commits.length} recent update${commits.length===1?'':'s'}`;
+  els.updatesSection.hidden = false;
+}
+
+async function fetchRecentUpdates(){
+  const res = await fetch(UPDATES_API, { headers: { 'Accept': 'application/vnd.github+json' } });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if(!Array.isArray(data)) throw new Error('Unexpected response');
+  return data.map(c => ({
+    sha: c.sha,
+    title: (c.commit?.message || '').split('\n')[0],
+    date: c.commit?.author?.date || c.commit?.committer?.date,
+    html_url: c.html_url
+  })).filter(c => c.sha && c.title && c.date);
+}
+
+async function loadRecentUpdates(){
+  const cached = readUpdatesCache();
+  if(cached && cached.length){
+    renderUpdates(cached);
+    return;
+  }
+  try {
+    const commits = await fetchRecentUpdates();
+    if(!commits.length) return; // leave section hidden
+    writeUpdatesCache(commits);
+    renderUpdates(commits);
+  } catch (err) {
+    console.warn('Recent updates fetch failed:', err);
+    // Leave the section hidden — it's informational, not core.
   }
 }
 

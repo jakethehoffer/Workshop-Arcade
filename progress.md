@@ -478,3 +478,17 @@ Original prompt: Do this for me
 - Validated the embedded github-script JS locally by extracting it from the YAML, stripping common indentation, and running it with a mock `context`/`github`/`core` for both an existing-game issue (Neon Snake) and a new-game issue (Tiny Tower). Both rendered the expected comment body with correct labels.
 - Local checks passed: catalog validation, npm run test:a11y across 21 HTML files, npm run test:games for 20 games, git diff --check clean.
 - Suggested next pass: with the brief, queue, and triage comment all aligned, the next ambitious step toward issue-to-PR automation would be a `workflow_dispatch` action that opens a draft PR with a templated checklist for an implementer, OR a `workflow_dispatch` that runs the catalog/a11y/games suite on the current main and reports the green status as a comment.
+
+## 2026-05-14 Claude pass 45
+
+- Pass 40 made the Improvement Queue render real OPEN issues, but the catalog had no surface for what had been shipped. With both open and closed workshop-request counts currently at zero, the catalog gave new users no signal the project is alive. Added a "Recent Updates" section below the queue that pulls the last 5 commits from GitHub - real, working data immediately, demonstrating active development.
+- Added a new `.queue.updates` section in `index.html` matching the existing `.queue` chrome pattern (eyebrow + h2 + status line + row list + "All Commits" action chip). Section starts `hidden` and is unhidden on successful fetch.
+- New loader: `loadRecentUpdates()` mirrors `loadIssueQueue()`: 5min sessionStorage cache under `workshop-arcade:recentUpdates:v1`, fetch from `api.github.com/repos/.../commits?per_page=5`, parses the response into `{sha, title (first line), date, html_url}` per commit, renders each as a row with the commit subject as the strong title and `{relativeTime} · {sha.slice(0,7)}` as the subtitle, all linking to the commit diff. Status row shows "N recent updates".
+- Graceful degradation: on fetch error the section stays hidden (it's informational, not core); the smoke suite's existing `api.github.com` console-error filter (from pass 41) covers the failure mode too.
+- Verified all three states in the browser:
+  - Populated: 5 commits rendered, first row "Sync workshop-request triage with brief conventions | 8m ago · 67cfce4 | DIFF →", links to the commit on GitHub.
+  - Cached: sessionStorage hit, no re-fetch, same content shown.
+  - Forced error (stubbed `window.fetch`): section stays hidden, no error visible to the user.
+  - Mobile 375x812: zero horizontal overflow, all 5 rows wrap cleanly.
+- Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean.
+- Suggested next pass: with both queues now active, a natural follow-up is to make the catalog's "About"/"Contact"/"RSS" footer links functional (currently `href="#"` placeholders), or polish the empty-states cohesion (the Recently empty state is a single `.empty` div outside the queue chrome).
