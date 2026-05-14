@@ -558,3 +558,16 @@ Original prompt: Do this for me
   - **Cross-link comment on issue #3**: `<!-- workshop-draft-pr-link -->\n**Draft PR:** https://...pull/4 — push implementation commits to ` + "`codex/workshop-3`" + `.`
 - Cleaned up test artifacts: closed PR #4 with a documentation comment, deleted the `codex/workshop-3` branch, closed issue #3 with a summary comment describing what was verified and what was fixed. The closed issue + closed PR remain as a record of the test.
 - Suggested next pass: with the loop now proven end-to-end (and two real bugs caught + fixed during verification), future moves are the deferred polish items (Recently empty state inside queue chrome, `<link rel="alternate">` Atom discovery) or a Lighthouse audit since the catalog feature-set is now stable.
+
+## 2026-05-14 Claude pass 50
+
+- Pivoted from internal polish to first-impression infrastructure. The catalog had no Atom feed discovery, no Open Graph tags, no Twitter Card, no theme color - so any share to Discord/Slack/iMessage/Twitter rendered as a bare URL with no preview, and feed readers couldn't auto-detect the commits feed. The page worked, but it didn't *show up* anywhere else.
+- Created `covers/og-image.svg` (1200×630), a hand-crafted dark-theme branded card with the conic-gradient brand dot, "PLAY & WORKSHOP" eyebrow, bold "WORKSHOP ARCADE" title, a two-line tagline, and three teal-bordered chip badges ("20 GAMES", "AI WORKSHOP", "OPEN SOURCE"). Matches the catalog's visual language exactly.
+- Extended the catalog `<head>`:
+  - `<meta name="theme-color" content="#0b0f14">` — colors the browser chrome on mobile to match the dark theme.
+  - `<meta name="author" content="Workshop Arcade">` — informational.
+  - `<link rel="alternate" type="application/atom+xml" title="Workshop Arcade — recent commits" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main.atom">` — feed-reader auto-discovery; pairs naturally with pass 46's footer RSS link.
+  - Open Graph block (og:type, og:site_name, og:title, og:description, og:url-equivalent via og:image absolute, og:image with width/height/alt) pointing at `raw.githubusercontent.com/.../covers/og-image.svg` for absolute reachability when the catalog is shared.
+  - Twitter Card block (twitter:card=summary_large_image, twitter:title, twitter:description, twitter:image with alt) using the same absolute SVG URL. SVG renders cleanly on Discord/Slack/iMessage/modern browsers; Twitter falls back to a summary card without image, which is no regression from current state.
+- Verified all tags rendered correctly via DOM inspection, the SVG loads at 1200×630, no console errors, and the full validation suite stayed green: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, `git diff --check` clean.
+- Suggested next pass: with the catalog now first-class on social-share surfaces and feed readers, future moves are smaller polish items (Recently empty state inside queue chrome, button-type sweep across game pages) or a Lighthouse audit for measured performance/SEO/a11y scores.
