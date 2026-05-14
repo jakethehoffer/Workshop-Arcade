@@ -640,3 +640,17 @@ Original prompt: Do this for me
 - Verified end-to-end: streak 0 → match → 1 (pill inactive) → match → 2 (pill teal-active) → mismatch → 0 (pill inactive, but `bestStreak: 2` retained in diagnostic); mute toggle persists to localStorage; mobile 375×812 with 5 HUD pills (Moves/Time/Pairs/Streak/Best) zero overflow; no console errors.
 - Final checks passed: catalog validation for 22 games, `npm run test:a11y` clean across 23 HTML files, `npm run test:games` passed for 22 games, `npm run capture:games` max score 0 across all 44 surfaces (Memory Match desktop+mobile still 0 despite the new HUD pill and audio scaffolding).
 - Suggested next pass: Reflex Spark audio (apply the same pattern — go-cue when the panel turns green, click-sound on reaction, fanfare on run complete), or a third new game in a missing genre, or the long-deferred Lighthouse audit.
+
+## 2026-05-14 Claude pass 55
+
+- Applied pass 54's Memory Match audio convention to Reflex Spark. A reaction game where the entire mechanic is timing benefits enormously from audio cues — a click when the panel turns green helps reaction time, and a wrong-buzzer makes false starts viscerally clear. Two new games now share consistent audio support; future new games have two examples of the convention to copy.
+- Added the same lazy `AudioContext` + tiny oscillator-tone audio engine to `websites/reflex-spark.html`:
+  - `playSpark()`: short bright square-wave chirp (880Hz then 1320Hz) — fires the moment the panel flashes green via `arm()`.
+  - `playClick()`: rising sine pair (660/990Hz) — fires on a valid reaction in `record()`.
+  - `playFalseStart()`: descending triangle pair (330/220Hz) — fires when the user taps during the red wait phase in `recordFalseStart()`.
+  - `playDone()`: 4-note major arpeggio (523/659/784/1047Hz) over 440ms — fires in `finishRun()`.
+- Sound toggle: new `🔊 Sound / 🔇 Muted` button between New Run and Help with `aria-pressed`. Preference persisted to `localStorage` under `reflex-spark.sound.v1`. Tapping the button when un-muting fires `playClick()` as audio confirmation.
+- `render_game_to_text()` now surfaces `soundEnabled` at the top level so the diagnostic snapshot reflects audio state.
+- Verified end-to-end with a stubbed `AudioContext` that counts oscillator creations: `arm` → 2 oscs (spark), `record` → 2 oscs (click), `recordFalseStart` → 2 oscs (false start). After clicking the sound button to mute, subsequent `arm` + `record` cycles produced **0 oscillators** — the `soundEnabled` guard correctly suppresses all sound paths. Mute toggle wrote `"false"` to localStorage. Mobile 375×812: zero overflow, 3 control buttons (New Run / Sound / Help), 4 HUD pills, no console errors.
+- Final checks passed: catalog validation for 22 games, `npm run test:a11y` clean across 23 HTML files (4 rules), `npm run test:games` passed for 22 games, `npm run capture:games` max score 0 across all 44 surfaces (Reflex Spark desktop+mobile still 0 despite the new button).
+- Suggested next pass: with both new games (Memory Match, Reflex Spark) now sharing the audio convention, future moves can ship a third new game (rhythm tap, sliding puzzle, Simon-style sequence memory all fit) or finally tackle the long-deferred Lighthouse audit for measured performance/SEO/a11y scores.
