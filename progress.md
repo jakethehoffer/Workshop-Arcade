@@ -492,3 +492,15 @@ Original prompt: Do this for me
   - Mobile 375x812: zero horizontal overflow, all 5 rows wrap cleanly.
 - Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean.
 - Suggested next pass: with both queues now active, a natural follow-up is to make the catalog's "About"/"Contact"/"RSS" footer links functional (currently `href="#"` placeholders), or polish the empty-states cohesion (the Recently empty state is a single `.empty` div outside the queue chrome).
+
+## 2026-05-14 Claude pass 46
+
+- Fixed a real UX bug: the catalog's three footer links (`About`, `Contact`, `RSS`) were `href="#"` placeholders that did nothing when clicked (silently scrolled to top). With the rest of the catalog now polished and functional, three dead links in the footer stood out.
+- Updated `index.html` footer:
+  - `About` → `https://github.com/jakethehoffer/Workshop-Arcade#readme` (jumps directly to the README on the public repo).
+  - `Contact` renamed to `GitHub` → `https://github.com/jakethehoffer/Workshop-Arcade` (the actual contact surface for an open-source project).
+  - `RSS` → `https://github.com/jakethehoffer/Workshop-Arcade/commits/main.atom` with a `title="Atom feed of recent commits"` tooltip. This pairs naturally with the Recent Updates section from pass 45.
+- All three links use `target="_blank" rel="noopener"` (matches the existing external-link convention used by the Improvement Queue's Open Queue link and the Recent Updates' All Commits link).
+- Confirmed the Atom feed is live: `curl -sI` against `commits/main.atom` returned `HTTP/1.1 200 OK` with `Content-Type: application/atom+xml`.
+- Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean. Verified in browser at desktop 1280px and mobile 375px - zero horizontal overflow, no console errors.
+- Suggested next pass: with the catalog page now fully functional end-to-end, future moves could include polishing the Recently empty state inside the queue chrome instead of using the standalone `.empty` div, adding a small Atom feed `<link rel="alternate">` to `<head>` for native feed reader discovery, or shifting to documentation drift (README's "Validation And Smoke Tests" section doesn't mention `npm run test:a11y` or `npm run capture:games`).
