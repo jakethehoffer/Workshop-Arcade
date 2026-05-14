@@ -26,22 +26,49 @@
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:
-    radial-gradient(circle at 28% 8%, rgba(94,234,212,0.1), transparent 28%),
+    radial-gradient(circle at 28% 8%, rgba(94,234,212,0.10), transparent 28%),
+    radial-gradient(circle at 92% -4%, rgba(34,197,94,0.08), transparent 32%),
     linear-gradient(180deg,#0c121b,var(--bg));color:var(--ink);
     font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
   .wrap{min-height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:8px}
-  header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--stroke);background:rgba(11,15,20,0.82);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
-  header h1{font-size:19px;margin:0 6px 0 0;opacity:.92}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(94,234,212,0.18);background:linear-gradient(180deg,rgba(13,20,34,0.85),rgba(11,16,26,0.92));backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+  .brand{display:flex;flex-direction:column;gap:2px;line-height:1;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .brand .title{font-size:18px;letter-spacing:0.14em;font-weight:800;color:var(--ink)}
   header .controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-  button,select,input[type="number"],input[type="text"]{background:#0f1726;border:1px solid var(--stroke);color:var(--ink);padding:7px 9px;border-radius:9px;cursor:pointer;font-size:12px}
-  button:hover{border-color:#2c3a56}
-  button.primary{border-color:#2e435f;box-shadow:0 0 0 1px rgba(94,234,212,.15) inset}
-  button.good{border-color:#2b5f3b}
-  button.warn{border-color:#5b4b26}
-  .toggle{display:inline-flex;gap:6px;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid var(--stroke);background:#0f1726;font-size:12px}
+  .control-group{display:inline-flex;gap:4px;align-items:center;background:rgba(11,17,32,0.6);border:1px solid var(--stroke);border-radius:12px;padding:3px 5px}
+  .control-group button{border:0;background:transparent;padding:6px 9px;box-shadow:none}
+  .control-group button:hover{background:rgba(94,234,212,0.08);border:0}
+  button,select,input[type="number"],input[type="text"]{
+    background:linear-gradient(180deg,#13203a,#0c1426);
+    border:1px solid var(--stroke);color:var(--ink);
+    padding:7px 11px;border-radius:10px;cursor:pointer;font-size:12px;
+    font-weight:600;
+    transition:border-color 0.15s ease,transform 0.12s ease,background 0.15s ease;
+  }
+  button:hover{border-color:rgba(94,234,212,0.45)}
+  button:active{transform:translateY(1px)}
+  button.primary{
+    border-color:rgba(94,234,212,0.55);
+    background:linear-gradient(180deg,rgba(94,234,212,0.22),rgba(94,234,212,0.06));
+    color:var(--ink);
+  }
+  button.good{border-color:rgba(34,197,94,0.5)}
+  button.warn{border-color:rgba(245,158,11,0.5)}
+  .toggle{display:inline-flex;gap:6px;align-items:center;padding:6px 11px;border-radius:999px;border:1px solid var(--stroke);background:linear-gradient(180deg,#13203a,#0c1426);font-size:12px;font-weight:600;cursor:pointer}
+  .toggle:hover{border-color:rgba(94,234,212,0.45)}
   .toggle input{accent-color:var(--accent)}
-  .hud{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
-  .hud .dot{width:8px;height:8px;border-radius:99px;background:var(--accent);display:inline-block;margin-right:6px}
+  .hud{margin-left:auto;display:flex;gap:8px;align-items:center;color:var(--ink);font-size:12px}
+  .hud > div{
+    background:linear-gradient(180deg,rgba(20,30,50,0.88),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);
+    padding:6px 11px;border-radius:10px;
+    display:inline-flex;align-items:center;gap:6px;
+    font-weight:700;letter-spacing:0.02em;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    font-variant-numeric:tabular-nums;
+  }
+  .hud .dot{width:8px;height:8px;border-radius:99px;background:var(--accent);display:inline-block;box-shadow:0 0 8px rgba(94,234,212,0.55)}
 
   main{padding:8px 12px 12px;display:flex;align-items:flex-start;justify-content:center}
   .board{width:min(100%, 1080px);display:grid;gap:var(--gap);grid-template-rows:calc(var(--card-h) + 8px) 1fr}
@@ -116,13 +143,17 @@
     :root{--card-w:clamp(50px,13.15vw,52px);--card-h:80px;--fan-up:33px;--fan-down:17px;--gap:3px}
     .wrap{gap:3px}
     main{padding:4px 2px 5px}
-    header{padding:7px 8px 6px;gap:5px}
-    header h1{font-size:18px;line-height:1;margin-right:4px}
+    header{padding:8px 10px 7px;gap:6px}
+    .brand .eyebrow{font-size:9px;letter-spacing:0.28em}
+    .brand .title{font-size:15px;letter-spacing:0.1em}
     header .controls{gap:4px}
-    button{font-size:11px;padding:6px 7px;border-radius:8px}
-    .toggle{font-size:11px;padding:6px 7px}
-    .hud{gap:6px;font-size:11px}
-    .hud .dot{width:7px;height:7px;margin-right:4px}
+    .control-group{padding:2px 3px;gap:3px}
+    button{font-size:11px;padding:6px 8px;border-radius:8px}
+    .control-group button{padding:5px 7px}
+    .toggle{font-size:11px;padding:6px 9px}
+    .hud{gap:5px;font-size:11px;width:100%;margin-left:0}
+    .hud > div{padding:5px 9px}
+    .hud .dot{width:7px;height:7px}
     .board{gap:var(--gap);min-height:min(67vh, 560px);grid-template-rows:calc(var(--card-h) + 3px) minmax(0,1fr)}
     .bottom{min-height:0}
     .bottom .pile{min-height:min(47vh, 390px)}
@@ -145,24 +176,26 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Klondike</h1>
+    <div class="brand">
+      <span class="eyebrow">Workshop Arcade</span>
+      <span class="title">KLONDIKE</span>
+    </div>
     <div class="controls">
-      <button id="newDeal" class="primary">New Deal</button>
-      <button id="restart">Restart Deal</button>
-      <button id="undo">Undo</button>
-      <button id="hint" class="good">Hint</button>
-      <button id="autoComplete" class="good" title="Finish the game automatically" style="display:none">
-  Auto-Complete
-</button>
-
-      <!-- ✂ REMOVED: Auto button -->
+      <div class="control-group">
+        <button id="newDeal" class="primary">New Deal</button>
+        <button id="restart">Restart Deal</button>
+      </div>
+      <div class="control-group">
+        <button id="undo">Undo</button>
+        <button id="hint" class="good">Hint</button>
+        <button id="autoComplete" class="good" title="Finish the game automatically" style="display:none">
+          Auto-Complete
+        </button>
+      </div>
       <label class="toggle" title="Toggle draw mode: 1 or 3 from the stock">
-  <input type="checkbox" id="drawOne" checked>
-  <span id="drawModeLabel">Draw: 1 (toggle to 3)</span>
-</label>
-
-      <!-- ✂ REMOVED: Unlimited passes toggle (always unlimited) -->
-      <!-- ✂ REMOVED: Seed input (deal is always random unless set in code) -->
+        <input type="checkbox" id="drawOne" checked>
+        <span id="drawModeLabel">Draw: 1 (toggle to 3)</span>
+      </label>
     </div>
     <div class="hud">
       <div><span class="dot"></span><span id="status">Ready</span></div>

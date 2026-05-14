@@ -361,3 +361,13 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T05-50-04-323Z/`; 40 ranked surfaces, max score 0, with Minesweeper desktop/mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Metro Dash menu chrome or any older first-screen still missing branded eyebrow framing.
+
+## 2026-05-14 Claude pass 37
+
+- Baseline: `test-results/render-ranking/2026-05-14T05-50-04-323Z/`; all 40 surfaces scored zero, but Klondike Solitaire's header still had a plain "Klondike" title, ungrouped buttons, and flat right-aligned status text that did not match the polished card board.
+- Polished `websites/solitare.html` header cohesion: replaced the plain `<h1>Klondike</h1>` with a Workshop Arcade + KLONDIKE eyebrow brand, grouped the New Deal/Restart Deal and Undo/Hint/Auto-Complete buttons into `.control-group` chips, retuned the Draw toggle pill with teal-accent chrome, refreshed `button`/`.toggle` chrome with gradients and a teal-accented primary action, restyled the right-aligned `.hud` Playing/Moves/Time entries as teal-tinted status pills with a glowing dot, and added a second teal/green ambient radial blob to fill the header empty space.
+- Rebuilt the mobile breakpoint so the brand stacks at the top, control groups stay compact, and the status pills wrap into a full-width row.
+- Preserved Klondike Solitaire gameplay rules, deal/restart/undo/hint/auto-complete wiring, draw mode toggle, status text updates, timer, move counter, board layout, and all existing render_game_to_text/advanceTime diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T05-58-45-176Z/`; 40 ranked surfaces, max score 0, with Klondike desktop/mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Maze Chase header refresh or older games still using legacy retro chrome.
