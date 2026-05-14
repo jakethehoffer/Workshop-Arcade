@@ -494,6 +494,28 @@ function getInteractionRecipe(slug) {
         await holdKeyAdvance(page, "ArrowUp", 700);
       },
     },
+    "memory-match": {
+      name: "flip a matching pair",
+      run: async (page) => {
+        // Find the first matching pair from the live deck, click them in order.
+        const pair = await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function") return null;
+          const snap = JSON.parse(window.render_game_to_text());
+          const byIcon = {};
+          for (const c of snap.cards) {
+            (byIcon[c.icon] = byIcon[c.icon] || []).push(c.id);
+          }
+          const found = Object.values(byIcon).find((ids) => ids.length >= 2);
+          return found ? [found[0], found[1]] : null;
+        });
+        if (pair) {
+          await clickSelectorIfVisible(page, `button[data-id="${pair[0]}"]`);
+          await settlePage(page, 150);
+          await clickSelectorIfVisible(page, `button[data-id="${pair[1]}"]`);
+        }
+        await settlePage(page, 250);
+      },
+    },
     minesweeper: {
       name: "reveal a center cell",
       run: async (page) => {

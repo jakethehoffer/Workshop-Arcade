@@ -571,3 +571,24 @@ Original prompt: Do this for me
   - Twitter Card block (twitter:card=summary_large_image, twitter:title, twitter:description, twitter:image with alt) using the same absolute SVG URL. SVG renders cleanly on Discord/Slack/iMessage/modern browsers; Twitter falls back to a summary card without image, which is no regression from current state.
 - Verified all tags rendered correctly via DOM inspection, the SVG loads at 1200×630, no console errors, and the full validation suite stayed green: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, `git diff --check` clean.
 - Suggested next pass: with the catalog now first-class on social-share surfaces and feed readers, future moves are smaller polish items (Recently empty state inside queue chrome, button-type sweep across game pages) or a Lighthouse audit for measured performance/SEO/a11y scores.
+
+## 2026-05-14 Claude pass 51
+
+- Twelve consecutive passes (39-50) had been catalog infrastructure and polish. The catalog had 20 games with no new content added since pass 1. With every convention now locked in (visual cohesion, a11y check, diagnostic hooks, capture harness, brief, triage, draft PR), the project was ready to actually USE that infrastructure to add new content. Shipped a new game: Memory Match.
+- New game `websites/memory-match.html`:
+  - Card-flip memory game with three difficulties (Easy 4x4/8 pairs, Medium 4x6/12 pairs, Hard 6x6/18 pairs) using emoji icons.
+  - Full visual cohesion: Workshop Arcade eyebrow + bold MEMORY MATCH title brand mark, teal/cyan gradient chrome on HUD pills (Moves / Time / Pairs / Best), gradient PLAY button, segmented difficulty pill control, ambient radial backdrop, tabular-numeric stat values.
+  - Accessibility: each card is a real `<button>` with `aria-label` ("Hidden card 4" → "Card 4: ⭐ (matched)"), face-down cards show a conic-gradient dot to suggest interactivity. Help and Win overlays use `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, focus trap, Escape close, focus restore.
+  - Diagnostic hooks: `window.render_game_to_text()` returns `{difficulty, moves, matched, pairs, faceup, busy, won, elapsedMs, best, cards, feedback}`; `window.advanceTime(ms)` deterministically advances the clock and resolves pending mismatch flip-backs.
+  - Feedback diagnostics (consumed by the capture harness's event-frame scoring): `feedback.flipAge` / `matchAge` / `mismatchAge` (transient, decay over 1.25s window), `flipCount` / `matchCount` / `mismatchCount` (running counters), `flashActive` boolean tied to the busy state.
+  - localStorage-backed personal best per difficulty (`memory-match.best.easy/medium/hard`), with sandboxed-storage shim via `websites/workshop-runtime.js`.
+- New cover `covers/memory-match.svg` (640x360): dark-theme branded card showing a 4x4 grid mid-game (two matched pairs lit teal, one in-progress flipped pair, the rest hidden) with the Workshop Arcade eyebrow + bold MEMORY/MATCH title and a three-line tagline.
+- Added manifest entry (Puzzle tag, 60 popularity, 2026-05-14 addedAt). `validate-catalog.ps1 -Fix` synced FALLBACK_GAMES in `index.html` to 21 games.
+- Added `memory-match` interaction recipe to `scripts/capture-games.mjs`: parses `render_game_to_text()`, finds the first matching pair from the deck, clicks both cards in sequence so the capture event-frame catches a real match.
+- Verified end-to-end in the browser at desktop and mobile:
+  - Played through a perfect game (8 pairs, 8 moves, won) and confirmed win overlay rendered.
+  - Tested mismatch flip-back: clicked two different-icon cards → busy=true with both faceup, then `advanceTime(900)` → faceup=[], busy=false.
+  - Switched to Hard difficulty: 36 cards, 6 columns, mobile 375px zero overflow, no console errors.
+  - Catalog grid shows 21 games with Memory Match card rendering its SVG cover, subtitle, Puzzle tag.
+- Final checks passed: catalog validation for 21 games, `npm run test:a11y` clean across 22 HTML files, `npm run test:games` passed for 21 games, `npm run capture:games` max score 0 across all 42 rendered surfaces (Memory Match desktop & mobile included), `git diff --check` clean.
+- Suggested next pass: Memory Match could get its own play-feel polish (match streak/combo, sound effects honoring SFX toggle) or another new game in a missing genre (reaction/whack-a-mole, rhythm tap, simple platformer).

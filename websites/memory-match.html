@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Memory Match</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100%;
+    background:
+      radial-gradient(900px 600px at 10% -6%,rgba(94,234,212,0.13),transparent 60%),
+      radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+    display:flex;flex-direction:column;align-items:center;padding:24px 16px 32px;
+  }
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .brand .title{font-size:22px;letter-spacing:0.16em;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.2);text-transform:uppercase}
+
+  .panel{
+    width:100%;max-width:680px;display:flex;flex-direction:column;align-items:center;gap:14px;
+  }
+
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:stretch}
+  .pill{
+    display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);
+    padding:8px 14px;border-radius:12px;line-height:1.05;min-width:78px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill .label{font-size:9px;letter-spacing:0.26em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .btn,.seg button{
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
+    padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .btn:hover,.seg button:hover{border-color:rgba(94,234,212,0.55)}
+  .seg{display:inline-flex;border-radius:999px;background:rgba(11,17,32,0.6);border:1px solid rgba(94,234,212,0.18);padding:3px;gap:2px}
+  .seg button{border-radius:999px;border:0;background:transparent;box-shadow:none;padding:6px 12px}
+  .seg button[aria-pressed="true"]{background:linear-gradient(180deg,rgba(94,234,212,0.22),rgba(11,17,32,0.92));border:1px solid rgba(94,234,212,0.55);box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 12px rgba(94,234,212,0.18)}
+
+  .board{
+    --cols:4;
+    display:grid;gap:10px;width:100%;
+    grid-template-columns:repeat(var(--cols),1fr);
+  }
+  .card{
+    aspect-ratio:1/1;border-radius:14px;border:1px solid rgba(94,234,212,0.22);
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    color:#e6edf3;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:clamp(28px,7vw,52px);line-height:1;
+    box-shadow:0 8px 18px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition:transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .card:hover:not([data-state="matched"]):not(:disabled){border-color:rgba(94,234,212,0.55);transform:translateY(-1px)}
+  .card[data-state="hidden"]{color:transparent}
+  .card[data-state="hidden"]::before{
+    content:"";display:block;width:46%;height:46%;border-radius:50%;
+    background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2);
+    opacity:0.45;filter:blur(2px);
+  }
+  .card[data-state="up"]{background:linear-gradient(180deg,rgba(45,75,120,0.55),rgba(20,38,70,0.65));border-color:rgba(94,234,212,0.55)}
+  .card[data-state="matched"]{
+    background:linear-gradient(180deg,rgba(94,234,212,0.18),rgba(20,38,70,0.65));
+    border-color:rgba(94,234,212,0.75);
+    color:#5eead4;
+    cursor:default;
+    box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 18px rgba(94,234,212,0.18);
+  }
+  .card:focus-visible{outline:3px solid rgba(124,158,255,0.7);outline-offset:2px}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .overlay.show{display:flex}
+  .overlay-card{
+    width:min(440px,100%);
+    background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
+    border:1px solid rgba(94,234,212,0.32);border-radius:16px;padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 24px rgba(94,234,212,0.12);
+  }
+  .overlay-card h3{margin:0 0 8px;font-size:20px;letter-spacing:0.04em}
+  .overlay-card .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .overlay-card p{margin:8px 0;color:#b6c4dc;font-size:14px;line-height:1.5}
+  .overlay-card ul{margin:8px 0;padding-left:18px;color:#b6c4dc;font-size:14px;line-height:1.6}
+  .overlay-card .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .overlay-card .stats{display:flex;gap:10px;justify-content:center;margin:12px 0 4px}
+
+  @media (max-width:560px){
+    body{padding:14px 10px 24px}
+    .brand .title{font-size:18px;letter-spacing:0.14em}
+    .board{gap:7px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand">
+  <span class="eyebrow">Workshop Arcade</span>
+  <span class="title">MEMORY MATCH</span>
+</div>
+<div class="panel">
+  <div class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
+    <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0:00</span></div>
+    <div class="pill"><span class="label">Pairs</span><span class="value" id="pairsValue">0/8</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
+  </div>
+  <div class="controls">
+    <span class="seg" role="group" aria-label="Difficulty">
+      <button type="button" data-difficulty="easy"   aria-pressed="true">Easy</button>
+      <button type="button" data-difficulty="medium" aria-pressed="false">Medium</button>
+      <button type="button" data-difficulty="hard"   aria-pressed="false">Hard</button>
+    </span>
+    <button class="btn primary" type="button" id="newGameBtn">New Game</button>
+    <button class="btn" type="button" id="helpBtn">❓ Help</button>
+  </div>
+  <div class="board" id="board" role="grid" aria-label="Memory match board"></div>
+</div>
+
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="overlay-card">
+    <span class="eyebrow">Workshop Arcade</span>
+    <h3 id="helpTitle">How to Play</h3>
+    <p>Flip two cards at a time to find their matching pair. Match every pair to win — fewer moves and faster times win bragging rights.</p>
+    <ul>
+      <li>Click or tap a face-down card to flip it.</li>
+      <li>Two non-matching cards flip back after a moment.</li>
+      <li>Use <kbd>Tab</kbd> and <kbd>Enter</kbd>/<kbd>Space</kbd> for keyboard play.</li>
+      <li>Press <kbd>Esc</kbd> to close this dialog.</li>
+    </ul>
+    <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+  <div class="overlay-card">
+    <span class="eyebrow">Match complete</span>
+    <h3 id="winTitle">You found every pair!</h3>
+    <div class="stats">
+      <div class="pill"><span class="label">Moves</span><span class="value" id="winMoves">0</span></div>
+      <div class="pill"><span class="label">Time</span><span class="value" id="winTime">0:00</span></div>
+    </div>
+    <p id="winNote">Nice work.</p>
+    <div class="actions"><button class="btn primary" type="button" id="winPlayAgain">Play Again</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const ICONS = ['🎮','🎯','🎲','🃏','⭐','⚡','❄️','🔥','☀️','🌙','⚽','🎵','🎨','🚀','🛡️','🎁','🍀','🌈'];
+  const DIFFICULTIES = {
+    easy:   { cols:4, pairs:8  },
+    medium: { cols:4, pairs:12 }, // 6 rows
+    hard:   { cols:6, pairs:18 }  // 6 rows
+  };
+  const FLIP_BACK_MS = 800;
+
+  const els = {
+    moves:   document.getElementById('movesValue'),
+    time:    document.getElementById('timeValue'),
+    pairs:   document.getElementById('pairsValue'),
+    best:    document.getElementById('bestValue'),
+    board:   document.getElementById('board'),
+    newGame: document.getElementById('newGameBtn'),
+    help:    document.getElementById('helpBtn'),
+    helpOverlay: document.getElementById('helpOverlay'),
+    helpClose:   document.getElementById('helpClose'),
+    winOverlay:  document.getElementById('winOverlay'),
+    winMoves:    document.getElementById('winMoves'),
+    winTime:     document.getElementById('winTime'),
+    winNote:     document.getElementById('winNote'),
+    winPlayAgain:document.getElementById('winPlayAgain'),
+    difficultyButtons: Array.from(document.querySelectorAll('[data-difficulty]'))
+  };
+
+  const state = {
+    difficulty: 'easy',
+    cards: [],         // {id, icon, state:'hidden|up|matched'}
+    flipped: [],       // indices currently flipped face up (max 2)
+    moves: 0,
+    matched: 0,
+    started: 0,        // ms timestamp game started, 0 if not yet started
+    now: 0,            // ms (Date.now-ish) — advanceable for tests
+    pendingResolveAt: 0, // when a non-match pair should flip back
+    won: false,
+    busy: false,       // ignore clicks while a non-match is being resolved
+    // event-frame feedback diagnostics (consumed by capture:games + web-game client)
+    lastFlipAt: 0,
+    lastMatchAt: 0,
+    lastMismatchAt: 0,
+    flipCount: 0,
+    matchCount: 0,
+    mismatchCount: 0
+  };
+
+  function bestKey(){ return 'memory-match.best.' + state.difficulty; }
+  function loadBest(){
+    try {
+      const raw = localStorage.getItem(bestKey());
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.moves !== 'number' || typeof parsed.time !== 'number') return null;
+      return parsed;
+    } catch { return null; }
+  }
+  function saveBest(record){
+    try { localStorage.setItem(bestKey(), JSON.stringify(record)); } catch {}
+  }
+
+  function shuffle(arr){
+    for (let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function formatTime(totalMs){
+    const totalSec = Math.max(0, Math.floor(totalMs / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function nowFn(){ return state.now; }
+
+  function setDifficulty(name){
+    if (!DIFFICULTIES[name]) return;
+    state.difficulty = name;
+    els.difficultyButtons.forEach(b => {
+      const active = b.dataset.difficulty === name;
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    newGame();
+  }
+
+  function newGame(){
+    const conf = DIFFICULTIES[state.difficulty];
+    const cardCount = conf.pairs * 2;
+    const icons = ICONS.slice(0, conf.pairs);
+    const deck = shuffle(icons.concat(icons)).map((icon, i) => ({ id: i, icon, state: 'hidden' }));
+    state.cards = deck;
+    state.flipped = [];
+    state.moves = 0;
+    state.matched = 0;
+    state.started = 0;
+    state.pendingResolveAt = 0;
+    state.won = false;
+    state.busy = false;
+    els.board.style.setProperty('--cols', conf.cols);
+    renderBoard();
+    updateHud();
+    closeOverlay(els.winOverlay);
+  }
+
+  function renderBoard(){
+    els.board.innerHTML = '';
+    for (const card of state.cards){
+      const btn = document.createElement('button');
+      btn.className = 'card';
+      btn.type = 'button';
+      btn.dataset.state = card.state;
+      btn.dataset.id = String(card.id);
+      btn.setAttribute('role', 'gridcell');
+      btn.setAttribute('aria-label', card.state === 'hidden' ? 'Hidden card ' + (card.id + 1) : 'Card ' + (card.id + 1) + ': ' + card.icon);
+      btn.textContent = card.state === 'hidden' ? '' : card.icon;
+      btn.addEventListener('click', () => onCardClick(card.id));
+      els.board.appendChild(btn);
+    }
+  }
+
+  function refreshCard(id){
+    const card = state.cards[id];
+    const btn = els.board.querySelector('button[data-id="' + id + '"]');
+    if (!btn) return;
+    btn.dataset.state = card.state;
+    btn.textContent = card.state === 'hidden' ? '' : card.icon;
+    btn.setAttribute('aria-label', card.state === 'hidden'
+      ? 'Hidden card ' + (card.id + 1)
+      : 'Card ' + (card.id + 1) + ': ' + card.icon + (card.state === 'matched' ? ' (matched)' : ''));
+  }
+
+  function updateHud(){
+    const conf = DIFFICULTIES[state.difficulty];
+    els.moves.textContent = String(state.moves);
+    els.pairs.textContent = state.matched + '/' + conf.pairs;
+    els.time.textContent = formatTime(state.started ? (state.now - state.started) : 0);
+    const best = loadBest();
+    if (best) {
+      els.best.textContent = best.moves + ' / ' + formatTime(best.time);
+    } else {
+      els.best.textContent = '—';
+    }
+  }
+
+  function onCardClick(id){
+    if (state.busy || state.won) return;
+    const card = state.cards[id];
+    if (!card || card.state !== 'hidden') return;
+    if (state.flipped.length >= 2) return;
+
+    if (!state.started) state.started = state.now;
+    card.state = 'up';
+    state.flipped.push(id);
+    state.lastFlipAt = state.now;
+    state.flipCount += 1;
+    refreshCard(id);
+
+    if (state.flipped.length === 2){
+      state.moves += 1;
+      updateHud();
+      const [aId, bId] = state.flipped;
+      const a = state.cards[aId], b = state.cards[bId];
+      if (a.icon === b.icon){
+        a.state = b.state = 'matched';
+        state.matched += 1;
+        state.flipped = [];
+        state.lastMatchAt = state.now;
+        state.matchCount += 1;
+        refreshCard(aId);
+        refreshCard(bId);
+        if (state.matched === DIFFICULTIES[state.difficulty].pairs) finishGame();
+      } else {
+        state.busy = true;
+        state.pendingResolveAt = state.now + FLIP_BACK_MS;
+        state.lastMismatchAt = state.now;
+        state.mismatchCount += 1;
+      }
+    }
+  }
+
+  function resolvePendingMismatch(){
+    if (!state.busy) return;
+    const [aId, bId] = state.flipped;
+    if (aId == null || bId == null) { state.busy = false; return; }
+    const a = state.cards[aId], b = state.cards[bId];
+    a.state = b.state = 'hidden';
+    refreshCard(aId);
+    refreshCard(bId);
+    state.flipped = [];
+    state.busy = false;
+    state.pendingResolveAt = 0;
+  }
+
+  function finishGame(){
+    state.won = true;
+    const elapsed = state.now - state.started;
+    const best = loadBest();
+    let beat = false;
+    if (!best || state.moves < best.moves || (state.moves === best.moves && elapsed < best.time)){
+      saveBest({ moves: state.moves, time: elapsed });
+      beat = true;
+    }
+    els.winMoves.textContent = String(state.moves);
+    els.winTime.textContent = formatTime(elapsed);
+    els.winNote.textContent = beat ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves in ' + formatTime(elapsed) + '.'
+      : 'Finished in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.';
+    openOverlay(els.winOverlay, els.winPlayAgain);
+    updateHud();
+  }
+
+  // ----- Modal management with focus trap + Escape close -----
+  let activeOverlay = null;
+  let returnFocusTo = null;
+
+  function openOverlay(overlay, autofocus){
+    if (activeOverlay) closeOverlay(activeOverlay, false);
+    overlay.classList.add('show');
+    activeOverlay = overlay;
+    returnFocusTo = document.activeElement;
+    setTimeout(() => { (autofocus || overlay.querySelector('button, [href], input, [tabindex]')).focus(); }, 0);
+  }
+  function closeOverlay(overlay, restoreFocus){
+    overlay.classList.remove('show');
+    if (activeOverlay === overlay) activeOverlay = null;
+    if (restoreFocus !== false && returnFocusTo && document.contains(returnFocusTo)){
+      returnFocusTo.focus({ preventScroll: true });
+    }
+    returnFocusTo = null;
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && activeOverlay){
+      e.preventDefault();
+      closeOverlay(activeOverlay);
+    } else if (e.key === 'Tab' && activeOverlay){
+      const focusables = activeOverlay.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    }
+  });
+
+  // ----- Tick loop for time + pending flip-back resolution -----
+  let lastFrame = 0;
+  function tick(timestamp){
+    if (!lastFrame) lastFrame = timestamp;
+    const delta = timestamp - lastFrame;
+    lastFrame = timestamp;
+    state.now += delta;
+    if (state.busy && state.now >= state.pendingResolveAt){
+      resolvePendingMismatch();
+    }
+    if (state.started && !state.won){
+      els.time.textContent = formatTime(state.now - state.started);
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ----- Wire controls -----
+  els.newGame.addEventListener('click', newGame);
+  els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
+  els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
+  els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
+  els.winPlayAgain.addEventListener('click', () => { closeOverlay(els.winOverlay); newGame(); });
+  els.difficultyButtons.forEach(b => b.addEventListener('click', () => setDifficulty(b.dataset.difficulty)));
+
+  // ----- Diagnostic hooks for capture harness + develop-web-game client -----
+  function ageSeconds(at){
+    if (!at) return null;
+    const sec = (state.now - at) / 1000;
+    return sec >= 0 && sec <= 1.25 ? sec : null;
+  }
+
+  window.render_game_to_text = function render_game_to_text(){
+    return JSON.stringify({
+      difficulty: state.difficulty,
+      moves: state.moves,
+      matched: state.matched,
+      pairs: DIFFICULTIES[state.difficulty].pairs,
+      faceup: state.flipped.slice(),
+      busy: state.busy,
+      won: state.won,
+      elapsedMs: state.started ? state.now - state.started : 0,
+      best: loadBest(),
+      cards: state.cards.map(c => ({ id: c.id, icon: c.icon, state: c.state })),
+      feedback: {
+        flipAge: ageSeconds(state.lastFlipAt),
+        matchAge: ageSeconds(state.lastMatchAt),
+        mismatchAge: ageSeconds(state.lastMismatchAt),
+        flipCount: state.flipCount,
+        matchCount: state.matchCount,
+        mismatchCount: state.mismatchCount,
+        flashActive: state.busy
+      }
+    });
+  };
+  window.advanceTime = function advanceTime(ms){
+    const dt = Math.max(0, Number(ms) || 0);
+    state.now += dt;
+    if (state.busy && state.now >= state.pendingResolveAt) resolvePendingMismatch();
+    if (state.started && !state.won) els.time.textContent = formatTime(state.now - state.started);
+    return state.now;
+  };
+
+  // Init
+  state.now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  newGame();
+})();
+</script>
+</body>
+</html>
