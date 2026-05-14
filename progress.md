@@ -271,3 +271,14 @@ Original prompt: Do this for me
 - Verified with the required develop-web-game client for 2048 plus direct desktop/mobile Playwright checks for bounded merge feedback, undo, help open/close, overlay restart usability, board sizing, no offscreen controls, and no overflow.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue qualitative zero-score contact-sheet review, likely targeting another page whose visual style still feels less integrated than the newest feedback-polished games.
+
+## 2026-05-14 Codex pass 28
+
+- Baseline: `test-results/render-ranking/2026-05-14T03-37-10-570Z/`; all automated scores were clean, so this pass targeted qualitative Sky Hopper visual cohesion and active-flight readability.
+- Restyled `websites/flappy-bird.html` toward the newer Workshop Arcade feel with a darker teal sky shell, richer world gradient, layered cloud/hill/ground treatment, stronger pipe contrast, and a more distinct bird silhouette.
+- Strengthened visual-only feedback for flaps, score events, pipe danger, speed streaks, hit flash, and screen shake while preserving flap physics, pipe timing, scoring, collision rules, saves, audio preferences, controls, metadata, and static-site behavior.
+- Added compact Sky Hopper diagnostics for layout, nearest gap, screen flash/shake, and danger feedback; also gated gameplay input while the help overlay is open so Space/tap cannot start play behind the help card.
+- Final capture: `test-results/render-ranking/2026-05-14T03-53-42-495Z/`; 40 ranked surfaces, max score 0, with Sky Hopper desktop/mobile manually inspected.
+- Verified with the required develop-web-game client for Sky Hopper plus direct desktop/mobile Playwright checks for active pipes, danger feedback, help gating, restart flow, crash feedback, no console/page errors, and no horizontal overflow.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue qualitative zero-score review; likely pick a remaining older game whose visual style or active-play feedback still feels less cohesive than the newest polished titles.
