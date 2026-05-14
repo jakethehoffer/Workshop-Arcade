@@ -654,3 +654,30 @@ Original prompt: Do this for me
 - Verified end-to-end with a stubbed `AudioContext` that counts oscillator creations: `arm` → 2 oscs (spark), `record` → 2 oscs (click), `recordFalseStart` → 2 oscs (false start). After clicking the sound button to mute, subsequent `arm` + `record` cycles produced **0 oscillators** — the `soundEnabled` guard correctly suppresses all sound paths. Mute toggle wrote `"false"` to localStorage. Mobile 375×812: zero overflow, 3 control buttons (New Run / Sound / Help), 4 HUD pills, no console errors.
 - Final checks passed: catalog validation for 22 games, `npm run test:a11y` clean across 23 HTML files (4 rules), `npm run test:games` passed for 22 games, `npm run capture:games` max score 0 across all 44 surfaces (Reflex Spark desktop+mobile still 0 despite the new button).
 - Suggested next pass: with both new games (Memory Match, Reflex Spark) now sharing the audio convention, future moves can ship a third new game (rhythm tap, sliding puzzle, Simon-style sequence memory all fit) or finally tackle the long-deferred Lighthouse audit for measured performance/SEO/a11y scores.
+
+## 2026-05-14 Claude pass 56
+
+- Third new game in six passes, picked to showcase the audio convention pass 54/55 just established. Echo Mimic is Simon-style sequence memory — every action plays a tone, every pad has its own pitch (C/E/G/C arpeggio across the four pads). It's the strongest demonstration yet that audio is a first-class convention.
+- `websites/echo-mimic.html`:
+  - Four-pad 2x2 grid (red/yellow/green/blue) with classic Simon coloring. Each pad is a real `<button type="button">` with `aria-label` and focus-visible outline; can be activated via click, Enter/Space when focused, or number keys 1-4.
+  - Sequence-memory gameplay: each round adds one step. Watch phase plays the sequence (each pad lights up + sounds), then mimic phase lets the player tap pads in order. One wrong pad ends the run.
+  - Adaptive difficulty: pad-flash duration starts at 420ms and shortens by 18ms per round, floored at 220ms. Inter-step gap stays 140ms.
+  - Audio engine matches Memory Match / Reflex Spark: lazy `AudioContext`, tiny oscillator tones, no asset additions:
+    - `playPad(color)`: pure sine at the pad's frequency (261.63 / 329.63 / 392 / 523.25 Hz = C/E/G/C).
+    - `playWrong()`: descending triangle pair (220→165Hz) on wrong-pad game over.
+    - `playWin()`: 4-note major arpeggio (523/659/784/1047Hz) when a run sets a new personal best ≥ round 3.
+  - Sound toggle `🔊 Sound / 🔇 Muted` persists to `localStorage` under `echo-mimic.sound.v1`.
+  - Diagnostic hooks: `render_game_to_text()` returns `{phase, round, sequenceLength, sequence, playerIndex, bestRound, soundEnabled, feedback}` where `feedback` has playback/correct/wrong ages + counters + a `flashActive` boolean tied to any pad's `data-active="true"`. `advanceTime(ms)` drives the playback queue forward so capture tests can skip the watch phase deterministically.
+  - localStorage best-round persistence under `echo-mimic.best.v1`, with sandboxed-storage shim via `workshop-runtime.js`.
+  - Help and Game Over overlays use `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + focus trap + Escape close.
+- `covers/echo-mimic.svg` (640x360): dark-theme branded card showing the 2x2 pad grid with the green pad mid-flash, plus the Workshop Arcade brand mark and a three-line tagline.
+- Added manifest entry (Puzzle + Arcade tags, 50 popularity). `validate-catalog.ps1 -Fix` synced FALLBACK_GAMES to 23 games.
+- `scripts/capture-games.mjs` recipe `echo-mimic`: clicks Start → `advanceTime(3000)` to skip the playback phase → reads `sequence[0]` from the diagnostic and clicks the matching pad. Captures the correct-tap event frame.
+- Verified end-to-end at desktop and mobile:
+  - idle → click Start → watch phase, round 1, sequence length 1.
+  - `advanceTime(3000)` → mimic phase, playerIndex 0.
+  - Click correct pad → playerIndex advances to 1, `correctCount` increments, after 600ms round 2 begins with sequence length 2.
+  - Wrong pad in round 2 → phase=over, `wrongCount: 1`, Game Over overlay shown, `bestRound: 2` persisted to localStorage.
+  - Mobile 375×812: zero overflow, all 4 pads visible at the correct size, no console errors.
+- Final checks passed: catalog validation for 23 games, `npm run test:a11y` clean across 24 HTML files (4 rules), `npm run test:games` passed for 23 games, `npm run capture:games` max score 0 across all 46 surfaces.
+- Suggested next pass: catalog now has 23 games. With three new games shipped in six passes (Memory Match → Reflex Spark → Echo Mimic) each using all conventions cleanly, future moves can continue with another genre, or polish older games to bring them up to the audio standard, or finally tackle Lighthouse.

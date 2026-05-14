@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Echo Mimic</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100%;
+    background:
+      radial-gradient(900px 600px at 10% -6%,rgba(94,234,212,0.13),transparent 60%),
+      radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+    display:flex;flex-direction:column;align-items:center;padding:24px 16px 32px;
+  }
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .brand .title{font-size:22px;letter-spacing:0.16em;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.2);text-transform:uppercase}
+
+  .panel{width:100%;max-width:560px;display:flex;flex-direction:column;gap:14px}
+
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .pill{
+    display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);
+    padding:8px 14px;border-radius:12px;line-height:1.05;min-width:78px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill .label{font-size:9px;letter-spacing:0.26em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+
+  .status{
+    text-align:center;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;
+    color:rgba(94,234,212,0.85);font-weight:700;min-height:18px;
+  }
+
+  .grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;
+    aspect-ratio:1/1;
+  }
+  .pad{
+    border-radius:18px;border:2px solid rgba(255,255,255,0.06);cursor:pointer;
+    font:inherit;display:flex;align-items:center;justify-content:center;
+    transition:transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+    -webkit-tap-highlight-color:transparent;
+    position:relative;
+  }
+  .pad:focus-visible{outline:3px solid rgba(124,158,255,0.7);outline-offset:3px}
+  .pad[data-color="red"]   {background:linear-gradient(180deg,#a31a2a,#5d0f1a); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(163,26,42,0.32)}
+  .pad[data-color="yellow"]{background:linear-gradient(180deg,#b6911d,#6e570f); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(182,145,29,0.32)}
+  .pad[data-color="green"] {background:linear-gradient(180deg,#1a7d4f,#0b4a2d); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(26,125,79,0.32)}
+  .pad[data-color="blue"]  {background:linear-gradient(180deg,#2152a3,#0e2c66); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(33,82,163,0.32)}
+  .pad[data-active="true"][data-color="red"]   {filter:brightness(1.6); box-shadow:0 0 36px rgba(251,113,133,0.6), inset 0 0 0 2px rgba(255,255,255,0.5)}
+  .pad[data-active="true"][data-color="yellow"]{filter:brightness(1.6); box-shadow:0 0 36px rgba(253,224,71,0.6), inset 0 0 0 2px rgba(255,255,255,0.5)}
+  .pad[data-active="true"][data-color="green"] {filter:brightness(1.6); box-shadow:0 0 36px rgba(94,234,212,0.6), inset 0 0 0 2px rgba(255,255,255,0.5)}
+  .pad[data-active="true"][data-color="blue"]  {filter:brightness(1.6); box-shadow:0 0 36px rgba(124,158,255,0.6), inset 0 0 0 2px rgba(255,255,255,0.5)}
+  .pad:active{transform:scale(0.985)}
+  .pad[disabled]{cursor:not-allowed;opacity:0.85}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .btn{
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
+    padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .btn:hover{border-color:rgba(94,234,212,0.55)}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .overlay.show{display:flex}
+  .overlay-card{
+    width:min(420px,100%);
+    background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
+    border:1px solid rgba(94,234,212,0.32);border-radius:16px;padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), 0 0 24px rgba(94,234,212,0.12);
+  }
+  .overlay-card h3{margin:0 0 8px;font-size:20px;letter-spacing:0.04em}
+  .overlay-card .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .overlay-card p,.overlay-card ul{margin:8px 0;color:#b6c4dc;font-size:14px;line-height:1.5}
+  .overlay-card ul{padding-left:18px}
+  .overlay-card .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .overlay-card .stats{display:flex;gap:10px;justify-content:center;margin:12px 0 4px}
+
+  @media (max-width:560px){
+    body{padding:14px 10px 24px}
+    .brand .title{font-size:18px;letter-spacing:0.14em}
+    .grid{gap:10px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand">
+  <span class="eyebrow">Workshop Arcade</span>
+  <span class="title">ECHO MIMIC</span>
+</div>
+<div class="panel">
+  <div class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">0</span></div>
+    <div class="pill"><span class="label">Length</span><span class="value" id="lengthValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Tap a pad or press Start to begin.</div>
+  <div class="grid" id="grid" role="application" aria-label="Echo Mimic pads">
+    <button class="pad" type="button" data-color="red"    data-index="0" data-active="false" aria-label="Red pad"></button>
+    <button class="pad" type="button" data-color="yellow" data-index="1" data-active="false" aria-label="Yellow pad"></button>
+    <button class="pad" type="button" data-color="green"  data-index="2" data-active="false" aria-label="Green pad"></button>
+    <button class="pad" type="button" data-color="blue"   data-index="3" data-active="false" aria-label="Blue pad"></button>
+  </div>
+  <div class="controls">
+    <button class="btn primary" type="button" id="startBtn">Start</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">🔊 Sound</button>
+    <button class="btn" type="button" id="helpBtn">❓ Help</button>
+  </div>
+</div>
+
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="overlay-card">
+    <span class="eyebrow">Workshop Arcade</span>
+    <h3 id="helpTitle">How to Play</h3>
+    <p>Watch the four pads flash in sequence, then repeat the sequence by tapping the pads in the same order. Each successful round adds one new step.</p>
+    <ul>
+      <li>Sound is part of the game — each pad has its own tone.</li>
+      <li>Get one step wrong and the run ends.</li>
+      <li>Keyboard: <kbd>Tab</kbd> to the pads, then <kbd>Enter</kbd>/<kbd>Space</kbd>. Or <kbd>1</kbd>-<kbd>4</kbd> for direct pad selection.</li>
+      <li>Press <kbd>Esc</kbd> to close this dialog.</li>
+    </ul>
+    <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="gameOverOverlay" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+  <div class="overlay-card">
+    <span class="eyebrow">Run Complete</span>
+    <h3 id="gameOverTitle">Wrong pad!</h3>
+    <div class="stats">
+      <div class="pill"><span class="label">Round</span><span class="value" id="goRound">0</span></div>
+      <div class="pill"><span class="label">Length</span><span class="value" id="goLength">0</span></div>
+    </div>
+    <p id="goNote">Nice run.</p>
+    <div class="actions"><button class="btn primary" type="button" id="goPlayAgain">Play Again</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const COLORS = ['red', 'yellow', 'green', 'blue'];
+  const PAD_FREQS = { red: 261.63, yellow: 329.63, green: 392.00, blue: 523.25 }; // C, E, G, C
+  const BEST_KEY = 'echo-mimic.best.v1';
+  const SOUND_KEY = 'echo-mimic.sound.v1';
+  const FLASH_MS = 420;
+  const GAP_MS = 140;
+  const SPEEDUP_MIN_FLASH = 220;
+  const SPEEDUP_PER_ROUND = 18;
+
+  const els = {
+    round:   document.getElementById('roundValue'),
+    length:  document.getElementById('lengthValue'),
+    best:    document.getElementById('bestValue'),
+    status:  document.getElementById('statusLine'),
+    grid:    document.getElementById('grid'),
+    pads:    Array.from(document.querySelectorAll('.pad')),
+    start:   document.getElementById('startBtn'),
+    sound:   document.getElementById('soundBtn'),
+    help:    document.getElementById('helpBtn'),
+    helpOverlay: document.getElementById('helpOverlay'),
+    helpClose:   document.getElementById('helpClose'),
+    goOverlay:   document.getElementById('gameOverOverlay'),
+    goRound:     document.getElementById('goRound'),
+    goLength:    document.getElementById('goLength'),
+    goNote:      document.getElementById('goNote'),
+    goPlayAgain: document.getElementById('goPlayAgain'),
+    goTitle:     document.getElementById('gameOverTitle')
+  };
+
+  // phase: 'idle' | 'watch' | 'mimic' | 'over'
+  const state = {
+    phase: 'idle',
+    sequence: [],
+    playerIndex: 0,
+    round: 0,
+    bestRound: null,
+    now: 0,
+    // playback scheduling
+    playbackQueue: [],   // [{ type:'on'|'off', at: ms, color }]
+    // event-frame feedback
+    lastPlaybackAt: 0,
+    lastCorrectAt: 0,
+    lastWrongAt: 0,
+    playbackCount: 0,
+    correctCount: 0,
+    wrongCount: 0
+  };
+  let soundEnabled = true;
+
+  // ----- Audio engine (matches Memory Match / Reflex Spark pattern) -----
+  let audioCtx = null;
+  function ensureAudio(){
+    if (audioCtx) return audioCtx;
+    try { const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return null; audioCtx = new Ctx(); } catch { audioCtx = null; }
+    return audioCtx;
+  }
+  function loadSoundPref(){ try { const raw = localStorage.getItem(SOUND_KEY); if (raw === null) return true; return raw === 'true'; } catch { return true; } }
+  function saveSoundPref(on){ try { localStorage.setItem(SOUND_KEY, String(on)); } catch {} }
+  function tone(freq, durMs, gain = 0.07, type = 'sine', offsetMs = 0){
+    if (!soundEnabled) return;
+    const ctx = ensureAudio(); if (!ctx) return;
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch {} }
+    const start = ctx.currentTime + offsetMs / 1000;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(gain, start + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + durMs / 1000);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + durMs / 1000 + 0.02);
+  }
+  function playPad(color, durMs = 240){ tone(PAD_FREQS[color] || 440, durMs, 0.07, 'sine'); }
+  function playWrong(){ tone(220, 140, 0.06, 'triangle'); tone(165, 180, 0.05, 'triangle', 90); }
+  function playWin(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, 200, 0.06, 'sine', i * 100)); }
+  function updateSoundButton(){
+    els.sound.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+    els.sound.textContent = soundEnabled ? '🔊 Sound' : '🔇 Muted';
+  }
+
+  // ----- Game flow -----
+  function loadBest(){ try { const raw = localStorage.getItem(BEST_KEY); if (!raw) return null; const p = JSON.parse(raw); return (p && typeof p.round === 'number') ? p : null; } catch { return null; } }
+  function saveBest(record){ try { localStorage.setItem(BEST_KEY, JSON.stringify(record)); } catch {} }
+
+  function updateHud(){
+    els.round.textContent = String(state.round);
+    els.length.textContent = String(state.sequence.length);
+    els.best.textContent = state.bestRound ? String(state.bestRound) : '—';
+  }
+  function setStatus(text){ els.status.textContent = text; }
+  function setPadActive(idx, active){
+    const pad = els.pads[idx];
+    if (!pad) return;
+    pad.setAttribute('data-active', active ? 'true' : 'false');
+  }
+  function setPadsDisabled(disabled){
+    els.pads.forEach(p => { if (disabled) p.setAttribute('disabled', ''); else p.removeAttribute('disabled'); });
+  }
+
+  function newRun(){
+    state.phase = 'idle';
+    state.sequence = [];
+    state.playerIndex = 0;
+    state.round = 0;
+    state.playbackQueue = [];
+    setStatus('Tap a pad or press Start to begin.');
+    setPadsDisabled(false);
+    els.pads.forEach((_, i) => setPadActive(i, false));
+    closeOverlay(els.goOverlay);
+    updateHud();
+  }
+
+  function startRound(){
+    state.round += 1;
+    state.sequence.push(Math.floor(Math.random() * 4));
+    state.playerIndex = 0;
+    setStatus('Watch the sequence…');
+    queuePlayback();
+    updateHud();
+  }
+
+  function queuePlayback(){
+    const flashMs = Math.max(SPEEDUP_MIN_FLASH, FLASH_MS - (state.round - 1) * SPEEDUP_PER_ROUND);
+    state.playbackQueue = [];
+    let t = state.now + 250; // small pre-roll
+    for (const idx of state.sequence){
+      state.playbackQueue.push({ type: 'on', at: t, idx });
+      state.playbackQueue.push({ type: 'off', at: t + flashMs, idx });
+      t += flashMs + GAP_MS;
+    }
+    state.playbackQueue.push({ type: 'mimic', at: t + 100 });
+    state.phase = 'watch';
+    setPadsDisabled(true);
+  }
+
+  function drivePlayback(){
+    if (state.phase !== 'watch') return;
+    while (state.playbackQueue.length && state.now >= state.playbackQueue[0].at){
+      const ev = state.playbackQueue.shift();
+      if (ev.type === 'on'){
+        setPadActive(ev.idx, true);
+        playPad(COLORS[ev.idx]);
+        state.lastPlaybackAt = state.now;
+        state.playbackCount += 1;
+      } else if (ev.type === 'off'){
+        setPadActive(ev.idx, false);
+      } else if (ev.type === 'mimic'){
+        beginMimic();
+      }
+    }
+  }
+
+  function beginMimic(){
+    state.phase = 'mimic';
+    state.playerIndex = 0;
+    setStatus('Now repeat the sequence.');
+    setPadsDisabled(false);
+  }
+
+  function onPadActivate(idx){
+    if (state.phase === 'idle'){
+      // First tap also starts the run — and counts as round 1's first input.
+      startRound();
+      return;
+    }
+    if (state.phase !== 'mimic') return;
+    const expected = state.sequence[state.playerIndex];
+    setPadActive(idx, true);
+    playPad(COLORS[idx], 180);
+    setTimeout(() => setPadActive(idx, false), 220);
+    if (idx === expected){
+      state.playerIndex += 1;
+      state.lastCorrectAt = state.now;
+      state.correctCount += 1;
+      if (state.playerIndex >= state.sequence.length){
+        // Round complete — schedule next round.
+        setStatus('Nice! Get ready…');
+        setPadsDisabled(true);
+        setTimeout(() => { if (state.phase === 'mimic') startRound(); }, 600);
+      }
+    } else {
+      state.lastWrongAt = state.now;
+      state.wrongCount += 1;
+      finishRun(false);
+    }
+  }
+
+  function finishRun(playerStopped){
+    state.phase = 'over';
+    setPadsDisabled(true);
+    const bestPrev = loadBest();
+    let beat = false;
+    if (!bestPrev || state.round > bestPrev.round){
+      state.bestRound = state.round;
+      saveBest({ round: state.round, length: state.sequence.length, ts: Date.now() });
+      beat = true;
+    } else {
+      state.bestRound = bestPrev.round;
+    }
+    els.goRound.textContent = String(state.round);
+    els.goLength.textContent = String(state.sequence.length);
+    els.goTitle.textContent = playerStopped ? 'Run Stopped' : 'Wrong pad!';
+    const noteParts = ['Reached round ' + state.round + ' (' + state.sequence.length + ' steps).'];
+    if (beat && state.round > 1) noteParts.push('New best!');
+    els.goNote.textContent = noteParts.join(' ');
+    setStatus(playerStopped ? 'Stopped.' : 'Game over — wrong pad.');
+    if (!playerStopped) playWrong();
+    if (beat && state.round >= 3) playWin();
+    openOverlay(els.goOverlay, els.goPlayAgain);
+    updateHud();
+  }
+
+  // ----- Modal management -----
+  let activeOverlay = null;
+  let returnFocus = null;
+  function openOverlay(o, focus){ if(activeOverlay) closeOverlay(activeOverlay,false); o.classList.add('show'); activeOverlay = o; returnFocus = document.activeElement; setTimeout(()=>(focus||o.querySelector('button')).focus(),0); }
+  function closeOverlay(o, restore){ o.classList.remove('show'); if(activeOverlay===o) activeOverlay=null; if(restore!==false && returnFocus && document.contains(returnFocus)) returnFocus.focus({preventScroll:true}); returnFocus=null; }
+  document.addEventListener('keydown',(e)=>{
+    if(activeOverlay){
+      if(e.key==='Escape'){ e.preventDefault(); closeOverlay(activeOverlay); return; }
+      if(e.key==='Tab'){
+        const f=activeOverlay.querySelectorAll('button,[href],input,[tabindex]:not([tabindex="-1"])');
+        if(!f.length) return; const first=f[0], last=f[f.length-1];
+        if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+      }
+      return;
+    }
+    // Number key shortcuts 1-4 for pads
+    if (state.phase === 'mimic'){
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= 4){ e.preventDefault(); onPadActivate(n - 1); }
+    }
+  });
+
+  // ----- Wire controls -----
+  els.pads.forEach((pad, idx) => pad.addEventListener('click', () => onPadActivate(idx)));
+  els.start.addEventListener('click', () => { if (state.phase === 'idle' || state.phase === 'over') { newRun(); startRound(); } });
+  els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
+  els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
+  els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
+  els.goPlayAgain.addEventListener('click', () => { closeOverlay(els.goOverlay); newRun(); startRound(); });
+  els.sound.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    saveSoundPref(soundEnabled);
+    updateSoundButton();
+    if (soundEnabled) playPad('green', 160);
+  });
+
+  // ----- Tick loop -----
+  let lastFrame = 0;
+  function tick(t){
+    if (!lastFrame) lastFrame = t;
+    state.now += t - lastFrame;
+    lastFrame = t;
+    drivePlayback();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ----- Diagnostic hooks -----
+  function ageSeconds(at){
+    if (!at) return null;
+    const sec = (state.now - at) / 1000;
+    return sec >= 0 && sec <= 1.25 ? sec : null;
+  }
+  window.render_game_to_text = function render_game_to_text(){
+    return JSON.stringify({
+      phase: state.phase,
+      round: state.round,
+      sequenceLength: state.sequence.length,
+      sequence: state.sequence.slice(),
+      playerIndex: state.playerIndex,
+      bestRound: state.bestRound,
+      soundEnabled,
+      feedback: {
+        playbackAge: ageSeconds(state.lastPlaybackAt),
+        correctAge: ageSeconds(state.lastCorrectAt),
+        wrongAge: ageSeconds(state.lastWrongAt),
+        playbackCount: state.playbackCount,
+        correctCount: state.correctCount,
+        wrongCount: state.wrongCount,
+        flashActive: els.pads.some(p => p.getAttribute('data-active') === 'true')
+      }
+    });
+  };
+  window.advanceTime = function advanceTime(ms){
+    const dt = Math.max(0, Number(ms) || 0);
+    state.now += dt;
+    drivePlayback();
+    return state.now;
+  };
+
+  // Init
+  state.now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const initialBest = loadBest();
+  state.bestRound = initialBest ? initialBest.round : null;
+  soundEnabled = loadSoundPref();
+  updateSoundButton();
+  newRun();
+})();
+</script>
+</body>
+</html>

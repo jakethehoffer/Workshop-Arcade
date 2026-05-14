@@ -538,6 +538,27 @@ function getInteractionRecipe(slug) {
         await settlePage(page, 200);
       },
     },
+    "echo-mimic": {
+      name: "watch sequence and repeat",
+      run: async (page) => {
+        // Start a round and skip the sequence playback via advanceTime, then
+        // tap the single pad shown to capture a "correct" event frame.
+        await clickSelectorIfVisible(page, "#startBtn");
+        await settlePage(page, 60);
+        await page.evaluate(() => { if (typeof window.advanceTime === "function") window.advanceTime(3000); });
+        await settlePage(page, 60);
+        // Read the first sequence index and click the matching pad.
+        const idx = await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function") return null;
+          const snap = JSON.parse(window.render_game_to_text());
+          return (snap && snap.sequence && snap.sequence.length) ? snap.sequence[0] : null;
+        });
+        if (idx !== null){
+          await clickSelectorIfVisible(page, `button.pad[data-index="${idx}"]`);
+        }
+        await settlePage(page, 200);
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
