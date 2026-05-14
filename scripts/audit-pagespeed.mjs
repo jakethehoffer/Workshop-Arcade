@@ -15,7 +15,15 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SITE = process.env.WORKSHOP_ARCADE_URL || "https://jakethehoffer.github.io/Workshop-Arcade";
+const args = new Set(process.argv.slice(2));
+const STRICT = args.has("--ci");
+const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jakethehoffer.github.io/Workshop-Arcade");
+
+const BUDGETS = {
+  Catalog: { transferKb: 250, requests: 40 },
+  Lexica: { transferKb: 300, requests: 8 },
+  default: { transferKb: 150, requests: 8 },
+};
 
 const TARGETS = [
   { label: "Catalog", path: "/" },
@@ -34,6 +42,67 @@ function status(value, thresholds) {
   if (value <= good) return "🟢";
   if (value <= ok) return "🟡";
   return "🔴";
+}
+function normalizeBaseUrl(url) {
+  return url.replace(/\/+$/, "");
+}
+function targetUrl(path) {
+  return SITE + path;
+}
+function budgetFor(label) {
+  return BUDGETS[label] || BUDGETS.default;
+}
+function auditIssues(result) {
+  const issues = [];
+
+  if (result.error) {
+    issues.push("failed to load target: " + result.error);
+    return issues;
+  }
+
+  const badResponses = result.badResponses || [];
+  for (const response of badResponses) {
+    issues.push("HTTP " + response.status + " from " + response.url);
+  }
+
+  for (const error of result.consoleErrors) {
+    issues.push("console error: " + error);
+  }
+  for (const error of result.pageErrors) {
+    issues.push("page error: " + error);
+  }
+
+  const meta = result.meta;
+  const requiredMeta = [
+    ["title", meta.hasTitle],
+    ["description", meta.hasDescription],
+    ["viewport", meta.hasViewport],
+    ["html lang", meta.hasLang],
+    ["canonical", meta.hasCanonical],
+    ["og:title", meta.hasOgTitle],
+    ["og:description", meta.hasOgDescription],
+    ["og:image", meta.hasOgImage],
+    ["og:url", meta.hasOgUrl],
+    ["twitter:card", meta.hasTwitterCard],
+    ["theme-color", meta.hasThemeColor],
+  ];
+  for (const [name, ok] of requiredMeta) {
+    if (!ok) issues.push("missing " + name);
+  }
+  if (meta.imgWithoutAlt > 0) {
+    issues.push(meta.imgWithoutAlt + " image(s) missing alt text");
+  }
+
+  const budget = budgetFor(result.label);
+  const transferBudget = budget.transferKb * 1024;
+  if (result.totalBytes > transferBudget) {
+    issues.push("transfer " + fmtKb(result.totalBytes) + " exceeds " + budget.transferKb + " KB budget");
+  }
+  if (result.requestCount > budget.requests) {
+    issues.push("request count " + result.requestCount + " exceeds " + budget.requests + " budget");
+  }
+
+  return issues;
 }
 
 async function auditUrl(browser, url) {
@@ -98,6 +167,9 @@ async function auditUrl(browser, url) {
   const totalBytes = requests.reduce((s, r) => s + r.bytes, 0);
   const sorted = [...requests].sort((a, b) => b.bytes - a.bytes);
   const largest = sorted[0];
+  const badResponses = requests
+    .filter((r) => r.status >= 400)
+    .map((r) => ({ url: r.url, status: r.status, bytes: r.bytes, type: r.type }));
 
   return {
     url,
@@ -106,6 +178,7 @@ async function auditUrl(browser, url) {
     totalBytes,
     requestCount: requests.length,
     largestResource: largest ? { url: largest.url, bytes: largest.bytes, type: largest.type, status: largest.status } : null,
+    badResponses,
     consoleErrors,
     pageErrors,
   };
@@ -119,7 +192,7 @@ async function main() {
   const browser = await chromium.launch();
   const results = [];
   for (const t of TARGETS) {
-    const url = SITE + t.path;
+    const url = targetUrl(t.path);
     process.stdout.write("Auditing " + t.label + " ... ");
     try {
       const r = await auditUrl(browser, url);
@@ -171,6 +244,7 @@ async function main() {
   }
   lines.push("");
   lines.push("FCP thresholds: 🟢 ≤1800ms, 🟡 ≤3000ms (Lighthouse mobile). Load: 🟢 ≤2500ms, 🟡 ≤4000ms. Transfer: 🟢 ≤200KB, 🟡 ≤500KB.");
+  lines.push("CI budgets: Catalog ≤250KB / ≤40 requests; Lexica ≤300KB / ≤8 requests; other sampled games ≤150KB / ≤8 requests.");
   lines.push("");
 
   // Meta-tag completeness matrix.
@@ -211,10 +285,49 @@ async function main() {
     lines.push("");
   }
 
+  if (STRICT) {
+    lines.push("## CI strict checks");
+    lines.push("");
+    let issueCount = 0;
+    for (const r of results) {
+      const issues = auditIssues(r);
+      if (!issues.length) {
+        lines.push("- **" + r.label + "**: passed");
+        continue;
+      }
+
+      lines.push("- **" + r.label + "**:");
+      for (const issue of issues) {
+        lines.push("  - " + issue);
+        issueCount += 1;
+      }
+    }
+    lines.push("");
+
+    if (issueCount > 0) {
+      lines.push("CI strict audit failed with " + issueCount + " issue(s).");
+      lines.push("");
+    } else {
+      lines.push("CI strict audit passed.");
+      lines.push("");
+    }
+  }
+
   const reportPath = join(outDir, "report.md");
   await writeFile(reportPath, lines.join("\n") + "\n");
   console.log("\nReport: " + reportPath);
   console.log(lines.join("\n"));
+
+  if (STRICT) {
+    const failures = results.flatMap((r) => auditIssues(r).map((issue) => r.label + ": " + issue));
+    if (failures.length) {
+      console.error("\nCI strict audit failed:");
+      for (const failure of failures) {
+        console.error("- " + failure);
+      }
+      process.exit(1);
+    }
+  }
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

@@ -727,3 +727,10 @@ Original prompt: Do this for me
 - Updated `docs/performance-baseline.md` with the final cover SVG audit: local catalog transfer is 140.7KB, all audited pages have green FCP/load metrics, and the catalog's largest resource is now the HTML document itself instead of cover art.
 - Verification passed locally: catalog validation, static a11y, 23-game smoke suite, 46-surface rendered capture (max score 0), old PNG reference scan, and local `audit:perf` against `http://127.0.0.1:4176`.
 - Suggested next pass: now that catalog image weight is cleaned up, the next useful work is either wiring `audit:perf` into CI for regression visibility or shipping another missing-genre game.
+
+## 2026-05-14 Codex pass 61
+
+- Wired the performance/SEO audit into CI as a real regression gate. `scripts/audit-pagespeed.mjs --ci` now fails on deterministic issues only: target load failure, HTTP 4xx/5xx responses, console/page errors, missing required SEO/social meta tags, missing image alt text, transfer over budget, or request count over budget. Timing metrics remain reported but do not fail CI.
+- Added `npm run audit:perf:ci`. CI budgets: Catalog ≤250KB / ≤40 requests, Lexica ≤300KB / ≤8 requests, and every other sampled game ≤150KB / ≤8 requests.
+- Extended Validate Catalog to start the local static server after smoke tests, wait for `http://127.0.0.1:4173/`, run `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`, stop the server via shell trap, and upload the generated markdown report as a 14-day artifact.
+- Updated `docs/performance-baseline.md` with the strict-mode budgets and local reproduction command.

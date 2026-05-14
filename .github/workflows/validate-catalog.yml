@@ -35,3 +35,35 @@ jobs:
 
       - name: Run game smoke tests
         run: npm run test:games
+
+      - name: Run performance and SEO regression audit
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm run start -- --host 127.0.0.1 --port 4173 > /tmp/workshop-arcade-server.log 2>&1 &
+          server_pid=$!
+
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in {1..40}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              break
+            fi
+            sleep 0.25
+          done
+
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci
+
+      - name: Upload performance audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-audit
+          path: test-results/lighthouse-baseline/**/report.md
+          if-no-files-found: ignore
+          retention-days: 14

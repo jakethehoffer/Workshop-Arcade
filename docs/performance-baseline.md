@@ -8,6 +8,16 @@ npm run audit:perf
 
 `audit:perf` is a local Playwright-based audit (see `scripts/audit-pagespeed.mjs`). It hits the live URL, walks a representative sample of pages, and measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console errors, meta-tag completeness, and the largest single resource per page. The raw per-run JSON is written under `test-results/lighthouse-baseline/<timestamp>/` (gitignored).
 
+CI runs `npm run audit:perf:ci` against a local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
+
+CI budgets:
+
+| Page group | Transfer | Requests |
+|------------|----------|----------|
+| Catalog | 250 KB | 40 |
+| Lexica | 300 KB | 8 |
+| Other sampled games | 150 KB | 8 |
+
 ## Final cover SVG audit (pass 60)
 
 Captured 2026-05-14 against `http://127.0.0.1:4176` (chromium @ 1280x800, network idle) after replacing the last catalog PNG covers.
@@ -108,6 +118,13 @@ Pass 59 swapped 11 catalog covers from PNG to existing SVG twins already in the 
 ```bash
 npm ci
 npm run audit:perf
+```
+
+Run the same strict checks CI uses against a local static server:
+
+```bash
+npm run start -- --host 127.0.0.1 --port 4173
+WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci
 ```
 
 Audit a different deployment by overriding the URL:
