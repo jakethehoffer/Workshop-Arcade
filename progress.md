@@ -331,3 +331,13 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T04-59-32-807Z/`; 40 ranked surfaces, max score 0, with Brick Breaker desktop/mobile HUD manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Neon Snake start-screen polish or another older game still lacking branded chrome.
+
+## 2026-05-14 Claude pass 34
+
+- Baseline: `test-results/render-ranking/2026-05-14T04-59-32-807Z/`; all 40 surfaces scored zero, but Neon Snake's first screen had no title at all and only flat single-line pills atop an unframed playing area.
+- Polished `websites/snake.html` first-screen visual cohesion: added a fixed Workshop Arcade + NEON SNAKE brand mark in the top-left, refreshed `.pill` chrome with a teal-tinted gradient and tabular-numeric numbers for Score/Best, gave the dynamic status pill a teal-accent color, retuned the mobile primary start button into an uppercase teal CTA, gave the canvas a subtle teal-tinted rounded border, and added an ambient teal/indigo radial backdrop to fill the desktop empty space.
+- Tuned the mobile breakpoint to hide the brand mark (the centered HUD already crowds the small viewport) and tightened status-pill sizing.
+- Preserved Neon Snake gameplay rules, scoring, best-score persistence, audio toggle, help/restart wiring, mobile controls, status text updates, and all existing diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T05-09-17-954Z/`; 40 ranked surfaces, max score 0, with Neon Snake desktop/mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; candidates include Block Drop HUD chrome cohesion or remaining games lacking branded eyebrow chrome.

@@ -6,15 +6,64 @@
 <title>Neon Snake</title>
 <style>
   html, body { margin:0; height:100%; background:#0b0f14; color:#e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display:flex; align-items:center; justify-content:center; }
-  canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
-  .hud { position:fixed; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:8px; align-items:center; font-weight:700; }
-  .pill { background:#111827; border:1px solid #26334a; padding:5px 8px; border-radius:10px; }
-  .pill.button { cursor:pointer; user-select:none; }
+  body {
+    background:
+      radial-gradient(900px 600px at 10% -6%,rgba(94,234,212,0.13),transparent 60%),
+      radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+  }
+  canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-radius:14px; border:1px solid rgba(94,234,212,0.14); }
+  .brand {
+    position:fixed; top:10px; left:14px;
+    display:flex; flex-direction:column; gap:2px; line-height:1;
+    user-select:none; pointer-events:none;
+    z-index:10;
+  }
+  .brand .eyebrow {
+    font-size:10px; letter-spacing:0.32em; text-transform:uppercase;
+    color:rgba(94,234,212,0.85); font-weight:700;
+  }
+  .brand .title {
+    font-size:20px; letter-spacing:0.16em; font-weight:800; color:#e6edf3;
+    text-shadow:0 0 18px rgba(94,234,212,0.2);
+  }
+  .hud { position:fixed; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:8px; align-items:stretch; user-select:none; z-index:11; }
+  .pill {
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);
+    padding:6px 11px; border-radius:10px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    backdrop-filter:blur(4px);
+    font-weight:700; letter-spacing:0.02em;
+    font-size:13px; color:#e6edf3;
+    line-height:1.1;
+    display:inline-flex; align-items:center;
+  }
+  .pill#score, .pill#best {
+    font-variant-numeric:tabular-nums;
+  }
+  .pill#status {
+    color:rgba(94,234,212,0.95);
+    font-size:12px; letter-spacing:0.04em;
+    font-weight:700;
+  }
+  .pill.button { cursor:pointer; user-select:none; transition:border-color 0.15s ease,transform 0.12s ease; }
+  .pill.button:hover { border-color:rgba(94,234,212,0.55); }
+  .pill.button:active { transform:translateY(1px); }
   button.pill { color:#e6edf3; font:inherit; }
-  .primary-start { display:none; border-color:#1f766b; color:#5eead4; background:#0e2c2a; font-weight:800; }
+  .primary-start {
+    display:none;
+    border-color:rgba(94,234,212,0.7);
+    color:#06242a;
+    background:linear-gradient(180deg,#6cf0d8,#22d3ee);
+    font-weight:800;
+    text-transform:uppercase; letter-spacing:0.14em; font-size:11px;
+    padding:6px 12px;
+    box-shadow:0 8px 18px rgba(34,211,238,0.32);
+  }
   .has-hotkey { display:inline-flex; align-items:center; gap:8px; }
   .utility-pill { width:38px; height:34px; padding:0; justify-content:center; position:relative; }
-  .utility-pill .icon { font-size:16px; line-height:1; }
+  .utility-pill .icon { font-size:16px; line-height:1; color:#e6edf3; }
   .utility-pill .label,
   .utility-pill .hotkey { display:none; }
   .hotkey { background:#0b1120; border:1px solid #26334a; padding:2px 6px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:0.04em; line-height:1; }
@@ -25,9 +74,10 @@
   @media (max-width: 640px){
     html, body { align-items:flex-start; justify-content:center; overflow:hidden; }
     canvas { margin-top:var(--snake-canvas-top, 112px); }
-    .hud { left:8px; right:8px; transform:none; flex-wrap:wrap; justify-content:center; gap:6px; }
+    .brand { display:none; }
+    .hud { left:8px; right:8px; transform:none; flex-wrap:wrap; justify-content:center; gap:6px; top:8px; }
     .pill { padding:6px 8px; font-size:12px; }
-    #status { max-width:78px; white-space:normal; text-align:center; }
+    #status { max-width:78px; white-space:normal; text-align:center; font-size:11px; }
     .primary-start { display:inline-flex; align-items:center; justify-content:center; min-width:74px; }
     .has-hotkey { gap:6px; }
     .utility-pill { width:34px; height:32px; }
@@ -51,6 +101,10 @@
 </head>
 <body>
   <canvas id="game"></canvas>
+  <div class="brand">
+    <span class="eyebrow">Workshop Arcade</span>
+    <span class="title">NEON SNAKE</span>
+  </div>
   <div class="hud">
     <div class="pill" id="score">Score: 0</div>
     <div class="pill" id="best">Best: 0</div>
