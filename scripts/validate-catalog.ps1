@@ -107,6 +107,10 @@ function Test-Subresources($Game) {
   foreach ($match in [regex]::Matches($html, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
     $tag = $match.Groups["tag"].Value.ToLowerInvariant()
     $resource = $match.Groups["value"].Value
+    $fullMatch = $match.Value
+    # <link rel="canonical|alternate"> intentionally points to the live
+    # deployment for SEO / feed-reader metadata; not a subresource fetch.
+    if ($tag -eq "link" -and $fullMatch -match 'rel=["''](canonical|alternate)["'']') { continue }
     $resolved = Resolve-ResourcePath $url $resource
     if ($resolved -eq "external") { continue }
     if ($resolved -eq "remote") {

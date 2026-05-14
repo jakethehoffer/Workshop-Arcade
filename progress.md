@@ -697,3 +697,15 @@ Original prompt: Do this for me
   - Pass 40's live Improvement Queue (fetches `api.github.com`) and pass 45's Recent Updates feed already work since the repo is public — they continue to work on the Pages-hosted site too.
   - Anyone can play any of the 23 games without cloning the repo.
 - Suggested next pass: with the site live, the long-deferred Lighthouse audit can be run against a real URL for canonical scores. Or continue with another new game / older-game polish.
+
+## 2026-05-14 Claude pass 58
+
+- Finally tackled the long-deferred (suggested 6+ times) performance + SEO audit. Pivoted from Google PageSpeed Insights (heavily rate-limited without an API key — every request returned HTTP 429) to a **local Playwright-based audit** that measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console/page errors, meta-tag completeness, and largest single resource per page. No new deps (Playwright was already installed).
+- `scripts/audit-pagespeed.mjs` walks the catalog + 5 representative games on the live URL, writes raw JSON per page under `test-results/lighthouse-baseline/<ts>/` (gitignored), and prints a markdown report. Wired as `npm run audit:perf`.
+- First audit surfaced a real, fixable gap: **every individual game page was missing every social/SEO meta tag** (description, canonical, og:*, twitter:*, theme-color). The catalog had all 12 tags; direct game URLs got bare previews when shared.
+- `scripts/inject-game-meta.mjs` (idempotent, wired as `npm run inject:meta`) reads `websites/manifest.json` and writes a per-game social block between `<!-- workshop-meta:start -->` / `<!-- workshop-meta:end -->` markers right after each game's `<title>`. Generates 13 tags per game using per-game data (title becomes "Game Name — Workshop Arcade", description pulls from manifest subtitle, canonical/og:url point to live Pages URL, og:image points to the cover via raw.githubusercontent.com for absolute reachability).
+- Ran the injection across all 23 games. Each game file gained ~16 lines of metadata. Re-audit confirmed all 6 audited pages now show ✓ for all 12 checked tags.
+- Patched `scripts/validate-catalog.ps1` to whitelist `<link rel="canonical|alternate">` tags from the remote-asset warning (they intentionally point to the live deployment for SEO/feed-reader metadata; not a subresource fetch).
+- Tracked baseline at `docs/performance-baseline.md` documents before/after meta-tag matrix, headline metrics with caveats (cold-cache effects on sequential first-audit FCPs), largest-resource-per-page (catalog's `minesweeper.png` at 110KB is the biggest optimization target), and reproduction instructions.
+- Final checks: catalog validation passed for 23 games (no warnings now); `npm run test:a11y` clean across 24 HTML files; `npm run test:games` passed for 23 games; new `npm run audit:perf` available for any future deployment audit.
+- Suggested next pass: minesweeper.png cover optimization (110KB → likely <30KB as SVG), or 4th new game, or older-game audio polish, or a CI step that runs `audit:perf` on every push to track perf regressions over time.
