@@ -504,3 +504,22 @@ Original prompt: Do this for me
 - Confirmed the Atom feed is live: `curl -sI` against `commits/main.atom` returned `HTTP/1.1 200 OK` with `Content-Type: application/atom+xml`.
 - Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean. Verified in browser at desktop 1280px and mobile 375px - zero horizontal overflow, no console errors.
 - Suggested next pass: with the catalog page now fully functional end-to-end, future moves could include polishing the Recently empty state inside the queue chrome instead of using the standalone `.empty` div, adding a small Atom feed `<link rel="alternate">` to `<head>` for native feed reader discovery, or shifting to documentation drift (README's "Validation And Smoke Tests" section doesn't mention `npm run test:a11y` or `npm run capture:games`).
+
+## 2026-05-14 Claude pass 47
+
+- Aligned the human-facing docs with the conventions passes 41-46 wired into the brief, triage comment, and code. The trio that should reference the same validation set: brief (✓ pass 42), triage comment (✓ pass 44), human docs (until now: drifted). README's "Validation And Smoke Tests", CONTRIBUTING.md's add/update list, and `docs/game-contract.md`'s "Expected Checks" all listed only `validate-catalog -Fix` + `validate-catalog` + `test:games` and missed `test:a11y` (added pass 41) and `capture:games` (added long ago, never made it into docs).
+- Updated `README.md` Validation section to:
+  - List the full suite: `validate-catalog -Fix`, `validate-catalog`, `npm ci`, `test:a11y`, `test:games`, `capture:games`.
+  - Describe what each command checks (validator, a11y rules, smoke flow, rendered-quality harness).
+  - Note that CI runs `validate-catalog`, `test:a11y`, and `test:games` on every push, with `capture:games` running locally.
+- Updated `CONTRIBUTING.md` add-or-update flow:
+  - Step 5 now points at `docs/game-contract.md` for visual cohesion, modal a11y, and diagnostic hooks specifically.
+  - Step 6 lists the full validation suite including `test:a11y` and `capture:games`.
+  - Workshop Requests section clarified that the catalog UI handles label attachment automatically and the triage workflow deep-links the affected game file.
+- Expanded `docs/game-contract.md` to actually document the conventions we built into the codebase:
+  - New Accessibility section enumerating the static `test:a11y` rules (canvas labels, iframe titles, dialog roles + modal + accessible name + focus trap + Escape).
+  - New Visual Cohesion section describing the Workshop Arcade brand-mark eyebrow, teal/cyan gradient chrome, ambient backdrop, tabular numerics, and mobile breakpoint behavior.
+  - New Diagnostic Hooks section documenting `window.render_game_to_text()` and `window.advanceTime(ms)` for the capture harness and develop-web-game client.
+  - Expected Checks now lists the full validation suite + requires every captured surface in `capture:games` to score 0.
+- Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, `git diff --check` clean (only CRLF normalization warnings on touched docs).
+- Suggested next pass: with brief + triage + human docs now aligned, the natural follow-ups are either smaller polish (Recently empty state inside queue chrome, `<link rel="alternate">` Atom discovery in `<head>`) or moving toward issue-to-PR automation as the next ambitious feature.

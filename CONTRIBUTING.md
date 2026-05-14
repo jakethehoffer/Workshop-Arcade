@@ -8,14 +8,18 @@ Workshop Arcade is intentionally static: games are single HTML files in `website
 2. Add or update a cover in `covers/`.
 3. Update `websites/manifest.json`.
 4. Include `websites/workshop-runtime.js` before game scripts so sandboxed play has safe storage fallback.
-5. Follow `docs/game-contract.md`.
+5. Follow `docs/game-contract.md` (in particular: visual cohesion pattern, modal/overlay accessibility, and diagnostic hooks).
 6. Run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
+npm run test:a11y
 npm run test:games
+npm run capture:games
 ```
+
+`npm run test:a11y` and `npm run capture:games` must both pass cleanly — every rendered surface scores 0 in the capture harness.
 
 ## Remove a Game
 
@@ -29,6 +33,6 @@ Then run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate
 
 ## Workshop Requests
 
-Use the catalog's `Improve` button to generate an AI-ready brief. Open it as a GitHub issue with the `workshop-request` label so requests are visible in the Improvement Queue.
+Use the catalog's `Improve` button to generate an AI-ready brief. Submitting it opens a pre-filled GitHub issue with the `workshop-request` label already attached, which surfaces it in the Improvement Queue on the catalog.
 
-The `Workshop Request Triage` workflow adds implementation labels and a checklist comment. It does not run AI code generation or require API keys.
+The `Workshop Request Triage` workflow adds implementation labels and a checklist comment with deep links to the affected game file. It does not run AI code generation or require API keys.
