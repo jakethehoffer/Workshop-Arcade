@@ -718,3 +718,12 @@ Original prompt: Do this for me
 - Verified: catalog validation passed for 23 games, `npm run test:a11y` clean across 24 HTML files, `npm run test:games` passed for 23 games, `npm run capture:games` max score 0 across all 46 surfaces (the SVG covers render identically to the PNGs in the rendered ranking).
 - Expected savings: catalog homepage transfer drops from ~1.2MB of cover thumbnails to ~40KB. The 3 remaining PNG covers (brick-breaker, checkers, shape-inlay) carry the remaining 396KB; they're the obvious next-step optimization target.
 - Suggested next pass: design SVG covers for the remaining 3 games (brick-breaker, checkers, shape-inlay) to bring every cover under 10KB, OR ship a 4th new game, OR run the audit against the redeployed Pages and update the baseline doc with the actual measured savings.
+
+## 2026-05-14 Codex pass 60
+
+- Finished the cover-asset optimization started in pass 59. Added hand-authored 640x360 SVG covers for Brick Breaker (4.7KB) and Checkers (8.1KB), both matching the dark Workshop Arcade cover language and keeping the game-state visuals recognizable without shipping screenshots.
+- Switched Slope Runner from stale Shape Inlay screenshot art to the existing Slope Runner SVG, so the renamed game now has matching catalog art. Deleted the three obsolete PNG covers after confirming no active references remained.
+- Updated `websites/manifest.json`, regenerated `index.html` fallback catalog with `validate-catalog.ps1 -Fix`, and re-ran `npm run inject:meta` so the three affected game pages now publish SVG `og:image` / `twitter:image` URLs.
+- Updated `docs/performance-baseline.md` with the final cover SVG audit: local catalog transfer is 140.7KB, all audited pages have green FCP/load metrics, and the catalog's largest resource is now the HTML document itself instead of cover art.
+- Verification passed locally: catalog validation, static a11y, 23-game smoke suite, 46-surface rendered capture (max score 0), old PNG reference scan, and local `audit:perf` against `http://127.0.0.1:4176`.
+- Suggested next pass: now that catalog image weight is cleaned up, the next useful work is either wiring `audit:perf` into CI for regression visibility or shipping another missing-genre game.

@@ -1,6 +1,6 @@
 # Workshop Arcade Performance & SEO Baseline
 
-This is a tracked snapshot of the first audit run against the live GitHub Pages deployment. Reproduce with:
+This is a tracked set of performance and SEO audit snapshots for the live GitHub Pages deployment and local verification runs. Reproduce with:
 
 ```bash
 npm run audit:perf
@@ -8,7 +8,22 @@ npm run audit:perf
 
 `audit:perf` is a local Playwright-based audit (see `scripts/audit-pagespeed.mjs`). It hits the live URL, walks a representative sample of pages, and measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console errors, meta-tag completeness, and the largest single resource per page. The raw per-run JSON is written under `test-results/lighthouse-baseline/<timestamp>/` (gitignored).
 
-## After meta-tag injection (commit forthcoming)
+## Final cover SVG audit (pass 60)
+
+Captured 2026-05-14 against `http://127.0.0.1:4176` (chromium @ 1280x800, network idle) after replacing the last catalog PNG covers.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 112 ms | 95 ms | 🟢 95 ms | 🟢 140.7 KB | 25 | 0 |
+| Memory Match | 🟢 60 ms | 10 ms | 🟢 11 ms | 🟢 25.6 KB | 2 | 0 |
+| Reflex Spark | 🟢 52 ms | 8 ms | 🟢 9 ms | 🟢 22.9 KB | 2 | 0 |
+| Echo Mimic | 🟢 44 ms | 8 ms | 🟢 8 ms | 🟢 22.4 KB | 2 | 0 |
+| Neon Snake | 🟢 36 ms | 27 ms | 🟢 27 ms | 🟢 36.8 KB | 2 | 0 |
+| Lexica | 🟢 48 ms | 15 ms | 🟢 16 ms | 🟡 213.6 KB | 4 | 0 |
+
+The catalog's largest resource is now the HTML document itself; no cover art appears as a largest-resource item. The Lexica word list remains the largest audited asset and is game-essential.
+
+## After meta-tag injection (pass 58)
 
 Captured 2026-05-14 against https://jakethehoffer.github.io/Workshop-Arcade/ (chromium @ 1280×800, network idle).
 
@@ -57,22 +72,27 @@ No console or page errors across any audited URL. Zero `img` elements missing `a
 
 ## Largest resource per page
 
-### After PNG → SVG swap (pass 59)
+### After final cover SVG pass (pass 60)
 
-- **Catalog**: 151.1 KB — `/covers/shape-inlay.png` (next-step target)
+- **Catalog**: all cover thumbnails now use SVG; largest cover is under 10 KB.
 - **Memory Match**: 24.5 KB — `/websites/memory-match.html`
 - **Reflex Spark**: 21.8 KB — `/websites/reflex-spark.html`
 - **Echo Mimic**: 21.4 KB — `/websites/echo-mimic.html`
 - **Neon Snake**: 35.7 KB — `/websites/snake.html`
 - **Lexica**: 155.5 KB — `/websites/words5.js` (5-letter wordlist; game-essential)
 
-Pass 59 swapped 11 catalog covers from PNG to existing SVG twins already in the repo. Total cover-asset weight dropped from ~1086 KB to ~34 KB for the 11 swapped games. Three covers remain on PNG because they have no SVG twin yet — these are the next-step optimization targets:
+Pass 60 finished the cover optimization by adding compact hand-authored SVG covers for Brick Breaker and Checkers, and by pointing Slope Runner at the existing slope-runner SVG art. The catalog no longer references PNG cover thumbnails.
 
-- `covers/brick-breaker.png` (124 KB)
-- `covers/checkers.png` (121 KB)
-- `covers/shape-inlay.png` (151 KB)
+### After PNG -> SVG swap (pass 59)
 
-Replacing those with hand-crafted SVG covers (matching the pattern of the newer game covers) would bring every cover under 10 KB.
+- **Catalog**: one remaining stale cover PNG was the largest catalog asset.
+- **Memory Match**: 24.5 KB — `/websites/memory-match.html`
+- **Reflex Spark**: 21.8 KB — `/websites/reflex-spark.html`
+- **Echo Mimic**: 21.4 KB — `/websites/echo-mimic.html`
+- **Neon Snake**: 35.7 KB — `/websites/snake.html`
+- **Lexica**: 155.5 KB — `/websites/words5.js` (5-letter wordlist; game-essential)
+
+Pass 59 swapped 11 catalog covers from PNG to existing SVG twins already in the repo. Total cover-asset weight dropped from ~1086 KB to ~34 KB for those 11 games. Three covers still needed follow-up at that point; pass 60 completed the set.
 
 ### Initial baseline (pre-swap)
 
