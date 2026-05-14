@@ -446,3 +446,22 @@ Original prompt: Do this for me
 - Verified in the browser at desktop. For an existing game (Neon Snake) the brief renders all the new sections including the diagnostic-hooks constraint; for the new-game flow (Tiny Tower) the brief renders constraints+acceptance but skips the diagnostics line.
 - Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean.
 - Suggested next pass: with the brief now reflecting all established conventions, future Workshop requests handed to AI tools should produce work that lands inside the existing patterns. Open work remains the button-type sweep, or a deeper Workshop modal review (does the saved-drafts flow handle edge cases, are focus areas comprehensive, is the brief title format optimal for a GitHub issue title).
+
+## 2026-05-14 Claude pass 43
+
+- Stepped back to think about user-facing feature gaps. Recent work had been polish (chrome, a11y, brief content); the catalog has 20 games but no way for a returning user to see what they last played. Added a "Recently played" filter chip - small, scoped, real user value, fits the existing chip filter pattern.
+- Implementation in `index.html`:
+  - New `state.recentPlays` (array of slugs) backed by `localStorage` key `workshop-arcade:recentPlays:v1`. Helpers `loadRecentPlays()` and `pushRecentPlay(slug)` handle parsing, type-validation, dedupe (most-recent-first), and a 10-item cap.
+  - `openPlayer(g)` now calls `pushRecentPlay(g.slug)` and re-runs `buildFilters()` so a freshly-played game can populate the Recently chip on return.
+  - `buildFilters()` inserts the Recently chip in position 2 (after All) only when `state.recentPlays.length > 0`, so the chip never sits empty.
+  - `update()` special-cases `state.category === 'Recently'` to build the list from `state.recentPlays` in order (ignoring the sort dropdown since the implicit order is "most recent first"). The search query still applies on top.
+  - `render()` swaps the result-count and empty-state copy when Recently is active: shows "N recently played" or "No recent plays", and the empty-state copy reads "No recently played games yet. Open any game and it will appear here."
+- Verified end-to-end in the browser:
+  - Pre-play: no Recently chip, normal category list.
+  - Play Neon Snake, then Block Drop, return to catalog: Recently chip appears after All; clicking it filters to those 2 games in most-recent-first order ("Block Drop", "Neon Snake"), result count reads "2 recently played".
+  - Replay Neon Snake: dedupes so the list becomes ["snake", "tetris"] - Neon Snake jumps to the top.
+  - Reload page: chip persists, filtered titles persist.
+  - Force-clear plays while Recently is active: result count reads "No recent plays", empty-state copy renders.
+  - Mobile (375x812): zero horizontal overflow, all 9 chips wrap cleanly, no console errors.
+- Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean.
+- Suggested next pass: with recent-play tracking in place, a natural follow-up is a "Continue where you left off" rail above the grid (the most recent game gets a featured card). Or extend persistence to track favorite games (explicit star) - the chip pattern is now proven.

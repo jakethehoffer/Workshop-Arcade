@@ -434,8 +434,28 @@ const state = {
   query: "",
   category: "All",
   sort: "new",
-  drafts: []
+  drafts: [],
+  recentPlays: []
 };
+
+const RECENT_PLAYS_KEY = 'workshop-arcade:recentPlays:v1';
+const RECENT_PLAYS_MAX = 10;
+
+function loadRecentPlays(){
+  try {
+    const raw = localStorage.getItem(RECENT_PLAYS_KEY);
+    if(!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(s => typeof s === 'string') : [];
+  } catch { return []; }
+}
+
+function pushRecentPlay(slug){
+  if(typeof slug !== 'string' || !slug) return;
+  const plays = [slug, ...state.recentPlays.filter(s => s !== slug)].slice(0, RECENT_PLAYS_MAX);
+  state.recentPlays = plays;
+  try { localStorage.setItem(RECENT_PLAYS_KEY, JSON.stringify(plays)); } catch {}
+}
 
 const els = {
   header: document.querySelector('header'),
@@ -582,6 +602,7 @@ function trapModalFocus(e){
   }catch(err){
     state.games = normalizeGames(FALLBACK_GAMES);
   }
+  state.recentPlays = loadRecentPlays();
   buildFilters();
   populateWorkshopGames();
   update();
@@ -609,7 +630,10 @@ function buildFilters(){
   const found = new Set(state.games.flatMap(g => g.tags || []));
   const ordered = CATEGORY_ORDER.filter(name => name === 'All' || found.has(name));
   const extras = [...found].filter(name => !CATEGORY_ORDER.includes(name)).sort((a,b)=>a.localeCompare(b));
-  const categories = [...ordered, ...extras];
+  const baseCategories = [...ordered, ...extras];
+  const categories = state.recentPlays.length
+    ? [baseCategories[0], 'Recently', ...baseCategories.slice(1)]
+    : baseCategories;
   if(!categories.includes(state.category)) state.category = 'All';
 
   els.filters.innerHTML = '';
@@ -640,14 +664,22 @@ function update(){
 
   const q = state.query;
   const cat = state.category;
-  let list = [...state.games];
-  if(cat !== 'All') list = list.filter(g => (g.tags||[]).includes(cat));
+  let list;
+  if(cat === 'Recently'){
+    // Recency-ordered list of recently-played games; ignores the sort dropdown
+    // because the implicit order is "most recent first".
+    list = state.recentPlays
+      .map(slug => state.games.find(g => g.slug === slug))
+      .filter(Boolean);
+  } else {
+    list = [...state.games];
+    if(cat !== 'All') list = list.filter(g => (g.tags||[]).includes(cat));
+    // sort (Recently keeps its implicit recency order)
+    if(state.sort === 'az') list.sort((a,b)=>a.title.localeCompare(b.title));
+    else if(state.sort === 'pop') list.sort((a,b)=>(b.popularity||0)-(a.popularity||0));
+    else list.sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
+  }
   if(q) list = list.filter(g => `${g.title} ${g.subtitle} ${(g.tags||[]).join(' ')}`.toLowerCase().includes(q));
-
-  // sort
-  if(state.sort === 'az') list.sort((a,b)=>a.title.localeCompare(b.title));
-  else if(state.sort === 'pop') list.sort((a,b)=>(b.popularity||0)-(a.popularity||0));
-  else list.sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
 
   state.filtered = list;
   render();
@@ -687,7 +719,15 @@ function render(){
   els.grid.removeAttribute('aria-busy');
 
   const n = state.filtered.length;
-  els.resultCount.textContent = `${n} game${n===1?'':'s'}`;
+  if(state.category === 'Recently'){
+    els.resultCount.textContent = n
+      ? `${n} recently played`
+      : 'No recent plays';
+    els.empty.textContent = 'No recently played games yet. Open any game and it will appear here.';
+  } else {
+    els.resultCount.textContent = `${n} game${n===1?'':'s'}`;
+    els.empty.textContent = 'No results. Try a different search or filter.';
+  }
   els.empty.hidden = n !== 0;
 }
 
@@ -846,6 +886,10 @@ function openPlayer(g, trigger = document.activeElement){
   els.playerFrame.src = g.url;
   els.playerFrame.title = `${g.title} player`;
   showManagedModal(els.playerModal, trigger, els.playerClose);
+  pushRecentPlay(g.slug);
+  // Refresh chip list so a freshly-played game can populate the Recently chip
+  // the next time the user returns to the catalog.
+  buildFilters();
 }
 
 function closePlayer(options = {}){
