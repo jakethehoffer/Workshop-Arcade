@@ -465,3 +465,16 @@ Original prompt: Do this for me
   - Mobile (375x812): zero horizontal overflow, all 9 chips wrap cleanly, no console errors.
 - Local checks passed: catalog validation, `npm run test:a11y` clean across 21 HTML files, `npm run test:games` passed for 20 games, final `npm run capture:games` all 40 surfaces score 0, `git diff --check` clean.
 - Suggested next pass: with recent-play tracking in place, a natural follow-up is a "Continue where you left off" rail above the grid (the most recent game gets a featured card). Or extend persistence to track favorite games (explicit star) - the chip pattern is now proven.
+
+## 2026-05-14 Claude pass 44
+
+- Synced the workshop-request triage workflow with the conventions pass 42 wired into the brief. The triage comment is the other side of that handoff: the brief goes INTO the issue, the triage comment GREETS the implementer. Both should reference the same patterns. The existing triage comment was a 7-step checklist that predated the test:a11y check, the capture:games harness, and the visual cohesion pattern.
+- Rewrote `.github/workflows/workshop-request.yml` to:
+  - Add an `issue_number` `workflow_dispatch` input so the workflow can be triggered manually against any existing issue (previously workflow_dispatch had no payload to act on).
+  - Parse `File:` and `Game:` lines out of the catalog-generated brief body and use them to deep-link the actual game file in the comment (`[`websites/snake.html`](https://github.com/...)`), surfacing the target file inline rather than asking the implementer to find it.
+  - Detect the new-game placeholder (`websites/your-game.html`) and add a "pick a real path" note plus a "new games should expose these hooks" variant of the diagnostics line.
+  - Restructure the checklist into Read / Implement / Verify sections matching the brief's mental model: Read (game file, contract, diagnostics), Implement (self-contained, visual cohesion, controls, modal a11y, manifest), Verify (validate-catalog, test:a11y, test:games, capture:games — every rendered surface must score 0).
+  - Use `'… ' + value + ' …'` string concatenation instead of template literals so backticks inside markdown don't collide with the YAML block-scalar's JS template-literal handling.
+- Validated the embedded github-script JS locally by extracting it from the YAML, stripping common indentation, and running it with a mock `context`/`github`/`core` for both an existing-game issue (Neon Snake) and a new-game issue (Tiny Tower). Both rendered the expected comment body with correct labels.
+- Local checks passed: catalog validation, npm run test:a11y across 21 HTML files, npm run test:games for 20 games, git diff --check clean.
+- Suggested next pass: with the brief, queue, and triage comment all aligned, the next ambitious step toward issue-to-PR automation would be a `workflow_dispatch` action that opens a draft PR with a templated checklist for an implementer, OR a `workflow_dispatch` that runs the catalog/a11y/games suite on the current main and reports the green status as a comment.

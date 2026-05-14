@@ -4,6 +4,10 @@ on:
   issues:
     types: [opened, edited, labeled, reopened]
   workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to triage (workflow_dispatch only)
+        required: false
 
 permissions:
   contents: read
@@ -20,20 +24,29 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Resolve the target issue. On workflow_dispatch with an
+            // issue_number input we look it up; otherwise we use the event.
+            let issue = context.payload.issue;
+            if (!issue && context.eventName === 'workflow_dispatch') {
+              const num = parseInt(context.payload.inputs?.issue_number || '', 10);
+              if (Number.isFinite(num)) {
+                const fetched = await github.rest.issues.get({ owner, repo, issue_number: num });
+                issue = fetched.data;
+              }
+            }
             if (!issue) {
-              core.info('No issue payload for workflow_dispatch.');
+              core.info('No issue payload available; nothing to triage.');
               return;
             }
 
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
             const labels = [
               { name: 'workshop-request', color: '0e8a16', description: 'Catalog-generated game improvement request' },
               { name: 'needs-implementation', color: '1d76db', description: 'Ready for an implementation pass' },
               { name: 'enhancement', color: 'a2eeef', description: 'Feature or improvement request' }
             ];
-
             for (const label of labels) {
               try {
                 await github.rest.issues.createLabel({ owner, repo, ...label });
@@ -41,7 +54,6 @@ jobs:
                 if (error.status !== 422) throw error;
               }
             }
-
             await github.rest.issues.addLabels({
               owner,
               repo,
@@ -49,22 +61,58 @@ jobs:
               labels: labels.map((label) => label.name)
             });
 
+            // Parse useful context out of the catalog-generated brief in the
+            // issue body so the triage comment can deep-link the game file.
+            const body = issue.body || '';
+            const fileMatch = body.match(/^File:\s*(\S+)\s*$/m);
+            const gameMatch = body.match(/^Game:\s*(.+?)\s*$/m);
+            const file = fileMatch ? fileMatch[1] : null;
+            const game = gameMatch ? gameMatch[1] : null;
+            const fileLink = file
+              ? '[`' + file + '`](https://github.com/' + owner + '/' + repo + '/blob/main/' + file + ')'
+              : 'the requested game file';
+            const isNewGame = file === 'websites/your-game.html';
+
+            const branch = 'codex/workshop-' + issue.number;
             const marker = '<!-- workshop-triage-checklist -->';
-            const branch = `codex/workshop-${issue.number}`;
-            const body = `${marker}
-            ## Workshop Implementation Checklist
+            const headerLines = [];
+            if (game) headerLines.push('**Game:** ' + game);
+            if (file) headerLines.push('**File:** ' + fileLink + (isNewGame ? ' (new game placeholder — pick a real path)' : ''));
+            headerLines.push('**Suggested branch:** `' + branch + '`');
 
-            Suggested branch: \`${branch}\`
+            const diagnosticsLine = isNewGame
+              ? 'New games should expose `window.render_game_to_text()` and `window.advanceTime(ms)` so `npm run capture:games` and the develop-web-game client work.'
+              : 'Preserve `window.render_game_to_text()` and `window.advanceTime(ms)` on the game so `npm run capture:games` and the develop-web-game client keep working.';
 
-            1. Inspect the requested game file and \`websites/manifest.json\`.
-            2. Keep the game self-contained and follow \`docs/game-contract.md\`.
-            3. Update catalog metadata and cover art when user-visible behavior changes.
-            4. Run \`powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\validate-catalog.ps1 -Fix\`.
-            5. Run \`powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\validate-catalog.ps1\`.
-            6. Run \`npm ci\` if dependencies are not installed, then \`npm run test:games\`.
-            7. Open a PR using \`.github/pull_request_template.md\` and link this issue.
-
-            This workflow does not run AI code generation. It prepares the request for a local agent or human implementation pass.`;
+            const body_new = [
+              marker,
+              '## Workshop Implementation Checklist',
+              '',
+              headerLines.join('  \n'),
+              '',
+              '### Read',
+              '1. Inspect ' + fileLink + ' and `websites/manifest.json`.',
+              '2. Read `docs/game-contract.md` for the per-game quality contract.',
+              '3. ' + diagnosticsLine,
+              '',
+              '### Implement',
+              '4. Keep the game self-contained — no remote scripts, fonts, or heavyweight runtime folders.',
+              '5. Match the catalog visual language: Workshop Arcade eyebrow + bold game-title brand mark, teal/cyan gradient chrome on pills/buttons/cards, ambient radial backdrop, tabular-numeric stat values.',
+              '6. Preserve keyboard and touch controls; keep mobile layout usable.',
+              '7. Modal/overlay accessibility: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, focus trap, Escape to close.',
+              '8. Update catalog metadata in `websites/manifest.json` when user-visible behavior changes.',
+              '',
+              '### Verify',
+              '9. `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-catalog.ps1 -Fix` if catalog metadata changed.',
+              '10. `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-catalog.ps1` (must pass).',
+              '11. `npm ci` if dependencies are not installed, then run all three:',
+              '    - `npm run test:a11y` — canvas labels, iframe titles, role=dialog semantics.',
+              '    - `npm run test:games` — sandbox player + issue-URL flow + per-game smoke for the manifest.',
+              '    - `npm run capture:games` — every rendered surface must score 0.',
+              '12. Open a PR using `.github/pull_request_template.md` and link this issue.',
+              '',
+              'This workflow does not run AI code generation. It prepares the request for a local agent or human implementation pass.'
+            ].join('\n');
 
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
@@ -74,7 +122,7 @@ jobs:
             });
             const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
             if (existing) {
-              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: body_new });
             } else {
-              await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body });
+              await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: body_new });
             }
