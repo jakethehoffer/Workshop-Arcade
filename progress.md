@@ -410,3 +410,14 @@ Original prompt: Do this for me
 - Focused Playwright keyboard checks passed at desktop and 390px mobile: Ctrl+/ search focus, filter chip state, thumbnail Enter/Space launch, modal Tab traps, Escape close with focus restore, Workshop keyboard controls, empty queue CTA, no horizontal overflow, and no page errors. The Codex Browser plugin blocked local `file://`/`127.0.0.1` navigation in this session, so focused checks used regular Playwright with the GitHub issue API stubbed to an empty queue.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games` (`test-results/render-ranking/2026-05-14T12-43-37-273Z`) with all 40 rendered surfaces at score 0, and `git diff --check` with only the existing CRLF warning on `index.html`.
 - Suggested next pass: broaden accessibility coverage into individual games, starting with canvas games that need clearer keyboard instructions/fallbacks, or implement the issue-to-PR automation path deferred in earlier planning.
+
+## 2026-05-14 Codex pass 42
+
+- Implemented the Canvas Game Accessibility Baseline Pass across the nine older canvas/action games: Arena, Arcade Jump, Sky Hopper, Metro Dash, Slope Runner, Neon Snake, Maze Chase, Minesweeper, and Block Drop.
+- Added labeled focusable primary canvases, visible focus outlines, normalized `button type="button"` and toggle ARIA state, dialog semantics for blocking help/pause/start/game-over overlays, and inline dependency-free focus helpers for Tab traps, Escape close, and trigger focus restoration.
+- Converted Arcade Jump's fake clickable utility controls to real buttons while preserving existing IDs/classes and gameplay wiring, and added keydown guards so focused controls keep native Enter/Space behavior instead of leaking into game input.
+- Preserved gameplay rules, scoring, saves, audio preferences, diagnostics, manifest metadata, sandboxing, and static-site architecture.
+- The in-app Browser plugin still blocked local `127.0.0.1` navigation with `net::ERR_BLOCKED_BY_CLIENT`, so focused browser validation used regular Playwright after the Browser fallback was confirmed.
+- Focused Playwright checks passed across all nine touched games at desktop and `390x844`: canvas labels/focus targets, help/pause dialog focus trapping and Escape restore, start/control keyboard activation, no console/page errors, and no mobile horizontal overflow. Representative `develop-web-game` client runs passed for Snake, Block Drop, Metro Dash, Slope Runner, and Arena.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games` (`test-results/render-ranking/2026-05-14T14-36-48-632Z`) with all 40 rendered surfaces at score 0, and `git diff --check` with only CRLF normalization warnings on touched HTML files.
+- Suggested next pass: add a small static accessibility regression script to CI so canvas labels, button types, and overlay dialog semantics stay covered automatically.

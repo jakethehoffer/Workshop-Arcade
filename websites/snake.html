@@ -13,6 +13,7 @@
       linear-gradient(180deg,#0b0f14,#070b12 80%);
   }
   canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-radius:14px; border:1px solid rgba(94,234,212,0.14); }
+  canvas:focus-visible { outline:3px solid #5eead4; outline-offset:4px; }
   .brand {
     position:fixed; top:10px; left:14px;
     display:flex; flex-direction:column; gap:2px; line-height:1;
@@ -100,7 +101,7 @@
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
-  <canvas id="game"></canvas>
+  <canvas id="game" tabindex="0" aria-label="Neon Snake game canvas"></canvas>
   <div class="brand">
     <span class="eyebrow">Workshop Arcade</span>
     <span class="title">NEON SNAKE</span>
@@ -114,19 +115,19 @@
     <button class="pill button utility-pill has-hotkey" id="helpBtn" type="button" title="How to Play (H)" aria-label="How to Play"><span class="icon" aria-hidden="true">?</span><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
   <div class="btns">
-    <button class="btn" id="upBtn">⬆︎</button>
-    <button class="btn" id="leftBtn">⬅︎</button>
-    <button class="btn" id="rightBtn">➡︎</button>
-    <button class="btn" id="downBtn">⬇︎</button>
-    <button class="btn" id="restartBtn">Restart</button>
-    <button class="btn has-hotkey" id="musicToggle"><span class="label">Music: On</span><span class="hotkey">M</span></button>
-    <button class="btn has-hotkey" id="helpBtnMobile"><span class="label">How to Play</span><span class="hotkey">H</span></button>
+    <button class="btn" id="upBtn" type="button" aria-label="Move up">⬆︎</button>
+    <button class="btn" id="leftBtn" type="button" aria-label="Move left">⬅︎</button>
+    <button class="btn" id="rightBtn" type="button" aria-label="Move right">➡︎</button>
+    <button class="btn" id="downBtn" type="button" aria-label="Move down">⬇︎</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn has-hotkey" id="musicToggle" type="button" aria-label="Toggle music"><span class="label">Music: On</span><span class="hotkey">M</span></button>
+    <button class="btn has-hotkey" id="helpBtnMobile" type="button" aria-label="How to play"><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
 
   <!-- Help Menu -->
-  <div class="overlay" id="helpOverlay">
+  <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="help-card">
-      <h2>❓ How to Play Snake</h2>
+      <h2 id="helpTitle">❓ How to Play Snake</h2>
       <p><b>Objective:</b> Control the snake to eat food and grow as long as possible. Avoid hitting the walls or your own tail!</p>
       
       <div class="controls-grid">
@@ -150,7 +151,7 @@
         <li>Plan your path to avoid trapping yourself</li>
       </ul>
 
-      <button class="btn btn-close" id="helpClose">Close</button>
+      <button class="btn btn-close" id="helpClose" type="button">Close</button>
     </div>
   </div>
 
@@ -178,6 +179,17 @@
   const helpCard=helpOverlay ? helpOverlay.querySelector('.help-card') : null;
   const hudEl=document.querySelector('.hud');
   const buttonsEl=document.querySelector('.btns');
+  const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  let activeDialogTrigger = null;
+
+  function helpFocusables() {
+    return [...helpOverlay.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+  }
+
+  function focusHelp() {
+    const target = helpClose && helpClose.getClientRects().length > 0 ? helpClose : (helpFocusables()[0] || helpOverlay);
+    target.focus({ preventScroll: true });
+  }
 
   let audioCtx=null;
   function ensureAC(){
@@ -666,6 +678,11 @@
 
   function onKey(e){
     const c=e.code;
+    if(e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && c !== 'Tab' && c !== 'Escape') return;
+    if(helpOverlay && helpOverlay.classList.contains('show')) {
+      if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c)) e.preventDefault();
+      return;
+    }
     if(c==='Space'){ if(gameOver||gameWon){ restart(); } else if(!running){ start(); } else { pause(); } }
     else if(c==='ArrowUp'||c==='KeyW'){ queueDir({x:0,y:-1}); }
     else if(c==='ArrowDown'||c==='KeyS'){ queueDir({x:0,y:1}); }
@@ -702,11 +719,13 @@
   // Help menu
   let wasRunningBeforeHelp = false;
   function openHelp(){ 
+    activeDialogTrigger = document.activeElement;
     wasRunningBeforeHelp = running && !gameOver;
     if(wasRunningBeforeHelp) {
       pause();
     }
     if(helpOverlay) helpOverlay.classList.add('show'); 
+    setTimeout(() => focusHelp(), 0);
   }
   function closeHelp(){ 
     if(helpOverlay) helpOverlay.classList.remove('show');
@@ -714,6 +733,11 @@
       start();
     }
     wasRunningBeforeHelp = false;
+    const target = activeDialogTrigger;
+    activeDialogTrigger = null;
+    if(target && target.isConnected && target.getClientRects().length > 0) {
+      setTimeout(() => target.focus({ preventScroll: true }), 0);
+    }
   }
   if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
   if(helpBtnMobile) helpBtnMobile.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
@@ -729,6 +753,21 @@
     });
   }
   window.addEventListener('keydown', (e) => {
+    if(helpOverlay.classList.contains('show') && e.code === 'Tab') {
+      const focusables = helpFocusables();
+      if(focusables.length) {
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if(e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus({ preventScroll: true });
+        } else if(!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus({ preventScroll: true });
+        }
+      }
+      return;
+    }
     if(e.code === 'KeyH' && !e.repeat) {
       if(helpOverlay.classList.contains('show')) closeHelp();
       else openHelp();

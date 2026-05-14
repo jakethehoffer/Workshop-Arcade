@@ -17,6 +17,7 @@
     width:100vw; height:100vh;
     display:block;
   }
+  canvas#game:focus-visible { outline:3px solid #4fc3f7; outline-offset:-6px; }
   .hud-btn {
     position:fixed; top:12px; z-index:50;
     background:rgba(4,10,24,0.66); border:1px solid rgba(79,195,247,0.35);
@@ -49,13 +50,13 @@
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
-<canvas id="game"></canvas>
-<button class="hud-btn" id="pauseBtn" title="Pause (P)">&#x23F8; Pause</button>
-<button class="hud-btn" id="helpBtn" title="Help (H)">? Help</button>
+<canvas id="game" tabindex="0" aria-label="Metro Dash game canvas"></canvas>
+<button class="hud-btn" id="pauseBtn" type="button" aria-label="Pause or resume" title="Pause (P)">&#x23F8; Pause</button>
+<button class="hud-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">? Help</button>
 
-<div class="overlay" id="helpOverlay">
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="card">
-    <h2>How to Play</h2>
+    <h2 id="helpTitle">How to Play</h2>
     <p>Sprint through the subway, dodging obstacles and collecting coins!</p>
     <div class="controls-grid">
       <div class="control-row"><span><kbd>&larr;</kbd> <kbd>A</kbd> Swipe&nbsp;Left</span><span>Move left</span></div>
@@ -65,15 +66,15 @@
       <div class="control-row"><span><kbd>P</kbd> <kbd>Esc</kbd></span><span>Pause</span></div>
     </div>
     <p><b>Tips:</b> Jump over barriers, slide under beams, dodge trains!</p>
-    <button class="btn btn-primary" id="helpClose">Got it</button>
+    <button class="btn btn-primary" id="helpClose" type="button">Got it</button>
   </div>
 </div>
 
-<div class="overlay" id="pauseOverlay">
+<div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
   <div class="card">
-    <h2>Paused</h2>
-    <button class="btn btn-primary" id="resumeBtn">Resume</button>
-    <button class="btn btn-warn" id="restartFromPause" style="margin-top:8px">Restart</button>
+    <h2 id="pauseTitle">Paused</h2>
+    <button class="btn btn-primary" id="resumeBtn" type="button">Resume</button>
+    <button class="btn btn-warn" id="restartFromPause" type="button" style="margin-top:8px">Restart</button>
   </div>
 </div>
 
@@ -952,8 +953,19 @@ function setGameOver() {
 }
 
 function togglePause() {
-  if (state === "playing") { state = "paused"; stopMusic(); pauseOverlay.classList.add("show"); }
-  else if (state === "paused") { state = "playing"; pauseOverlay.classList.remove("show"); lastTime = null; startMusic(); }
+  if (state === "playing") {
+    state = "paused";
+    stopMusic();
+    pauseOverlay.classList.add("show");
+    activateDialog(pauseOverlay, pauseBtn, resumeBtn, () => togglePause());
+  }
+  else if (state === "paused") {
+    state = "playing";
+    deactivateDialog(pauseOverlay);
+    pauseOverlay.classList.remove("show");
+    lastTime = null;
+    startMusic();
+  }
 }
 
 /* ===== INPUT ===== */
@@ -981,6 +993,7 @@ function doSlide() {
 }
 
 document.addEventListener("keydown", e => {
+  if (e.target && e.target.closest && e.target.closest("button, a, input, select, textarea") && e.code !== "Tab" && e.code !== "Escape") return;
   if (e.repeat) return;
   if (state === "title" && (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW")) { startGame(); return; }
   if (state === "gameover" && (e.code === "Space" || e.code === "Enter")) { startGame(); return; }
@@ -1126,17 +1139,72 @@ const pauseBtn = document.getElementById("pauseBtn");
 const pauseOverlay = document.getElementById("pauseOverlay");
 const resumeBtn = document.getElementById("resumeBtn");
 const restartFromPause = document.getElementById("restartFromPause");
+const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+let activeDialog = null;
+let activeDialogTrigger = null;
+let activeDialogClose = null;
 
 let helpOpen = false;
-function openHelp() { helpOpen = true; helpOverlay.classList.add("show"); }
-function closeHelp() { helpOpen = false; helpOverlay.classList.remove("show"); }
+function dialogFocusables(dialog) {
+  return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+}
+function activateDialog(dialog, trigger, preferred, closeFn) {
+  activeDialog = dialog;
+  activeDialogTrigger = trigger && typeof trigger.focus === "function" ? trigger : document.activeElement;
+  activeDialogClose = closeFn || null;
+  setTimeout(() => {
+    const target = preferred && preferred.getClientRects().length > 0 ? preferred : (dialogFocusables(dialog)[0] || dialog);
+    target.focus({ preventScroll: true });
+  }, 0);
+}
+function deactivateDialog(dialog, restoreFocus = true) {
+  if (activeDialog !== dialog) return;
+  const target = activeDialogTrigger;
+  activeDialog = null;
+  activeDialogTrigger = null;
+  activeDialogClose = null;
+  if (restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
+    setTimeout(() => target.focus({ preventScroll: true }), 0);
+  }
+}
+document.addEventListener("keydown", e => {
+  if (!activeDialog || !activeDialog.classList.contains("show") || e.defaultPrevented) return;
+  if (e.key === "Escape" && activeDialogClose) {
+    e.preventDefault();
+    e.stopPropagation();
+    activeDialogClose();
+    return;
+  }
+  if (e.key !== "Tab") return;
+  const focusables = dialogFocusables(activeDialog);
+  if (!focusables.length) return;
+  const first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus({ preventScroll: true });
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus({ preventScroll: true });
+  }
+}, true);
+
+function openHelp() {
+  helpOpen = true;
+  helpOverlay.classList.add("show");
+  activateDialog(helpOverlay, helpBtn, helpClose, () => closeHelp());
+}
+function closeHelp() {
+  helpOpen = false;
+  deactivateDialog(helpOverlay);
+  helpOverlay.classList.remove("show");
+}
 
 helpBtn.onclick = e => { e.preventDefault(); openHelp(); };
 helpClose.onclick = e => { e.preventDefault(); closeHelp(); };
 helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) closeHelp(); });
 pauseBtn.onclick = e => { e.preventDefault(); togglePause(); };
 resumeBtn.onclick = e => { e.preventDefault(); togglePause(); };
-restartFromPause.onclick = e => { e.preventDefault(); pauseOverlay.classList.remove("show"); startGame(); };
+restartFromPause.onclick = e => { e.preventDefault(); deactivateDialog(pauseOverlay, false); pauseOverlay.classList.remove("show"); startGame(); };
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && state === "playing") stopMusic();

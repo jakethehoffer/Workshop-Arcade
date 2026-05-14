@@ -19,6 +19,7 @@
     display:block;
     background: radial-gradient(circle at 50% 22%, #77d8de 0, #1b6680 58%, #071421 100%);
   }
+  canvas#game:focus-visible { outline:3px solid #7de5ed; outline-offset:-6px; }
   .help-btn {
     position:fixed; top:12px; right:12px; z-index:50;
     background:rgba(7,18,31,0.78); border:1px solid rgba(125,229,237,0.42);
@@ -41,13 +42,13 @@
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
-<canvas id="game"></canvas>
-<button class="help-btn" id="helpBtn" title="Help (H)">❓ Help</button>
+<canvas id="game" tabindex="0" aria-label="Sky Hopper game canvas"></canvas>
+<button class="help-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">❓ Help</button>
 
 <!-- Help Menu -->
-<div class="overlay" id="helpOverlay">
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="help-card">
-    <h2>❓ How to Play Sky Hopper</h2>
+    <h2 id="helpTitle">❓ How to Play Sky Hopper</h2>
     <p><b>Objective:</b> Guide the bird through the pipes by tapping/clicking to make it flap. Avoid hitting the pipes or the ground!</p>
     
     <div class="controls-grid">
@@ -66,7 +67,7 @@
       <li>Hit a pipe or the ground and it's game over!</li>
     </ul>
 
-    <button class="btn-close" id="helpClose">Close</button>
+    <button class="btn-close" id="helpClose" type="button">Close</button>
   </div>
 </div>
 
@@ -1377,24 +1378,56 @@ const helpBtn = document.getElementById('helpBtn');
 const helpOverlay = document.getElementById('helpOverlay');
 const helpClose = document.getElementById('helpClose');
 const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
+const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+let activeDialogTrigger = null;
+
+function helpFocusables() {
+  return [...helpOverlay.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+}
+
+function focusHelp(preferred = helpClose) {
+  const target = preferred && preferred.getClientRects().length > 0 ? preferred : (helpFocusables()[0] || helpOverlay);
+  target.focus({ preventScroll: true });
+}
 
 let wasStartedBeforeHelp = false;
 let helpOpen = false;
 function openHelp(){ 
   if(helpOverlay) {
+    activeDialogTrigger = document.activeElement;
     wasStartedBeforeHelp = started && !gameOver;
     helpOpen = true;
     helpOverlay.classList.add('show'); 
+    setTimeout(() => focusHelp(), 0);
   }
 }
 function closeHelp(){ 
   if(helpOverlay) {
     helpOpen = false;
     helpOverlay.classList.remove('show');
+    const target = activeDialogTrigger;
+    activeDialogTrigger = null;
+    if(target && target.isConnected && target.getClientRects().length > 0) {
+      setTimeout(() => target.focus({ preventScroll: true }), 0);
+    }
   }
 }
 
 document.addEventListener("keydown", e => { 
+  if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && e.code !== "Tab" && e.code !== "Escape") return;
+  if (helpOpen && e.code === "Tab") {
+    const focusables = helpFocusables();
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  }
   if (e.code === "KeyH" && !e.repeat) {
     if(helpOverlay) {
       if(helpOverlay.classList.contains('show')) closeHelp();

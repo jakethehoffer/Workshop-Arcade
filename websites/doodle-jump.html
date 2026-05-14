@@ -31,6 +31,13 @@
 #bg { position:absolute; z-index: 0; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
 /* optional but safe: ensure game canvas is above */
 #game { position:absolute; inset:0; z-index:1; }
+#game:focus-visible { outline:3px solid var(--accent); outline-offset:-6px; }
+button.action, button.pill.btn {
+  appearance:none;
+  font:inherit;
+  color:inherit;
+  text-align:inherit;
+}
 
   .hud { position:fixed; top:10px; left:50%; z-index: 5; transform:translateX(-50%); display:flex; gap:12px; align-items:center; font-weight:700; letter-spacing:.3px; user-select:none; transition: opacity .2s ease, transform .2s ease; }
   body.menu-open .hud { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-10px); }
@@ -432,26 +439,26 @@
 </head>
 <body>
 <div id="wrap">
-  <canvas id="bg"></canvas>
-  <canvas id="game"></canvas>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <canvas id="game" tabindex="0" aria-label="Arcade Jump game canvas"></canvas>
 
   <div class="hud" id="hud">
     <div class="pill">Score: <b id="score">0</b></div>
     <div class="pill">Best: <b id="best">0</b></div>
     <div class="pill" id="buff">No power-ups</div>
-    <div class="pill btn" id="pause">⏸ Pause</div>
-    <div class="pill btn" id="mute">🔊 Sound</div>
+    <button class="pill btn" id="pause" type="button" aria-label="Pause or resume">⏸ Pause</button>
+    <button class="pill btn" id="mute" type="button" aria-label="Toggle sound">🔊 Sound</button>
     <div class="pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause</div>
   </div>
 
-  <div class="overlay menu-overlay fade" id="menu">
+  <div class="overlay menu-overlay fade" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
     <div class="menu-card">
       <div class="menu-hero">
-        <h1 class="menu-title">Arcade Jump</h1>
+        <h1 class="menu-title" id="menuTitle">Arcade Jump</h1>
         <p class="menu-tagline">Climb through shifting platforms, chain power-ups, and jump to new heights.</p>
         <div class="menu-actions">
-          <div class="action primary" id="startBtn">Start Run</div>
-          <div class="action ghost" id="helpBtn">How to Play</div>
+          <button class="action primary" id="startBtn" type="button">Start Run</button>
+          <button class="action ghost" id="helpBtn" type="button">How to Play</button>
         </div>
         <div class="menu-stats">
           <div class="menu-stat">
@@ -514,21 +521,21 @@
     </div>
   </div>
 
-  <div class="overlay fade" id="gameover" style="display:none">
+  <div class="overlay fade" id="gameover" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle" style="display:none">
     <div class="panel">
-      <h1>😵 Game Over</h1>
+      <h1 id="gameOverTitle">😵 Game Over</h1>
       <p>Your score: <b id="finalScore">0</b> • Best: <b id="finalBest">0</b></p>
       <div class="row">
-        <div class="action primary" id="restartBtn">Restart</div>
-          <div class="action" id="helpBtnOver">Help</div>
+        <button class="action primary" id="restartBtn" type="button">Restart</button>
+          <button class="action" id="helpBtnOver" type="button">Help</button>
 
       </div>
     </div>
   </div>
 
-  <div class="overlay fade" id="helpPanel" style="display:none">
+  <div class="overlay fade" id="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTitle" style="display:none">
   <div class="panel">
-    <h1>❓ Help</h1>
+    <h1 id="helpTitle">❓ Help</h1>
     <p><b>Move:</b> A/← and D/→ • <b>Double-jump:</b> Space (mid-air) • <b>Pause:</b> P</p>
 
     <h3 style="margin:12px 0 6px">Platforms</h3>
@@ -564,7 +571,7 @@
     </ul>
 
     <div class="row" style="margin-top:10px">
-      <div class="action" id="helpClose">Close</div>
+      <button class="action" id="helpClose" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -672,9 +679,62 @@ const helpPanelCard = helpPanel ? helpPanel.querySelector('.panel') : null;
 const helpBtn = document.getElementById('helpBtn');
 const helpBtnOver = document.getElementById('helpBtnOver');
 const helpClose = document.getElementById('helpClose');
+const startBtnEl = document.getElementById('startBtn');
   const body = document.body;
+  const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  let activeDialog = null;
+  let activeDialogTrigger = null;
+  let activeDialogClose = null;
 
-  document.getElementById('startBtn').onclick = start;
+  function isShown(el){ return !!el && getComputedStyle(el).display !== 'none'; }
+  function dialogFocusables(dialog){
+    return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+  }
+  function activateDialog(dialog, trigger, preferred, closeFn){
+    activeDialog = dialog;
+    activeDialogTrigger = trigger && typeof trigger.focus === 'function' ? trigger : document.activeElement;
+    activeDialogClose = closeFn || null;
+    setTimeout(() => {
+      const target = preferred && preferred.getClientRects().length > 0 ? preferred : (dialogFocusables(dialog)[0] || dialog);
+      target.focus({ preventScroll:true });
+    }, 0);
+  }
+  function deactivateDialog(dialog, restoreFocus = true){
+    if(activeDialog !== dialog) return;
+    const target = activeDialogTrigger;
+    activeDialog = null;
+    activeDialogTrigger = null;
+    activeDialogClose = null;
+    if(restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
+      setTimeout(() => target.focus({ preventScroll:true }), 0);
+    }
+  }
+  document.addEventListener('keydown', (e) => {
+    if(!activeDialog || !isShown(activeDialog) || e.defaultPrevented) return;
+    if(e.key === 'Escape' && activeDialogClose) {
+      e.preventDefault();
+      e.stopPropagation();
+      activeDialogClose();
+      return;
+    }
+    if(e.key !== 'Tab') return;
+    const focusables = dialogFocusables(activeDialog);
+    if(!focusables.length) {
+      e.preventDefault();
+      activeDialog.focus({ preventScroll:true });
+      return;
+    }
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if(e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus({ preventScroll:true });
+    } else if(!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus({ preventScroll:true });
+    }
+  }, true);
+
+  startBtnEl.onclick = start;
 
 
 if (helpBtn) helpBtn.onclick = openHelp;
@@ -709,22 +769,31 @@ window.addEventListener('keydown', (e) => {
   function updateMute(){ muteBtn.textContent = sound.muted ? '🔇 Muted' : '🔊 Sound'; }
 
   function hide(el){
+    deactivateDialog(el, false);
     el.style.display = 'none';
     if (el === menu) body.classList.remove('menu-open');
   }
   function show(el){
     el.style.display = 'flex';
     if (el === menu) body.classList.add('menu-open');
+    if (el === menu) activateDialog(menu, null, startBtnEl);
+    if (el === gameover) activateDialog(gameover, canvas, document.getElementById('restartBtn'));
   }
-  function openHelp(){ helpPanel.style.display = 'flex'; }
-function closeHelp(){ helpPanel.style.display = 'none'; }
+  function openHelp(){
+    helpPanel.style.display = 'flex';
+    activateDialog(helpPanel, document.activeElement, helpClose, () => closeHelp());
+  }
+function closeHelp(){ deactivateDialog(helpPanel); helpPanel.style.display = 'none'; }
 
 
   // ===== Input =====
   const keys = new Set();
   window.addEventListener('keydown', (e) => {
-
-
+    if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && e.code !== 'Tab' && e.code !== 'Escape') return;
+    if (helpPanel && helpPanel.style.display !== 'none') {
+      if (['Space','KeyP','ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code)) e.preventDefault();
+      return;
+    }
 
     if (e.repeat) return;
 

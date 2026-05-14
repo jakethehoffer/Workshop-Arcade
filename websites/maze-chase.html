@@ -167,6 +167,11 @@
           inset 0 0 25px rgba(76, 201, 240, 0.1);
       }
 
+      canvas:focus-visible {
+        outline: 3px solid #4cc9f0;
+        outline-offset: 4px;
+      }
+
       .overlay {
         position: absolute;
         inset: 0;
@@ -369,8 +374,8 @@
         </div>
 
         <div class="game-wrap">
-          <canvas id="game" aria-label="Maze Chase game board"></canvas>
-          <div class="overlay show" id="overlay">
+          <canvas id="game" tabindex="0" aria-label="Maze Chase game board"></canvas>
+          <div class="overlay show" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
             <div class="overlay-card">
               <h2 id="overlay-title">Ready</h2>
               <p id="overlay-message">Press Enter or tap Start.</p>
@@ -406,6 +411,47 @@
         const resetBtn = document.getElementById("reset-btn");
         const pauseBtn = document.getElementById("pause-btn");
         const muteBtn = document.getElementById("mute-btn");
+        const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        let activeDialog = null;
+        let activeDialogTrigger = null;
+
+        function dialogFocusables(dialog) {
+          return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+        }
+
+        function activateDialog(dialog, trigger, preferred) {
+          activeDialog = dialog;
+          activeDialogTrigger = trigger && typeof trigger.focus === "function" ? trigger : document.activeElement;
+          setTimeout(() => {
+            const target = preferred && preferred.getClientRects().length > 0 ? preferred : (dialogFocusables(dialog)[0] || dialog);
+            target.focus({ preventScroll: true });
+          }, 0);
+        }
+
+        function deactivateDialog(dialog, restoreFocus = true) {
+          if (activeDialog !== dialog) return;
+          const target = activeDialogTrigger;
+          activeDialog = null;
+          activeDialogTrigger = null;
+          if (restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
+            setTimeout(() => target.focus({ preventScroll: true }), 0);
+          }
+        }
+
+        document.addEventListener("keydown", (event) => {
+          if (!activeDialog || !activeDialog.classList.contains("show") || event.key !== "Tab") return;
+          const focusables = dialogFocusables(activeDialog);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus({ preventScroll: true });
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus({ preventScroll: true });
+          }
+        }, true);
 
         const rawMap = [
           "############################",
@@ -1184,6 +1230,12 @@
           overlayTitle.textContent = title;
           overlayMessage.textContent = message;
           overlay.classList.toggle("show", phase !== "playing");
+          if (phase === "playing") {
+            deactivateDialog(overlay, false);
+            canvas.focus({ preventScroll: true });
+          } else {
+            activateDialog(overlay, phase === "paused" ? pauseBtn : canvas, phase === "paused" ? startBtn : startBtn);
+          }
           pauseBtn.textContent = phase === "paused" ? "Resume" : "Pause";
           setMusicState(phase);
         }
@@ -2335,6 +2387,15 @@
         }
 
         function handleKeydown(event) {
+          if (
+            event.target &&
+            event.target.closest &&
+            event.target.closest("button, a, input, select, textarea") &&
+            event.key !== "Escape" &&
+            event.key !== "Tab"
+          ) {
+            return;
+          }
           if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) {
             event.preventDefault();
           }

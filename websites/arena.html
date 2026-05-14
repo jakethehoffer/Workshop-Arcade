@@ -8,6 +8,7 @@
     html, body { height: 100%; margin: 0; background: #050810; color: #e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; touch-action: none; }
     #wrap { position: fixed; inset: 0; overflow: hidden; }
     canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; cursor: crosshair; }
+    canvas:focus-visible { outline: 3px solid #7dd3fc; outline-offset: -6px; }
     .hud { position: fixed; top: 12px; left: 14px; right: 14px; user-select: none; display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; z-index: 20; pointer-events: none; }
     .hud .brand{
       display:flex; flex-direction:column; gap:2px; line-height:1;
@@ -66,7 +67,7 @@
 </head>
 <body>
   <div id="wrap">
-    <canvas id="game"></canvas>
+    <canvas id="game" tabindex="0" aria-label="Arena game canvas"></canvas>
 
     <div class="hud" aria-live="polite">
       <div class="brand">
@@ -77,23 +78,23 @@
       <span class="stat">Level<strong id="level">1</strong></span>
       <span class="stat">High<strong id="high">0</strong></span>
       <div class="hud-actions">
-        <button id="muteBtn" class="icon-btn" aria-label="Toggle sound" title="M to mute/unmute">🔊</button>
-        <button id="pauseBtn" class="icon-btn" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
-        <button id="helpBtn" class="icon-btn" aria-label="Help" title="Help (H)">❓</button>
+        <button id="muteBtn" class="icon-btn" type="button" aria-label="Toggle sound" title="M to mute/unmute">🔊</button>
+        <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
+        <button id="helpBtn" class="icon-btn" type="button" aria-label="Help" title="Help (H)">❓</button>
       </div>
     </div>
 
-    <div class="overlay" id="menu" hidden>
+    <div class="overlay" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
       <div class="card">
-        <h1>Arena</h1>
+        <h1 id="menuTitle">Arena</h1>
         <p>Move with WASD, arrow keys, or drag on the arena. Outlast hunters and collect their dust when they expire.</p>
         <button id="startBtn" type="button" aria-label="Play">Play (Enter/Space)</button>
       </div>
     </div>
 
-    <div class="overlay" id="gameOver" hidden>
+    <div class="overlay" id="gameOver" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle" hidden>
       <div class="card">
-        <h1>Game Over</h1>
+        <h1 id="gameOverTitle">Game Over</h1>
         <p id="finalScore">Score: 0</p>
         <p id="bestScore">Best: 0</p>
         <button id="restartBtn" type="button" aria-label="Restart">Restart (R/Space/Enter)</button>
@@ -101,18 +102,18 @@
     </div>
 
     <!-- NEW: Paused overlay -->
-    <div class="overlay" id="paused" hidden>
+    <div class="overlay" id="paused" role="dialog" aria-modal="true" aria-labelledby="pauseTitle" hidden>
       <div class="card">
-        <h1>Paused</h1>
+        <h1 id="pauseTitle">Paused</h1>
         <p>Press P or Esc, or click Resume to continue.</p>
         <button id="resumeBtn" type="button" aria-label="Resume">Resume (P/Esc)</button>
       </div>
     </div>
 
     <!-- Help Menu -->
-    <div class="overlay" id="helpOverlay" hidden>
+    <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
       <div class="card">
-        <h1>❓ How to Play Arena</h1>
+        <h1 id="helpTitle">❓ How to Play Arena</h1>
         <p><b>Objective:</b> Survive as long as possible by avoiding enemies and collecting their dust particles!</p>
         
         <p><b>Controls:</b></p>
@@ -159,6 +160,61 @@
     const pauseBtn = document.getElementById('pauseBtn');
     const pausedEl = document.getElementById('paused');
     const resumeBtn = document.getElementById('resumeBtn');
+    const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    let activeDialog = null;
+    let activeDialogTrigger = null;
+    let activeDialogClose = null;
+
+    function dialogFocusables(dialog) {
+      return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+    }
+
+    function activateDialog(dialog, trigger, preferred, closeFn) {
+      activeDialog = dialog;
+      activeDialogTrigger = trigger && typeof trigger.focus === 'function' ? trigger : document.activeElement;
+      activeDialogClose = closeFn || null;
+      setTimeout(() => {
+        const target = (preferred && preferred.getClientRects().length > 0) ? preferred : (dialogFocusables(dialog)[0] || dialog);
+        target.focus({ preventScroll: true });
+      }, 0);
+    }
+
+    function deactivateDialog(dialog, restoreFocus = true) {
+      if (activeDialog !== dialog) return;
+      const target = activeDialogTrigger;
+      activeDialog = null;
+      activeDialogTrigger = null;
+      activeDialogClose = null;
+      if (restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
+        setTimeout(() => target.focus({ preventScroll: true }), 0);
+      }
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (!activeDialog || activeDialog.hidden || event.defaultPrevented) return;
+      if (event.key === 'Escape' && activeDialogClose) {
+        event.preventDefault();
+        event.stopPropagation();
+        activeDialogClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusables = dialogFocusables(activeDialog);
+      if (!focusables.length) {
+        event.preventDefault();
+        activeDialog.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    }, true);
 
     // Minimal WebAudio manager (no external files)
     const Sound = (() => {
@@ -453,6 +509,10 @@
 
     /* UPDATED: hides all overlays including paused */
     function hideOverlays() {
+      deactivateDialog(menuEl, false);
+      deactivateDialog(overEl, false);
+      deactivateDialog(pausedEl, false);
+      deactivateDialog(helpOverlay, false);
       menuEl.hidden = true;
       overEl.hidden = true;
       pausedEl.hidden = true; // NEW
@@ -462,7 +522,7 @@
       pausedEl.hidden = true; // NEW
       menuEl.hidden = false;
       startBtn.tabIndex = 0;
-      startBtn.focus({ preventScroll: true });
+      activateDialog(menuEl, null, startBtn, () => startGameImmediate());
       pauseBtn.textContent = '⏸'; // reset icon
     }
     function showGameOver() {
@@ -480,6 +540,7 @@
       }
       overEl.hidden = false;
       pausedEl.hidden = true; // ensure not shown
+      activateDialog(overEl, canvas, restartBtn, () => startGameImmediate());
       pauseBtn.textContent = '⏸';
     }
 
@@ -1027,6 +1088,9 @@
       'ArrowLeft': 'left', 'KeyA': 'left',
       'ArrowRight': 'right', 'KeyD': 'right',
     };
+    function isInteractiveTarget(target) {
+      return !!(target && target.closest && target.closest('button, a, input, select, textarea'));
+    }
 
     /* NEW: pause/resume helpers */
     function pauseGame() {
@@ -1034,11 +1098,13 @@
       if (state.mode !== 'playing') return;
       state.mode = 'paused';
       pausedEl.hidden = false;
+      activateDialog(pausedEl, pauseBtn, resumeBtn, () => resumeGame());
       pauseBtn.textContent = '▶️';
       Sound.stopMusic();
     }
     function resumeGame() {
       if (state.mode !== 'paused') return;
+      deactivateDialog(pausedEl);
       pausedEl.hidden = true;
       state.mode = 'playing';
       pauseBtn.textContent = '⏸';
@@ -1051,6 +1117,7 @@
     }
 
     window.addEventListener('keydown', (e) => {
+      if (isInteractiveTarget(e.target) && e.key !== 'Escape') return;
       const navKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
       if (navKeys.includes(e.key)) e.preventDefault();
 
@@ -1136,10 +1203,12 @@
           pauseGame();
         }
         helpOverlay.hidden = false; 
+        activateDialog(helpOverlay, helpBtn, helpClose, () => closeHelp());
       }
     }
     function closeHelp(){ 
       if(helpOverlay) {
+        deactivateDialog(helpOverlay);
         helpOverlay.hidden = true;
         if(!wasPausedBeforeHelp && state.mode === 'paused') {
           resumeGame();

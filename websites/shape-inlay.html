@@ -307,6 +307,11 @@
         touch-action: none;
       }
 
+      canvas:focus-visible {
+        outline: 3px solid #5eead4;
+        outline-offset: -6px;
+      }
+
       .scanlines {
         position: absolute;
         inset: 0;
@@ -501,8 +506,8 @@
           <p class="tagline">Thread the neon canyon. The floor never stops falling away.</p>
         </div>
         <div class="mast-actions">
-          <button class="btn" id="startBtn">Start run</button>
-          <button class="btn secondary" id="resetBtn">New track</button>
+          <button class="btn" id="startBtn" type="button">Start run</button>
+          <button class="btn secondary" id="resetBtn" type="button">New track</button>
         </div>
       </header>
 
@@ -545,13 +550,13 @@
 
         <section class="arena">
           <div class="canvas-frame">
-            <canvas id="game"></canvas>
+            <canvas id="game" tabindex="0" aria-label="Slope Runner game canvas"></canvas>
             <div class="scanlines"></div>
-            <div class="overlay show" id="overlay">
+            <div class="overlay show" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
               <div class="overlay-card">
                 <h2 id="overlayTitle">Ready to drop</h2>
                 <p id="overlayText">Hold A/D or drag to steer. Survive the canyon.</p>
-                <button class="btn" id="overlayBtn">Start run</button>
+                <button class="btn" id="overlayBtn" type="button">Start run</button>
               </div>
             </div>
           </div>
@@ -585,6 +590,47 @@
         const statusEl = document.getElementById("status");
         const nerveFill = document.getElementById("nerveFill");
         const frameEl = document.querySelector(".canvas-frame");
+        const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        let activeDialog = null;
+        let activeDialogTrigger = null;
+
+        function dialogFocusables(dialog) {
+          return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+        }
+
+        function activateDialog(dialog, trigger, preferred) {
+          activeDialog = dialog;
+          activeDialogTrigger = trigger && typeof trigger.focus === "function" ? trigger : document.activeElement;
+          setTimeout(() => {
+            const target = preferred && preferred.getClientRects().length > 0 ? preferred : (dialogFocusables(dialog)[0] || dialog);
+            target.focus({ preventScroll: true });
+          }, 0);
+        }
+
+        function deactivateDialog(dialog, restoreFocus = true) {
+          if (activeDialog !== dialog) return;
+          const target = activeDialogTrigger;
+          activeDialog = null;
+          activeDialogTrigger = null;
+          if (restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
+            setTimeout(() => target.focus({ preventScroll: true }), 0);
+          }
+        }
+
+        document.addEventListener("keydown", (event) => {
+          if (!activeDialog || !activeDialog.classList.contains("show") || event.key !== "Tab") return;
+          const focusables = dialogFocusables(activeDialog);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus({ preventScroll: true });
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus({ preventScroll: true });
+          }
+        }, true);
 
         const config = {
           segmentLength: 60,
@@ -1255,10 +1301,13 @@
           overlayText.textContent = message;
           overlayBtn.textContent = buttonText;
           overlay.classList.add("show");
+          activateDialog(overlay, document.activeElement, overlayBtn);
         }
 
         function hideOverlay() {
+          deactivateDialog(overlay, false);
           overlay.classList.remove("show");
+          canvas.focus({ preventScroll: true });
         }
 
         function prepareRun() {

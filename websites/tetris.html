@@ -14,6 +14,7 @@
       linear-gradient(180deg,#0b0f14,#070b12 80%);
   }
   canvas { display:block; margin:0 auto; background:#0e1522; border:1px solid rgba(125,211,252,0.22); border-radius:14px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  canvas:focus-visible { outline:3px solid #7dd3fc; outline-offset:4px; }
 
   .brand{
     position:fixed; top:12px; left:16px;
@@ -115,7 +116,7 @@
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
-  <canvas id="game"></canvas>
+  <canvas id="game" tabindex="0" aria-label="Block Drop game canvas"></canvas>
 
   <div class="brand">
     <span class="eyebrow">Workshop Arcade</span>
@@ -160,21 +161,21 @@
     <div class="pill" id="level">Level: 1</div>
     <div class="pill" id="best">Best: 0</div>
     <div class="pill" id="hold">
-      Hold<canvas id="holdCanvas" width="64" height="64"></canvas>
+      Hold<canvas id="holdCanvas" width="64" height="64" aria-hidden="true"></canvas>
       <div class="keynote">(Key: C / Shift)</div>
     </div>
-    <div class="pill" id="next">Next<canvas id="nextCanvas" width="64" height="64"></canvas></div>
+    <div class="pill" id="next">Next<canvas id="nextCanvas" width="64" height="64" aria-hidden="true"></canvas></div>
     <div class="pill" id="status">Press Space to Start</div>
     <button class="btn" id="resetBtn" type="button" aria-label="Reset game">Reset</button>
     <button class="btn" id="soundBtn" type="button" aria-label="Toggle sound (M)">Sound: On (M)</button>
   </div>
 
   <div class="btns">
-    <button class="btn" id="leftBtn">Left</button>
-    <button class="btn" id="rotLBtn">Rotate L</button>
-    <button class="btn" id="hardBtn">Drop</button>
-    <button class="btn" id="rotRBtn">Rotate R</button>
-    <button class="btn" id="rightBtn">Right</button>
+    <button class="btn" id="leftBtn" type="button">Left</button>
+    <button class="btn" id="rotLBtn" type="button">Rotate L</button>
+    <button class="btn" id="hardBtn" type="button">Drop</button>
+    <button class="btn" id="rotRBtn" type="button">Rotate R</button>
+    <button class="btn" id="rightBtn" type="button">Right</button>
   </div>
 
 
@@ -195,6 +196,8 @@
   const startPanel = document.getElementById('startPanel');
   const playBtn = document.getElementById('playBtn');
   const openHelpBtn = document.getElementById('openHelpBtn');
+  const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  let helpTrigger = null;
   let helpUp = false;
   let helpMode = 'start';      // 'start' | 'pause'
 
@@ -202,6 +205,21 @@
 
   let audioCtx=null;
   let muted = false; // 🔊 global mute flag
+
+  function helpFocusables(){
+    return helpEl ? [...helpEl.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0) : [];
+  }
+  function focusHelp(){
+    const target = helpPlay && helpPlay.getClientRects().length > 0 ? helpPlay : (helpFocusables()[0] || helpEl);
+    if(target) target.focus({ preventScroll:true });
+  }
+  function restoreHelpTrigger(){
+    const target = helpTrigger;
+    helpTrigger = null;
+    if(target && target.isConnected && target.getClientRects().length > 0) {
+      setTimeout(() => target.focus({ preventScroll:true }), 0);
+    }
+  }
 
   function ensureAudio(){ try{ if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; audioCtx=new AC(); } if(audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} }
   function sfx(freq=600,dur=0.06,type='square',gain=0.06){
@@ -255,10 +273,12 @@
   function showHelp(mode){ // mode: 'start' | 'pause'
     helpMode = mode;
     helpUp = true;
+    helpTrigger = document.activeElement;
     if (helpEl) helpEl.classList.add('show');
     updateStartPanel();
     if (helpPlay) helpPlay.textContent = (mode === 'pause') ? 'Resume' : 'Play';
     if (mode === 'pause' && statusEl) statusEl.textContent = 'Paused - Press Space/Enter or Play';
+    setTimeout(() => focusHelp(), 0);
   }
 
   function stopMusic(){ if(music.loop){ clearInterval(music.loop); } music.loop=null; music.on=false; }
@@ -1053,6 +1073,7 @@
   requestAnimationFrame(loop);
 
   function onKey(e){
+    if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && e.code !== 'Tab' && e.code !== 'Escape') return;
     if (e.code === 'Key' + SOUND_KEY){
       e.preventDefault();
       setMuted(!muted);
@@ -1060,6 +1081,21 @@
     }
     // HELP: while overlay is up, only Space/Enter (and P if paused) dismiss it
     if (helpUp){
+      if (e.code === 'Tab') {
+        const focusables = helpFocusables();
+        if (focusables.length) {
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus({ preventScroll:true });
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus({ preventScroll:true });
+          }
+        }
+        return;
+      }
       if (
         e.code === 'Space' ||
         e.code === 'Enter' ||
@@ -1171,6 +1207,7 @@
     helpUp = false;
     if (helpEl) helpEl.classList.remove('show');
     updateStartPanel();
+    restoreHelpTrigger();
   }
 
   function dismissHelp(action){ // 'start' | 'resume'

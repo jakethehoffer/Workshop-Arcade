@@ -80,6 +80,7 @@
   #game { display:block; width:min(calc(100vw - 20px), 1200px); height: calc(min(calc(100vw - 20px), 1200px) * 0.65); margin:14px auto; background: radial-gradient(1200px 800px at 20% 10%, #0a1322 0%, transparent 60%),
            radial-gradient(900px 600px at 80% 0%, #0b1a2a 0%, transparent 60%),
            linear-gradient(180deg, #0b1220, #0a0f18); border:1px solid #15243a; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04); }
+  #game:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
   footer { display:flex; justify-content:center; gap:12px; padding:8px 12px; color:var(--muted); font-size:12px; text-align:center; }
   .sep { width:1px; height:20px; background:#1f2e45; }
   .toggle { cursor:pointer; }
@@ -131,7 +132,7 @@
         <span class="pill">💣 <span id="mines">000</span></span>
       </div>
       <div class="control-group">
-        <button id="reset">🙂 New Game (N)</button>
+        <button id="reset" type="button">🙂 New Game (N)</button>
         <select id="difficulty" title="Difficulty">
           <option value="beginner">Beginner 9×9 (10)</option>
           <option value="intermediate" selected>Intermediate 16×16 (40)</option>
@@ -143,15 +144,15 @@
         <span class="custom-field">W:<input id="cw" type="number" min="5" max="50" value="16" inputmode="numeric" style="width:60px"></span>
         <span class="custom-field">H:<input id="ch" type="number" min="5" max="30" value="16" inputmode="numeric" style="width:60px"></span>
         <span class="custom-field">M:<input id="cm" type="number" min="1" max="300" value="40" inputmode="numeric" style="width:80px"></span>
-        <button id="applyCustom">Apply</button>
+        <button id="applyCustom" type="button">Apply</button>
       </span>
       <div class="control-group">
-        <button id="flagMode" title="Touch helper"><span class="icon">🚩</span> Flag Mode: <span id="flagState">OFF</span> <span class="kbd">F</span></button>
+        <button id="flagMode" type="button" title="Touch helper" aria-pressed="false"><span class="icon">🚩</span> Flag Mode: <span id="flagState">OFF</span> <span class="kbd">F</span></button>
       </div>
       <div class="control-group">
-        <button id="sfxBtn" class="toggle is-on"><span class="icon">🔊</span> SFX <span class="kbd">S</span><span class="led-inline" id="sfxLed"></span></button>
-        <button id="musicBtn" class="toggle"><span class="icon">🎵</span> Music <span class="kbd">M</span><span class="led-inline" id="musicLed"></span></button>
-        <button id="helpBtn" class="toggle"><span class="icon">❓</span> How to Play <span class="kbd">H</span></button>
+        <button id="sfxBtn" class="toggle is-on" type="button" aria-pressed="true"><span class="icon">🔊</span> SFX <span class="kbd">S</span><span class="led-inline" id="sfxLed"></span></button>
+        <button id="musicBtn" class="toggle" type="button" aria-pressed="false"><span class="icon">🎵</span> Music <span class="kbd">M</span><span class="led-inline" id="musicLed"></span></button>
+        <button id="helpBtn" class="toggle" type="button"><span class="icon">❓</span> How to Play <span class="kbd">H</span></button>
       </div>
     </div>
   </header>
@@ -161,16 +162,16 @@
     <span class="custom-warn" id="customWarn" role="status" aria-live="polite"></span>
   </div>
 
-  <canvas id="game" width="1200" height="780"></canvas>
+  <canvas id="game" width="1200" height="780" tabindex="0" aria-label="Minesweeper board"></canvas>
 
   <footer>
     <span class="help">Controls: <span class="kbd">Left Click</span>/<span class="kbd">Tap</span> reveal • <span class="kbd">Right Click</span>/<span class="kbd">Long‑press</span> flag • Toggle <b>🚩 Flag Mode</b> on touch for easier flagging.</span>
   </footer>
 
   <!-- Help Menu -->
-  <div class="overlay" id="helpOverlay" style="display:none; position:fixed; inset:0; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.75);">
+  <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle" style="display:none; position:fixed; inset:0; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.75);">
     <div class="help-card" style="background:var(--panel); border:1px solid #173051; padding:24px 26px; border-radius:16px; max-width:min(92vw, 600px); box-shadow:0 10px 30px rgba(0,0,0,.5); pointer-events:auto; color:var(--ink);">
-      <h2 style="margin:0 0 16px 0; font-size:24px; color:var(--accent);">❓ How to Play Minesweeper</h2>
+      <h2 id="helpTitle" style="margin:0 0 16px 0; font-size:24px; color:var(--accent);">❓ How to Play Minesweeper</h2>
       <p><b>Objective:</b> Reveal all tiles that don't contain mines without clicking on any mines!</p>
       
       <p><b>Controls:</b></p>
@@ -191,7 +192,7 @@
         <li>Choose from Beginner, Intermediate, Expert, or Custom difficulty</li>
       </ul>
 
-      <button class="btn" id="helpClose" style="margin-top:16px; width:100%; background:var(--accent); color:#000; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer;">Close</button>
+      <button class="btn" id="helpClose" type="button" style="margin-top:16px; width:100%; background:var(--accent); color:#000; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer;">Close</button>
     </div>
   </div>
 </div>
@@ -1170,6 +1171,7 @@ function drawRaisedTile(x, y, s, hovered) {
     sfxLed.classList.toggle('on', sfxOn);
     sfxLed.classList.toggle('off', !sfxOn);
     sfxBtn.classList.toggle('is-on', sfxOn);
+    sfxBtn.setAttribute('aria-pressed', sfxOn ? 'true' : 'false');
     sfx('tick');
   }
 
@@ -1178,6 +1180,7 @@ function drawRaisedTile(x, y, s, hovered) {
     musicLed.classList.toggle('on', musicOn);
     musicLed.classList.toggle('off', !musicOn);
     musicBtn.classList.toggle('is-on', musicOn);
+    musicBtn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
     sfx('tick');
     ensureAudio();
     if (musicOn) startMusic(); else stopMusic();
@@ -1351,6 +1354,7 @@ function drawRaisedTile(x, y, s, hovered) {
   function updateFlagButton(){
     if (flagStateEl) flagStateEl.textContent = state.flagMode ? 'ON' : 'OFF';
     if (flagBtn) flagBtn.classList.toggle('is-on', !!state.flagMode);
+    if (flagBtn) flagBtn.setAttribute('aria-pressed', state.flagMode ? 'true' : 'false');
   }
   function toggleFlagMode(){ state.flagMode = !state.flagMode; updateFlagButton(); sfx('tick'); }
   flagBtn.addEventListener('click', toggleFlagMode);
@@ -1361,13 +1365,48 @@ function drawRaisedTile(x, y, s, hovered) {
   const helpOverlay = document.getElementById('helpOverlay');
   const helpClose = document.getElementById('helpClose');
   const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
+  const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  let helpTrigger = null;
   let helpOpen = false;
+
+  function helpFocusables() {
+    return [...helpOverlay.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
+  }
+
+  function focusHelp() {
+    const target = helpClose && helpClose.getClientRects().length > 0 ? helpClose : (helpFocusables()[0] || helpOverlay);
+    target.focus({ preventScroll: true });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (!helpOpen || event.defaultPrevented) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeHelp();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusables = helpFocusables();
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  }, true);
 
   function openHelp(){ 
     if(helpOverlay) {
+      helpTrigger = document.activeElement;
       helpOpen = true;
       helpOverlay.style.display = 'grid';
       helpOverlay.style.pointerEvents = 'auto';
+      setTimeout(() => focusHelp(), 0);
     }
   }
   function closeHelp(){ 
@@ -1375,6 +1414,11 @@ function drawRaisedTile(x, y, s, hovered) {
       helpOpen = false;
       helpOverlay.style.display = 'none';
       helpOverlay.style.pointerEvents = 'none';
+      const target = helpTrigger;
+      helpTrigger = null;
+      if(target && target.isConnected && target.getClientRects().length > 0) {
+        setTimeout(() => target.focus({ preventScroll: true }), 0);
+      }
     }
   }
   function toggleHelp(){
