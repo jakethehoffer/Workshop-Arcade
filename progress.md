@@ -322,3 +322,12 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T04-53-35-976Z/`; 40 ranked surfaces, max score 0, with Checkers desktop/mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Brick Breaker top bar HUD or older games still missing eyebrow/card-frame chrome.
+
+## 2026-05-14 Claude pass 33
+
+- Baseline: `test-results/render-ranking/2026-05-14T04-53-35-976Z/`; all 40 surfaces scored zero, but Brick Breaker's in-game HUD still used flat single-line "Score: 0" pills and basic flat utility buttons that did not match the polished paddle/brick palette.
+- Polished `websites/brick-breaker.html` HUD chrome: restructured the `.pill` stat cards into an eyebrow-style uppercase label-on-top + tabular-numeric value-below layout with teal-tinted gradient borders, refreshed the base button and utility-strip buttons with matching gradient/shadow chrome and a teal hover border, and tuned mobile pill sizing so the new structure stays compact on a 390px viewport.
+- Preserved Brick Breaker gameplay rules, score/level/lives/best wiring, powerups and curses, audio toggles, pause/restart/help controls, start/legend overlay, and all existing visual-only feedback and diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T04-59-32-807Z/`; 40 ranked surfaces, max score 0, with Brick Breaker desktop/mobile HUD manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Neon Snake start-screen polish or another older game still lacking branded chrome.
