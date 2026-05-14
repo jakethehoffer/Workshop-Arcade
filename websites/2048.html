@@ -6,14 +6,17 @@
   <title>2048</title>
   <style>
     :root{
-      --bg0:#f9f4e7;            /* light base */
-      --bg1:#dfe9df;            /* gradient stop */
-      --board:#bbada0;          /* board background */
-      --grid:#cdc1b4;           /* empty cell background */
-      --text:#776e65;           /* dark text */
-      --text-light:#f9f6f2;     /* light text on dark tiles */
-      --accent:#edc22e;         /* brand accent */
-      --accent-2:#4aa7a5;
+      --bg0:#071015;
+      --bg1:#101b18;
+      --panel:#0d1820;
+      --board:#152731;
+      --grid:#20333c;
+      --text:#e7f3ee;
+      --muted:#8fa6a4;
+      --text-light:#f9fbf3;
+      --accent:#f6c453;
+      --accent-2:#58e2ce;
+      --danger:#ff6b6b;
       --fade: .28s cubic-bezier(.22,.61,.36,1); /* UI fade timing */
     }
 
@@ -31,61 +34,66 @@
     /* Page layout */
     html,body{height:100%;margin:0;
       background:
-        radial-gradient(circle at 16% 12%, rgba(74,167,165,.20), transparent 28%),
-        radial-gradient(circle at 86% 18%, rgba(237,194,46,.22), transparent 24%),
+        radial-gradient(circle at 14% 10%, rgba(88,226,206,.16), transparent 28%),
+        radial-gradient(circle at 88% 16%, rgba(246,196,83,.14), transparent 24%),
         linear-gradient(160deg,var(--bg0),var(--bg1));
       color:var(--text);
       overflow-x:hidden;
       font-family:EmbeddedMontserrat, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif}
 
-    .wrap{width:min(94vw,700px);min-height:100dvh;margin:0 auto;padding:clamp(10px,2vw,18px);display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center}
+    .wrap{width:min(94vw,720px);min-height:100dvh;margin:0 auto;padding:clamp(10px,2vw,18px);display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center}
     header{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
-    h1{font-size:clamp(36px,7vw,58px);line-height:1;margin:0;color:#5f574f;text-shadow:0 2px 0 rgba(255,255,255,.55)}
+    h1{font-size:clamp(36px,7vw,58px);line-height:1;margin:0;color:var(--text);letter-spacing:0;text-shadow:0 0 18px rgba(88,226,206,.18)}
     .badges{margin-left:auto;display:flex;gap:10px}
-    .badge{background:linear-gradient(180deg,#b9aa9d,#9f8d7d);color:#fff;border-radius:12px;padding:9px 13px;min-width:112px;text-align:center;box-shadow:0 8px 18px rgba(92,77,61,.16)}
-    .badge .label{font-size:12px;opacity:.9}
+    .badge{background:linear-gradient(180deg,rgba(28,48,56,.96),rgba(15,28,35,.98));color:var(--text-light);border:1px solid rgba(88,226,206,.18);border-radius:10px;padding:9px 13px;min-width:112px;text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.24)}
+    .badge .label{font-size:12px;color:var(--muted)}
     .badge .value{font-size:22px;font-weight:700}
 
     .controls{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .controls-hint{opacity:.7}
-    button{appearance:none;border:0;border-radius:10px;padding:9px 12px;background:#8f7a66;color:white;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(74,55,38,.14)}
-    button:active{transform:translateY(1px)}
+    .controls-hint{color:var(--muted)}
+    button{appearance:none;border:1px solid rgba(88,226,206,.16);border-radius:9px;padding:9px 12px;background:linear-gradient(180deg,#182a32,#101d24);color:var(--text);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.22)}
+    button:hover{border-color:rgba(88,226,206,.34)}
+    button:disabled{opacity:.58;cursor:not-allowed}
+    button:active{transform:translateY(1px);box-shadow:0 0 0 2px rgba(88,226,206,.14),0 5px 12px rgba(0,0,0,.2)}
 
     /* Canvas container keeps a square that scales responsively */
-    .board{position:relative;margin-top:16px;aspect-ratio:1/1;width:min(100%,620px);justify-self:center;background:transparent;filter:drop-shadow(0 24px 36px rgba(75,61,46,.16))}
-    canvas{width:100%;height:100%;display:block;touch-action:none;border-radius:18px;}
+    .board{position:relative;margin-top:16px;aspect-ratio:1/1;width:min(100%,620px);justify-self:center;background:transparent;filter:drop-shadow(0 26px 42px rgba(0,0,0,.38))}
+    .board:active canvas{box-shadow:0 0 0 2px rgba(88,226,206,.28),0 0 36px rgba(88,226,206,.12)}
+    canvas{width:100%;height:100%;display:block;touch-action:none;border-radius:18px;box-shadow:0 0 0 1px rgba(88,226,206,.12);}
 
     /* Overlay messages (win / game over). Kept in layout but faded by opacity */
     .overlay{position:absolute;inset:0;display:grid;place-items:center;border-radius:18px;
-      background:rgba(238,228,218,.65);backdrop-filter:saturate(1.2) blur(1px);
+      background:rgba(5,12,16,.76);backdrop-filter:saturate(1.2) blur(2px);
       opacity:0; pointer-events:none; transition:opacity var(--fade)}
     .overlay.show{opacity:1; pointer-events:auto}
-    .card{background:rgba(255,255,255,.92);border-radius:14px;padding:18px 20px;box-shadow:0 6px 30px rgba(0,0,0,.12);text-align:center;max-width:min(90%,420px)}
+    .card{background:linear-gradient(180deg,rgba(19,34,42,.98),rgba(9,18,24,.98));border:1px solid rgba(88,226,206,.22);border-radius:14px;padding:18px 20px;box-shadow:0 18px 44px rgba(0,0,0,.38);text-align:center;max-width:min(90%,420px);color:var(--text)}
     .card h2{margin:0 0 10px 0}
     .card p{margin:0 0 14px 0}
     .card .actions{display:flex;gap:10px;justify-content:center}
-    .card .primary{background:var(--accent);color:#000}
-    .help-overlay{position:fixed;inset:0;display:none;place-items:center;pointer-events:none;z-index:100;background:rgba(0,0,0,0.6)}
+    .card .primary{background:linear-gradient(180deg,#f9d86f,#f0b63e);color:#1b1508;border-color:rgba(246,196,83,.55)}
+    .help-overlay{position:fixed;inset:0;display:none;place-items:center;pointer-events:none;z-index:100;background:rgba(0,0,0,0.72)}
     .help-overlay.show{display:grid;pointer-events:auto}
-    .help-card{background:rgba(255,255,255,.98);border:2px solid var(--board);padding:24px 26px;border-radius:14px;max-width:min(92vw, 550px);box-shadow:0 6px 30px rgba(0,0,0,.2);pointer-events:auto;color:var(--text)}
+    .help-card{background:linear-gradient(180deg,#14242d,#0b151c);border:1px solid rgba(88,226,206,.24);padding:24px 26px;border-radius:14px;max-width:min(92vw, 550px);box-shadow:0 20px 50px rgba(0,0,0,.42);pointer-events:auto;color:var(--text)}
     .help-card h2{margin:0 0 16px 0;font-size:24px;color:var(--text)}
     .help-card p{margin:8px 0;line-height:1.6}
     .help-card .controls-grid{display:grid;grid-template-columns:1fr;gap:10px;margin:16px 0}
     .help-card .control-row{display:flex;align-items:center;gap:12px}
-    .help-card kbd{background:var(--board);border:1px solid var(--grid);border-bottom-width:3px;padding:4px 10px;border-radius:8px;font-weight:700;font-family:inherit;display:inline-block;color:var(--text-light)}
-    .help-card .btn-close{margin-top:16px;width:100%;background:var(--accent);color:#000;border:none;padding:10px;border-radius:10px;font-weight:700;cursor:pointer}
+    .help-card kbd{background:#1c323c;border:1px solid rgba(88,226,206,.26);border-bottom-width:3px;padding:4px 10px;border-radius:8px;font-weight:700;font-family:inherit;display:inline-block;color:var(--text-light)}
+    .help-card .btn-close{margin-top:16px;width:100%;background:linear-gradient(180deg,#f9d86f,#f0b63e);color:#1b1508;border:none;padding:10px;border-radius:10px;font-weight:700;cursor:pointer}
     .help-card .btn-close:active{transform:translateY(1px)}
     @media (max-width: 520px){
-      .wrap{width:100%;max-width:100%;padding:10px;align-content:start}
-      header{align-items:center}
+      .wrap{width:100%;max-width:100%;padding:10px 10px 8px;align-content:start;grid-template-rows:auto auto auto}
+      header{align-items:center;gap:8px}
+      h1{font-size:34px}
       .badges{width:100%;margin-left:0}
-      .badge{flex:1;min-width:0;padding:7px 8px}
+      .badge{flex:1;min-width:0;padding:7px 8px;border-radius:9px}
+      .badge .label{font-size:11px}
       .badge .value{font-size:20px}
       h1{line-height:1.05}
-      .controls{font-size:12px;gap:6px}
-      button{padding:8px 10px}
-      .controls-hint{width:100%;font-size:11px;line-height:1.25}
-      .board{margin-top:10px}
+      .controls{font-size:12px;gap:6px;margin-top:8px}
+      button{padding:8px 9px}
+      .controls-hint{width:100%;font-size:11px;line-height:1.2}
+      .board{margin-top:8px;width:min(100%,370px)}
       .help-card{padding:18px;max-height:86dvh;overflow:auto}
     }
   </style>
@@ -181,10 +189,10 @@
   const POP_TIME = 110;               // ms for spawn/merge pop
 
   const TILE_COLORS = {               // background color by tile value
-    0:"#cdc1b4", 2:"#eee4da", 4:"#ede0c8",
-    8:"#f2b179", 16:"#f59563", 32:"#f67c5f", 64:"#f65e3b",
-    128:"#edcf72", 256:"#edcc61", 512:"#edc850", 1024:"#edc53f", 2048:"#edc22e",
-    4096:'#3d73c2', 8192:'#9c27b0', 16384:'#e91e63', 32768:'#ff5722', 65536:'#ff9800'
+    0:"#20333c", 2:"#e7dfce", 4:"#e8cfaa",
+    8:"#f0a45c", 16:"#f47f56", 32:"#ee5f57", 64:"#d9445a",
+    128:"#f2c94c", 256:"#e2b43f", 512:"#58e2ce", 1024:"#32b8de", 2048:"#8f7bff",
+    4096:'#ce67e6', 8192:'#ff6fb0', 16384:'#ff8a47', 32768:'#f6c453', 65536:'#f3f7ff'
   };
 
   // --- DOM & canvas setup ----------------------------------------------------
@@ -584,17 +592,36 @@ function checkWinOnly(){
     const boardY = Math.floor((H - (cellSize*SIZE + gap*(SIZE-1)))/2);
     const radius = Math.floor(cellSize*0.1);
 
+    ctx.save();
+    const boardGlow = ctx.createRadialGradient(W * 0.5, H * 0.45, size * 0.12, W * 0.5, H * 0.5, size * 0.72);
+    boardGlow.addColorStop(0, 'rgba(88,226,206,0.12)');
+    boardGlow.addColorStop(1, 'rgba(88,226,206,0)');
+    ctx.fillStyle = boardGlow;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
     // Board background
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.34)';
+    ctx.shadowBlur = Math.max(18, W * 0.04);
+    ctx.shadowOffsetY = Math.max(8, W * 0.018);
     roundRect(ctx, boardX - pad*0.5, boardY - pad*0.5,
                     cellSize*SIZE + gap*(SIZE-1) + pad,
-                    cellSize*SIZE + gap*(SIZE-1) + pad, 14, '#bbada0');
+                    cellSize*SIZE + gap*(SIZE-1) + pad, 16, '#14242d');
+    ctx.restore();
 
     // Grid cells
     for(let r=0;r<SIZE;r++){
       for(let c=0;c<SIZE;c++){
         const x = boardX + c*(cellSize+gap);
         const y = boardY + r*(cellSize+gap);
-        roundRect(ctx, x, y, cellSize, cellSize, radius, '#cdc1b4');
+        roundRect(ctx, x, y, cellSize, cellSize, radius, '#20333c');
+        ctx.save();
+        ctx.globalAlpha = 0.34;
+        ctx.strokeStyle = 'rgba(88,226,206,.10)';
+        ctx.lineWidth = Math.max(1, cellSize * 0.01);
+        roundRectStroke(ctx, x + 1, y + 1, cellSize - 2, cellSize - 2, radius, ctx.strokeStyle);
+        ctx.restore();
       }
     }
 
@@ -641,20 +668,25 @@ function checkWinOnly(){
     for(const target of feedback.mergeTargets){
       const center = cellCenter(target.row, target.col);
       ctx.globalAlpha = 0.72 * fade;
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = Math.max(3, cellSize * 0.055);
+      ctx.strokeStyle = '#f6c453';
+      ctx.lineWidth = Math.max(4, cellSize * 0.06);
       ctx.beginPath();
       ctx.arc(center.x, center.y, cellSize * (0.34 + age * 0.2), 0, Math.PI * 2);
       ctx.stroke();
+      ctx.globalAlpha = 0.2 * fade;
+      ctx.fillStyle = '#f6c453';
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, cellSize * (0.2 + age * 0.18), 0, Math.PI * 2);
+      ctx.fill();
     }
 
     if(feedback.spawnedTile){
       const { row, col } = feedback.spawnedTile;
       const x = boardX + col * (cellSize + gap);
       const y = boardY + row * (cellSize + gap);
-      ctx.globalAlpha = 0.52 * fade;
-      ctx.strokeStyle = '#50f0c8';
-      ctx.lineWidth = Math.max(3, cellSize * 0.045);
+      ctx.globalAlpha = 0.66 * fade;
+      ctx.strokeStyle = '#58e2ce';
+      ctx.lineWidth = Math.max(3, cellSize * 0.05);
       roundRectStroke(ctx, x + 3, y + 3, cellSize - 6, cellSize - 6, radius, ctx.strokeStyle);
     }
 
@@ -666,11 +698,11 @@ function checkWinOnly(){
       ctx.font = `800 ${Math.max(18, cellSize * 0.32)}px EmbeddedMontserrat, system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.lineWidth = 5;
+      ctx.lineWidth = Math.max(5, cellSize * 0.07);
       const x = boardX + (cellSize * SIZE + gap * (SIZE - 1)) / 2;
-      const y = boardY + Math.max(18, cellSize * 0.22) - age * cellSize * 0.08;
-      ctx.strokeStyle = 'rgba(80,64,48,.45)';
-      ctx.fillStyle = feedback.scoreGained > 0 ? '#f59e0b' : '#6d635c';
+      const y = boardY + Math.max(22, cellSize * 0.14) - age * cellSize * 0.03;
+      ctx.strokeStyle = 'rgba(4,10,14,.72)';
+      ctx.fillStyle = feedback.scoreGained > 0 ? '#f6c453' : '#58e2ce';
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
     }
@@ -679,16 +711,16 @@ function checkWinOnly(){
 
   function drawTile(x,y,size,radius,value,scale){
     const bg = TILE_COLORS[value] || '#3c3a32';
-    const fontColor = value<=4 ? '#776e65' : '#f9f6f2';
+    const fontColor = value<=4 || value >= 65536 ? '#17232a' : '#f9fbf3';
 
     const s = size*scale;
     const ox = Math.round(x + (size - s)/2);
     const oy = Math.round(y + (size - s)/2);
 
     ctx.save();
-    ctx.shadowColor = value >= 8 ? 'rgba(120, 75, 28, 0.24)' : 'rgba(80, 64, 48, 0.10)';
-    ctx.shadowBlur = value >= 8 ? 16 : 8;
-    ctx.shadowOffsetY = 4;
+    ctx.shadowColor = value >= 8 ? 'rgba(246, 196, 83, 0.24)' : 'rgba(0, 0, 0, 0.20)';
+    ctx.shadowBlur = value >= 8 ? 18 : 10;
+    ctx.shadowOffsetY = 5;
     roundRect(ctx, ox, oy, s, s, radius, bg);
     ctx.restore();
 
@@ -697,20 +729,33 @@ function checkWinOnly(){
     ctx.roundRect(ox, oy, s, s, radius);
     ctx.clip();
     const shine = ctx.createLinearGradient(ox, oy, ox, oy + s * 0.45);
-    shine.addColorStop(0, 'rgba(255,255,255,0.22)');
+    shine.addColorStop(0, 'rgba(255,255,255,0.24)');
     shine.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = shine;
     ctx.fillRect(ox, oy, s, s * 0.52);
     ctx.restore();
 
+    if(value >= 128){
+      ctx.save();
+      ctx.globalAlpha = 0.24;
+      ctx.strokeStyle = value >= 2048 ? '#f6c453' : '#58e2ce';
+      ctx.lineWidth = Math.max(2, size * 0.025);
+      roundRectStroke(ctx, ox + 2, oy + 2, s - 4, s - 4, radius, ctx.strokeStyle);
+      ctx.restore();
+    }
+
     // Choose font size based on digits; font family prefers the embedded name
     const digits = String(value).length;
     const base = Math.floor(size * (digits<=2?0.5: digits===3?0.45: 0.38));
     ctx.fillStyle = fontColor;
+    ctx.shadowColor = value<=4 || value >= 65536 ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.32)';
+    ctx.shadowBlur = value<=4 || value >= 65536 ? 0 : Math.max(4, size * 0.05);
     ctx.font = `700 ${base}px EmbeddedMontserrat, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(value, ox + s/2, oy + s/2);
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
   }
 
   function roundRect(ctx, x, y, w, h, r, fill){
@@ -859,6 +904,9 @@ function checkWinOnly(){
     const flat = matrix.flat();
     const largestTile = flat.reduce((max, value) => Math.max(max, value), 0);
     const eventAge = feedbackAge();
+    const boardEl = document.getElementById('board');
+    const boardRect = boardEl?.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
     return JSON.stringify({
       game: '2048',
       ready: Array.isArray(board),
@@ -877,6 +925,17 @@ function checkWinOnly(){
       grid: matrix,
       overlay: overlay.classList.contains('show') ? overlayTitle.textContent : null,
       helpOpen,
+      layout: {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        mobile: window.matchMedia('(max-width: 520px)').matches,
+        boardWidth: Math.round(boardRect?.width || 0),
+        boardHeight: Math.round(boardRect?.height || 0),
+        canvasCssWidth: Math.round(canvasRect.width),
+        canvasCssHeight: Math.round(canvasRect.height),
+        canvasPixelWidth: canvas.width,
+        canvasPixelHeight: canvas.height,
+        overflowX: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      },
       feedback: {
         lastMoveDirection: feedback.lastMoveDirection,
         eventAge: eventAge === null ? null : Number(eventAge.toFixed(2)),

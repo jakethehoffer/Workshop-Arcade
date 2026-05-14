@@ -259,3 +259,15 @@ Original prompt: Do this for me
 - Verified with the required develop-web-game client for Solitaire stock draw plus direct mobile Playwright checks for stock draw, hint, a legal drag when available, undo/restart, no clipped card text, and no horizontal overflow.
 - Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
 - Suggested next pass: continue qualitative zero-score review; likely choose another mobile board/card interaction surface only if actual contact-sheet evidence shows player friction.
+
+## 2026-05-14 Codex pass 27
+
+- Baseline: `test-results/render-ranking/2026-05-14T03-00-17-317Z/`; all 40 surfaces scored zero, so this pass targeted qualitative 2048 visual cohesion and touch feel.
+- Restyled `websites/2048.html` into the darker Workshop Arcade visual language with higher-contrast page chrome, score badges, buttons, help/overlay panels, board cells, tile shadows, and more distinct high-value tile colors.
+- Improved mobile first/play screens by compacting controls and making the board fill 370px at the 390px viewport with zero horizontal overflow.
+- Strengthened canvas feedback for merge rings, spawn outlines, score/direction pops, tile glow, and board press affordance while preserving 2048 rules, random spawns, scoring, undo, overlays, saves, keyboard/swipe controls, and existing event diagnostics.
+- Extended 2048 diagnostics with a compact `layout` object for viewport, mobile mode, board/canvas sizes, canvas pixel size, and horizontal overflow.
+- Final capture: `test-results/render-ranking/2026-05-14T03-23-38-360Z/`; all 40 surfaces score zero, with 2048 desktop/mobile manually inspected.
+- Verified with the required develop-web-game client for 2048 plus direct desktop/mobile Playwright checks for bounded merge feedback, undo, help open/close, overlay restart usability, board sizing, no offscreen controls, and no overflow.
+- Local checks passed: catalog validation, full 20-game smoke suite, final `npm run capture:games`, and `git diff --check`.
+- Suggested next pass: continue qualitative zero-score contact-sheet review, likely targeting another page whose visual style still feels less integrated than the newest feedback-polished games.
