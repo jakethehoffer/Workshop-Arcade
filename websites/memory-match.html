@@ -33,6 +33,11 @@
   }
   .pill .label{font-size:9px;letter-spacing:0.26em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
   .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+  .pill#streakPill[data-active="true"]{
+    border-color:rgba(94,234,212,0.75);
+    box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 18px rgba(94,234,212,0.25);
+  }
+  .pill#streakPill[data-active="true"] .value{color:#5eead4}
 
   .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
   .btn,.seg button{
@@ -116,6 +121,7 @@
     <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
     <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0:00</span></div>
     <div class="pill"><span class="label">Pairs</span><span class="value" id="pairsValue">0/8</span></div>
+    <div class="pill" id="streakPill" data-active="false"><span class="label">Streak</span><span class="value" id="streakValue">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
   </div>
   <div class="controls">
@@ -125,6 +131,7 @@
       <button type="button" data-difficulty="hard"   aria-pressed="false">Hard</button>
     </span>
     <button class="btn primary" type="button" id="newGameBtn">New Game</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">🔊 Sound</button>
     <button class="btn" type="button" id="helpBtn">❓ Help</button>
   </div>
   <div class="board" id="board" role="grid" aria-label="Memory match board"></div>
@@ -174,8 +181,11 @@
     time:    document.getElementById('timeValue'),
     pairs:   document.getElementById('pairsValue'),
     best:    document.getElementById('bestValue'),
+    streakPill:  document.getElementById('streakPill'),
+    streakValue: document.getElementById('streakValue'),
     board:   document.getElementById('board'),
     newGame: document.getElementById('newGameBtn'),
+    sound:   document.getElementById('soundBtn'),
     help:    document.getElementById('helpBtn'),
     helpOverlay: document.getElementById('helpOverlay'),
     helpClose:   document.getElementById('helpClose'),
@@ -186,6 +196,57 @@
     winPlayAgain:document.getElementById('winPlayAgain'),
     difficultyButtons: Array.from(document.querySelectorAll('[data-difficulty]'))
   };
+
+  // ----- Audio engine: lazy Web Audio API, tiny oscillator tones -----
+  const SOUND_KEY = 'memory-match.sound.v1';
+  let audioCtx = null;
+  function ensureAudio(){
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch { audioCtx = null; }
+    return audioCtx;
+  }
+  function loadSoundPref(){
+    try { const raw = localStorage.getItem(SOUND_KEY); if (raw === null) return true; return raw === 'true'; }
+    catch { return true; }
+  }
+  function saveSoundPref(on){ try { localStorage.setItem(SOUND_KEY, String(on)); } catch {} }
+  function tone(freq, durMs, gain = 0.06, type = 'sine', offsetMs = 0){
+    if (!state.soundEnabled) return;
+    const ctx = ensureAudio(); if (!ctx) return;
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch {} }
+    const start = ctx.currentTime + offsetMs / 1000;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(gain, start + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + durMs / 1000);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + durMs / 1000 + 0.02);
+  }
+  function playFlip(){ tone(540, 90, 0.04, 'sine'); }
+  function playMatch(streak){
+    const base = 520 + Math.min(streak - 1, 5) * 80; // higher pitch on longer streaks
+    tone(base, 140, 0.06, 'sine');
+    tone(base * 1.25, 160, 0.05, 'sine', 80);
+  }
+  function playMismatch(){
+    tone(280, 140, 0.05, 'triangle');
+    tone(220, 180, 0.04, 'triangle', 100);
+  }
+  function playWin(){
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, 220, 0.06, 'sine', i * 110));
+  }
+  function updateSoundButton(){
+    els.sound.setAttribute('aria-pressed', state.soundEnabled ? 'true' : 'false');
+    els.sound.textContent = state.soundEnabled ? '🔊 Sound' : '🔇 Muted';
+  }
 
   const state = {
     difficulty: 'easy',
@@ -204,7 +265,10 @@
     lastMismatchAt: 0,
     flipCount: 0,
     matchCount: 0,
-    mismatchCount: 0
+    mismatchCount: 0,
+    streak: 0,           // consecutive matches in the current run
+    bestStreak: 0,       // best streak this run
+    soundEnabled: true
   };
 
   function bestKey(){ return 'memory-match.best.' + state.difficulty; }
@@ -261,6 +325,8 @@
     state.pendingResolveAt = 0;
     state.won = false;
     state.busy = false;
+    state.streak = 0;
+    state.bestStreak = 0;
     els.board.style.setProperty('--cols', conf.cols);
     renderBoard();
     updateHud();
@@ -299,6 +365,8 @@
     els.moves.textContent = String(state.moves);
     els.pairs.textContent = state.matched + '/' + conf.pairs;
     els.time.textContent = formatTime(state.started ? (state.now - state.started) : 0);
+    els.streakValue.textContent = String(state.streak);
+    els.streakPill.setAttribute('data-active', state.streak >= 2 ? 'true' : 'false');
     const best = loadBest();
     if (best) {
       els.best.textContent = best.moves + ' / ' + formatTime(best.time);
@@ -318,11 +386,11 @@
     state.flipped.push(id);
     state.lastFlipAt = state.now;
     state.flipCount += 1;
+    playFlip();
     refreshCard(id);
 
     if (state.flipped.length === 2){
       state.moves += 1;
-      updateHud();
       const [aId, bId] = state.flipped;
       const a = state.cards[aId], b = state.cards[bId];
       if (a.icon === b.icon){
@@ -331,15 +399,24 @@
         state.flipped = [];
         state.lastMatchAt = state.now;
         state.matchCount += 1;
+        state.streak += 1;
+        if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+        playMatch(state.streak);
         refreshCard(aId);
         refreshCard(bId);
+        updateHud();
         if (state.matched === DIFFICULTIES[state.difficulty].pairs) finishGame();
       } else {
         state.busy = true;
         state.pendingResolveAt = state.now + FLIP_BACK_MS;
         state.lastMismatchAt = state.now;
         state.mismatchCount += 1;
+        state.streak = 0;
+        playMismatch();
+        updateHud();
       }
+    } else {
+      updateHud();
     }
   }
 
@@ -367,8 +444,11 @@
     }
     els.winMoves.textContent = String(state.moves);
     els.winTime.textContent = formatTime(elapsed);
-    els.winNote.textContent = beat ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves in ' + formatTime(elapsed) + '.'
-      : 'Finished in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.';
+    const streakNote = state.bestStreak >= 3 ? ' Best streak: ' + state.bestStreak + '.' : '';
+    els.winNote.textContent = (beat
+      ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves in ' + formatTime(elapsed) + '.'
+      : 'Finished in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.') + streakNote;
+    playWin();
     openOverlay(els.winOverlay, els.winPlayAgain);
     updateHud();
   }
@@ -429,6 +509,12 @@
   els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
   els.winPlayAgain.addEventListener('click', () => { closeOverlay(els.winOverlay); newGame(); });
   els.difficultyButtons.forEach(b => b.addEventListener('click', () => setDifficulty(b.dataset.difficulty)));
+  els.sound.addEventListener('click', () => {
+    state.soundEnabled = !state.soundEnabled;
+    saveSoundPref(state.soundEnabled);
+    updateSoundButton();
+    if (state.soundEnabled) playFlip();
+  });
 
   // ----- Diagnostic hooks for capture harness + develop-web-game client -----
   function ageSeconds(at){
@@ -449,6 +535,9 @@
       elapsedMs: state.started ? state.now - state.started : 0,
       best: loadBest(),
       cards: state.cards.map(c => ({ id: c.id, icon: c.icon, state: c.state })),
+      streak: state.streak,
+      bestStreak: state.bestStreak,
+      soundEnabled: state.soundEnabled,
       feedback: {
         flipAge: ageSeconds(state.lastFlipAt),
         matchAge: ageSeconds(state.lastMatchAt),
@@ -456,6 +545,7 @@
         flipCount: state.flipCount,
         matchCount: state.matchCount,
         mismatchCount: state.mismatchCount,
+        streak: state.streak,
         flashActive: state.busy
       }
     });
@@ -470,6 +560,8 @@
 
   // Init
   state.now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  state.soundEnabled = loadSoundPref();
+  updateSoundButton();
   newGame();
 })();
 </script>

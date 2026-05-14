@@ -626,3 +626,17 @@ Original prompt: Do this for me
   - Catalog grid shows 22 cards including Reflex Spark with SVG cover and Arcade/Action tags.
 - Final checks passed: catalog validation for 22 games, `npm run test:a11y` clean across 23 HTML files (4 rules enforced), `npm run test:games` passed for 22 games, `npm run capture:games` max score 0 across all 44 rendered surfaces (Reflex Spark desktop+mobile included).
 - Suggested next pass: catalog now has 22 games. With a clear new-game template proven twice in three passes (Memory Match, Reflex Spark — both used all conventions cleanly), future passes can either keep adding genres (rhythm tap, sliding puzzle, Simon-style sequence memory) or shift back to polish (Memory Match play-feel polish, Lighthouse audit, Recently empty state inside queue chrome).
+
+## 2026-05-14 Claude pass 54
+
+- Polish pass on Memory Match adding streak system + audio. Memory Match (pass 51) was pure luck with no skill ladder, and the catalog has no audio convention for recently-shipped games (older games like Brick Breaker have it). Adding both establishes the audio pattern + adds skill depth to a luck-driven game.
+- Streak system: consecutive matches increment `state.streak`. Mismatch resets it to 0. `state.bestStreak` tracks the run's high water mark. A new "Streak" HUD pill renders the live count and lights up teal (border + value color + glow) at streak ≥ 2 via `data-active="true"` CSS. The win-overlay note appends "Best streak: N" when bestStreak ≥ 3. Streak diagnostic surfaces in `render_game_to_text()` at the top level and inside `feedback.streak`.
+- Audio engine: lazy `Web Audio API` `AudioContext` initialized on first sound call (avoids autoplay-policy warnings). Sounds are tiny oscillator tones — no asset additions:
+  - `playFlip()`: single 540Hz sine, 90ms decay — subtle blip on every card flip.
+  - `playMatch(streak)`: two-note sine chord (520-880Hz base + perfect-fifth above), with base pitch climbing 80Hz per streak step (caps at +400Hz) — rising chord on streaks rewards combos.
+  - `playMismatch()`: descending triangle pair (280→220Hz) — sad short trombone.
+  - `playWin()`: 4-note major arpeggio (523/659/784/1047Hz) over 440ms.
+- Sound toggle: new `🔊 Sound / 🔇 Muted` button with `aria-pressed`. Preference persisted in `localStorage` under `memory-match.sound.v1`. Tapping the button when un-muting fires `playFlip()` as audio confirmation. Wired exactly like Brick Breaker's existing pattern.
+- Verified end-to-end: streak 0 → match → 1 (pill inactive) → match → 2 (pill teal-active) → mismatch → 0 (pill inactive, but `bestStreak: 2` retained in diagnostic); mute toggle persists to localStorage; mobile 375×812 with 5 HUD pills (Moves/Time/Pairs/Streak/Best) zero overflow; no console errors.
+- Final checks passed: catalog validation for 22 games, `npm run test:a11y` clean across 23 HTML files, `npm run test:games` passed for 22 games, `npm run capture:games` max score 0 across all 44 surfaces (Memory Match desktop+mobile still 0 despite the new HUD pill and audio scaffolding).
+- Suggested next pass: Reflex Spark audio (apply the same pattern — go-cue when the panel turns green, click-sound on reaction, fanfare on run complete), or a third new game in a missing genre, or the long-deferred Lighthouse audit.
