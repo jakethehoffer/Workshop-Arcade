@@ -167,7 +167,7 @@ async function checkCatalog(browser, baseUrl) {
     if (title !== game.title) {
       addFailure("catalog", `sandbox opened '${title}' for '${game.title}'`);
     }
-    await page.keyboard.press("Escape");
+    await page.locator("#playerClose").click();
     await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   }
   await page.close();
