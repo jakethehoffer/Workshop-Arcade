@@ -57,14 +57,31 @@ No console or page errors across any audited URL. Zero `img` elements missing `a
 
 ## Largest resource per page
 
-- **Catalog**: 109.7 KB — `/covers/minesweeper.png`
+### After PNG → SVG swap (pass 59)
+
+- **Catalog**: 151.1 KB — `/covers/shape-inlay.png` (next-step target)
+- **Memory Match**: 24.5 KB — `/websites/memory-match.html`
+- **Reflex Spark**: 21.8 KB — `/websites/reflex-spark.html`
+- **Echo Mimic**: 21.4 KB — `/websites/echo-mimic.html`
+- **Neon Snake**: 35.7 KB — `/websites/snake.html`
+- **Lexica**: 155.5 KB — `/websites/words5.js` (5-letter wordlist; game-essential)
+
+Pass 59 swapped 11 catalog covers from PNG to existing SVG twins already in the repo. Total cover-asset weight dropped from ~1086 KB to ~34 KB for the 11 swapped games. Three covers remain on PNG because they have no SVG twin yet — these are the next-step optimization targets:
+
+- `covers/brick-breaker.png` (124 KB)
+- `covers/checkers.png` (121 KB)
+- `covers/shape-inlay.png` (151 KB)
+
+Replacing those with hand-crafted SVG covers (matching the pattern of the newer game covers) would bring every cover under 10 KB.
+
+### Initial baseline (pre-swap)
+
+- **Catalog**: 109.7 KB — `/covers/minesweeper.png` (now SVG; 4 KB)
 - **Memory Match**: 23.3 KB — `/websites/memory-match.html`
 - **Reflex Spark**: 20.6 KB — `/websites/reflex-spark.html`
 - **Echo Mimic**: 20.1 KB — `/websites/echo-mimic.html`
 - **Neon Snake**: 34.6 KB — `/websites/snake.html`
 - **Lexica**: 155.5 KB — `/websites/words5.js` (5-letter wordlist)
-
-`covers/minesweeper.png` at ~110 KB is the largest single asset on the catalog. Optimizing it (or converting to SVG like the newer covers) could shave 50+ KB. Lexica's wordlist is the nature of the game.
 
 ## How to re-run
 
