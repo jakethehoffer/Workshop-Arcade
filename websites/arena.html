@@ -8,8 +8,30 @@
     html, body { height: 100%; margin: 0; background: #050810; color: #e6edf3; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; touch-action: none; }
     #wrap { position: fixed; inset: 0; overflow: hidden; }
     canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; cursor: crosshair; }
-    .hud { position: fixed; top: 12px; left: 14px; right: 14px; font-weight: 700; letter-spacing: .5px; user-select: none; text-shadow: 0 2px 6px rgba(0,0,0,.45); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; z-index: 20; pointer-events: none; }
-    .hud span { background: rgba(9,16,28,.72); padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(125,211,252,.18); backdrop-filter: blur(8px); box-shadow: 0 8px 24px rgba(0,0,0,.22); }
+    .hud { position: fixed; top: 12px; left: 14px; right: 14px; user-select: none; display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; z-index: 20; pointer-events: none; }
+    .hud .brand{
+      display:flex; flex-direction:column; gap:2px; line-height:1;
+      margin-right: 6px; align-self:center;
+    }
+    .hud .brand .eyebrow{ font-size:10px; letter-spacing:0.32em; text-transform:uppercase; color:rgba(125,211,252,0.85); font-weight:700; }
+    .hud .brand .title{ font-size:18px; letter-spacing:0.16em; font-weight:800; color:#e6edf3; text-shadow:0 0 18px rgba(125,211,252,0.25); }
+    .hud .stat {
+      background: linear-gradient(180deg, rgba(20,30,50,0.85), rgba(9,16,28,0.92));
+      padding: 6px 11px; border-radius: 10px;
+      border: 1px solid rgba(125,211,252,0.24);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+      display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px;
+      font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      font-size: 10px; color: rgba(125,211,252,0.85);
+      line-height: 1.05;
+    }
+    .hud .stat strong {
+      color: #e6edf3; font-size: 14px; letter-spacing: 0.02em; text-transform: none;
+      font-weight: 800; font-variant-numeric: tabular-nums;
+    }
+    .hud-actions { display:inline-flex; gap:6px; margin-left:auto; }
     .overlay { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: auto; z-index: 10; }
     .overlay[hidden] { display: none !important; }
     .card { pointer-events: auto; width: min(420px, 92vw); padding: 22px 22px 18px; border-radius: 16px; background: linear-gradient(180deg, rgba(10,18,32,.94), rgba(6,10,18,.9)); border: 1px solid rgba(125,211,252,.24); box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); text-align: center; }
@@ -22,15 +44,19 @@
     /* HUD icon buttons */
     .icon-btn {
       width: 38px; height: 38px; padding: 0; display: grid; place-items: center;
-      border-radius: 10px; background: rgba(15,20,25,.5); color: #e6edf3;
-      border: 1px solid rgba(255,255,255,.08); box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      border-radius: 10px; background: linear-gradient(180deg, rgba(20,30,50,0.85), rgba(9,16,28,0.92)); color: #e6edf3;
+      border: 1px solid rgba(125,211,252,0.22);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
       font-size: 18px; line-height: 1;
       pointer-events: auto;
+      transition: border-color 0.15s ease, transform 0.12s ease, background 0.15s ease;
     }
-    .icon-btn:hover { filter: none; background: rgba(18,24,30,.65); }
+    .icon-btn:hover { filter: none; border-color: rgba(125,211,252,0.55); }
     @media (max-width: 640px) {
-      .hud { top: 8px; left: 8px; right: 8px; gap: 6px; font-size: 12px; }
-      .hud span { padding: 5px 8px; }
+      .hud { top: 8px; left: 8px; right: 8px; gap: 6px; }
+      .hud .brand { display: none; }
+      .hud .stat { padding: 5px 9px; font-size: 9px; letter-spacing: 0.16em; }
+      .hud .stat strong { font-size: 13px; }
       .icon-btn { width: 34px; height: 34px; border-radius: 9px; }
       .card { padding: 18px 16px 15px; }
       .card p { font-size: 13px; }
@@ -43,13 +69,18 @@
     <canvas id="game"></canvas>
 
     <div class="hud" aria-live="polite">
-      <span>Score: <strong id="score">0</strong></span>
-      <span style="margin-left:8px;">Level: <strong id="level">1</strong></span>
-      <span style="margin-left:8px;">High: <strong id="high">0</strong></span>
-      <button id="muteBtn" class="icon-btn" aria-label="Toggle sound" title="M to mute/unmute">🔊</button>
-      <!-- NEW: Pause/Resume button -->
-      <button id="pauseBtn" class="icon-btn" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
-      <button id="helpBtn" class="icon-btn" aria-label="Help" title="Help (H)">❓</button>
+      <div class="brand">
+        <span class="eyebrow">Workshop Arcade</span>
+        <span class="title">ARENA</span>
+      </div>
+      <span class="stat">Score<strong id="score">0</strong></span>
+      <span class="stat">Level<strong id="level">1</strong></span>
+      <span class="stat">High<strong id="high">0</strong></span>
+      <div class="hud-actions">
+        <button id="muteBtn" class="icon-btn" aria-label="Toggle sound" title="M to mute/unmute">🔊</button>
+        <button id="pauseBtn" class="icon-btn" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
+        <button id="helpBtn" class="icon-btn" aria-label="Help" title="Help (H)">❓</button>
+      </div>
     </div>
 
     <div class="overlay" id="menu" hidden>

@@ -371,3 +371,12 @@ Original prompt: Do this for me
 - Final capture: `test-results/render-ranking/2026-05-14T05-58-45-176Z/`; 40 ranked surfaces, max score 0, with Klondike desktop/mobile manually inspected.
 - Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
 - Suggested next pass: continue qualitative zero-score review; remaining cohesion candidates include Maze Chase header refresh or older games still using legacy retro chrome.
+
+## 2026-05-14 Claude pass 38
+
+- Baseline: `test-results/render-ranking/2026-05-14T05-58-45-176Z/`; all 40 surfaces scored zero, but Arena's HUD still used flat inline-spaced "Score: 0 | Level: 1 | High: 0" text that did not match the eyebrow/value stat pattern shared by Brick Breaker, Block Drop, and Neon Snake.
+- Polished `websites/arena.html` HUD chrome: replaced the inline-margin spans with a Workshop Arcade + ARENA brand mark plus three SCORE/LEVEL/HIGH eyebrow-label stat cards with cyan-tinted gradient borders and tabular-numeric values, moved the mute/pause/help icon buttons into a right-aligned `.hud-actions` cluster, upgraded `.icon-btn` chrome to match (cyan border + hover accent), and hid the brand on the 390px viewport so the HUD stays compact.
+- Preserved Arena gameplay rules, score/level/high wiring, audio mute, pause/resume, help overlay, menu/game-over cards, controls, and all existing render_game_to_text/advanceTime diagnostics.
+- Final capture: `test-results/render-ranking/2026-05-14T06-06-14-858Z/`; 40 ranked surfaces, max score 0, with Arena desktop/mobile manually inspected.
+- Local checks passed: catalog validation, full 20-game smoke suite, and final `npm run capture:games`.
+- Suggested next pass: continue qualitative zero-score review; the remaining catalog is now largely cohesive - any further passes should focus on subjective player-feel details rather than chrome.
