@@ -740,3 +740,9 @@ Original prompt: Do this for me
 - Expanded the performance/SEO audit from a five-game sample to full direct-page coverage. `scripts/audit-pagespeed.mjs` now reads `websites/manifest.json`, audits the catalog first, then audits every manifest game in manifest order.
 - Kept the existing strict-mode checks and added one narrow budget exception for Idle Tycoon (≤225KB / ≤8 requests) because its standalone HTML is intentionally larger than the default game budget. Catalog remains ≤250KB / ≤40 requests, Lexica remains ≤300KB / ≤8 requests, and all other manifest games remain ≤150KB / ≤8 requests.
 - Updated `docs/performance-baseline.md` so the audit docs describe manifest-wide coverage instead of sampled-game coverage.
+
+## 2026-05-15 Codex pass 63
+
+- Promoted the rendered-quality harness from local review to a CI regression gate. `scripts/capture-games.mjs --ci` keeps writing the same summary/contact-sheet outputs, then fails nonzero if any captured surface scores above 0.
+- Added `npm run capture:games:ci`, stabilized the Sky Hopper and Neon Snake event recipes to avoid harness-induced game-over drift, and extended Validate Catalog to run the strict capture after the performance/SEO audit. CI now uploads a compact `render-ranking` artifact containing `summary.json`, `contact-sheet.html`, and `contact-sheet.png`.
+- Updated README and the game contract so contributors know the render-ranking score-0 threshold is enforced in CI.

@@ -52,6 +52,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 npm run test:a11y
 npm run test:games
 npm run capture:games
+npm run capture:games:ci
 ```
 
-Every captured surface in `npm run capture:games` must score 0. Use `npm ci` first when Node dependencies are not installed.
+Every captured surface in `npm run capture:games` must score 0. CI enforces the same threshold with `npm run capture:games:ci` and uploads the compact render-ranking report. Use `npm ci` first when Node dependencies are not installed.

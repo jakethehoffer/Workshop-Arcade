@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const args = new Set(process.argv.slice(2));
+const STRICT = args.has("--ci");
 const manifest = JSON.parse(await readFile(path.join(repoRoot, "websites", "manifest.json"), "utf8"));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outputRoot = path.join(repoRoot, "test-results", "render-ranking", stamp);
@@ -84,10 +86,25 @@ try {
 
   console.log(`Captured ${records.length} rendered surfaces for ${manifest.length} games.`);
   console.log(`Output: ${outputRoot}`);
+  console.log(`Max render score: ${summary.rankedSurfaces[0]?.score ?? 0}`);
   console.log("Top ranked surfaces:");
   for (const surface of summary.rankedSurfaces.slice(0, 10)) {
     const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
     console.log(` - ${surface.title} ${surface.viewport}: ${surface.score} (${reasonText})`);
+  }
+
+  if (STRICT) {
+    const failures = summary.rankedSurfaces.filter((surface) => surface.score > 0);
+    if (failures.length) {
+      console.error("\nCI rendered-quality gate failed:");
+      for (const surface of failures) {
+        const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
+        console.error(`- ${surface.title} ${surface.viewport}: ${surface.score} (${reasonText})`);
+      }
+      process.exitCode = 1;
+    } else {
+      console.log("CI rendered-quality gate passed.");
+    }
   }
 } finally {
   if (browser) await browser.close();
@@ -335,6 +352,8 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
   const eventScreenshotPath = path.join(outputRoot, eventScreenshot);
   const screenshot = `shots/${game.slug}-${viewport.name}-after.png`;
   const screenshotPath = path.join(outputRoot, screenshot);
+  let finalScreenshot = screenshot;
+  let shouldCaptureFinalScreenshot = true;
   const issueStart = snapshotIssues(issues);
   const preState = parseRenderText(preRenderText);
   let eventRenderText = null;
@@ -361,18 +380,27 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
     }
 
     await page.screenshot({ path: eventScreenshotPath });
-    await settlePage(page, recipe.settleMs ?? 350);
+    if (recipe.freezePostAtEvent) {
+      postRenderText = eventRenderText;
+      postState = eventState;
+      finalScreenshot = eventScreenshot;
+      shouldCaptureFinalScreenshot = false;
+    } else {
+      await settlePage(page, recipe.settleMs ?? 350);
 
-    if (hasRenderText) {
-      postRenderText = await page.evaluate(() => window.render_game_to_text());
-      postState = parseRenderText(postRenderText);
+      if (hasRenderText) {
+        postRenderText = await page.evaluate(() => window.render_game_to_text());
+        postState = parseRenderText(postRenderText);
+      }
     }
   } catch (caught) {
     error = caught instanceof Error ? caught.message : String(caught);
   }
 
   try {
-    await page.screenshot({ path: screenshotPath });
+    if (shouldCaptureFinalScreenshot) {
+      await page.screenshot({ path: screenshotPath });
+    }
   } catch (caught) {
     if (!error) error = caught instanceof Error ? caught.message : String(caught);
   }
@@ -396,7 +424,7 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
     name: recipe?.name || "missing recipe",
     available: Boolean(recipe),
     eventScreenshot,
-    screenshot,
+    screenshot: finalScreenshot,
     preState,
     eventState,
     postState,
@@ -462,17 +490,19 @@ function getInteractionRecipe(slug) {
     "flappy-bird": {
       name: "start and flap",
       expectsStart: true,
-      settleMs: 120,
+      freezePostAtEvent: true,
+      settleMs: 0,
       run: async (page) => {
-        await pressAndAdvance(page, "Space", 60);
+        await pressAndAdvance(page, "Space", 20);
       },
     },
     snake: {
       name: "start and turn",
       expectsStart: true,
+      settleMs: 0,
       run: async (page) => {
-        await pressAndAdvance(page, "Space", 200);
-        await pressAndAdvance(page, "ArrowDown", 180);
+        await pressAndAdvance(page, "Space", 20);
+        await pressAndAdvance(page, "ArrowDown", 20);
       },
     },
     tetris: {

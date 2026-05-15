@@ -67,3 +67,18 @@ jobs:
           path: test-results/lighthouse-baseline/**/report.md
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Run rendered-quality regression capture
+        run: npm run capture:games:ci
+
+      - name: Upload rendered-quality report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: render-ranking
+          path: |
+            test-results/render-ranking/**/summary.json
+            test-results/render-ranking/**/contact-sheet.html
+            test-results/render-ranking/**/contact-sheet.png
+          if-no-files-found: ignore
+          retention-days: 14
