@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Circuit Putt</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Bank neon mini-golf shots through rails, bumpers, and sand." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/circuit-putt.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Circuit Putt — Workshop Arcade" />
+<meta property="og:description" content="Bank neon mini-golf shots through rails, bumpers, and sand." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/circuit-putt.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/circuit-putt.svg" />
+<meta property="og:image:alt" content="Circuit Putt cover art" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Circuit Putt — Workshop Arcade" />
+<meta name="twitter:description" content="Bank neon mini-golf shots through rails, bumpers, and sand." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/circuit-putt.svg" />
+<!-- workshop-meta:end -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;background:
+      radial-gradient(860px 520px at 12% -8%,rgba(94,234,212,0.14),transparent 60%),
+      radial-gradient(720px 520px at 92% 8%,rgba(34,211,238,0.10),transparent 58%),
+      linear-gradient(180deg,#0b0f14,#07101a 82%);
+    display:flex;flex-direction:column;align-items:center;padding:22px 14px 28px;overflow-x:hidden;
+  }
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.86);font-weight:700}
+  .brand .title{font-size:22px;letter-spacing:0;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.18);text-transform:uppercase}
+  .panel{width:100%;max-width:760px;display:flex;flex-direction:column;gap:12px}
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .pill{
+    display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:76px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.94));
+    border:1px solid rgba(94,234,212,0.23);padding:8px 12px;border-radius:12px;line-height:1.05;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,0.68);box-shadow:0 0 20px rgba(94,234,212,0.16),0 6px 14px rgba(0,0,0,0.28)}
+  .pill .label{font-size:9px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.84);font-weight:700}
+  .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+  .stage-wrap{
+    border:1px solid rgba(94,234,212,0.28);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(13,20,35,0.92),rgba(8,13,23,0.96));
+    box-shadow:0 18px 38px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:-4px}
+  .status{
+    text-align:center;min-height:20px;font-size:12px;letter-spacing:0;text-transform:uppercase;
+    color:rgba(94,234,212,0.86);font-weight:800;
+  }
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .btn{
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
+    padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    letter-spacing:0;text-transform:uppercase;font-size:12px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .btn:hover{border-color:rgba(94,234,212,0.55)}
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .overlay.show{display:flex}
+  .overlay-card{
+    width:min(470px,100%);background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
+    border:1px solid rgba(94,234,212,0.32);border-radius:16px;padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55),0 0 24px rgba(94,234,212,0.12);
+  }
+  .overlay-card h3{margin:0 0 8px;font-size:20px;letter-spacing:0}
+  .overlay-card .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .overlay-card p,.overlay-card ul{margin:8px 0;color:#b6c4dc;font-size:14px;line-height:1.5}
+  .overlay-card ul{padding-left:18px}
+  .overlay-card .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  @media (max-width:560px){
+    body{padding:14px 8px 22px}
+    .brand .title{font-size:18px;letter-spacing:0}
+    .panel{gap:10px}
+    .pill{min-width:62px;padding:7px 8px}
+    .pill .value{font-size:16px}
+    .status{font-size:11px;letter-spacing:0}
+    .btn{padding:8px 10px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand">
+  <span class="eyebrow">Workshop Arcade</span>
+  <span class="title">CIRCUIT PUTT</span>
+</div>
+<main class="panel" aria-label="Circuit Putt game">
+  <div class="hud" aria-label="Circuit Putt score">
+    <div class="pill"><span class="label">Hole</span><span class="value" id="holeValue">1/3</span></div>
+    <div class="pill"><span class="label">Strokes</span><span class="value" id="strokeValue">0</span></div>
+    <div class="pill"><span class="label">Total</span><span class="value" id="totalValue">0</span></div>
+    <div class="pill"><span class="label">Par</span><span class="value" id="parValue">9</span></div>
+    <div class="pill" id="bestPill"><span class="label">Best</span><span class="value" id="bestValue">-</span></div>
+  </div>
+  <div class="stage-wrap">
+    <canvas id="game" width="900" height="560" tabindex="0" aria-label="Circuit Putt playfield. Drag from the ball and release to putt, or use arrow keys and Space."></canvas>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start to tee off.</div>
+  <div class="controls">
+    <button class="btn primary" type="button" id="startBtn">Start Round</button>
+    <button class="btn" type="button" id="resetBtn">Reset Hole</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button class="btn" type="button" id="helpBtn">Help</button>
+  </div>
+</main>
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="overlay-card">
+    <div class="eyebrow">Mini Golf Controls</div>
+    <h3 id="helpTitle">Bank the circuit in the fewest strokes.</h3>
+    <p>Drag away from the ball and release to putt. The cue points along the shot line.</p>
+    <ul>
+      <li>Arrow keys adjust keyboard aim and power.</li>
+      <li>Space putts when the ball is stopped.</li>
+      <li>R resets the current hole.</li>
+      <li>Sand slows the ball; bumpers and rails add feedback.</li>
+    </ul>
+    <div class="actions">
+      <button class="btn primary" type="button" id="closeHelpBtn">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const els = {
+    hole: document.getElementById("holeValue"),
+    strokes: document.getElementById("strokeValue"),
+    total: document.getElementById("totalValue"),
+    par: document.getElementById("parValue"),
+    best: document.getElementById("bestValue"),
+    bestPill: document.getElementById("bestPill"),
+    status: document.getElementById("statusLine"),
+    start: document.getElementById("startBtn"),
+    reset: document.getElementById("resetBtn"),
+    sound: document.getElementById("soundBtn"),
+    help: document.getElementById("helpBtn"),
+    overlay: document.getElementById("helpOverlay"),
+    closeHelp: document.getElementById("closeHelpBtn")
+  };
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const storage = {
+    get(key, fallback){
+      try {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      } catch (_) {
+        return fallback;
+      }
+    },
+    set(key, value){
+      try { window.localStorage.setItem(key, String(value)); } catch (_) {}
+    }
+  };
+  const keys = {
+    best: "circuit-putt:best-total",
+    sound: "circuit-putt:sound"
+  };
+
+  const holes = [
+    {
+      name: "Rail Split",
+      par: 2,
+      tee: { x: 112, y: 430 },
+      cup: { x: 770, y: 132, r: 18 },
+      bounds: { x: 46, y: 82, w: 808, h: 414 },
+      walls: [
+        { x: 342, y: 170, w: 210, h: 20 },
+        { x: 602, y: 252, w: 24, h: 78 }
+      ],
+      sands: [
+        { x: 486, y: 338, w: 180, h: 92 }
+      ],
+      bumpers: [
+        { x: 448, y: 176, r: 30 }
+      ]
+    },
+    {
+      name: "Switchback",
+      par: 3,
+      tee: { x: 126, y: 126 },
+      cup: { x: 778, y: 428, r: 18 },
+      bounds: { x: 46, y: 82, w: 808, h: 414 },
+      walls: [
+        { x: 274, y: 250, w: 24, h: 144 },
+        { x: 480, y: 138, w: 210, h: 20 }
+      ],
+      sands: [
+        { x: 390, y: 332, w: 170, h: 86 }
+      ],
+      bumpers: [
+        { x: 616, y: 310, r: 28 },
+        { x: 380, y: 178, r: 24 }
+      ]
+    },
+    {
+      name: "Pulse Green",
+      par: 4,
+      tee: { x: 104, y: 452 },
+      cup: { x: 796, y: 108, r: 18 },
+      bounds: { x: 46, y: 82, w: 808, h: 414 },
+      walls: [
+        { x: 246, y: 132, w: 22, h: 190 },
+        { x: 492, y: 302, w: 228, h: 20 },
+        { x: 626, y: 114, w: 20, h: 62 }
+      ],
+      sands: [
+        { x: 334, y: 384, w: 194, h: 82 },
+        { x: 682, y: 326, w: 106, h: 76 }
+      ],
+      bumpers: [
+        { x: 404, y: 228, r: 28 },
+        { x: 574, y: 398, r: 24 }
+      ]
+    }
+  ];
+
+  const totalPar = holes.reduce((sum, hole) => sum + hole.par, 0);
+  let soundOn = storage.get(keys.sound, "1") !== "0";
+  let audio = null;
+  let lastStamp = 0;
+  let mouse = { x: 0, y: 0 };
+  const feedback = {
+    stroke: 0,
+    wall: 0,
+    bumper: 0,
+    sand: 0,
+    cup: 0,
+    reset: 0,
+    lastEvent: "none",
+    strokeCount: 0,
+    wallHitCount: 0,
+    bumperHitCount: 0,
+    cupCount: 0,
+    resetCount: 0
+  };
+  const state = {
+    mode: "ready",
+    holeIndex: 0,
+    strokes: 0,
+    scores: [0, 0, 0],
+    ball: { x: holes[0].tee.x, y: holes[0].tee.y, vx: 0, vy: 0, r: 9, moving: false },
+    trail: [],
+    aimAngle: 0,
+    aimPower: 0.58,
+    dragging: false,
+    dragPoint: null,
+    message: "Press Start to tee off.",
+    bestTotal: parseBest(storage.get(keys.best, "0"))
+  };
+
+  function parseBest(value){
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  }
+
+  function clamp(n, min, max){
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function round(n){
+    return Math.round(n * 100) / 100;
+  }
+
+  function currentHole(){
+    return holes[state.holeIndex];
+  }
+
+  function currentTotal(){
+    const base = state.scores.reduce((sum, value) => sum + value, 0);
+    return state.mode === "playing" ? base + state.strokes : base;
+  }
+
+  function completedTotal(){
+    return state.scores.reduce((sum, value) => sum + value, 0);
+  }
+
+  function ballSpeed(){
+    return Math.hypot(state.ball.vx, state.ball.vy);
+  }
+
+  function distanceToCup(){
+    const cup = currentHole().cup;
+    return Math.hypot(cup.x - state.ball.x, cup.y - state.ball.y);
+  }
+
+  function pointInRect(x, y, rect){
+    return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+  }
+
+  function isInSand(x, y){
+    return currentHole().sands.some(rect => pointInRect(x, y, rect));
+  }
+
+  function setFeedback(name){
+    if (name === "stroke") {
+      feedback.stroke = 0.42;
+      feedback.strokeCount += 1;
+    } else if (name === "wall") {
+      feedback.wall = 0.32;
+      feedback.wallHitCount += 1;
+    } else if (name === "bumper") {
+      feedback.bumper = 0.42;
+      feedback.bumperHitCount += 1;
+    } else if (name === "cup") {
+      feedback.cup = 0.75;
+      feedback.cupCount += 1;
+    } else if (name === "reset") {
+      feedback.reset = 0.52;
+      feedback.resetCount += 1;
+    } else if (name === "sand") {
+      feedback.sand = 0.24;
+    }
+    feedback.lastEvent = name;
+  }
+
+  function updateAimToCup(){
+    const cup = currentHole().cup;
+    state.aimAngle = Math.atan2(cup.y - state.ball.y, cup.x - state.ball.x);
+  }
+
+  function resetBallForHole(){
+    const hole = currentHole();
+    state.ball.x = hole.tee.x;
+    state.ball.y = hole.tee.y;
+    state.ball.vx = 0;
+    state.ball.vy = 0;
+    state.ball.moving = false;
+    state.trail = [];
+    state.dragging = false;
+    state.dragPoint = null;
+    state.aimPower = 0.58;
+    updateAimToCup();
+  }
+
+  function startRound(){
+    state.mode = "playing";
+    state.holeIndex = 0;
+    state.strokes = 0;
+    state.scores = [0, 0, 0];
+    state.message = "Hole 1: drag from the ball or aim with arrows.";
+    resetBallForHole();
+    setFeedback("reset");
+    beep("start");
+    updateUi();
+    render();
+    canvas.focus({ preventScroll: true });
+  }
+
+  function nextHole(){
+    if (state.holeIndex < holes.length - 1) {
+      state.holeIndex += 1;
+      state.strokes = 0;
+      state.mode = "playing";
+      state.message = `Hole ${state.holeIndex + 1}: ${currentHole().name}.`;
+      resetBallForHole();
+      setFeedback("reset");
+      beep("start");
+    }
+    updateUi();
+    render();
+    canvas.focus({ preventScroll: true });
+  }
+
+  function resetCurrentHole(){
+    if (state.mode === "ready") {
+      startRound();
+      return;
+    }
+    if (state.mode === "complete") {
+      startRound();
+      return;
+    }
+    state.strokes = 0;
+    state.mode = "playing";
+    state.message = `Hole ${state.holeIndex + 1} reset.`;
+    resetBallForHole();
+    setFeedback("reset");
+    beep("reset");
+    updateUi();
+    render();
+  }
+
+  function completeHole(){
+    if (state.mode !== "playing") return;
+    const holeNumber = state.holeIndex + 1;
+    state.scores[state.holeIndex] = state.strokes;
+    state.ball.vx = 0;
+    state.ball.vy = 0;
+    state.ball.moving = false;
+    setFeedback("cup");
+    beep("cup");
+    if (state.holeIndex === holes.length - 1) {
+      const total = completedTotal();
+      state.mode = "complete";
+      state.message = `Round complete in ${total} strokes.`;
+      if (!state.bestTotal || total < state.bestTotal) {
+        state.bestTotal = total;
+        storage.set(keys.best, String(total));
+        state.message = `New best: ${total} strokes.`;
+      }
+    } else {
+      state.mode = "between";
+      state.message = `Hole ${holeNumber} sunk in ${state.strokes} strokes.`;
+    }
+    updateUi();
+  }
+
+  function ensureAudio(){
+    if (!soundOn) return null;
+    if (!audio) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      audio = new AudioContext();
+    }
+    if (audio.state === "suspended") audio.resume().catch(() => {});
+    return audio;
+  }
+
+  function beep(type){
+    const ac = ensureAudio();
+    if (!ac) return;
+    const now = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const config = {
+      start: [330, 0.04, "triangle", 0.035],
+      stroke: [520, 0.055, "sine", 0.032],
+      wall: [180, 0.045, "square", 0.025],
+      bumper: [760, 0.06, "triangle", 0.036],
+      cup: [930, 0.18, "sine", 0.045],
+      reset: [240, 0.05, "triangle", 0.026]
+    }[type] || [360, 0.04, "sine", 0.025];
+    osc.type = config[2];
+    osc.frequency.setValueAtTime(config[0], now);
+    if (type === "cup") osc.frequency.exponentialRampToValueAtTime(1320, now + config[1]);
+    gain.gain.setValueAtTime(config[3], now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + config[1]);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + config[1] + 0.02);
+  }
+
+  function launchShot(vx, vy){
+    if (state.mode !== "playing" || state.ball.moving) return false;
+    const speed = Math.hypot(vx, vy);
+    if (speed < 90) return false;
+    const cap = 980;
+    const scale = Math.min(1, cap / speed);
+    state.ball.vx = vx * scale;
+    state.ball.vy = vy * scale;
+    state.ball.moving = true;
+    state.strokes += 1;
+    state.message = "Rolling...";
+    setFeedback("stroke");
+    beep("stroke");
+    updateUi();
+    return true;
+  }
+
+  function keyboardPutt(){
+    const speed = 170 + state.aimPower * 760;
+    launchShot(Math.cos(state.aimAngle) * speed, Math.sin(state.aimAngle) * speed);
+  }
+
+  function shotFromDrag(point){
+    const dx = state.ball.x - point.x;
+    const dy = state.ball.y - point.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 12) return false;
+    const power = clamp(dist / 150, 0.08, 1);
+    const speed = 150 + power * 790;
+    return launchShot((dx / dist) * speed, (dy / dist) * speed);
+  }
+
+  function resolveRectCollision(rect){
+    const b = state.ball;
+    const closestX = clamp(b.x, rect.x, rect.x + rect.w);
+    const closestY = clamp(b.y, rect.y, rect.y + rect.h);
+    const dx = b.x - closestX;
+    const dy = b.y - closestY;
+    const dist = Math.hypot(dx, dy);
+    if (dist >= b.r) return;
+    if (dist > 0.001) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const push = b.r - dist + 0.1;
+      b.x += nx * push;
+      b.y += ny * push;
+      const dot = b.vx * nx + b.vy * ny;
+      if (dot < 0) {
+        b.vx = (b.vx - 2 * dot * nx) * 0.82;
+        b.vy = (b.vy - 2 * dot * ny) * 0.82;
+        setFeedback("wall");
+        beep("wall");
+      }
+      return;
+    }
+    const left = Math.abs((rect.x - b.r) - b.x);
+    const right = Math.abs((rect.x + rect.w + b.r) - b.x);
+    const top = Math.abs((rect.y - b.r) - b.y);
+    const bottom = Math.abs((rect.y + rect.h + b.r) - b.y);
+    const min = Math.min(left, right, top, bottom);
+    if (min === left) { b.x = rect.x - b.r; b.vx = -Math.abs(b.vx) * 0.82; }
+    else if (min === right) { b.x = rect.x + rect.w + b.r; b.vx = Math.abs(b.vx) * 0.82; }
+    else if (min === top) { b.y = rect.y - b.r; b.vy = -Math.abs(b.vy) * 0.82; }
+    else { b.y = rect.y + rect.h + b.r; b.vy = Math.abs(b.vy) * 0.82; }
+    setFeedback("wall");
+    beep("wall");
+  }
+
+  function resolveBounds(bounds){
+    const b = state.ball;
+    let hit = false;
+    if (b.x - b.r < bounds.x) {
+      b.x = bounds.x + b.r;
+      b.vx = Math.abs(b.vx) * 0.82;
+      hit = true;
+    } else if (b.x + b.r > bounds.x + bounds.w) {
+      b.x = bounds.x + bounds.w - b.r;
+      b.vx = -Math.abs(b.vx) * 0.82;
+      hit = true;
+    }
+    if (b.y - b.r < bounds.y) {
+      b.y = bounds.y + b.r;
+      b.vy = Math.abs(b.vy) * 0.82;
+      hit = true;
+    } else if (b.y + b.r > bounds.y + bounds.h) {
+      b.y = bounds.y + bounds.h - b.r;
+      b.vy = -Math.abs(b.vy) * 0.82;
+      hit = true;
+    }
+    if (hit) {
+      setFeedback("wall");
+      beep("wall");
+    }
+  }
+
+  function resolveBumper(bumper){
+    const b = state.ball;
+    const dx = b.x - bumper.x;
+    const dy = b.y - bumper.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = b.r + bumper.r;
+    if (dist >= minDist) return;
+    const nx = dist > 0.001 ? dx / dist : 1;
+    const ny = dist > 0.001 ? dy / dist : 0;
+    b.x = bumper.x + nx * (minDist + 0.3);
+    b.y = bumper.y + ny * (minDist + 0.3);
+    const dot = b.vx * nx + b.vy * ny;
+    if (dot < 0) {
+      b.vx = (b.vx - 2 * dot * nx) * 1.04;
+      b.vy = (b.vy - 2 * dot * ny) * 1.04;
+    } else {
+      b.vx += nx * 80;
+      b.vy += ny * 80;
+    }
+    setFeedback("bumper");
+    beep("bumper");
+  }
+
+  function update(dt){
+    for (const name of ["stroke", "wall", "bumper", "sand", "cup", "reset"]) {
+      feedback[name] = Math.max(0, feedback[name] - dt);
+    }
+    if (state.mode !== "playing") return;
+    const b = state.ball;
+    if (!b.moving) return;
+
+    const hole = currentHole();
+    const subSteps = Math.max(1, Math.ceil(ballSpeed() / 260));
+    const slice = dt / subSteps;
+    for (let i = 0; i < subSteps; i += 1) {
+      b.x += b.vx * slice;
+      b.y += b.vy * slice;
+      resolveBounds(hole.bounds);
+      for (const rect of hole.walls) resolveRectCollision(rect);
+      for (const bumper of hole.bumpers) resolveBumper(bumper);
+
+      const sand = isInSand(b.x, b.y);
+      const friction = sand ? 0.966 : 0.989;
+      const frameScale = slice * 60;
+      b.vx *= Math.pow(friction, frameScale);
+      b.vy *= Math.pow(friction, frameScale);
+      if (sand) setFeedback("sand");
+
+      state.trail.push({ x: b.x, y: b.y });
+      if (state.trail.length > 22) state.trail.shift();
+
+      if (distanceToCup() <= hole.cup.r + b.r + 2) {
+        completeHole();
+        return;
+      }
+    }
+
+    if (ballSpeed() < 18) {
+      b.vx = 0;
+      b.vy = 0;
+      b.moving = false;
+      state.message = "Ball stopped. Line up the next putt.";
+      updateAimToCup();
+      updateUi();
+    }
+  }
+
+  function drawRoundedRect(x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function fillTextCenter(text, x, y, size, color){
+    ctx.save();
+    ctx.font = `800 ${size}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function drawBackdrop(){
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, "#071522");
+    grd.addColorStop(1, "#060b14");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = "rgba(94,234,212,0.18)";
+    ctx.lineWidth = 1;
+    for (let x = 34; x < W; x += 54) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 28; y < H; y += 54) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawCourse(){
+    const hole = currentHole();
+    const bounds = hole.bounds;
+    ctx.save();
+    ctx.shadowColor = "rgba(94,234,212,0.18)";
+    ctx.shadowBlur = 20;
+    drawRoundedRect(bounds.x, bounds.y, bounds.w, bounds.h, 24);
+    const course = ctx.createLinearGradient(bounds.x, bounds.y, bounds.x + bounds.w, bounds.y + bounds.h);
+    course.addColorStop(0, "#0c473d");
+    course.addColorStop(0.5, "#0f5a48");
+    course.addColorStop(1, "#123f45");
+    ctx.fillStyle = course;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(94,234,212,0.64)";
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(226,253,255,0.14)";
+    for (let y = bounds.y + 38; y < bounds.y + bounds.h; y += 48) {
+      ctx.beginPath();
+      ctx.moveTo(bounds.x + 18, y);
+      ctx.lineTo(bounds.x + bounds.w - 18, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    for (const sand of hole.sands) {
+      ctx.save();
+      drawRoundedRect(sand.x, sand.y, sand.w, sand.h, 18);
+      ctx.fillStyle = "rgba(244,201,120,0.24)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244,201,120,0.46)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = "rgba(255,238,180,0.34)";
+      for (let x = sand.x - sand.h; x < sand.x + sand.w; x += 20) {
+        ctx.beginPath();
+        ctx.moveTo(x, sand.y + sand.h);
+        ctx.lineTo(x + sand.h, sand.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    for (const wall of hole.walls) {
+      ctx.save();
+      drawRoundedRect(wall.x, wall.y, wall.w, wall.h, 9);
+      ctx.fillStyle = "#0b1628";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = feedback.wall > 0 ? "#6cf0d8" : "rgba(124,158,255,0.58)";
+      ctx.shadowColor = "rgba(124,158,255,0.38)";
+      ctx.shadowBlur = feedback.wall > 0 ? 18 : 8;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (const bumper of hole.bumpers) {
+      ctx.save();
+      const pulse = feedback.bumper > 0 ? 1 + feedback.bumper * 0.22 : 1;
+      ctx.translate(bumper.x, bumper.y);
+      ctx.scale(pulse, pulse);
+      const ring = ctx.createRadialGradient(0, 0, 3, 0, 0, bumper.r + 8);
+      ring.addColorStop(0, "#e6edf3");
+      ring.addColorStop(0.42, "#22d3ee");
+      ring.addColorStop(1, "rgba(34,211,238,0.08)");
+      ctx.fillStyle = ring;
+      ctx.beginPath();
+      ctx.arc(0, 0, bumper.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(226,253,255,0.64)";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const cup = hole.cup;
+    ctx.save();
+    ctx.shadowColor = "rgba(8,13,23,0.85)";
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = "#06121f";
+    ctx.beginPath();
+    ctx.arc(cup.x, cup.y, cup.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = feedback.cup > 0 ? 24 : 10;
+    ctx.shadowColor = "rgba(94,234,212,0.58)";
+    ctx.strokeStyle = feedback.cup > 0 ? "#6cf0d8" : "rgba(94,234,212,0.72)";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(226,253,255,0.28)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cup.x, cup.y, cup.r + 12, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBall(){
+    const b = state.ball;
+    ctx.save();
+    for (let i = 0; i < state.trail.length; i += 1) {
+      const p = state.trail[i];
+      const t = i / Math.max(1, state.trail.length - 1);
+      ctx.globalAlpha = t * 0.36;
+      ctx.fillStyle = "#6cf0d8";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, b.r * (0.35 + t * 0.45), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = "rgba(94,234,212,0.62)";
+    ctx.shadowBlur = feedback.stroke > 0 || b.moving ? 20 : 10;
+    const glow = ctx.createRadialGradient(b.x - 4, b.y - 5, 2, b.x, b.y, b.r + 7);
+    glow.addColorStop(0, "#ffffff");
+    glow.addColorStop(0.45, "#d9fff8");
+    glow.addColorStop(1, "#22d3ee");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(6,20,28,0.58)";
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawAim(){
+    if (state.mode !== "playing" || state.ball.moving) return;
+    const b = state.ball;
+    let angle = state.aimAngle;
+    let power = state.aimPower;
+    if (state.dragging && state.dragPoint) {
+      const dx = b.x - state.dragPoint.x;
+      const dy = b.y - state.dragPoint.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0.001) {
+        angle = Math.atan2(dy, dx);
+        power = clamp(dist / 150, 0.08, 1);
+      }
+      ctx.save();
+      ctx.strokeStyle = "rgba(226,253,255,0.34)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+    const len = 58 + power * 88;
+    const endX = b.x + Math.cos(angle) * len;
+    const endY = b.y + Math.sin(angle) * len;
+    ctx.save();
+    ctx.strokeStyle = "#6cf0d8";
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "rgba(94,234,212,0.42)";
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.fillStyle = "#6cf0d8";
+    ctx.beginPath();
+    ctx.arc(endX, endY, 5 + power * 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCourseLabels(){
+    const hole = currentHole();
+    ctx.save();
+    ctx.font = "800 12px ui-sans-serif, system-ui, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(226,253,255,0.82)";
+    ctx.fillText(`HOLE ${state.holeIndex + 1}: ${hole.name}`, 58, 52);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(94,234,212,0.84)";
+    ctx.fillText(`PAR ${hole.par}`, W - 58, 52);
+    ctx.restore();
+  }
+
+  function drawOverlay(){
+    if (state.mode === "playing") return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,0.56)";
+    ctx.fillRect(0, 0, W, H);
+    const title = state.mode === "ready" ? "CIRCUIT PUTT" : state.mode === "between" ? "HOLE COMPLETE" : "ROUND COMPLETE";
+    const sub = state.mode === "ready"
+      ? "Three neon holes. Fewest strokes wins."
+      : state.message;
+    fillTextCenter(title, W / 2, H / 2 - 28, 30, "#e6edf3");
+    fillTextCenter(sub, W / 2, H / 2 + 8, 15, "rgba(94,234,212,0.92)");
+    ctx.restore();
+  }
+
+  function render(){
+    drawBackdrop();
+    drawCourse();
+    drawCourseLabels();
+    drawAim();
+    drawBall();
+    drawOverlay();
+  }
+
+  function updateUi(){
+    const hole = currentHole();
+    els.hole.textContent = `${state.holeIndex + 1}/${holes.length}`;
+    els.strokes.textContent = String(state.strokes);
+    els.total.textContent = String(currentTotal());
+    els.par.textContent = String(totalPar);
+    els.best.textContent = state.bestTotal ? String(state.bestTotal) : "-";
+    els.bestPill.dataset.hot = state.bestTotal && currentTotal() > 0 && currentTotal() <= state.bestTotal ? "true" : "false";
+    els.status.textContent = state.message;
+    if (state.mode === "ready") els.start.textContent = "Start Round";
+    else if (state.mode === "between") els.start.textContent = "Next Hole";
+    else if (state.mode === "complete") els.start.textContent = "Restart";
+    else els.start.textContent = "Restart Round";
+    els.reset.disabled = state.mode === "ready";
+    els.sound.textContent = soundOn ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    els.hole.parentElement.dataset.hot = state.mode === "between" || state.mode === "complete" ? "true" : "false";
+    els.strokes.parentElement.dataset.hot = feedback.stroke > 0 ? "true" : "false";
+  }
+
+  function getPoint(event){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: clamp(((event.clientX - rect.left) / rect.width) * W, 0, W),
+      y: clamp(((event.clientY - rect.top) / rect.height) * H, 0, H)
+    };
+  }
+
+  function canAim(){
+    return state.mode === "playing" && !state.ball.moving;
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    if (!canAim()) return;
+    const point = getPoint(event);
+    const near = Math.hypot(point.x - state.ball.x, point.y - state.ball.y) <= 54;
+    if (!near) return;
+    event.preventDefault();
+    try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+    state.dragging = true;
+    state.dragPoint = point;
+    mouse = point;
+    render();
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    const point = getPoint(event);
+    mouse = point;
+    if (!state.dragging) return;
+    event.preventDefault();
+    state.dragPoint = point;
+    const dx = state.ball.x - point.x;
+    const dy = state.ball.y - point.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 1) {
+      state.aimAngle = Math.atan2(dy, dx);
+      state.aimPower = clamp(dist / 150, 0.08, 1);
+    }
+    render();
+  });
+
+  function finishPointer(event){
+    if (!state.dragging) return;
+    event.preventDefault();
+    const point = getPoint(event);
+    state.dragging = false;
+    state.dragPoint = null;
+    shotFromDrag(point);
+    render();
+  }
+
+  canvas.addEventListener("pointerup", finishPointer);
+  canvas.addEventListener("pointercancel", (event) => {
+    if (!state.dragging) return;
+    event.preventDefault();
+    state.dragging = false;
+    state.dragPoint = null;
+    render();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.target && /input|textarea|select/i.test(event.target.tagName)) return;
+    const key = event.key.toLowerCase();
+    if (key === "escape") {
+      els.overlay.classList.remove("show");
+      return;
+    }
+    if (key === "enter" && state.mode !== "playing") {
+      event.preventDefault();
+      if (state.mode === "ready" || state.mode === "complete") startRound();
+      else if (state.mode === "between") nextHole();
+      return;
+    }
+    if (key === "r") {
+      event.preventDefault();
+      resetCurrentHole();
+      return;
+    }
+    if (!canAim()) return;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      state.aimAngle -= 0.12;
+      render();
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      state.aimAngle += 0.12;
+      render();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      state.aimPower = clamp(state.aimPower + 0.055, 0.08, 1);
+      render();
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      state.aimPower = clamp(state.aimPower - 0.055, 0.08, 1);
+      render();
+    } else if (event.code === "Space" || event.key === " ") {
+      event.preventDefault();
+      keyboardPutt();
+      render();
+    }
+  });
+
+  els.start.addEventListener("click", () => {
+    if (state.mode === "ready" || state.mode === "complete") startRound();
+    else if (state.mode === "between") nextHole();
+    else startRound();
+  });
+  els.reset.addEventListener("click", resetCurrentHole);
+  els.sound.addEventListener("click", () => {
+    soundOn = !soundOn;
+    storage.set(keys.sound, soundOn ? "1" : "0");
+    if (soundOn) beep("start");
+    updateUi();
+  });
+  els.help.addEventListener("click", () => els.overlay.classList.add("show"));
+  els.closeHelp.addEventListener("click", () => els.overlay.classList.remove("show"));
+  els.overlay.addEventListener("click", (event) => {
+    if (event.target === els.overlay) els.overlay.classList.remove("show");
+  });
+
+  function loop(stamp){
+    if (!lastStamp) lastStamp = stamp;
+    const dt = clamp((stamp - lastStamp) / 1000, 0, 1 / 24);
+    lastStamp = stamp;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function snapshot(){
+    const hole = currentHole();
+    const b = state.ball;
+    const speed = ballSpeed();
+    const dragVector = state.dragPoint ? { x: round(state.dragPoint.x - b.x), y: round(state.dragPoint.y - b.y) } : { x: 0, y: 0 };
+    const activeSand = isInSand(b.x, b.y);
+    return {
+      game: "Circuit Putt",
+      mode: state.mode,
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down, width 900, height 560",
+      hole: {
+        index: state.holeIndex,
+        number: state.holeIndex + 1,
+        total: holes.length,
+        name: hole.name,
+        par: hole.par,
+        strokes: state.strokes,
+        completedScores: state.scores.slice(),
+        completedTotal: completedTotal(),
+        displayedTotal: currentTotal()
+      },
+      totalPar,
+      bestTotal: state.bestTotal,
+      ball: {
+        x: round(b.x),
+        y: round(b.y),
+        vx: round(b.vx),
+        vy: round(b.vy),
+        speed: round(speed),
+        r: b.r,
+        moving: b.moving
+      },
+      aim: {
+        angle: round(state.aimAngle),
+        power: round(state.aimPower),
+        dragging: state.dragging,
+        vector: dragVector,
+        available: canAim(),
+        mouse: { x: round(mouse.x), y: round(mouse.y) }
+      },
+      cup: {
+        x: hole.cup.x,
+        y: hole.cup.y,
+        r: hole.cup.r,
+        distance: round(distanceToCup())
+      },
+      terrain: {
+        onSand: activeSand,
+        sandCount: hole.sands.length,
+        wallCount: hole.walls.length,
+        bumperCount: hole.bumpers.length,
+        sands: hole.sands.map(rect => ({ x: rect.x, y: rect.y, w: rect.w, h: rect.h })),
+        walls: hole.walls.map(rect => ({ x: rect.x, y: rect.y, w: rect.w, h: rect.h })),
+        bumpers: hole.bumpers.map(bumper => ({ x: bumper.x, y: bumper.y, r: bumper.r }))
+      },
+      feedback: {
+        lastEvent: feedback.lastEvent,
+        strokeActive: feedback.stroke > 0,
+        wallActive: feedback.wall > 0,
+        bumperActive: feedback.bumper > 0,
+        sandActive: feedback.sand > 0,
+        cupActive: feedback.cup > 0,
+        resetActive: feedback.reset > 0,
+        strokeCount: feedback.strokeCount,
+        wallHitCount: feedback.wallHitCount,
+        bumperHitCount: feedback.bumperHitCount,
+        cupCount: feedback.cupCount,
+        resetCount: feedback.resetCount
+      },
+      runComplete: state.mode === "complete",
+      message: state.message,
+      soundOn
+    };
+  }
+
+  window.render_game_to_text = () => JSON.stringify(snapshot());
+  window.advanceTime = (ms) => {
+    const steps = Math.max(1, Math.round(Number(ms || 0) / (1000 / 60)));
+    for (let i = 0; i < steps; i += 1) update(1 / 60);
+    updateUi();
+    render();
+    return window.render_game_to_text();
+  };
+
+  updateAimToCup();
+  updateUi();
+  render();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

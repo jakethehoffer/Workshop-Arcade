@@ -19,6 +19,21 @@ CI budgets:
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
 
+## Circuit Putt audit (pass 66)
+
+Captured 2026-05-15 against `http://127.0.0.1:4192` (chromium @ 1280x800, network idle) after adding Circuit Putt. The strict audit covered the catalog plus 26 manifest games, 27 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 564 ms | 537 ms | 🟢 537 ms | 🟢 152.0 KB | 28 | 0 |
+| Paddle Pulse | 🟢 68 ms | 57 ms | 🟢 58 ms | 🟢 25.6 KB | 2 | 0 |
+| Rhythm Circuit | 🟢 76 ms | 36 ms | 🟢 36 ms | 🟢 26.2 KB | 2 | 0 |
+| Circuit Putt | 🟢 80 ms | 59 ms | 🟢 59 ms | 🟢 37.6 KB | 2 | 0 |
+| Idle Tycoon | 🟢 520 ms | 20 ms | 🟢 24 ms | 🟢 184.9 KB | 2 | 0 |
+| Lexica | 🟢 92 ms | 65 ms | 🟢 66 ms | 🟡 213.6 KB | 4 | 0 |
+
+Circuit Putt stays well under the default 150 KB / 8 request game budget. No console or page errors were reported across the audited URLs, and every page passed the strict meta/alt checks.
+
 ## Rhythm Circuit audit (pass 65)
 
 Captured 2026-05-15 against `http://127.0.0.1:4188` (chromium @ 1280x800, network idle) after adding Rhythm Circuit. The strict audit covered the catalog plus 25 manifest games, 26 pages total.

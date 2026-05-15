@@ -628,6 +628,52 @@ function getInteractionRecipe(slug) {
         }
       },
     },
+    "circuit-putt": {
+      name: "start and putt",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+        });
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function") return;
+          const snap = JSON.parse(window.render_game_to_text());
+          const canvas = document.querySelector("#game");
+          if (!canvas || !snap?.ball || !snap?.cup) return;
+          const rect = canvas.getBoundingClientRect();
+          const toClient = (x, y) => ({
+            x: rect.left + (x / 900) * rect.width,
+            y: rect.top + (y / 560) * rect.height
+          });
+          const dx = snap.cup.x - snap.ball.x;
+          const dy = snap.cup.y - snap.ball.y;
+          const len = Math.max(1, Math.hypot(dx, dy));
+          const drag = 118;
+          const start = toClient(snap.ball.x, snap.ball.y);
+          const end = toClient(snap.ball.x - (dx / len) * drag, snap.ball.y - (dy / len) * drag);
+          const dispatch = (type, point, buttons) => {
+            canvas.dispatchEvent(new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 8,
+              pointerType: "mouse",
+              isPrimary: true,
+              button: 0,
+              buttons,
+              clientX: point.x,
+              clientY: point.y
+            }));
+          };
+          dispatch("pointerdown", start, 1);
+          dispatch("pointermove", end, 1);
+          dispatch("pointerup", end, 0);
+          if (typeof window.advanceTime === "function") {
+            window.advanceTime(260);
+          }
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
