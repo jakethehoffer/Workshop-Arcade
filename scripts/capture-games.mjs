@@ -589,6 +589,16 @@ function getInteractionRecipe(slug) {
         await settlePage(page, 200);
       },
     },
+    "paddle-pulse": {
+      name: "start rally and move paddle",
+      expectsStart: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#startBtn");
+        await page.evaluate(() => { if (typeof window.advanceTime === "function") window.advanceTime(1280); });
+        await pressAndAdvance(page, "ArrowDown", 160);
+        await settlePage(page, 120);
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
@@ -635,6 +645,7 @@ function getInteractionRecipe(slug) {
     arena: {
       name: "start and move",
       expectsStart: true,
+      freezePostAtEvent: true,
       run: async (page) => {
         await clickSelectorIfVisible(page, "#startBtn");
         await holdKeyAdvance(page, "ArrowRight", 120);

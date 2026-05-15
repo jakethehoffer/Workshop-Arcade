@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Paddle Pulse</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Return the serve, build the rally, and win the neon paddle duel." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/paddle-pulse.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Paddle Pulse — Workshop Arcade" />
+<meta property="og:description" content="Return the serve, build the rally, and win the neon paddle duel." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/paddle-pulse.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/paddle-pulse.svg" />
+<meta property="og:image:alt" content="Paddle Pulse cover art" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Paddle Pulse — Workshop Arcade" />
+<meta name="twitter:description" content="Return the serve, build the rally, and win the neon paddle duel." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/paddle-pulse.svg" />
+<!-- workshop-meta:end -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;background:
+      radial-gradient(900px 600px at 10% -6%,rgba(94,234,212,0.13),transparent 60%),
+      radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+    display:flex;flex-direction:column;align-items:center;padding:22px 14px 28px;overflow-x:hidden;
+  }
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .brand .title{font-size:22px;letter-spacing:0.16em;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.2);text-transform:uppercase}
+  .panel{width:100%;max-width:780px;display:flex;flex-direction:column;gap:12px}
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .pill{
+    display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);padding:8px 13px;border-radius:12px;line-height:1.05;min-width:72px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,0.65);box-shadow:0 0 20px rgba(94,234,212,0.18),0 6px 14px rgba(0,0,0,0.28)}
+  .pill .label{font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+  .arena-wrap{
+    border:1px solid rgba(94,234,212,0.28);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(13,20,35,0.92),rgba(8,13,23,0.95));
+    box-shadow:0 18px 38px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:16/9;max-height:68vh;background:#07101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:-4px}
+  .status{
+    text-align:center;min-height:20px;font-size:12px;letter-spacing:0.13em;text-transform:uppercase;
+    color:rgba(94,234,212,0.86);font-weight:800;
+  }
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .btn{
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
+    padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .btn:hover{border-color:rgba(94,234,212,0.55)}
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .overlay.show{display:flex}
+  .overlay-card{
+    width:min(450px,100%);background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
+    border:1px solid rgba(94,234,212,0.32);border-radius:16px;padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55),0 0 24px rgba(94,234,212,0.12);
+  }
+  .overlay-card h3{margin:0 0 8px;font-size:20px;letter-spacing:0.04em}
+  .overlay-card .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .overlay-card p,.overlay-card ul{margin:8px 0;color:#b6c4dc;font-size:14px;line-height:1.5}
+  .overlay-card ul{padding-left:18px}
+  .overlay-card .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  @media (max-width:560px){
+    body{padding:14px 8px 22px}
+    .brand .title{font-size:18px;letter-spacing:0.14em}
+    .panel{gap:10px}
+    .pill{min-width:64px;padding:7px 9px}
+    .pill .value{font-size:16px}
+    .status{font-size:11px;letter-spacing:0.09em}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand">
+  <span class="eyebrow">Workshop Arcade</span>
+  <span class="title">PADDLE PULSE</span>
+</div>
+<main class="panel" aria-label="Paddle Pulse game">
+  <div class="hud" aria-label="Score and match status">
+    <div class="pill"><span class="label">You</span><span class="value" id="playerScore">0</span></div>
+    <div class="pill"><span class="label">AI</span><span class="value" id="aiScore">0</span></div>
+    <div class="pill"><span class="label">Rally</span><span class="value" id="rallyValue">0</span></div>
+    <div class="pill" id="pulsePill"><span class="label">Pulse</span><span class="value" id="pulseValue">0%</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </div>
+  <div class="arena-wrap">
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Paddle Pulse playfield. Move the left paddle with W, S, Arrow Up, Arrow Down, or drag on touch screens. First to seven wins."></canvas>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start to serve.</div>
+  <div class="controls">
+    <button class="btn primary" type="button" id="startBtn">Start Match</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">Sound On</button>
+    <button class="btn" type="button" id="helpBtn">Help</button>
+  </div>
+</main>
+
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="overlay-card">
+    <span class="eyebrow">Workshop Arcade</span>
+    <h3 id="helpTitle">How to Play</h3>
+    <p>Return the ball with the left paddle. Longer rallies build pulse, brighten the table, and speed up the ball. First side to 7 wins.</p>
+    <ul>
+      <li>Keyboard: <kbd>W</kbd>/<kbd>S</kbd> or <kbd>ArrowUp</kbd>/<kbd>ArrowDown</kbd> moves the paddle.</li>
+      <li>Touch: drag anywhere on the playfield to set the paddle height.</li>
+      <li><kbd>Space</kbd> or <kbd>Enter</kbd> starts or restarts. <kbd>F</kbd> toggles fullscreen.</li>
+      <li><kbd>Esc</kbd> closes this dialog or exits fullscreen.</li>
+    </ul>
+    <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const W = 960;
+  const H = 540;
+  const WIN_SCORE = 7;
+  const BEST_KEY = "paddle-pulse.bestRally.v1";
+  const SOUND_KEY = "paddle-pulse.sound.v1";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const els = {
+    playerScore: document.getElementById("playerScore"),
+    aiScore: document.getElementById("aiScore"),
+    rally: document.getElementById("rallyValue"),
+    pulse: document.getElementById("pulseValue"),
+    pulsePill: document.getElementById("pulsePill"),
+    best: document.getElementById("bestValue"),
+    status: document.getElementById("statusLine"),
+    start: document.getElementById("startBtn"),
+    sound: document.getElementById("soundBtn"),
+    help: document.getElementById("helpBtn"),
+    helpOverlay: document.getElementById("helpOverlay"),
+    helpClose: document.getElementById("helpClose")
+  };
+
+  const paddle = { w: 18, h: 118, speed: 520 };
+  const player = { x: 54, y: H / 2 - paddle.h / 2, vy: 0 };
+  const ai = { x: W - 72, y: H / 2 - paddle.h / 2, vy: 0, target: H / 2 };
+  const ball = { x: W / 2, y: H / 2, vx: -330, vy: 80, r: 10, trail: [] };
+  const keys = new Set();
+  const feedback = { lastHitAt: -9999, lastWallAt: -9999, lastScoreAt: -9999, lastPulseAt: -9999, hitCount: 0, wallCount: 0, scoreCount: 0 };
+  const state = {
+    mode: "ready",
+    playerScore: 0,
+    aiScore: 0,
+    rally: 0,
+    bestRally: loadBestRally(),
+    pulse: 0,
+    winner: null,
+    now: 0,
+    message: "Press Start to serve.",
+    serveDir: -1
+  };
+
+  let soundEnabled = loadSoundPref();
+  let audioCtx = null;
+  let lastFrame = 0;
+  let helpFocusReturn = null;
+
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+  function loadBestRally(){
+    try { return Math.max(0, Number(localStorage.getItem(BEST_KEY) || 0)); } catch { return 0; }
+  }
+  function saveBestRally(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
+  function loadSoundPref(){
+    try { const raw = localStorage.getItem(SOUND_KEY); return raw === null ? true : raw === "true"; } catch { return true; }
+  }
+  function saveSoundPref(value){ try { localStorage.setItem(SOUND_KEY, String(value)); } catch {} }
+  function ensureAudio(){
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch { audioCtx = null; }
+    return audioCtx;
+  }
+  function tone(freq, durMs, gain = 0.055, type = "sine", offsetMs = 0){
+    if (!soundEnabled) return;
+    const ac = ensureAudio();
+    if (!ac) return;
+    if (ac.state === "suspended") { try { ac.resume(); } catch {} }
+    const start = ac.currentTime + offsetMs / 1000;
+    const osc = ac.createOscillator();
+    const amp = ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(gain, start + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + durMs / 1000);
+    osc.connect(amp).connect(ac.destination);
+    osc.start(start);
+    osc.stop(start + durMs / 1000 + 0.02);
+  }
+  function playHit(){
+    const lift = Math.min(360, state.rally * 18);
+    tone(360 + lift, 95, 0.06, "square");
+    tone(720 + lift, 120, 0.035, "sine", 20);
+  }
+  function playWall(){ tone(240, 70, 0.035, "triangle"); }
+  function playScore(){ tone(180, 120, 0.055, "triangle"); tone(130, 160, 0.04, "triangle", 90); }
+  function playWin(){ [523,659,784,1047].forEach((f,i) => tone(f, 150, 0.045, "sine", i * 85)); }
+
+  function updateSoundButton(){
+    els.sound.textContent = soundEnabled ? "Sound On" : "Muted";
+    els.sound.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+  }
+
+  function centerPaddles(){
+    player.y = H / 2 - paddle.h / 2;
+    player.vy = 0;
+    ai.y = H / 2 - paddle.h / 2;
+    ai.vy = 0;
+    ai.target = H / 2;
+  }
+
+  function resetBall(dir){
+    ball.x = W / 2;
+    ball.y = H / 2;
+    const speed = 335;
+    ball.vx = dir * speed;
+    ball.vy = dir < 0 ? -24 : 24;
+    ball.trail = [];
+    state.rally = 0;
+    state.pulse = 0;
+  }
+
+  function startMatch(){
+    state.playerScore = 0;
+    state.aiScore = 0;
+    state.winner = null;
+    state.mode = "playing";
+    state.message = "Return the serve.";
+    centerPaddles();
+    resetBall(-1);
+    canvas.focus({ preventScroll: true });
+    render();
+  }
+
+  function continueAfterPoint(){
+    if (state.mode === "over") return startMatch();
+    state.mode = "playing";
+    state.message = "Return the serve.";
+    centerPaddles();
+    resetBall(state.serveDir);
+    canvas.focus({ preventScroll: true });
+    render();
+  }
+
+  function scorePoint(side){
+    feedback.lastScoreAt = state.now;
+    feedback.scoreCount += 1;
+    playScore();
+    if (side === "player") {
+      state.playerScore += 1;
+      state.serveDir = 1;
+      state.message = "Point to you.";
+    } else {
+      state.aiScore += 1;
+      state.serveDir = -1;
+      state.message = "Point to AI.";
+    }
+    state.rally = 0;
+    state.pulse = 0;
+    if (state.playerScore >= WIN_SCORE || state.aiScore >= WIN_SCORE) {
+      state.winner = state.playerScore > state.aiScore ? "player" : "ai";
+      state.mode = "over";
+      state.message = state.winner === "player" ? "You win the duel." : "AI wins the duel.";
+      playWin();
+    } else {
+      state.mode = "point";
+      resetBall(state.serveDir);
+    }
+  }
+
+  function paddleCenter(p){ return p.y + paddle.h / 2; }
+  function ballIntersects(p){
+    return ball.x - ball.r < p.x + paddle.w &&
+      ball.x + ball.r > p.x &&
+      ball.y + ball.r > p.y &&
+      ball.y - ball.r < p.y + paddle.h;
+  }
+  function reflectFromPaddle(p, dir){
+    const offset = clamp((ball.y - paddleCenter(p)) / (paddle.h / 2), -1, 1);
+    const speed = clamp(Math.hypot(ball.vx, ball.vy) + 18 + state.rally * 1.2, 340, 720);
+    const maxAngle = Math.PI * 0.34;
+    ball.vx = Math.cos(offset * maxAngle) * speed * dir;
+    ball.vy = Math.sin(offset * maxAngle) * speed;
+    ball.x = dir > 0 ? p.x + paddle.w + ball.r + 0.5 : p.x - ball.r - 0.5;
+    state.rally += 1;
+    state.pulse = clamp(Math.round((state.rally / 9) * 100), 0, 100);
+    if (state.rally > state.bestRally) {
+      state.bestRally = state.rally;
+      saveBestRally(state.bestRally);
+    }
+    feedback.lastHitAt = state.now;
+    feedback.hitCount += 1;
+    if (state.pulse >= 100) feedback.lastPulseAt = state.now;
+    playHit();
+  }
+
+  function update(dt){
+    state.now += dt * 1000;
+    if (state.mode !== "playing") return;
+
+    let input = 0;
+    if (keys.has("arrowup") || keys.has("w")) input -= 1;
+    if (keys.has("arrowdown") || keys.has("s")) input += 1;
+    player.vy = input * paddle.speed;
+    player.y = clamp(player.y + player.vy * dt, 22, H - paddle.h - 22);
+
+    const lead = clamp(ball.vx * 0.22, -90, 90);
+    ai.target = clamp(ball.y + lead, paddle.h / 2 + 22, H - paddle.h / 2 - 22);
+    const aiError = ball.vx > 0 ? Math.sin(state.now / 360) * 18 : Math.sin(state.now / 520) * 34;
+    const aiDelta = ai.target + aiError - paddleCenter(ai);
+    ai.vy = clamp(aiDelta * 5.2, -445, 445);
+    ai.y = clamp(ai.y + ai.vy * dt, 22, H - paddle.h - 22);
+
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    ball.trail.push({ x: ball.x, y: ball.y, age: 0 });
+    ball.trail = ball.trail.map((p) => ({ x: p.x, y: p.y, age: p.age + dt })).filter((p) => p.age < 0.28).slice(-16);
+
+    if (ball.y - ball.r <= 18 && ball.vy < 0) {
+      ball.y = 18 + ball.r;
+      ball.vy *= -1;
+      feedback.lastWallAt = state.now;
+      feedback.wallCount += 1;
+      playWall();
+    }
+    if (ball.y + ball.r >= H - 18 && ball.vy > 0) {
+      ball.y = H - 18 - ball.r;
+      ball.vy *= -1;
+      feedback.lastWallAt = state.now;
+      feedback.wallCount += 1;
+      playWall();
+    }
+
+    if (ball.vx < 0 && ballIntersects(player)) reflectFromPaddle(player, 1);
+    if (ball.vx > 0 && ballIntersects(ai)) reflectFromPaddle(ai, -1);
+    if (ball.x < -40) scorePoint("ai");
+    if (ball.x > W + 40) scorePoint("player");
+  }
+
+  function drawRoundedRect(x,y,w,h,r,fill,stroke){
+    ctx.beginPath();
+    ctx.roundRect(x,y,w,h,r);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+  }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    const pulseAlpha = state.pulse / 100;
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,"#0a1322");
+    bg.addColorStop(1,"#050a12");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,W,H);
+
+    const teal = ctx.createRadialGradient(120,70,20,120,70,520);
+    teal.addColorStop(0,`rgba(94,234,212,${0.18 + pulseAlpha * 0.13})`);
+    teal.addColorStop(1,"rgba(94,234,212,0)");
+    ctx.fillStyle = teal;
+    ctx.fillRect(0,0,W,H);
+    const indigo = ctx.createRadialGradient(840,470,20,840,470,520);
+    indigo.addColorStop(0,"rgba(124,158,255,0.12)");
+    indigo.addColorStop(1,"rgba(124,158,255,0)");
+    ctx.fillStyle = indigo;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.strokeStyle = "rgba(94,234,212,0.20)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18,18,W-36,H-36);
+    ctx.setLineDash([12,16]);
+    ctx.beginPath();
+    ctx.moveTo(W/2,30);
+    ctx.lineTo(W/2,H-30);
+    ctx.strokeStyle = "rgba(230,237,243,0.20)";
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const hitAge = state.now - feedback.lastHitAt;
+    if (hitAge < 220) {
+      const a = 1 - hitAge / 220;
+      ctx.fillStyle = `rgba(94,234,212,${0.11 * a})`;
+      ctx.fillRect(18,18,W-36,H-36);
+    }
+
+    ball.trail.forEach((p) => {
+      const a = Math.max(0, 1 - p.age / 0.28) * 0.35;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,ball.r * (1.8 - p.age),0,Math.PI*2);
+      ctx.fillStyle = `rgba(94,234,212,${a})`;
+      ctx.fill();
+    });
+
+    const paddleFill = "rgba(230,237,243,0.92)";
+    drawRoundedRect(player.x,player.y,paddle.w,paddle.h,9,paddleFill,"rgba(94,234,212,0.75)");
+    drawRoundedRect(ai.x,ai.y,paddle.w,paddle.h,9,"rgba(160,179,211,0.86)","rgba(124,158,255,0.55)");
+    ctx.shadowColor = pulseAlpha > 0.65 ? "rgba(94,234,212,0.75)" : "rgba(94,234,212,0.35)";
+    ctx.shadowBlur = 18 + pulseAlpha * 16;
+    ctx.beginPath();
+    ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+    ctx.fillStyle = "#dffff8";
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.font = "800 56px ui-sans-serif, system-ui";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(230,237,243,0.12)";
+    ctx.fillText(String(state.playerScore), W/2 - 96, 88);
+    ctx.fillText(String(state.aiScore), W/2 + 96, 88);
+
+    if (state.mode !== "playing") {
+      ctx.fillStyle = "rgba(3,7,18,0.54)";
+      ctx.fillRect(18,18,W-36,H-36);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#e6edf3";
+      ctx.font = "800 44px ui-sans-serif, system-ui";
+      const headline = state.mode === "over" ? (state.winner === "player" ? "YOU WIN" : "AI WINS") : state.mode === "point" ? "POINT" : "PADDLE PULSE";
+      ctx.fillText(headline, W/2, H/2 - 20);
+      ctx.font = "700 18px ui-sans-serif, system-ui";
+      ctx.fillStyle = "rgba(94,234,212,0.9)";
+      ctx.fillText(state.message, W/2, H/2 + 20);
+    }
+
+    syncHud();
+  }
+
+  function syncHud(){
+    els.playerScore.textContent = String(state.playerScore);
+    els.aiScore.textContent = String(state.aiScore);
+    els.rally.textContent = String(state.rally);
+    els.pulse.textContent = `${state.pulse}%`;
+    els.best.textContent = String(state.bestRally);
+    els.pulsePill.dataset.hot = state.pulse >= 75 ? "true" : "false";
+    els.status.textContent = state.mode === "playing" ? "Keep the rally alive." : state.message;
+    els.start.textContent = state.mode === "ready" ? "Start Match" : state.mode === "over" ? "New Match" : state.mode === "point" ? "Serve" : "Restart";
+  }
+
+  function frame(ts){
+    if (!lastFrame) lastFrame = ts;
+    const dt = Math.min(0.033, Math.max(0, (ts - lastFrame) / 1000));
+    lastFrame = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  function setPaddleFromClientY(clientY){
+    const rect = canvas.getBoundingClientRect();
+    const y = (clientY - rect.top) * H / rect.height;
+    player.y = clamp(y - paddle.h / 2, 22, H - paddle.h - 22);
+    player.vy = 0;
+    canvas.focus({ preventScroll: true });
+  }
+
+  function showHelp(){
+    helpFocusReturn = document.activeElement;
+    els.helpOverlay.hidden = false;
+    els.helpOverlay.classList.add("show");
+    els.helpClose.focus();
+  }
+  function closeHelp(){
+    els.helpOverlay.classList.remove("show");
+    els.helpOverlay.hidden = true;
+    if (helpFocusReturn && typeof helpFocusReturn.focus === "function") helpFocusReturn.focus({ preventScroll: true });
+  }
+  function handleHelpTrap(event){
+    if (els.helpOverlay.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeHelp();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusables = Array.from(els.helpOverlay.querySelectorAll("button,[href],input,select,textarea,[tabindex]:not([tabindex='-1'])")).filter((el) => !el.disabled);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function toggleFullscreen(){
+    const root = document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen) {
+      root.requestFullscreen().catch(() => {});
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  els.start.addEventListener("click", () => {
+    if (state.mode === "ready" || state.mode === "over") startMatch();
+    else if (state.mode === "point") continueAfterPoint();
+    else startMatch();
+  });
+  els.sound.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    saveSoundPref(soundEnabled);
+    updateSoundButton();
+    if (soundEnabled) playHit();
+  });
+  els.help.addEventListener("click", showHelp);
+  els.helpClose.addEventListener("click", closeHelp);
+  els.helpOverlay.addEventListener("click", (event) => {
+    if (event.target === els.helpOverlay) closeHelp();
+  });
+  document.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    handleHelpTrap(event);
+    if (!els.helpOverlay.hidden) return;
+    if (["arrowup","arrowdown","w","s"," ","enter"].includes(key)) event.preventDefault();
+    if (key === " " || key === "enter") {
+      if (state.mode === "ready" || state.mode === "over") startMatch();
+      else if (state.mode === "point") continueAfterPoint();
+      return;
+    }
+    if (key === "f") { toggleFullscreen(); return; }
+    if (key === "escape" && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    keys.add(key);
+  });
+  document.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+  canvas.addEventListener("pointerdown", (event) => {
+    canvas.setPointerCapture(event.pointerId);
+    setPaddleFromClientY(event.clientY);
+    if (state.mode === "ready" || state.mode === "over") startMatch();
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (event.buttons || event.pointerType === "touch") setPaddleFromClientY(event.clientY);
+  });
+
+  window.render_game_to_text = function(){
+    return JSON.stringify({
+      coordinateSystem: "game units, origin top-left, x right, y down, width 960, height 540",
+      mode: state.mode,
+      score: { player: state.playerScore, ai: state.aiScore, target: WIN_SCORE },
+      rally: state.rally,
+      bestRally: state.bestRally,
+      pulse: state.pulse,
+      winner: state.winner,
+      message: state.message,
+      player: { x: Math.round(player.x), y: Math.round(player.y), centerY: Math.round(paddleCenter(player)), vy: Math.round(player.vy), w: paddle.w, h: paddle.h },
+      ai: { x: Math.round(ai.x), y: Math.round(ai.y), centerY: Math.round(paddleCenter(ai)), targetY: Math.round(ai.target), vy: Math.round(ai.vy), w: paddle.w, h: paddle.h },
+      ball: { x: Math.round(ball.x), y: Math.round(ball.y), vx: Math.round(ball.vx), vy: Math.round(ball.vy), r: ball.r },
+      soundEnabled,
+      feedback: {
+        hitActive: state.now - feedback.lastHitAt < 260,
+        wallActive: state.now - feedback.lastWallAt < 180,
+        scoreActive: state.now - feedback.lastScoreAt < 500,
+        pulseActive: state.now - feedback.lastPulseAt < 500,
+        hitCount: feedback.hitCount,
+        wallCount: feedback.wallCount,
+        scoreCount: feedback.scoreCount
+      }
+    });
+  };
+  window.advanceTime = function(ms){
+    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < steps; i += 1) update(1 / 60);
+    render();
+  };
+
+  updateSoundButton();
+  resetBall(-1);
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
