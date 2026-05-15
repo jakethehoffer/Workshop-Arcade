@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Rhythm Circuit</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Hit four lanes on the pulse line and keep the combo alive." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/rhythm-circuit.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Rhythm Circuit — Workshop Arcade" />
+<meta property="og:description" content="Hit four lanes on the pulse line and keep the combo alive." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/rhythm-circuit.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/rhythm-circuit.svg" />
+<meta property="og:image:alt" content="Rhythm Circuit cover art" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Rhythm Circuit — Workshop Arcade" />
+<meta name="twitter:description" content="Hit four lanes on the pulse line and keep the combo alive." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/rhythm-circuit.svg" />
+<!-- workshop-meta:end -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;background:
+      radial-gradient(900px 600px at 10% -6%,rgba(94,234,212,0.13),transparent 60%),
+      radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
+      linear-gradient(180deg,#0b0f14,#070b12 80%);
+    display:flex;flex-direction:column;align-items:center;padding:22px 14px 28px;overflow-x:hidden;
+  }
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .brand .title{font-size:22px;letter-spacing:0;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.2);text-transform:uppercase}
+  .panel{width:100%;max-width:720px;display:flex;flex-direction:column;gap:12px}
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .pill{
+    display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);padding:8px 13px;border-radius:12px;line-height:1.05;min-width:74px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,0.68);box-shadow:0 0 20px rgba(94,234,212,0.16),0 6px 14px rgba(0,0,0,0.28)}
+  .pill .label{font-size:9px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+  .stage-wrap{
+    border:1px solid rgba(94,234,212,0.28);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(13,20,35,0.92),rgba(8,13,23,0.95));
+    box-shadow:0 18px 38px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07101a}
+  canvas:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:-4px}
+  .status{
+    text-align:center;min-height:20px;font-size:12px;letter-spacing:0;text-transform:uppercase;
+    color:rgba(94,234,212,0.86);font-weight:800;
+  }
+  .lane-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .btn,.lane-btn{
+    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
+    padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
+    letter-spacing:0;text-transform:uppercase;font-size:12px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .lane-btn{min-height:44px;font-size:15px;font-weight:800}
+  .lane-btn[data-active="true"]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
+  .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .btn:hover,.lane-btn:hover{border-color:rgba(94,234,212,0.55)}
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .overlay.show{display:flex}
+  .overlay-card{
+    width:min(460px,100%);background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
+    border:1px solid rgba(94,234,212,0.32);border-radius:16px;padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55),0 0 24px rgba(94,234,212,0.12);
+  }
+  .overlay-card h3{margin:0 0 8px;font-size:20px;letter-spacing:0}
+  .overlay-card .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
+  .overlay-card p,.overlay-card ul{margin:8px 0;color:#b6c4dc;font-size:14px;line-height:1.5}
+  .overlay-card ul{padding-left:18px}
+  .overlay-card .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  @media (max-width:560px){
+    body{padding:14px 8px 22px}
+    .brand .title{font-size:18px;letter-spacing:0}
+    .panel{gap:10px}
+    .pill{min-width:64px;padding:7px 9px}
+    .pill .value{font-size:16px}
+    .status{font-size:11px;letter-spacing:0}
+    .lane-btn{min-height:42px;padding:8px 6px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand">
+  <span class="eyebrow">Workshop Arcade</span>
+  <span class="title">RHYTHM CIRCUIT</span>
+</div>
+<main class="panel" aria-label="Rhythm Circuit game">
+  <div class="hud" aria-label="Rhythm Circuit score">
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill" id="comboPill"><span class="label">Combo</span><span class="value" id="comboValue">0</span></div>
+    <div class="pill"><span class="label">Accuracy</span><span class="value" id="accuracyValue">100%</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </div>
+  <div class="stage-wrap">
+    <canvas id="game" width="880" height="550" tabindex="0" aria-label="Rhythm Circuit playfield. Hit falling notes at the pulse line with D, F, J, K, or the four touch lane buttons."></canvas>
+  </div>
+  <div class="lane-buttons" aria-label="Touch lane controls">
+    <button class="lane-btn" type="button" data-lane="0" aria-label="Lane one D">D</button>
+    <button class="lane-btn" type="button" data-lane="1" aria-label="Lane two F">F</button>
+    <button class="lane-btn" type="button" data-lane="2" aria-label="Lane three J">J</button>
+    <button class="lane-btn" type="button" data-lane="3" aria-label="Lane four K">K</button>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start to arm the circuit.</div>
+  <div class="controls">
+    <button class="btn primary" type="button" id="startBtn">Start Run</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">Sound On</button>
+    <button class="btn" type="button" id="helpBtn">Help</button>
+  </div>
+</main>
+
+<div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="overlay-card">
+    <span class="eyebrow">Workshop Arcade</span>
+    <h3 id="helpTitle">How to Play</h3>
+    <p>Hit each falling note as it crosses the pulse line. Cleaner timing earns more points and keeps your combo alive.</p>
+    <ul>
+      <li>Keyboard lanes: <kbd>D</kbd>, <kbd>F</kbd>, <kbd>J</kbd>, <kbd>K</kbd>.</li>
+      <li>Touch: tap the four lane buttons below the stage.</li>
+      <li>Perfect is within 70ms; Good within 115ms; OK within 165ms.</li>
+      <li><kbd>Space</kbd> or <kbd>Enter</kbd> starts or restarts. <kbd>Esc</kbd> closes this dialog.</li>
+    </ul>
+    <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const W = 880;
+  const H = 550;
+  const LANES = 4;
+  const LEAD_MS = 1450;
+  const HIT_Y = 454;
+  const TOP_Y = 64;
+  const NOTE_H = 22;
+  const BEST_KEY = "rhythm-circuit.bestScore.v1";
+  const SOUND_KEY = "rhythm-circuit.sound.v1";
+  const laneKeys = ["d", "f", "j", "k"];
+  const laneFreq = [261.63, 329.63, 392.0, 523.25];
+  const rawChart = [
+    [900,0],[1240,1],[1580,2],[1920,3],
+    [2360,0],[2360,2],[2820,1],[3160,3],
+    [3600,2],[3940,1],[4280,0],[4620,3],
+    [5060,0],[5060,3],[5520,1],[5860,2],
+    [6300,3],[6640,2],[6980,1],[7320,0]
+  ];
+  const chart = rawChart.map(([time,lane], index) => ({ id:index, time, lane, status:"pending", judgedAt:null, judgement:null, delta:null }));
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const els = {
+    score: document.getElementById("scoreValue"),
+    combo: document.getElementById("comboValue"),
+    comboPill: document.getElementById("comboPill"),
+    accuracy: document.getElementById("accuracyValue"),
+    best: document.getElementById("bestValue"),
+    status: document.getElementById("statusLine"),
+    start: document.getElementById("startBtn"),
+    sound: document.getElementById("soundBtn"),
+    help: document.getElementById("helpBtn"),
+    helpOverlay: document.getElementById("helpOverlay"),
+    helpClose: document.getElementById("helpClose"),
+    laneButtons: Array.from(document.querySelectorAll(".lane-btn"))
+  };
+
+  const state = {
+    mode: "ready",
+    time: 0,
+    score: 0,
+    combo: 0,
+    maxCombo: 0,
+    hits: 0,
+    misses: 0,
+    totalJudged: 0,
+    accuracyPoints: 0,
+    accuracy: 100,
+    bestScore: loadBestScore(),
+    message: "Press Start to arm the circuit.",
+    finishAt: rawChart[rawChart.length - 1][0] + 900,
+    laneFlashUntil: [0,0,0,0],
+    judgement: "",
+    judgementUntil: 0,
+    now: 0
+  };
+  const feedback = { lastHitAt:-9999, lastMissAt:-9999, lastStartAt:-9999, lastCompleteAt:-9999, hitCount:0, missCount:0, startCount:0, completeCount:0 };
+  let soundEnabled = loadSoundPref();
+  let audioCtx = null;
+  let lastFrame = 0;
+  let helpFocusReturn = null;
+
+  function loadBestScore(){ try { return Math.max(0, Number(localStorage.getItem(BEST_KEY) || 0)); } catch { return 0; } }
+  function saveBestScore(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
+  function loadSoundPref(){ try { const raw = localStorage.getItem(SOUND_KEY); return raw === null ? true : raw === "true"; } catch { return true; } }
+  function saveSoundPref(value){ try { localStorage.setItem(SOUND_KEY, String(value)); } catch {} }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function laneCenter(lane){ return laneLeft(lane) + laneWidth() / 2; }
+  function laneWidth(){ return 150; }
+  function laneLeft(lane){ return 104 + lane * 168; }
+  function noteY(note){ return TOP_Y + ((LEAD_MS - (note.time - state.time)) / LEAD_MS) * (HIT_Y - TOP_Y); }
+  function visibleNotes(){
+    return chart.filter((note) => note.status === "pending" && note.time - state.time <= LEAD_MS + 120 && note.time - state.time >= -210);
+  }
+  function nextPending(){ return chart.find((note) => note.status === "pending") || null; }
+
+  function ensureAudio(){
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch { audioCtx = null; }
+    return audioCtx;
+  }
+  function tone(freq, durMs, gain = 0.05, type = "sine", offsetMs = 0){
+    if (!soundEnabled) return;
+    const ac = ensureAudio();
+    if (!ac) return;
+    if (ac.state === "suspended") { try { ac.resume(); } catch {} }
+    const start = ac.currentTime + offsetMs / 1000;
+    const osc = ac.createOscillator();
+    const amp = ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(gain, start + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + durMs / 1000);
+    osc.connect(amp).connect(ac.destination);
+    osc.start(start);
+    osc.stop(start + durMs / 1000 + 0.02);
+  }
+  function playHit(lane, judgement){
+    const lift = judgement === "Perfect" ? 180 : judgement === "Good" ? 90 : 0;
+    tone(laneFreq[lane] + lift, 90, 0.055, "square");
+    tone(laneFreq[lane] * 2 + lift, 120, 0.028, "sine", 18);
+  }
+  function playMiss(){ tone(180, 120, 0.055, "triangle"); tone(130, 150, 0.04, "triangle", 80); }
+  function playStart(){ tone(392, 90, 0.04, "sine"); tone(523, 110, 0.04, "sine", 70); }
+  function playComplete(){ [523,659,784,1047].forEach((freq, i) => tone(freq, 150, 0.04, "sine", i * 82)); }
+
+  function updateSoundButton(){
+    els.sound.textContent = soundEnabled ? "Sound On" : "Muted";
+    els.sound.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+  }
+  function resetChart(){
+    for (const note of chart) {
+      note.status = "pending";
+      note.judgedAt = null;
+      note.judgement = null;
+      note.delta = null;
+    }
+  }
+  function startRun(){
+    resetChart();
+    state.mode = "playing";
+    state.time = 0;
+    state.score = 0;
+    state.combo = 0;
+    state.maxCombo = 0;
+    state.hits = 0;
+    state.misses = 0;
+    state.totalJudged = 0;
+    state.accuracyPoints = 0;
+    state.accuracy = 100;
+    state.message = "Catch the circuit pulse.";
+    state.judgement = "";
+    state.judgementUntil = 0;
+    feedback.lastStartAt = state.now;
+    feedback.startCount += 1;
+    playStart();
+    canvas.focus({ preventScroll: true });
+    render();
+  }
+  function finishRun(){
+    if (state.mode !== "playing") return;
+    state.mode = "complete";
+    state.combo = 0;
+    state.message = state.score >= state.bestScore && state.score > 0 ? "New best circuit." : "Run complete.";
+    if (state.score > state.bestScore) {
+      state.bestScore = state.score;
+      saveBestScore(state.bestScore);
+    }
+    feedback.lastCompleteAt = state.now;
+    feedback.completeCount += 1;
+    playComplete();
+  }
+  function updateAccuracy(){
+    state.accuracy = state.totalJudged ? Math.round((state.accuracyPoints / (state.totalJudged * 100)) * 100) : 100;
+  }
+  function applyJudgement(note, judgement, delta){
+    const base = judgement === "Perfect" ? 1000 : judgement === "Good" ? 650 : 350;
+    const acc = judgement === "Perfect" ? 100 : judgement === "Good" ? 75 : 45;
+    note.status = "hit";
+    note.judgement = judgement;
+    note.delta = Math.round(delta);
+    note.judgedAt = state.time;
+    state.combo += 1;
+    state.maxCombo = Math.max(state.maxCombo, state.combo);
+    state.hits += 1;
+    state.totalJudged += 1;
+    state.accuracyPoints += acc;
+    state.score += base + state.combo * 35;
+    state.laneFlashUntil[note.lane] = state.time + 160;
+    state.judgement = judgement;
+    state.judgementUntil = state.time + 420;
+    state.message = `${judgement} +${base}`;
+    feedback.lastHitAt = state.now;
+    feedback.hitCount += 1;
+    playHit(note.lane, judgement);
+    updateAccuracy();
+  }
+  function missNote(note, reason = "Miss"){
+    if (note.status !== "pending") return;
+    note.status = "missed";
+    note.judgement = reason;
+    note.delta = Math.round(state.time - note.time);
+    note.judgedAt = state.time;
+    state.combo = 0;
+    state.misses += 1;
+    state.totalJudged += 1;
+    state.judgement = reason;
+    state.judgementUntil = state.time + 420;
+    state.message = reason;
+    feedback.lastMissAt = state.now;
+    feedback.missCount += 1;
+    playMiss();
+    updateAccuracy();
+  }
+  function hitLane(lane){
+    if (state.mode === "ready" || state.mode === "complete") {
+      startRun();
+      return;
+    }
+    if (state.mode !== "playing") return;
+    const candidates = chart
+      .filter((note) => note.status === "pending" && note.lane === lane)
+      .map((note) => ({ note, delta: state.time - note.time, abs: Math.abs(state.time - note.time) }))
+      .filter((item) => item.abs <= 165)
+      .sort((a,b) => a.abs - b.abs);
+    if (!candidates.length) {
+      state.laneFlashUntil[lane] = state.time + 120;
+      state.combo = 0;
+      state.judgement = "Empty";
+      state.judgementUntil = state.time + 300;
+      state.message = "Empty lane";
+      feedback.lastMissAt = state.now;
+      feedback.missCount += 1;
+      playMiss();
+      return;
+    }
+    const { note, delta, abs } = candidates[0];
+    const judgement = abs <= 70 ? "Perfect" : abs <= 115 ? "Good" : "OK";
+    applyJudgement(note, judgement, delta);
+  }
+
+  function update(dt){
+    state.now += dt * 1000;
+    if (state.mode !== "playing") return;
+    state.time += dt * 1000;
+    for (const note of chart) {
+      if (note.status === "pending" && state.time - note.time > 190) {
+        missNote(note);
+      }
+    }
+    if (state.time > state.finishAt && chart.every((note) => note.status !== "pending")) {
+      finishRun();
+    }
+  }
+  function drawRoundedRect(x,y,w,h,r,fill,stroke){
+    ctx.beginPath();
+    ctx.roundRect(x,y,w,h,r);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+  }
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,"#0a1322");
+    bg.addColorStop(1,"#050a12");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,W,H);
+    const teal = ctx.createRadialGradient(120,70,20,120,70,520);
+    teal.addColorStop(0,"rgba(94,234,212,0.17)");
+    teal.addColorStop(1,"rgba(94,234,212,0)");
+    ctx.fillStyle = teal;
+    ctx.fillRect(0,0,W,H);
+    const indigo = ctx.createRadialGradient(780,470,20,780,470,500);
+    indigo.addColorStop(0,"rgba(124,158,255,0.13)");
+    indigo.addColorStop(1,"rgba(124,158,255,0)");
+    ctx.fillStyle = indigo;
+    ctx.fillRect(0,0,W,H);
+
+    const laneColors = ["#5eead4","#22d3ee","#7c9eff","#f472b6"];
+    for (let lane = 0; lane < LANES; lane += 1) {
+      const x = laneLeft(lane);
+      const active = state.time < state.laneFlashUntil[lane];
+      drawRoundedRect(x,52,laneWidth(),420,14,active ? "rgba(94,234,212,0.16)" : "rgba(10,18,31,0.62)", "rgba(94,234,212,0.18)");
+      ctx.fillStyle = "rgba(230,237,243,0.20)";
+      ctx.font = "800 18px ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(laneKeys[lane].toUpperCase(), laneCenter(lane), 86);
+      ctx.strokeStyle = laneColors[lane];
+      ctx.globalAlpha = active ? 0.65 : 0.22;
+      ctx.beginPath();
+      ctx.moveTo(x + 18, HIT_Y);
+      ctx.lineTo(x + laneWidth() - 18, HIT_Y);
+      ctx.lineWidth = active ? 5 : 3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    for (const note of visibleNotes()) {
+      const y = noteY(note);
+      const x = laneLeft(note.lane) + 17;
+      const distance = Math.abs(note.time - state.time);
+      const near = distance <= 165;
+      const grad = ctx.createLinearGradient(x,y - NOTE_H / 2,x,y + NOTE_H / 2);
+      grad.addColorStop(0, near ? "#dffff8" : laneColors[note.lane]);
+      grad.addColorStop(1, laneColors[note.lane]);
+      ctx.shadowColor = laneColors[note.lane];
+      ctx.shadowBlur = near ? 20 : 8;
+      drawRoundedRect(x,y - NOTE_H / 2,laneWidth() - 34,NOTE_H,10,grad,near ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.15)");
+      ctx.shadowBlur = 0;
+    }
+
+    if (state.mode !== "playing") {
+      ctx.fillStyle = "rgba(3,7,18,0.58)";
+      ctx.fillRect(18,18,W-36,H-36);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#e6edf3";
+      ctx.font = "800 40px ui-sans-serif, system-ui";
+      ctx.fillText(state.mode === "complete" ? "RUN COMPLETE" : "RHYTHM CIRCUIT", W/2, H/2 - 20);
+      ctx.fillStyle = "rgba(94,234,212,0.9)";
+      ctx.font = "700 17px ui-sans-serif, system-ui";
+      ctx.fillText(state.message, W/2, H/2 + 20);
+    } else if (state.judgement && state.time < state.judgementUntil) {
+      ctx.textAlign = "center";
+      ctx.fillStyle = state.judgement === "Miss" || state.judgement === "Empty" ? "#ffd6d6" : "#dffff8";
+      ctx.font = "800 34px ui-sans-serif, system-ui";
+      ctx.fillText(state.judgement, W/2, 130);
+    }
+
+    syncHud();
+  }
+  function syncHud(){
+    els.score.textContent = String(state.score);
+    els.combo.textContent = String(state.combo);
+    els.accuracy.textContent = `${state.accuracy}%`;
+    els.best.textContent = String(state.bestScore);
+    els.comboPill.dataset.hot = state.combo >= 4 ? "true" : "false";
+    els.status.textContent = state.message;
+    els.start.textContent = state.mode === "playing" ? "Restart" : state.mode === "complete" ? "New Run" : "Start Run";
+    els.laneButtons.forEach((btn, lane) => { btn.dataset.active = state.time < state.laneFlashUntil[lane] ? "true" : "false"; });
+  }
+  function frame(ts){
+    if (!lastFrame) lastFrame = ts;
+    const dt = Math.min(0.033, Math.max(0, (ts - lastFrame) / 1000));
+    lastFrame = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  function showHelp(){
+    helpFocusReturn = document.activeElement;
+    els.helpOverlay.hidden = false;
+    els.helpOverlay.classList.add("show");
+    els.helpClose.focus();
+  }
+  function closeHelp(){
+    els.helpOverlay.classList.remove("show");
+    els.helpOverlay.hidden = true;
+    if (helpFocusReturn && typeof helpFocusReturn.focus === "function") helpFocusReturn.focus({ preventScroll: true });
+  }
+  function handleHelpTrap(event){
+    if (els.helpOverlay.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeHelp();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusables = Array.from(els.helpOverlay.querySelectorAll("button,[href],input,select,textarea,[tabindex]:not([tabindex='-1'])")).filter((el) => !el.disabled);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  els.start.addEventListener("click", startRun);
+  els.sound.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    saveSoundPref(soundEnabled);
+    updateSoundButton();
+    if (soundEnabled) playStart();
+  });
+  els.help.addEventListener("click", showHelp);
+  els.helpClose.addEventListener("click", closeHelp);
+  els.helpOverlay.addEventListener("click", (event) => { if (event.target === els.helpOverlay) closeHelp(); });
+  els.laneButtons.forEach((button, lane) => {
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      hitLane(lane);
+      canvas.focus({ preventScroll: true });
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    handleHelpTrap(event);
+    if (!els.helpOverlay.hidden) return;
+    const key = event.key.toLowerCase();
+    if (laneKeys.includes(key)) {
+      event.preventDefault();
+      hitLane(laneKeys.indexOf(key));
+      canvas.focus({ preventScroll: true });
+      return;
+    }
+    if (key === " " || key === "enter") {
+      event.preventDefault();
+      startRun();
+    }
+  });
+
+  window.render_game_to_text = function(){
+    const visible = visibleNotes().slice(0, 8).map((note) => ({
+      id: note.id,
+      lane: note.lane,
+      key: laneKeys[note.lane].toUpperCase(),
+      time: Math.round(note.time),
+      y: Math.round(noteY(note)),
+      deltaMs: Math.round(state.time - note.time),
+      status: note.status
+    }));
+    const next = nextPending();
+    return JSON.stringify({
+      coordinateSystem: "game units, origin top-left, x right, y down, width 880, height 550",
+      mode: state.mode,
+      time: Math.round(state.time),
+      score: state.score,
+      combo: state.combo,
+      maxCombo: state.maxCombo,
+      accuracy: state.accuracy,
+      bestScore: state.bestScore,
+      hits: state.hits,
+      misses: state.misses,
+      totalJudged: state.totalJudged,
+      nextNote: next ? { id: next.id, lane: next.lane, key: laneKeys[next.lane].toUpperCase(), time: next.time, dueInMs: Math.round(next.time - state.time) } : null,
+      visibleNotes: visible,
+      laneStates: state.laneFlashUntil.map((until, lane) => ({ lane, key: laneKeys[lane].toUpperCase(), active: state.time < until })),
+      judgement: state.time < state.judgementUntil ? state.judgement : "",
+      message: state.message,
+      soundEnabled,
+      feedback: {
+        hitActive: state.now - feedback.lastHitAt < 320,
+        missActive: state.now - feedback.lastMissAt < 420,
+        startActive: state.now - feedback.lastStartAt < 420,
+        completeActive: state.now - feedback.lastCompleteAt < 700,
+        hitCount: feedback.hitCount,
+        missCount: feedback.missCount,
+        startCount: feedback.startCount,
+        completeCount: feedback.completeCount
+      }
+    });
+  };
+  window.advanceTime = function(ms){
+    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < steps; i += 1) update(1 / 60);
+    render();
+  };
+
+  updateSoundButton();
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

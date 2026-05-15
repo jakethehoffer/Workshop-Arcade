@@ -599,6 +599,35 @@ function getInteractionRecipe(slug) {
         await settlePage(page, 120);
       },
     },
+    "rhythm-circuit": {
+      name: "hit first pulse note",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+        });
+        const next = await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function") return null;
+          const snap = JSON.parse(window.render_game_to_text());
+          return snap.nextNote || null;
+        });
+        if (next) {
+          await page.evaluate((amount) => {
+            if (typeof window.advanceTime === "function") {
+              window.advanceTime(Math.max(0, amount));
+            }
+          }, next.dueInMs);
+          await page.evaluate((key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+            if (typeof window.advanceTime === "function") {
+              window.advanceTime(16);
+            }
+          }, next.key.toLowerCase());
+        }
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
@@ -908,7 +937,41 @@ async function clickSelectorIfVisible(page, selector) {
   const locator = page.locator(selector).first();
   if ((await locator.count()) === 0) return false;
   if (!(await locator.isVisible().catch(() => false))) return false;
-  await locator.click({ timeout: 1200 });
+  const clicked = await locator.evaluate((element) => {
+    if (element.matches(":disabled") || element.getAttribute("aria-disabled") === "true") {
+      return false;
+    }
+    element.scrollIntoView({ block: "center", inline: "center" });
+    const rect = element.getBoundingClientRect();
+    const init = {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    };
+    const PointerCtor = window.PointerEvent;
+    if (PointerCtor) {
+      element.dispatchEvent(new PointerCtor("pointerdown", {
+        ...init,
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+      }));
+    }
+    element.dispatchEvent(new MouseEvent("mousedown", init));
+    if (PointerCtor) {
+      element.dispatchEvent(new PointerCtor("pointerup", {
+        ...init,
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+      }));
+    }
+    element.dispatchEvent(new MouseEvent("mouseup", init));
+    element.dispatchEvent(new MouseEvent("click", init));
+    return true;
+  });
+  if (!clicked) return false;
   await settlePage(page, 80);
   return true;
 }

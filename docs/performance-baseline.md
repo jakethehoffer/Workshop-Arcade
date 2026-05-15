@@ -19,6 +19,20 @@ CI budgets:
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
 
+## Rhythm Circuit audit (pass 65)
+
+Captured 2026-05-15 against `http://127.0.0.1:4188` (chromium @ 1280x800, network idle) after adding Rhythm Circuit. The strict audit covered the catalog plus 25 manifest games, 26 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 512 ms | 485 ms | 🟢 486 ms | 🟢 148.2 KB | 27 | 0 |
+| Paddle Pulse | 🟢 560 ms | 521 ms | 🟢 523 ms | 🟢 25.6 KB | 2 | 0 |
+| Rhythm Circuit | 🟢 444 ms | 338 ms | 🟢 339 ms | 🟢 26.2 KB | 2 | 0 |
+| Idle Tycoon | 🟢 1320 ms | 1116 ms | 🟢 1117 ms | 🟢 184.9 KB | 2 | 0 |
+| Lexica | 🟢 440 ms | 481 ms | 🟢 482 ms | 🟡 213.6 KB | 4 | 0 |
+
+Rhythm Circuit stays well under the default 150 KB / 8 request game budget. No console or page errors were reported across the audited URLs, and every page passed the strict meta/alt checks.
+
 ## Final cover SVG audit (pass 60)
 
 Captured 2026-05-14 against `http://127.0.0.1:4176` (chromium @ 1280x800, network idle) after replacing the last catalog PNG covers.
@@ -134,4 +148,4 @@ Audit a different deployment by overriding the URL:
 WORKSHOP_ARCADE_URL=https://example.com npm run audit:perf
 ```
 
-The audit takes ~30 seconds end-to-end (Playwright cold-starts chromium once and reuses it).
+The full-manifest audit usually takes about 1-2 minutes end-to-end (Playwright cold-starts chromium once and reuses it).
