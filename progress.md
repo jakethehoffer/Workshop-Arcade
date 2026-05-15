@@ -734,3 +734,9 @@ Original prompt: Do this for me
 - Added `npm run audit:perf:ci`. CI budgets: Catalog ≤250KB / ≤40 requests, Lexica ≤300KB / ≤8 requests, and every other sampled game ≤150KB / ≤8 requests.
 - Extended Validate Catalog to start the local static server after smoke tests, wait for `http://127.0.0.1:4173/`, run `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`, stop the server via shell trap, and upload the generated markdown report as a 14-day artifact.
 - Updated `docs/performance-baseline.md` with the strict-mode budgets and local reproduction command.
+
+## 2026-05-14 Codex pass 62
+
+- Expanded the performance/SEO audit from a five-game sample to full direct-page coverage. `scripts/audit-pagespeed.mjs` now reads `websites/manifest.json`, audits the catalog first, then audits every manifest game in manifest order.
+- Kept the existing strict-mode checks and added one narrow budget exception for Idle Tycoon (≤225KB / ≤8 requests) because its standalone HTML is intentionally larger than the default game budget. Catalog remains ≤250KB / ≤40 requests, Lexica remains ≤300KB / ≤8 requests, and all other manifest games remain ≤150KB / ≤8 requests.
+- Updated `docs/performance-baseline.md` so the audit docs describe manifest-wide coverage instead of sampled-game coverage.

@@ -6,7 +6,7 @@ This is a tracked set of performance and SEO audit snapshots for the live GitHub
 npm run audit:perf
 ```
 
-`audit:perf` is a local Playwright-based audit (see `scripts/audit-pagespeed.mjs`). It hits the live URL, walks a representative sample of pages, and measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console errors, meta-tag completeness, and the largest single resource per page. The raw per-run JSON is written under `test-results/lighthouse-baseline/<timestamp>/` (gitignored).
+`audit:perf` is a local Playwright-based audit (see `scripts/audit-pagespeed.mjs`). It hits the live URL, walks the catalog plus every game in `websites/manifest.json`, and measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console errors, meta-tag completeness, and the largest single resource per page. The raw per-run JSON is written under `test-results/lighthouse-baseline/<timestamp>/` (gitignored).
 
 CI runs `npm run audit:perf:ci` against a local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
 
@@ -16,7 +16,8 @@ CI budgets:
 |------------|----------|----------|
 | Catalog | 250 KB | 40 |
 | Lexica | 300 KB | 8 |
-| Other sampled games | 150 KB | 8 |
+| Idle Tycoon | 225 KB | 8 |
+| Other manifest games | 150 KB | 8 |
 
 ## Final cover SVG audit (pass 60)
 

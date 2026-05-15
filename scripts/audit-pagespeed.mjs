@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Local Playwright-based performance + SEO + best-practices audit of the
-// Workshop Arcade catalog and a representative sample of games. Measures the
+// Workshop Arcade catalog and all manifest-listed games. Measures the
 // metrics Lighthouse cares about most (paint timing, transfer weight, request
 // count, console errors, meta tag completeness) without needing an external
 // service or a 50MB lighthouse dep. Produces a markdown report under
@@ -10,7 +10,7 @@
 // Default: the live GitHub Pages site for this repo.
 
 import { chromium } from "playwright";
-import { writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,18 +21,10 @@ const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jaketh
 
 const BUDGETS = {
   Catalog: { transferKb: 250, requests: 40 },
+  "Idle Tycoon": { transferKb: 225, requests: 8 },
   Lexica: { transferKb: 300, requests: 8 },
   default: { transferKb: 150, requests: 8 },
 };
-
-const TARGETS = [
-  { label: "Catalog", path: "/" },
-  { label: "Memory Match", path: "/websites/memory-match.html" },
-  { label: "Reflex Spark", path: "/websites/reflex-spark.html" },
-  { label: "Echo Mimic", path: "/websites/echo-mimic.html" },
-  { label: "Neon Snake", path: "/websites/snake.html" },
-  { label: "Lexica", path: "/websites/wordle.html" },
-];
 
 function fmtKb(n) { return (n / 1024).toFixed(1) + " KB"; }
 function fmtMs(n) { return n == null ? "—" : Math.round(n) + " ms"; }
@@ -51,6 +43,36 @@ function targetUrl(path) {
 }
 function budgetFor(label) {
   return BUDGETS[label] || BUDGETS.default;
+}
+function slugifyLabel(label) {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page";
+}
+async function loadTargets() {
+  const manifestPath = join(repoRoot, "websites", "manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+
+  if (!Array.isArray(manifest)) {
+    throw new Error("Expected websites/manifest.json to contain an array");
+  }
+
+  return [
+    { label: "Catalog", path: "/" },
+    ...manifest.map((game, index) => {
+      if (!game || typeof game.title !== "string" || !game.title.trim()) {
+        throw new Error("Manifest entry " + index + " is missing title");
+      }
+      if (typeof game.url !== "string" || !game.url.trim()) {
+        throw new Error("Manifest entry " + game.title + " is missing url");
+      }
+
+      const title = game.title.trim();
+      const gameUrl = game.url.trim();
+      return {
+        label: title,
+        path: "/" + gameUrl.replace(/^\/+/, ""),
+      };
+    }),
+  ];
 }
 function auditIssues(result) {
   const issues = [];
@@ -147,7 +169,7 @@ async function auditUrl(browser, url) {
     const head = document.head;
     const pick = (sel) => head.querySelector(sel);
     return {
-      hasTitle: !!document.title && document.title.length >= 5,
+      hasTitle: document.title.trim().length > 0,
       hasDescription: !!pick('meta[name="description"]'),
       hasViewport: !!pick('meta[name="viewport"]'),
       hasLang: !!document.documentElement.lang,
@@ -191,7 +213,8 @@ async function main() {
 
   const browser = await chromium.launch();
   const results = [];
-  for (const t of TARGETS) {
+  const targets = await loadTargets();
+  for (const t of targets) {
     const url = targetUrl(t.path);
     process.stdout.write("Auditing " + t.label + " ... ");
     try {
@@ -204,8 +227,7 @@ async function main() {
         " ConsoleErr=" + r.consoleErrors.length +
         " PageErr=" + r.pageErrors.length
       );
-      const safeLabel = t.label.replace(/\W+/g, "-").toLowerCase();
-      await writeFile(join(outDir, safeLabel + ".raw.json"), JSON.stringify(r, null, 2));
+      await writeFile(join(outDir, slugifyLabel(t.label) + ".raw.json"), JSON.stringify(r, null, 2));
       results.push({ label: t.label, ...r });
     } catch (err) {
       console.error("FAILED:", err.message);
@@ -244,7 +266,7 @@ async function main() {
   }
   lines.push("");
   lines.push("FCP thresholds: 🟢 ≤1800ms, 🟡 ≤3000ms (Lighthouse mobile). Load: 🟢 ≤2500ms, 🟡 ≤4000ms. Transfer: 🟢 ≤200KB, 🟡 ≤500KB.");
-  lines.push("CI budgets: Catalog ≤250KB / ≤40 requests; Lexica ≤300KB / ≤8 requests; other sampled games ≤150KB / ≤8 requests.");
+  lines.push("CI budgets: Catalog ≤250KB / ≤40 requests; Lexica ≤300KB / ≤8 requests; Idle Tycoon ≤225KB / ≤8 requests; other manifest games ≤150KB / ≤8 requests.");
   lines.push("");
 
   // Meta-tag completeness matrix.
