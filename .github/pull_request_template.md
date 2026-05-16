@@ -6,7 +6,11 @@
 
 - [ ] `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix`
 - [ ] `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1`
+- [ ] `npm run test:docs`
+- [ ] `npm run test:a11y`
 - [ ] `npm run test:games`
+- [ ] `npm run capture:games:ci`
+- [ ] `npm run audit:perf:ci`
 - [ ] New or changed games have a `websites/*.html` file and a cover under `covers/`.
 - [ ] `websites/manifest.json` and the generated `FALLBACK_GAMES` list in `index.html` stay synchronized.
 - [ ] Game pages follow `docs/game-contract.md`.

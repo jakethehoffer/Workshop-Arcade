@@ -123,9 +123,11 @@ jobs:
                 '',
                 '### Validation suite (must all pass before flipping to ready)',
                 '- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-catalog.ps1`',
+                '- `npm run test:docs`',
                 '- `npm run test:a11y`',
                 '- `npm run test:games`',
-                '- `npm run capture:games` (every rendered surface must score 0)'
+                '- `npm run capture:games:ci` (every rendered surface must score 0)',
+                '- `npm run audit:perf:ci`'
               ].join('\n');
 
               const created = await github.rest.pulls.create({

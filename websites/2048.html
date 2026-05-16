@@ -74,8 +74,20 @@
 
     /* Canvas container keeps a square that scales responsively */
     .board{position:relative;margin-top:16px;aspect-ratio:1/1;width:min(100%,620px);justify-self:center;background:transparent;filter:drop-shadow(0 26px 42px rgba(0,0,0,.38))}
+    .board.invalid canvas{animation:invalidWobble .22s ease-out}
+    .board.major-merge canvas{animation:mergePulse .34s ease-out}
     .board:active canvas{box-shadow:0 0 0 2px rgba(88,226,206,.28),0 0 36px rgba(88,226,206,.12)}
     canvas{width:100%;height:100%;display:block;touch-action:none;border-radius:18px;box-shadow:0 0 0 1px rgba(88,226,206,.12);}
+    @keyframes invalidWobble{
+      0%,100%{transform:translateX(0)}
+      25%{transform:translateX(-4px)}
+      55%{transform:translateX(4px)}
+      80%{transform:translateX(-2px)}
+    }
+    @keyframes mergePulse{
+      0%,100%{transform:scale(1)}
+      45%{transform:scale(1.012)}
+    }
 
     /* Overlay messages (win / game over). Kept in layout but faded by opacity */
     .overlay{position:absolute;inset:0;display:grid;place-items:center;border-radius:18px;
@@ -128,6 +140,7 @@
     <div class="controls">
       <button type="button" id="newBtn" title="Start a new game (N)">New Game</button>
       <button type="button" id="undoBtn" title="Undo last move (Z)" disabled>Undo</button>
+      <button type="button" id="soundBtn" title="Toggle sound effects" aria-pressed="true">Sound On</button>
       <button type="button" id="helpBtn" title="Help (H)">❓ Help</button>
       <span class="controls-hint" aria-hidden="true">Use ← ↑ → ↓ or WASD (swipe if mobile)</span>
     </div>
@@ -223,6 +236,8 @@
   const restartBtn = document.getElementById('restartBtn');
   const newBtn = document.getElementById('newBtn');
   const undoBtn = document.getElementById('undoBtn');
+  const soundBtn = document.getElementById('soundBtn');
+  const boardEl = document.getElementById('board');
 
   // --- Game state ------------------------------------------------------------
   let tiles = [];          // {id,value,r,c,fromR,fromC,toR,toC,scale,popStart,removing,mergedInto}
@@ -237,6 +252,9 @@
   const feedback = {
     lastMoveDirection: null,
     lastEventAt: null,
+    lastInvalidDirection: null,
+    lastInvalidAt: null,
+    invalidMoveCount: 0,
     movedTileCount: 0,
     mergeCount: 0,
     scoreGained: 0,
@@ -247,6 +265,130 @@
     mergeMoveCount: 0,
     spawnCount: 0
   };
+
+  const SOUND_KEY = '2048:sound';
+  const soundState = {
+    enabled: readSoundPreference(),
+    context: null,
+    gestureSeen: false,
+    lastSound: null,
+    lastSoundAt: null,
+    playCount: 0
+  };
+
+  function readSoundPreference(){
+    try{
+      const stored = localStorage.getItem(SOUND_KEY);
+      return stored === null ? true : stored !== 'off';
+    }catch{
+      return true;
+    }
+  }
+
+  function writeSoundPreference(enabled){
+    try{ localStorage.setItem(SOUND_KEY, enabled ? 'on' : 'off'); }catch{}
+  }
+
+  function updateSoundButton(){
+    if(!soundBtn) return;
+    soundBtn.textContent = soundState.enabled ? 'Sound On' : 'Sound Off';
+    soundBtn.setAttribute('aria-pressed', String(soundState.enabled));
+    soundBtn.title = soundState.enabled ? 'Turn sound effects off' : 'Turn sound effects on';
+  }
+
+  function noteAudioGesture(){
+    soundState.gestureSeen = true;
+  }
+
+  function getAudioContext(){
+    if(!soundState.enabled || !soundState.gestureSeen) return null;
+    if(!soundState.context){
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtor) return null;
+      soundState.context = new AudioCtor();
+    }
+    if(soundState.context.state === 'suspended'){
+      soundState.context.resume().catch(()=>{});
+    }
+    return soundState.context;
+  }
+
+  function playSound(name){
+    soundState.lastSound = name;
+    soundState.lastSoundAt = performance.now();
+    if(!soundState.enabled) return;
+    const audio = getAudioContext();
+    if(!audio) return;
+    const now = audio.currentTime;
+    const master = audio.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(soundLevel(name), now + 0.012);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + soundDuration(name));
+    master.connect(audio.destination);
+    for(const tone of soundTones(name)){
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = tone.type || 'sine';
+      osc.frequency.setValueAtTime(tone.freq, now + (tone.delay || 0));
+      if(tone.to) osc.frequency.exponentialRampToValueAtTime(tone.to, now + (tone.delay || 0) + tone.duration);
+      gain.gain.setValueAtTime(tone.gain || 1, now + (tone.delay || 0));
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now + (tone.delay || 0));
+      osc.stop(now + (tone.delay || 0) + tone.duration);
+    }
+    soundState.playCount++;
+  }
+
+  function soundDuration(name){
+    return ({
+      move: 0.09,
+      merge: 0.16,
+      invalid: 0.12,
+      undo: 0.12,
+      newGame: 0.18,
+      win: 0.34,
+      gameOver: 0.3
+    })[name] || 0.12;
+  }
+
+  function soundLevel(name){
+    return ({
+      move: 0.045,
+      merge: 0.07,
+      invalid: 0.055,
+      undo: 0.05,
+      newGame: 0.055,
+      win: 0.075,
+      gameOver: 0.065
+    })[name] || 0.05;
+  }
+
+  function soundTones(name){
+    const tones = {
+      move: [{ freq: 260, to: 390, duration: 0.08, type: 'triangle' }],
+      merge: [
+        { freq: 330, to: 520, duration: 0.12, type: 'triangle' },
+        { freq: 660, duration: 0.09, delay: 0.04, gain: 0.55, type: 'sine' }
+      ],
+      invalid: [{ freq: 145, to: 96, duration: 0.11, type: 'sawtooth' }],
+      undo: [{ freq: 360, to: 210, duration: 0.11, type: 'triangle' }],
+      newGame: [
+        { freq: 240, to: 320, duration: 0.08, type: 'sine' },
+        { freq: 360, to: 520, duration: 0.11, delay: 0.06, type: 'triangle' }
+      ],
+      win: [
+        { freq: 392, duration: 0.1, type: 'triangle' },
+        { freq: 523, duration: 0.12, delay: 0.08, type: 'triangle' },
+        { freq: 784, duration: 0.16, delay: 0.18, type: 'sine' }
+      ],
+      gameOver: [
+        { freq: 220, to: 165, duration: 0.15, type: 'triangle' },
+        { freq: 146, to: 110, duration: 0.18, delay: 0.11, type: 'sine' }
+      ]
+    };
+    return tones[name] || tones.move;
+  }
 
   // --- Input queue so fast swipes/keys aren't dropped -------------------------
 const inputQ = [];
@@ -315,7 +457,7 @@ function clearQueue(){ inputQ.length = 0; }
   window.addEventListener('orientationchange', ()=>setTimeout(fitCanvasToCSSSize,200));
 
   // --- Game lifecycle --------------------------------------------------------
-  function newGame(){
+  function newGame(options = {}){
       clearQueue();                      // <-- added
     board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
     tiles = [];
@@ -325,6 +467,7 @@ function clearQueue(){ inputQ.length = 0; }
     updateHUD();
     hideOverlay();
     draw();
+    if(options.sound) playSound('newGame');
   }
 
   function snapshot(){
@@ -358,6 +501,7 @@ function clearQueue(){ inputQ.length = 0; }
     resetFeedback();
     updateHUD();
     draw();
+    playSound('undo');
   }
 
   function updateHUD(){
@@ -466,6 +610,7 @@ function move(dir){
 
   if(!moved){
     lastState = null; undoBtn.disabled = true;
+    recordInvalidFeedback(dir);
     if(!canAnyMove()){
       over = true; 
       undoBtn.disabled = true; // Disable undo when game over
@@ -520,6 +665,9 @@ if(!over) checkEndStates();
   function resetFeedback(){
     feedback.lastMoveDirection = null;
     feedback.lastEventAt = null;
+    feedback.lastInvalidDirection = null;
+    feedback.lastInvalidAt = null;
+    feedback.invalidMoveCount = 0;
     feedback.movedTileCount = 0;
     feedback.mergeCount = 0;
     feedback.scoreGained = 0;
@@ -543,17 +691,46 @@ if(!over) checkEndStates();
     feedback.moveCount++;
     if(feedback.mergeCount) feedback.mergeMoveCount++;
     if(feedback.spawnedTile) feedback.spawnCount++;
+    if(feedback.largestMergedTile >= 128) flashBoard('major-merge', 360);
+    if(!overlay.classList.contains('show')) playSound(feedback.mergeCount ? 'merge' : 'move');
+  }
+
+  function recordInvalidFeedback(direction){
+    feedback.lastInvalidDirection = direction;
+    feedback.lastInvalidAt = performance.now();
+    feedback.invalidMoveCount++;
+    flashBoard('invalid', 240);
+    playSound('invalid');
+    draw();
   }
 
   function feedbackAge(){
     return feedback.lastEventAt === null ? null : Math.max(0, (performance.now() - feedback.lastEventAt) / 1000);
   }
 
+  function invalidFeedbackAge(){
+    return feedback.lastInvalidAt === null ? null : Math.max(0, (performance.now() - feedback.lastInvalidAt) / 1000);
+  }
+
+  function soundFeedbackAge(){
+    return soundState.lastSoundAt === null ? null : Math.max(0, (performance.now() - soundState.lastSoundAt) / 1000);
+  }
+
+  function flashBoard(className, duration){
+    if(!boardEl) return;
+    boardEl.classList.remove(className);
+    void boardEl.offsetWidth;
+    boardEl.classList.add(className);
+    window.setTimeout(() => boardEl.classList.remove(className), duration);
+  }
+
   function activeFeedbackCount(){
     const age = feedbackAge();
+    const invalidAge = invalidFeedbackAge();
     const eventActive = age !== null && age < 1.25 ? 1 : 0;
+    const invalidActive = invalidAge !== null && invalidAge < 0.75 ? 1 : 0;
     const tilePops = tiles.filter(t => t.popStart != null).length;
-    return eventActive + tilePops;
+    return eventActive + invalidActive + tilePops;
   }
 
 
@@ -672,9 +849,11 @@ function checkWinOnly(){
 
   function drawFeedbackOverlay(metrics){
     const age = feedbackAge();
-    if(age === null || age > 1.2) return;
+    const invalidAge = invalidFeedbackAge();
+    if((age === null || age > 1.2) && (invalidAge === null || invalidAge > 0.75)) return;
     const { boardX, boardY, cellSize, gap, radius } = metrics;
-    const fade = Math.max(0, 1 - age / 1.2);
+    const fade = age === null ? 0 : Math.max(0, 1 - age / 1.2);
+    const invalidFade = invalidAge === null ? 0 : Math.max(0, 1 - invalidAge / 0.75);
     const cellCenter = (row, col) => ({
       x: boardX + col * (cellSize + gap) + cellSize / 2,
       y: boardY + row * (cellSize + gap) + cellSize / 2
@@ -706,11 +885,30 @@ function checkWinOnly(){
       roundRectStroke(ctx, x + 3, y + 3, cellSize - 6, cellSize - 6, radius, ctx.strokeStyle);
     }
 
-    const label = feedback.scoreGained > 0
+    if(invalidFade > 0){
+      const inset = Math.max(4, cellSize * 0.06);
+      ctx.globalAlpha = 0.68 * invalidFade;
+      ctx.strokeStyle = '#ff6b6b';
+      ctx.lineWidth = Math.max(3, cellSize * 0.045);
+      roundRectStroke(
+        ctx,
+        boardX - gap,
+        boardY - gap,
+        cellSize * SIZE + gap * (SIZE - 1) + gap * 2,
+        cellSize * SIZE + gap * (SIZE - 1) + gap * 2,
+        radius + inset,
+        ctx.strokeStyle
+      );
+    }
+
+    const label = invalidFade > 0
+      ? 'NO MOVE'
+      : feedback.scoreGained > 0
       ? `+${feedback.scoreGained}`
       : feedback.lastMoveDirection ? feedback.lastMoveDirection.toUpperCase() : '';
     if(label){
-      ctx.globalAlpha = 0.92 * fade;
+      const labelFade = invalidFade > 0 ? invalidFade : fade;
+      ctx.globalAlpha = 0.92 * labelFade;
       ctx.font = `800 ${Math.max(18, cellSize * 0.32)}px EmbeddedMontserrat, system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -718,7 +916,7 @@ function checkWinOnly(){
       const x = boardX + (cellSize * SIZE + gap * (SIZE - 1)) / 2;
       const y = boardY + Math.max(22, cellSize * 0.14) - age * cellSize * 0.03;
       ctx.strokeStyle = 'rgba(4,10,14,.72)';
-      ctx.fillStyle = feedback.scoreGained > 0 ? '#f6c453' : '#58e2ce';
+      ctx.fillStyle = invalidFade > 0 ? '#ff6b6b' : feedback.scoreGained > 0 ? '#f6c453' : '#58e2ce';
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
     }
@@ -813,6 +1011,8 @@ function checkWinOnly(){
     keepBtn.style.display = canKeep ? '' : 'none';
     overlay.setAttribute('aria-hidden','false');
     overlay.classList.add('show');
+    if(title.includes('Win')) playSound('win');
+    else if(title.includes('Game Over')) playSound('gameOver');
     // Focus the most relevant action
     requestAnimationFrame(()=> (canKeep ? keepBtn : restartBtn).focus());
   }
@@ -821,7 +1021,7 @@ function checkWinOnly(){
     overlay.setAttribute('aria-hidden','true');
   }
 
-  keepBtn.addEventListener('click',()=>{ keepPlaying = true; hideOverlay(); draw(); });
+  keepBtn.addEventListener('click',()=>{ noteAudioGesture(); keepPlaying = true; hideOverlay(); draw(); });
 
   // Help menu
   const helpBtn = document.getElementById('helpBtn');
@@ -843,8 +1043,8 @@ function checkWinOnly(){
     }
   }
 
-  if(helpBtn) helpBtn.addEventListener('click', (e) => { e.preventDefault(); openHelp(); });
-  if(helpClose) helpClose.addEventListener('click', (e) => { e.preventDefault(); closeHelp(); });
+  if(helpBtn) helpBtn.addEventListener('click', (e) => { noteAudioGesture(); e.preventDefault(); openHelp(); });
+  if(helpClose) helpClose.addEventListener('click', (e) => { noteAudioGesture(); e.preventDefault(); closeHelp(); });
   if(helpOverlay) {
     helpOverlay.addEventListener('click', (e) => {
       if(e.target === helpOverlay) closeHelp();
@@ -856,6 +1056,7 @@ function checkWinOnly(){
     });
   }
   window.addEventListener('keydown', (e) => {
+    noteAudioGesture();
     if(e.code === 'KeyH' && !e.repeat) {
       if(helpOverlay && helpOverlay.classList.contains('show')) closeHelp();
       else openHelp();
@@ -864,15 +1065,23 @@ function checkWinOnly(){
       closeHelp();
     }
   });
-  restartBtn.addEventListener('click',()=>{ newGame(); }); // in-page reset
-  newBtn.addEventListener('click',()=> newGame());
-  undoBtn.addEventListener('click',()=> undo());
+  restartBtn.addEventListener('click',()=>{ noteAudioGesture(); newGame({ sound: true }); }); // in-page reset
+  newBtn.addEventListener('click',()=>{ noteAudioGesture(); newGame({ sound: true }); });
+  undoBtn.addEventListener('click',()=>{ noteAudioGesture(); undo(); });
+  if(soundBtn) soundBtn.addEventListener('click',()=>{
+    noteAudioGesture();
+    soundState.enabled = !soundState.enabled;
+    writeSoundPreference(soundState.enabled);
+    updateSoundButton();
+    if(soundState.enabled) playSound('move');
+  });
 
   // --- Input: keyboard + touch ----------------------------------------------
   const DIR_KEYS = {ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down', a:'left', d:'right', w:'up', s:'down'};
   window.addEventListener('keydown', e=>{
+    noteAudioGesture();
     const k = e.key;
-    if((k==='n'||k==='N') && !helpOpen){ newGame(); return; }
+    if((k==='n'||k==='N') && !helpOpen){ newGame({ sound: true }); return; }
     if(k==='z' || k==='Z') { if(!over) undo(); return; } // Prevent undo when game over
     if(overlay.classList.contains('show') || helpOpen){
       // Block moves while overlay is up; let the focused button handle keys.
@@ -886,6 +1095,7 @@ function checkWinOnly(){
   // Touch swipe handling (simple threshold)
   let touchStart = null;
   canvas.addEventListener('touchstart', e=>{
+    noteAudioGesture();
     if(e.touches.length!==1) return;
     const t = e.touches[0]; touchStart = {x:t.clientX, y:t.clientY};
   }, {passive:true});
@@ -920,6 +1130,8 @@ function checkWinOnly(){
     const flat = matrix.flat();
     const largestTile = flat.reduce((max, value) => Math.max(max, value), 0);
     const eventAge = feedbackAge();
+    const invalidAge = invalidFeedbackAge();
+    const lastSoundAge = soundFeedbackAge();
     const boardEl = document.getElementById('board');
     const boardRect = boardEl?.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
@@ -941,6 +1153,16 @@ function checkWinOnly(){
       grid: matrix,
       overlay: overlay.classList.contains('show') ? overlayTitle.textContent : null,
       helpOpen,
+      sound: {
+        enabled: soundState.enabled,
+        persistedKey: SOUND_KEY,
+        gestureSeen: soundState.gestureSeen,
+        audioReady: !!soundState.context,
+        audioState: soundState.context ? soundState.context.state : null,
+        lastSound: soundState.lastSound,
+        lastSoundAge: lastSoundAge === null ? null : Number(lastSoundAge.toFixed(2)),
+        playCount: soundState.playCount
+      },
       layout: {
         viewport: { width: window.innerWidth, height: window.innerHeight },
         mobile: window.matchMedia('(max-width: 520px)').matches,
@@ -955,6 +1177,11 @@ function checkWinOnly(){
       feedback: {
         lastMoveDirection: feedback.lastMoveDirection,
         eventAge: eventAge === null ? null : Number(eventAge.toFixed(2)),
+        lastInvalidDirection: feedback.lastInvalidDirection,
+        invalidAge: invalidAge === null ? null : Number(invalidAge.toFixed(2)),
+        invalidMoveCount: feedback.invalidMoveCount,
+        lastSound: soundState.lastSound,
+        lastSoundAge: lastSoundAge === null ? null : Number(lastSoundAge.toFixed(2)),
         movedTileCount: feedback.movedTileCount,
         mergeCount: feedback.mergeCount,
         scoreGained: feedback.scoreGained,
@@ -1086,6 +1313,7 @@ function checkWinOnly(){
   }
 
   // --- Kick off --------------------------------------------------------------
+  updateSoundButton();
   fitCanvasToCSSSize();
   newGame();              // start immediately with two tiles
   runSelfTests();         // run tests AFTER initialization so snapshot() is safe

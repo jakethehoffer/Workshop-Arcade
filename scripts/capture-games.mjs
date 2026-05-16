@@ -720,6 +720,38 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "signal-siege": {
+      name: "build tower and start wave",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          const canvas = document.querySelector("#game");
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const point = {
+            x: rect.left + (250 / 900) * rect.width,
+            y: rect.top + (170 / 560) * rect.height
+          };
+          canvas.dispatchEvent(new PointerEvent("pointerdown", {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 9,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: 1,
+            clientX: point.x,
+            clientY: point.y
+          }));
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "s", code: "KeyS", bubbles: true }));
+          document.dispatchEvent(new KeyboardEvent("keyup", { key: "s", code: "KeyS", bubbles: true }));
+          if (typeof window.advanceTime === "function") {
+            window.advanceTime(3600);
+          }
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
