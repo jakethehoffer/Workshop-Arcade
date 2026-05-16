@@ -674,6 +674,52 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "neon-drift": {
+      name: "start and boost",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+        });
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const held = new Set();
+          const normalize = (angle) => {
+            while (angle > Math.PI) angle -= Math.PI * 2;
+            while (angle < -Math.PI) angle += Math.PI * 2;
+            return angle;
+          };
+          const setKey = (key, on) => {
+            if (held.has(key) === on) return;
+            held[on ? "add" : "delete"](key);
+            document.dispatchEvent(new KeyboardEvent(on ? "keydown" : "keyup", {
+              key,
+              code: key === " " ? "Space" : key,
+              bubbles: true
+            }));
+          };
+          for (let i = 0; i < 115; i += 1) {
+            const snap = JSON.parse(window.render_game_to_text());
+            const target = snap.checkpoint;
+            const desired = Math.atan2(target.y - snap.car.y, target.x - snap.car.x);
+            const delta = normalize(desired - snap.car.angle);
+            setKey("ArrowUp", true);
+            setKey("ArrowLeft", delta < -0.12);
+            setKey("ArrowRight", delta > 0.12);
+            setKey(" ", Math.abs(delta) < 0.25 && snap.boost.amount > 0.08);
+            window.advanceTime(1000 / 60);
+          }
+          for (const key of held) {
+            document.dispatchEvent(new KeyboardEvent("keyup", {
+              key,
+              code: key === " " ? "Space" : key,
+              bubbles: true
+            }));
+          }
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
