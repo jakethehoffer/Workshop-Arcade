@@ -14,12 +14,14 @@ Workshop Arcade is intentionally static: games are single HTML files in `website
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
+npm run test:docs
 npm run test:a11y
 npm run test:games
-npm run capture:games
+npm run capture:games:ci
+npm run audit:perf:ci
 ```
 
-`npm run test:a11y` and `npm run capture:games` must both pass cleanly — every rendered surface scores 0 in the capture harness.
+These are the publish-ready gates mirrored by CI: docs drift, accessibility, game smoke coverage, strict render capture, and strict performance audit. `npm run capture:games` is useful for optional local contact-sheet review, but `npm run capture:games:ci` is the enforced publish gate and every rendered surface must score 0.
 
 ## Remove a Game
 
@@ -37,4 +39,4 @@ Use the catalog's `Improve` button to generate an AI-ready brief. Submitting it 
 
 The `Workshop Request Triage` workflow adds implementation labels and a checklist comment with deep links to the affected game file. It does not run AI code generation or require API keys.
 
-When you're ready to start work, run the `Workshop Draft PR` workflow manually (`Actions → Workshop Draft PR → Run workflow`) with the issue number. It scaffolds a `codex/workshop-<N>` branch from main, opens a draft PR titled `[Workshop #N] <title>` that closes the issue, and comments the PR link back on the issue. The PR body references the triage checklist and the validation suite the implementer must run before flipping to ready-for-review. Re-running the workflow against the same issue is a no-op once the branch and PR exist.
+When you're ready to start work, run the `Workshop Draft PR` workflow manually (`Actions -> Workshop Draft PR -> Run workflow`) with the issue number. It scaffolds a `codex/workshop-<N>` branch from main, opens a draft PR titled `[Workshop #N] <title>` that closes the issue, and comments the PR link back on the issue. The PR body references the triage checklist and the validation suite the implementer must run before flipping to ready-for-review. Re-running the workflow against the same issue is a no-op once the branch and PR exist.

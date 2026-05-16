@@ -752,6 +752,43 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "pinball-foundry": {
+      name: "launch, flip, and chase a target hit",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const key = (type, value, code = value) => {
+            document.dispatchEvent(new KeyboardEvent(type, { key: value, code, bubbles: true }));
+          };
+          key("keydown", " ", "Space");
+          window.advanceTime(900);
+          key("keyup", " ", "Space");
+          let flipped = false;
+          for (let i = 0; i < 220; i += 1) {
+            const snap = JSON.parse(window.render_game_to_text());
+            if (!flipped && snap.ball.y > 690 && snap.ball.y < 885 && Math.abs(snap.ball.vy) > 120) {
+              const left = snap.ball.x < 360;
+              key("keydown", left ? "ArrowLeft" : "ArrowRight", left ? "ArrowLeft" : "ArrowRight");
+              window.advanceTime(120);
+              key("keyup", left ? "ArrowLeft" : "ArrowRight", left ? "ArrowLeft" : "ArrowRight");
+              flipped = true;
+            }
+            if (
+              snap.mode === "playing" &&
+              (snap.score > 0 || snap.bumperHits > 0 || snap.litLanes.side.length > 0 || snap.litLanes.rollovers.some(Boolean) || i > 150)
+            ) break;
+            window.advanceTime(1000 / 60);
+          }
+          if (!flipped) {
+            key("keydown", "ArrowLeft", "ArrowLeft");
+            window.advanceTime(120);
+            key("keyup", "ArrowLeft", "ArrowLeft");
+          }
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {

@@ -197,6 +197,10 @@ canvas{
   button:hover { background: linear-gradient(180deg, #243049, #182233); border-color: rgba(92,230,153,0.32); }
   button:active { transform: translateY(1px); }
   button[disabled] { opacity: .55; cursor: not-allowed; }
+  button.toggle[aria-pressed="true"] {
+    border-color: rgba(92,230,153,0.5);
+    background: linear-gradient(180deg, rgba(92,230,153,0.24), rgba(20,28,42,0.95));
+  }
   ol.moves {
     margin: 0;
     padding-left: 18px;
@@ -335,6 +339,7 @@ canvas{
       <div class="controls">
         <button type="button" id="undo">Undo</button>
         <button type="button" id="new">Restart Game</button>
+        <button type="button" id="sound" class="toggle" aria-pressed="true" title="Toggle sound">Sound On</button>
         <button type="button" id="helpBtn">❓ Help</button>
         <button type="button" id="flip">Flip Board</button>
       </div>
@@ -403,6 +408,7 @@ const movesEl = document.getElementById('moves');
 const newBtn = document.getElementById('new');
 const undoBtn = document.getElementById('undo');
 const flipBtn = document.getElementById('flip');
+const soundBtn = document.getElementById('sound');
 const coordsEl = document.getElementById('coords');
 const vsComputerEl = document.getElementById('vsComputer');
 const autoFlipEl = document.getElementById('autoFlip');
@@ -413,12 +419,97 @@ const goEl     = document.getElementById('gameOver');
 const goTitle  = document.getElementById('goTitle');
 const goRematch= document.getElementById('goRematch');
 const goReview = document.getElementById('goReview');
+const SOUND_KEY = 'chess.sound.v1';
+const audioState = {
+  enabled: readSoundPreference(),
+  context: null,
+  lastSound: null,
+  oscillatorCount: 0,
+};
 
 function showOverlay(title){
   goTitle.textContent = title;
   goEl.classList.add('show');
+  playSound('game-over');
 }
 function hideOverlay(){ goEl.classList.remove('show'); }
+
+function readSoundPreference() {
+  try {
+    return window.localStorage?.getItem(SOUND_KEY) !== 'off';
+  } catch (err) {
+    return true;
+  }
+}
+
+function writeSoundPreference(enabled) {
+  try {
+    window.localStorage?.setItem(SOUND_KEY, enabled ? 'on' : 'off');
+  } catch (err) {
+    // Storage can be unavailable in embedded/private contexts.
+  }
+}
+
+function updateSoundButton() {
+  if (!soundBtn) return;
+  soundBtn.textContent = audioState.enabled ? 'Sound On' : 'Sound Off';
+  soundBtn.setAttribute('aria-pressed', audioState.enabled ? 'true' : 'false');
+  soundBtn.title = audioState.enabled ? 'Sound on' : 'Sound muted';
+}
+
+function getAudioContext() {
+  if (!audioState.enabled) return null;
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return null;
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  if (!audioState.context) audioState.context = new AudioCtor();
+  return audioState.context;
+}
+
+function soundPattern(kind) {
+  const patterns = {
+    move: [[420, 0.035, 0.025], [560, 0.045, 0.022]],
+    capture: [[180, 0.04, 0.04], [120, 0.065, 0.035]],
+    check: [[720, 0.04, 0.026], [940, 0.055, 0.026], [720, 0.07, 0.02]],
+    castle: [[330, 0.04, 0.025], [470, 0.055, 0.025], [620, 0.07, 0.022]],
+    promotion: [[560, 0.035, 0.025], [760, 0.05, 0.026], [1040, 0.07, 0.026]],
+    undo: [[300, 0.035, 0.022], [210, 0.055, 0.02]],
+    restart: [[240, 0.035, 0.02], [360, 0.05, 0.022]],
+    'game-over': [[150, 0.045, 0.03], [110, 0.075, 0.026], [90, 0.105, 0.022]],
+    rematch: [[300, 0.035, 0.022], [460, 0.05, 0.024], [680, 0.065, 0.022]],
+  };
+  return patterns[kind] || patterns.move;
+}
+
+function playSound(kind) {
+  if (!audioState.enabled) return;
+  const audio = getAudioContext();
+  if (!audio) return;
+  const now = audio.currentTime;
+  soundPattern(kind).forEach(([freq, offset, gainValue]) => {
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = kind === 'capture' || kind === 'game-over' ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(freq, now + offset);
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(gainValue, now + offset + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.105);
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.12);
+    audioState.oscillatorCount++;
+  });
+  audioState.lastSound = kind;
+}
+
+function soundForMove(captured, givesCheck, isCastle, promoted) {
+  if (promoted) return 'promotion';
+  if (isCastle) return 'castle';
+  if (givesCheck) return 'check';
+  if (captured) return 'capture';
+  return 'move';
+}
 
 function buildSAN(){
   let out = '';
@@ -432,8 +523,17 @@ function buildSAN(){
 }
 
 // Buttons
-goRematch.addEventListener('click', ()=>{ hideOverlay(); newGame(); draw(); });
+goRematch.addEventListener('click', ()=>{ hideOverlay(); newGame(); playSound('rematch'); draw(); });
 goReview .addEventListener('click', ()=>{ hideOverlay(); /* leave final board for study */ });
+if (soundBtn) {
+  updateSoundButton();
+  soundBtn.addEventListener('click', () => {
+    audioState.enabled = !audioState.enabled;
+    writeSoundPreference(audioState.enabled);
+    updateSoundButton();
+    if (audioState.enabled) playSound('move');
+  });
+}
 
 // Help menu
 const helpBtn = document.getElementById('helpBtn');
@@ -835,6 +935,7 @@ function recordMoveFeedback(mv, movedPiece, capturedPiece, captureSquare, givesC
     castle: mv.castle || null,
     promotion: promotedTo,
   };
+  playSound(soundForMove(captured, givesCheck, isCastle, promoted));
   scheduleFeedbackDraw();
 }
 
@@ -989,7 +1090,13 @@ function onClick(evt) {
   }
 }
 
-newBtn.addEventListener('click', () => { if (!currentAnimation && !aiThinking) newGame(); hideOverlay();});
+newBtn.addEventListener('click', () => {
+  if (!currentAnimation && !aiThinking) {
+    newGame();
+    playSound('restart');
+  }
+  hideOverlay();
+});
 
 undoBtn.addEventListener('click', () => {
   hideOverlay();
@@ -1037,6 +1144,7 @@ undoBtn.addEventListener('click', () => {
 
   // Refresh move list & board
   renderMoveList();
+  playSound('undo');
   draw();
 });
 
@@ -1724,6 +1832,9 @@ function renderGameToText(){
     result: state.result,
     moveCount: moveHistory.length,
     lastMove: moveHistory.length ? moveHistory[moveHistory.length - 1] : null,
+    soundEnabled: !!audioState.enabled,
+    lastSound: audioState.lastSound,
+    audioOscillatorCount: audioState.oscillatorCount,
     flipped: !!flipped,
     aiMode: {
       enabled: !!vsComputer,

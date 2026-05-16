@@ -6,6 +6,7 @@ const root = process.cwd();
 
 const requiredCommands = [
   'validate-catalog.ps1',
+  'npm run test:docs',
   'npm run test:a11y',
   'npm run test:games',
   'npm run capture:games:ci',
@@ -13,6 +14,9 @@ const requiredCommands = [
 ];
 
 const validationSurfaces = [
+  'README.md',
+  'CONTRIBUTING.md',
+  'docs/game-contract.md',
   '.github/pull_request_template.md',
   '.github/ISSUE_TEMPLATE/workshop-request.md',
   '.github/workflows/workshop-request.yml',
