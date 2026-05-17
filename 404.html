@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Not Found — Workshop Arcade</title>
+  <meta name="description" content="That page doesn't exist in Workshop Arcade. Search the catalog or head back to the home page." />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2300e5c8'/%3E%3Cpath d='M35 40h10v20H35zm20 0h10v20H55z' fill='%230b0f14'/%3E%3C/svg%3E" />
+  <link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/404.html" />
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#0b0f14;
+      --panel:#0f1522;
+      --ink:#e6edf3;
+      --muted:#9fb0c8;
+      --accent:#5eead4;
+      --ring:#7c9eff;
+      --stroke:#16243a;
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    body{
+      background:
+        radial-gradient(900px 600px at 8% -6%, rgba(94,234,212,0.13), transparent 60%),
+        radial-gradient(700px 500px at 94% 8%, rgba(124,158,255,0.10), transparent 60%),
+        linear-gradient(180deg, #0b0f14, #070b12 80%);
+      background-attachment: fixed;
+      display:grid;
+      place-items:center;
+      padding:24px;
+    }
+    main{
+      max-width:560px;
+      width:100%;
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:32px 28px;
+      text-align:center;
+    }
+    .code{
+      font-size:64px;
+      font-weight:800;
+      letter-spacing:0.1em;
+      background:linear-gradient(120deg,#2cf8e2,#7c9eff);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      margin:0 0 8px;
+    }
+    h1{font-size:22px;margin:0 0 12px;letter-spacing:0.02em}
+    p{color:var(--muted);margin:0 0 20px;line-height:1.5}
+    form{display:flex;gap:8px;margin:0 0 16px}
+    input[type=search]{
+      flex:1;min-width:0;
+      background:#0c121e;
+      color:var(--ink);
+      border:1px solid var(--stroke);
+      border-radius:10px;
+      padding:10px 12px;
+      font-size:14px;
+      font-family:inherit;
+    }
+    input[type=search]:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+    button{
+      background:var(--accent);
+      color:#0b0f14;
+      border:0;
+      border-radius:10px;
+      padding:10px 16px;
+      font-weight:700;
+      font-size:14px;
+      cursor:pointer;
+      font-family:inherit;
+    }
+    button:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+    .suggestions{list-style:none;padding:0;margin:0 0 18px;text-align:left;display:none}
+    .suggestions.show{display:block}
+    .suggestions li{margin:0}
+    .suggestions a{
+      display:block;
+      padding:10px 12px;
+      border:1px solid var(--stroke);
+      border-radius:10px;
+      margin-bottom:6px;
+      color:var(--ink);
+      text-decoration:none;
+    }
+    .suggestions a:hover, .suggestions a:focus-visible{
+      border-color:var(--accent);
+      outline:none;
+    }
+    .suggestions .subtitle{color:var(--muted);font-size:12px;margin-top:2px}
+    .home{
+      display:inline-block;
+      margin-top:8px;
+      color:var(--accent);
+      font-weight:600;
+      text-decoration:none;
+      border-bottom:1px dashed rgba(94,234,212,0.4);
+    }
+    .home:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+  </style>
+</head>
+<body>
+<main>
+  <p class="code" aria-label="HTTP 404">404</p>
+  <h1>That page isn't in the arcade.</h1>
+  <p>The URL you opened doesn't match any game in our catalog. Try a search, or head back to the home page.</p>
+  <form id="searchForm" role="search" aria-label="Search catalog">
+    <label for="q" class="sr-only" style="position:absolute;left:-9999px">Search games</label>
+    <input id="q" type="search" placeholder="Search games (e.g. snake)" autocomplete="off" inputmode="search" />
+    <button type="submit">Search</button>
+  </form>
+  <ul id="suggestions" class="suggestions" aria-live="polite"></ul>
+  <a class="home" href="./">← Back to the catalog</a>
+</main>
+<script>
+(async function () {
+  const params = new URLSearchParams(window.location.search);
+  const initialQuery = (params.get('q') || guessFromPath()).toLowerCase();
+  const searchForm = document.getElementById('searchForm');
+  const queryInput = document.getElementById('q');
+  const suggestionsList = document.getElementById('suggestions');
+
+  if (initialQuery) {
+    queryInput.value = initialQuery;
+  }
+
+  function guessFromPath() {
+    const path = window.location.pathname || '';
+    // /Workshop-Arcade/websites/something.html -> "something"
+    const m = path.match(/\/websites\/([^/?#]+?)(?:\.html?)?$/i);
+    if (m) return m[1].replace(/[-_]+/g, ' ');
+    return '';
+  }
+
+  let manifest = null;
+  async function loadManifest() {
+    if (manifest) return manifest;
+    try {
+      const r = await fetch('./websites/manifest.json', { cache: 'no-cache' });
+      if (!r.ok) throw new Error('manifest fetch failed');
+      manifest = await r.json();
+    } catch {
+      manifest = [];
+    }
+    return manifest;
+  }
+
+  function score(game, query) {
+    if (!query) return 0;
+    const hay = [game.title, game.subtitle, game.slug, game.id]
+      .filter(Boolean).map((value) => String(value).toLowerCase());
+    let best = 0;
+    for (const value of hay) {
+      if (value.includes(query)) best = Math.max(best, value === query ? 3 : 2);
+      else if (query.length > 2 && value.includes(query.slice(0, Math.max(3, Math.floor(query.length * 0.6))))) {
+        best = Math.max(best, 1);
+      }
+    }
+    return best;
+  }
+
+  async function suggest(query) {
+    suggestionsList.classList.remove('show');
+    suggestionsList.innerHTML = '';
+    if (!query) return;
+    const games = await loadManifest();
+    const ranked = games
+      .map((game) => ({ game, score: score(game, query) }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+    if (!ranked.length) return;
+    for (const { game } of ranked) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = './' + game.url.replace(/^\/+/, '');
+      a.innerHTML = '<strong>' + escapeHtml(game.title) + '</strong>' +
+        '<div class="subtitle">' + escapeHtml(game.subtitle || '') + '</div>';
+      li.appendChild(a);
+      suggestionsList.appendChild(li);
+    }
+    suggestionsList.classList.add('show');
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[ch]);
+  }
+
+  searchForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    suggest(queryInput.value.trim().toLowerCase());
+  });
+  queryInput.addEventListener('input', () => {
+    suggest(queryInput.value.trim().toLowerCase());
+  });
+
+  if (initialQuery) {
+    suggest(initialQuery);
+  }
+})();
+</script>
+</body>
+</html>

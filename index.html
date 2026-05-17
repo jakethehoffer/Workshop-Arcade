@@ -8,6 +8,11 @@
   <meta name="theme-color" content="#0b0f14" />
   <meta name="author" content="Workshop Arcade" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2300e5c8'/%3E%3Cpath d='M35 40h10v20H35zm20 0h10v20H55z' fill='%230b0f14'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="covers/app-icon.svg" />
+  <link rel="manifest" href="app.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Arcade" />
   <link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/" />
   <link rel="alternate" type="application/atom+xml" title="Workshop Arcade — recent commits" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main.atom" />
   <!-- Open Graph -->
@@ -1344,6 +1349,18 @@ document.addEventListener('keydown', e => {
   if(trapModalFocus(e)) return;
 });
 renderDrafts();
+
+// Register the offline-capable shell worker after first paint so it never
+// blocks the catalog load. Failures are non-fatal: the site keeps working
+// without offline support.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      // Registration failures (file:// protocol, private mode, etc.) are expected
+      // off the live site and intentionally swallowed to keep the console clean.
+    });
+  });
+}
 </script>
 </body>
 </html>

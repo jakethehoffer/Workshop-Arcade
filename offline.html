@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Offline — Workshop Arcade</title>
+  <meta name="description" content="You're offline. Workshop Arcade can show any games you've already opened on this device while the network is down." />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2300e5c8'/%3E%3Cpath d='M35 40h10v20H35zm20 0h10v20H55z' fill='%230b0f14'/%3E%3C/svg%3E" />
+  <link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/offline.html" />
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#0b0f14;
+      --panel:#0f1522;
+      --ink:#e6edf3;
+      --muted:#9fb0c8;
+      --accent:#5eead4;
+      --ring:#7c9eff;
+      --stroke:#16243a;
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    body{
+      background:
+        radial-gradient(900px 600px at 8% -6%, rgba(94,234,212,0.13), transparent 60%),
+        radial-gradient(700px 500px at 94% 8%, rgba(124,158,255,0.10), transparent 60%),
+        linear-gradient(180deg, #0b0f14, #070b12 80%);
+      background-attachment: fixed;
+      display:grid;
+      place-items:center;
+      padding:24px;
+    }
+    main{
+      max-width:520px;
+      width:100%;
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:32px 28px;
+      text-align:center;
+    }
+    .icon{
+      width:72px;height:72px;border-radius:50%;
+      background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2);
+      box-shadow:0 0 24px rgba(94,234,212,0.35);
+      margin:0 auto 18px;
+      position:relative;
+    }
+    .icon::after{
+      content:'';
+      position:absolute;inset:14px;
+      border-radius:50%;
+      background:var(--panel);
+      box-shadow:inset 0 0 0 1px var(--stroke);
+    }
+    h1{font-size:22px;margin:0 0 12px;letter-spacing:0.02em}
+    p{color:var(--muted);margin:0 0 18px;line-height:1.5}
+    .status{
+      display:inline-block;
+      font-size:12px;font-weight:700;
+      letter-spacing:0.1em;text-transform:uppercase;
+      padding:4px 10px;border-radius:999px;
+      background:rgba(251,113,133,0.12);
+      color:#fb7185;
+      border:1px solid rgba(251,113,133,0.35);
+    }
+    .status.online{background:rgba(52,211,153,0.12);color:#34d399;border-color:rgba(52,211,153,0.35)}
+    .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+    .btn{
+      background:var(--accent);
+      color:#0b0f14;
+      border:0;
+      border-radius:10px;
+      padding:10px 16px;
+      font-weight:700;
+      font-size:14px;
+      cursor:pointer;
+      text-decoration:none;
+      font-family:inherit;
+    }
+    .btn.secondary{
+      background:transparent;
+      color:var(--ink);
+      border:1px solid var(--stroke);
+    }
+    .btn:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+  </style>
+</head>
+<body>
+<main>
+  <div class="icon" aria-hidden="true"></div>
+  <p><span id="status" class="status">Offline</span></p>
+  <h1>You're offline.</h1>
+  <p>The network can't be reached right now. Any games you've already opened on this device should still load from the cache — just head back to the catalog and try one.</p>
+  <div class="row">
+    <a class="btn" href="./">Back to catalog</a>
+    <button class="btn secondary" type="button" id="retry">Retry connection</button>
+  </div>
+</main>
+<script>
+(function () {
+  const statusEl = document.getElementById('status');
+  const retryBtn = document.getElementById('retry');
+
+  function paintStatus() {
+    const online = navigator.onLine;
+    statusEl.textContent = online ? 'Online' : 'Offline';
+    statusEl.classList.toggle('online', online);
+  }
+
+  window.addEventListener('online', paintStatus);
+  window.addEventListener('offline', paintStatus);
+  retryBtn.addEventListener('click', () => {
+    // Force a network attempt: navigate back to the catalog rather than
+    // reloading this page (which the SW would also serve from cache).
+    window.location.href = './';
+  });
+
+  paintStatus();
+})();
+</script>
+</body>
+</html>
