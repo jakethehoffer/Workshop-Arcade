@@ -5,10 +5,15 @@
 // cached after the player navigates to them at least once, so the install
 // step stays small and predictable.
 //
+// Navigations that fail (no network, cache miss for the requested URL,
+// catalog shell missing) fall through to the dedicated `offline.html`
+// page so visitors always land somewhere branded with a "Back to catalog"
+// link. `404.html` is pre-cached opportunistically for the same reason.
+//
 // Cache key includes a version stamp so a deploy that ships a changed
 // shell file invalidates the old cache via `activate` cleanup.
 
-const VERSION = 'wa-v1-2026-05-17';
+const VERSION = 'wa-v2-2026-05-17';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -16,11 +21,15 @@ const RUNTIME_CACHE = `${VERSION}-runtime`;
 // (GitHub Pages serves this site under /Workshop-Arcade/).
 const scopeUrl = new URL(self.registration.scope);
 const scopePath = scopeUrl.pathname.endsWith('/') ? scopeUrl.pathname : `${scopeUrl.pathname}/`;
+const OFFLINE_URL = new URL('offline.html', scopeUrl).toString();
+const NOT_FOUND_URL = new URL('404.html', scopeUrl).toString();
 const shellAssets = [
   '',
   'websites/manifest.json',
   'covers/app-icon.svg',
   'app.webmanifest',
+  'offline.html',
+  '404.html',
 ].map((relative) => new URL(relative, scopeUrl).toString());
 
 self.addEventListener('install', (event) => {
@@ -62,7 +71,10 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== scopeUrl.origin) return;
   if (!url.pathname.startsWith(scopePath)) return;
 
-  // Navigations: serve the catalog shell when offline.
+  // Navigations: prefer the network so the user gets the freshest catalog
+  // (or game page) when online. Offline, fall back to the cached copy of
+  // the requested URL, then to the catalog shell, then to a branded
+  // offline.html page rather than a raw 503.
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       try {
@@ -75,7 +87,9 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         const shellMatch = await caches.match(new URL('', scopeUrl).toString());
         if (shellMatch) return shellMatch;
-        return new Response('Offline', { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain' } });
+        const offlineMatch = await caches.match(OFFLINE_URL);
+        if (offlineMatch) return offlineMatch;
+        return new Response('Offline', { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
       }
     })());
     return;
@@ -94,7 +108,7 @@ self.addEventListener('fetch', (event) => {
     if (cached) return cached;
     const network = await fetchPromise;
     if (network) return network;
-    return new Response('Offline', { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain' } });
+    return new Response('Offline', { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   })());
 });
 
@@ -103,3 +117,7 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// Keep the constants reachable from check-pwa.mjs's static contract check.
+// They are documented references for tooling, not runtime exports.
+self.WORKSHOP_ARCADE_SW_FALLBACKS = { OFFLINE_URL, NOT_FOUND_URL };

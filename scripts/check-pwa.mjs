@@ -118,6 +118,20 @@ async function checkServiceWorker() {
   if (!/caches\.keys\(\)/.test(src) || !/caches\.delete\(/.test(src)) {
     fail(`${swPath}: must clean up old caches on activate (caches.keys() + caches.delete)`);
   }
+
+  // Wiring contract for the offline fallback page. The SW must (1) pre-cache
+  // offline.html as part of its install-time shell list, and (2) reference
+  // OFFLINE_URL inside the navigation fetch handler so a failed navigation
+  // lands on the branded offline page rather than a raw 503.
+  if (!/['"`]offline\.html['"`]/.test(src)) {
+    fail(`${swPath}: must reference 'offline.html' so it is pre-cached and available offline`);
+  }
+  if (!/OFFLINE_URL\s*=\s*new URL\(['"`]offline\.html['"`]/.test(src)) {
+    fail(`${swPath}: missing OFFLINE_URL constant resolved from 'offline.html'`);
+  }
+  if (!/caches\.match\(OFFLINE_URL\)/.test(src)) {
+    fail(`${swPath}: navigation handler must fall back to caches.match(OFFLINE_URL) when network and other caches miss`);
+  }
 }
 
 async function checkIndexWiring() {
