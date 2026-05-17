@@ -510,7 +510,7 @@
     <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
     <template id="cardT">
       <article class="card">
-        <button class="thumb" type="button"><img alt="" loading="lazy" /></button>
+        <button class="thumb" type="button"><img alt="" width="640" height="360" decoding="async" /></button>
         <div class="meta">
           <div class="title"></div>
           <div class="subtitle"></div>
@@ -972,14 +972,29 @@ function update(){
   render();
 }
 
+// Number of cards likely visible above the fold on a typical desktop viewport.
+// Their covers get eager loading + high fetch priority so the LCP candidate
+// is fetched immediately; later covers stay lazy so off-screen ones don't
+// compete for bandwidth on first paint.
+const ABOVE_FOLD_COVERS = 6;
+
 function render(){
   els.grid.innerHTML = '';
   els.grid.setAttribute('aria-busy','true');
   const frag = document.createDocumentFragment();
+  let cardIndex = 0;
   for(const g of state.filtered){
     const card = els.cardT.content.firstElementChild.cloneNode(true);
     const img = card.querySelector('img');
     img.alt = `${g.title} cover`;
+    if (cardIndex < ABOVE_FOLD_COVERS) {
+      img.loading = 'eager';
+      img.setAttribute('fetchpriority', 'high');
+    } else {
+      img.loading = 'lazy';
+      img.setAttribute('fetchpriority', 'low');
+    }
+    cardIndex++;
     img.src = g.cover || placeholderCover(g.title);
     card.querySelector('.title').textContent = g.title;
     card.querySelector('.subtitle').textContent = g.subtitle || '';
