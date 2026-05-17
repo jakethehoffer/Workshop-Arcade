@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Shadow Switch</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Sneak through neon guard cones, latch switches, collect keys, and clear four compact stealth floors." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-switch.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Shadow Switch — Workshop Arcade" />
+<meta property="og:description" content="Sneak through neon guard cones, latch switches, collect keys, and clear four compact stealth floors." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-switch.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/shadow-switch.svg" />
+<meta property="og:image:alt" content="Shadow Switch cover art" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Shadow Switch — Workshop Arcade" />
+<meta name="twitter:description" content="Sneak through neon guard cones, latch switches, collect keys, and clear four compact stealth floors." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/shadow-switch.svg" />
+<!-- workshop-meta:end -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:18px 12px 22px;overflow-x:hidden;background:
+      radial-gradient(760px 520px at 10% -10%,rgba(45,212,191,.14),transparent 60%),
+      radial-gradient(700px 500px at 94% 0%,rgba(129,140,248,.12),transparent 62%),
+      linear-gradient(180deg,#0a0f14,#071018 82%);
+  }
+  .brand{align-self:flex-start;line-height:1;user-select:none}
+  .brand .eyebrow{display:block;font-size:10px;text-transform:uppercase;color:rgba(94,234,212,.86);font-weight:850}
+  .brand .title{display:block;margin-top:3px;font-size:22px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.2)}
+  .panel{width:100%;max-width:900px;display:flex;flex-direction:column;gap:9px}
+  .hud,.toolbar,.touchpad{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .pill{
+    min-width:74px;padding:7px 10px;border:1px solid rgba(94,234,212,.24);border-radius:8px;
+    background:linear-gradient(180deg,rgba(18,28,45,.96),rgba(9,15,27,.97));
+    box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.04);text-align:center;line-height:1.05;
+  }
+  .pill[data-hot="true"]{border-color:rgba(251,191,36,.7);box-shadow:0 0 18px rgba(251,191,36,.14),0 6px 14px rgba(0,0,0,.25)}
+  .pill .label{display:block;font-size:9px;color:rgba(94,234,212,.84);font-weight:900;text-transform:uppercase}
+  .pill .value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
+  .stage{border:1px solid rgba(94,234,212,.28);border-radius:12px;overflow:hidden;background:#071018;box-shadow:0 18px 38px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}
+  canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#071018;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(94,234,212,.8);outline-offset:-4px}
+  .status{min-height:20px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .btn{
+    border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(18,28,45,.96),rgba(9,15,27,.97));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:850;text-transform:uppercase;padding:8px 11px;cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn[aria-pressed="true"],.btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
+  .btn:hover:not([disabled]){border-color:rgba(94,234,212,.56)}
+  .touchpad{display:grid;grid-template-columns:42px 42px 42px 74px;grid-template-rows:38px 38px;grid-template-areas:". up . wait" "left down right wait";width:max-content;max-width:100%;margin:0 auto}
+  .touchpad .up{grid-area:up}.touchpad .left{grid-area:left}.touchpad .down{grid-area:down}.touchpad .right{grid-area:right}.touchpad .wait{grid-area:wait}
+  .touchpad .btn{min-width:38px;height:38px;padding:0;font-size:15px}
+  .help{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
+  @media (max-width:560px){
+    body{padding:10px 8px 16px;gap:7px}
+    .brand .title{font-size:18px}
+    .panel{gap:7px}
+    .pill{min-width:58px;padding:6px 7px}
+    .pill .value{font-size:15px}
+    .btn{padding:8px 8px;font-size:11px}
+    .help{font-size:11px}
+    canvas{max-height:58vh}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Shadow Switch</span></div>
+<main class="panel" aria-label="Shadow Switch game">
+  <div class="hud" aria-label="Shadow Switch status">
+    <div class="pill"><span class="label">Level</span><span class="value" id="levelValue">1/4</span></div>
+    <div class="pill"><span class="label">Steps</span><span class="value" id="stepsValue">0</span></div>
+    <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0.0</span></div>
+    <div class="pill" id="keyPill"><span class="label">Key</span><span class="value" id="keyValue">No</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">--</span></div>
+    <div class="pill" id="alertPill"><span class="label">Alert</span><span class="value" id="alertValue">Clear</span></div>
+  </div>
+  <div class="stage"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Grid stealth puzzle canvas. Move with arrow keys or WASD, use Space or Enter to flip a switch or wait, avoid guard light cones, collect the key, and reach the exit."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Collect the key, flip switches, and stay out of light.</div>
+  <div class="toolbar" aria-label="Game controls">
+    <button class="btn primary" type="button" id="restartBtn">Restart</button>
+    <button class="btn" type="button" id="nextBtn" disabled>Next Level</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button class="btn" type="button" id="fullBtn">Fullscreen</button>
+  </div>
+  <div class="touchpad" aria-label="Touch movement controls">
+    <button class="btn up" type="button" data-move="0,-1" aria-label="Move up">&uarr;</button>
+    <button class="btn left" type="button" data-move="-1,0" aria-label="Move left">&larr;</button>
+    <button class="btn down" type="button" data-move="0,1" aria-label="Move down">&darr;</button>
+    <button class="btn right" type="button" data-move="1,0" aria-label="Move right">&rarr;</button>
+    <button class="btn wait" type="button" id="waitBtn">Wait</button>
+  </div>
+  <div class="help">Arrows/WASD move. Space/Enter flips an adjacent switch or waits. R restarts, F fullscreen, M or Sound toggles audio. On touch, use the directional pad and Wait.</div>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const TAU = Math.PI * 2;
+  const BEST_KEY = "shadow-switch.best.v1";
+  const SOUND_KEY = "shadow-switch.sound.v1";
+  const els = {
+    level: document.getElementById("levelValue"),
+    steps: document.getElementById("stepsValue"),
+    time: document.getElementById("timeValue"),
+    key: document.getElementById("keyValue"),
+    keyPill: document.getElementById("keyPill"),
+    best: document.getElementById("bestValue"),
+    alert: document.getElementById("alertValue"),
+    alertPill: document.getElementById("alertPill"),
+    status: document.getElementById("statusLine"),
+    restart: document.getElementById("restartBtn"),
+    next: document.getElementById("nextBtn"),
+    sound: document.getElementById("soundBtn"),
+    full: document.getElementById("fullBtn"),
+    wait: document.getElementById("waitBtn")
+  };
+  const DIRS = {
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 }
+  };
+  const LEVELS = [
+    {
+      name: "Relay Atrium",
+      tip: "Step beside the switch to open the top door.",
+      layout: [
+        "#############",
+        "#P..a.....E.#",
+        "#...#.......#",
+        "#...A..#....#",
+        "#..##..#....#",
+        "#...K.......#",
+        "#...........#",
+        "#############"
+      ],
+      guards: [
+        { id: "G1", range: 3, path: [[9,6],[11,6],[11,4],[9,4]] }
+      ]
+    },
+    {
+      name: "Crossbeam",
+      tip: "Two switches open the cross hall; use waits to let patrols pass.",
+      layout: [
+        "###############",
+        "#P....#.....E.#",
+        "#.##..#..a#####",
+        "#...A.#.......#",
+        "#.....###.##..#",
+        "#..K......B...#",
+        "#.....b..#....#",
+        "#.............#",
+        "###############"
+      ],
+      guards: [
+        { id: "G1", range: 3, path: [[8,3],[13,3],[13,5],[8,5]] },
+        { id: "G2", range: 2, path: [[2,7],[6,7],[6,5],[2,5]] }
+      ]
+    },
+    {
+      name: "Double Lock",
+      tip: "Switches stay latched. Watch the long cone near the exit.",
+      layout: [
+        "###############",
+        "#P..#.....#..E#",
+        "#...#..a..#.#.#",
+        "#.###..#..#.#.#",
+        "#...A..#K...#.#",
+        "#.####.####.#.#",
+        "#......B..b...#",
+        "#.............#",
+        "###############"
+      ],
+      guards: [
+        { id: "G1", range: 2, path: [[11,7],[13,7],[13,4],[11,4]] },
+        { id: "G2", range: 2, path: [[1,6],[5,6],[5,4],[1,4]] },
+        { id: "G3", range: 2, path: [[8,1],[9,1],[9,3],[8,3]] }
+      ]
+    },
+    {
+      name: "Midnight Switchyard",
+      tip: "Final floor: open both doors, then cross behind the sweeping guards.",
+      layout: [
+        "################",
+        "#P...#....#...E#",
+        "#.##.#.##.#.####",
+        "#....#a..#.....#",
+        "####.#.#.###.#.#",
+        "#K...A.#.....#.#",
+        "#.####.#####.#.#",
+        "#......B..b....#",
+        "#..#.........#.#",
+        "################"
+      ],
+      guards: [
+        { id: "G1", range: 3, path: [[12,3],[14,3],[14,7],[12,7]] },
+        { id: "G2", range: 2, path: [[1,8],[7,8],[7,5],[1,5]] },
+        { id: "G3", range: 2, path: [[8,1],[9,1],[9,4],[8,4]] },
+        { id: "G4", range: 2, path: [[5,7],[9,7],[9,8],[5,8]] }
+      ]
+    }
+  ];
+
+  const storage = {
+    get(key, fallback){
+      try {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      } catch (_) {
+        return fallback;
+      }
+    },
+    set(key, value){
+      try { window.localStorage.setItem(key, String(value)); } catch (_) {}
+    }
+  };
+  let audioCtx = null;
+  let lastStamp = 0;
+  const state = {
+    mode: "playing",
+    levelIndex: 0,
+    level: null,
+    cols: 0,
+    rows: 0,
+    map: [],
+    player: { x: 1, y: 1 },
+    key: { x: 1, y: 1, taken: false },
+    exit: { x: 1, y: 1, reached: false, open: false },
+    switches: [],
+    doors: [],
+    guards: [],
+    steps: 0,
+    time: 0,
+    runBaseSteps: 0,
+    runBaseTime: 0,
+    soundOn: storage.get(SOUND_KEY, "1") !== "0",
+    best: loadBest(),
+    alert: { active: false, text: "Clear", timer: 0, guardId: "", cells: [] },
+    feedback: "Collect the key, flip switches, and stay out of light.",
+    lastAction: "start",
+    lastSound: "none",
+    complete: false,
+    gameOver: false
+  };
+
+  function loadBest(){
+    try {
+      const raw = storage.get(BEST_KEY, "");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.steps !== "number" || typeof parsed.time !== "number") return null;
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+  function saveBest(record){
+    state.best = record;
+    storage.set(BEST_KEY, JSON.stringify(record));
+  }
+  function betterRun(steps, time){
+    return !state.best || steps < state.best.steps || (steps === state.best.steps && time < state.best.time);
+  }
+  function clamp(value, min, max){
+    return Math.max(min, Math.min(max, value));
+  }
+  function round(value){
+    return Math.round(value * 100) / 100;
+  }
+  function sameCell(a, b){
+    return a && b && a.x === b.x && a.y === b.y;
+  }
+  function keyOf(x, y){
+    return `${x},${y}`;
+  }
+  function formatTime(seconds){
+    return `${Math.max(0, seconds).toFixed(1)}s`;
+  }
+  function ensureAudio(){
+    if (!state.soundOn || audioCtx) return;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+  }
+  function sfx(name){
+    if (!state.soundOn) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") { try { audioCtx.resume(); } catch (_) {} }
+    const cfg = {
+      move: [310, .045, .018, "triangle"],
+      wait: [190, .05, .012, "sine"],
+      block: [110, .08, .025, "square"],
+      switch: [520, .09, .035, "triangle"],
+      key: [760, .11, .04, "sine"],
+      door: [260, .1, .035, "sawtooth"],
+      caught: [92, .16, .05, "sawtooth"],
+      clear: [880, .15, .04, "sine"],
+      next: [430, .08, .03, "triangle"],
+      toggle: [680, .06, .03, "sine"]
+    }[name] || [320, .06, .02, "sine"];
+    state.lastSound = name;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = cfg[3];
+    osc.frequency.setValueAtTime(cfg[0], now);
+    if (name === "clear") osc.frequency.exponentialRampToValueAtTime(1180, now + cfg[1]);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(cfg[2], now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + cfg[1]);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + cfg[1] + .025);
+  }
+  function parseLevel(level){
+    const rows = level.layout.length;
+    const cols = Math.max(...level.layout.map((row) => row.length));
+    const map = Array.from({ length: rows }, () => Array(cols).fill("#"));
+    const player = { x: 1, y: 1 };
+    const key = { x: 1, y: 1, taken: false };
+    const exit = { x: 1, y: 1, reached: false, open: false };
+    const switches = [];
+    const doors = [];
+    for (let y = 0; y < rows; y += 1) {
+      for (let x = 0; x < cols; x += 1) {
+        const ch = level.layout[y][x] || "#";
+        map[y][x] = ch === "#" ? "#" : ".";
+        if (ch === "P") { player.x = x; player.y = y; }
+        else if (ch === "K") { key.x = x; key.y = y; }
+        else if (ch === "E") { exit.x = x; exit.y = y; }
+        else if (/[ABC]/.test(ch)) switches.push({ id: ch.toLowerCase(), x, y, active: false });
+        else if (/[abc]/.test(ch)) doors.push({ id: ch, x, y, open: false });
+      }
+    }
+    const guards = level.guards.map((guard, index) => {
+      const first = guard.path[0];
+      const second = guard.path[1] || first;
+      return {
+        id: guard.id || `G${index + 1}`,
+        x: first[0],
+        y: first[1],
+        prevX: first[0],
+        prevY: first[1],
+        dir: directionName(second[0] - first[0], second[1] - first[1]),
+        path: guard.path.map((p) => ({ x: p[0], y: p[1] })),
+        pathIndex: 0,
+        range: guard.range || 3,
+        alert: false,
+        slide: 0
+      };
+    });
+    return { rows, cols, map, player, key, exit, switches, doors, guards };
+  }
+  function loadLevel(index, baseSteps, baseTime){
+    const level = LEVELS[index];
+    const parsed = parseLevel(level);
+    state.mode = "playing";
+    state.levelIndex = index;
+    state.level = level;
+    state.cols = parsed.cols;
+    state.rows = parsed.rows;
+    state.map = parsed.map;
+    state.player = parsed.player;
+    state.key = parsed.key;
+    state.exit = parsed.exit;
+    state.switches = parsed.switches;
+    state.doors = parsed.doors;
+    state.guards = parsed.guards;
+    state.steps = 0;
+    state.time = 0;
+    state.runBaseSteps = baseSteps || 0;
+    state.runBaseTime = baseTime || 0;
+    state.alert = { active: false, text: "Clear", timer: 0, guardId: "", cells: [] };
+    state.feedback = level.tip;
+    state.lastAction = "level-start";
+    state.complete = false;
+    state.gameOver = false;
+    syncDoors();
+    updateUi();
+    render();
+  }
+  function newRun(){
+    loadLevel(0, 0, 0);
+  }
+  function restartLevel(){
+    if (state.mode === "run-complete") {
+      newRun();
+    } else {
+      loadLevel(state.levelIndex, state.runBaseSteps, state.runBaseTime);
+    }
+    sfx("next");
+  }
+  function directionName(dx, dy){
+    if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? "left" : "right";
+    return dy < 0 ? "up" : "down";
+  }
+  function directionVector(name){
+    return DIRS[name] || DIRS.right;
+  }
+  function wallAt(x, y){
+    return y < 0 || y >= state.rows || x < 0 || x >= state.cols || state.map[y][x] === "#";
+  }
+  function doorAt(x, y){
+    return state.doors.find((door) => door.x === x && door.y === y) || null;
+  }
+  function switchAt(x, y){
+    return state.switches.find((sw) => sw.x === x && sw.y === y) || null;
+  }
+  function guardAt(x, y){
+    return state.guards.find((guard) => guard.x === x && guard.y === y) || null;
+  }
+  function closedDoorAt(x, y){
+    const door = doorAt(x, y);
+    return door && !door.open;
+  }
+  function passable(x, y){
+    return !wallAt(x, y) && !closedDoorAt(x, y);
+  }
+  function sightBlocked(x, y){
+    return wallAt(x, y) || closedDoorAt(x, y);
+  }
+  function syncDoors(){
+    for (const door of state.doors) {
+      door.open = state.switches.some((sw) => sw.id === door.id && sw.active);
+    }
+  }
+  function lineClear(x0, y0, x1, y1){
+    const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 1; i <= steps; i += 1) {
+      const x = Math.round(x0 + (x1 - x0) * i / steps);
+      const y = Math.round(y0 + (y1 - y0) * i / steps);
+      if (sightBlocked(x, y)) return false;
+    }
+    return true;
+  }
+  function guardSightCells(guard){
+    const dir = directionVector(guard.dir);
+    const side = { x: -dir.y, y: dir.x };
+    const seen = new Map();
+    for (let depth = 1; depth <= guard.range; depth += 1) {
+      const width = depth >= 4 ? 2 : depth >= 2 ? 1 : 0;
+      for (let spread = -width; spread <= width; spread += 1) {
+        const x = guard.x + dir.x * depth + side.x * spread;
+        const y = guard.y + dir.y * depth + side.y * spread;
+        if (!wallAt(x, y) && !closedDoorAt(x, y) && lineClear(guard.x, guard.y, x, y)) {
+          seen.set(keyOf(x, y), { x, y });
+        }
+      }
+    }
+    return Array.from(seen.values());
+  }
+  function detectPlayer(){
+    for (const guard of state.guards) guard.alert = false;
+    for (const guard of state.guards) {
+      const cells = guardSightCells(guard);
+      const caughtByBody = guard.x === state.player.x && guard.y === state.player.y;
+      const caughtBySight = cells.some((cell) => cell.x === state.player.x && cell.y === state.player.y);
+      if (caughtByBody || caughtBySight) {
+        guard.alert = true;
+        state.mode = "game-over";
+        state.gameOver = true;
+        state.complete = false;
+        state.alert = { active: true, text: `Caught by ${guard.id}`, timer: 2.5, guardId: guard.id, cells };
+        state.feedback = "Alert triggered. Press R to retry the floor.";
+        state.lastAction = "detected";
+        sfx("caught");
+        updateUi();
+        return true;
+      }
+    }
+    return false;
+  }
+  function advanceGuards(){
+    for (const guard of state.guards) {
+      const old = guard.path[guard.pathIndex];
+      guard.pathIndex = (guard.pathIndex + 1) % guard.path.length;
+      const next = guard.path[guard.pathIndex];
+      guard.prevX = old.x;
+      guard.prevY = old.y;
+      guard.x = next.x;
+      guard.y = next.y;
+      guard.dir = directionName(next.x - old.x, next.y - old.y);
+      guard.slide = .16;
+    }
+  }
+  function markStep(kind){
+    state.steps += 1;
+    state.lastAction = kind;
+    if (state.alert.timer <= 0) state.alert = { active: false, text: "Clear", timer: 0, guardId: "", cells: [] };
+  }
+  function collectKeyIfHere(){
+    if (!state.key.taken && state.player.x === state.key.x && state.player.y === state.key.y) {
+      state.key.taken = true;
+      state.feedback = "Key secured. Reach the exit hatch.";
+      state.lastAction = "key";
+      sfx("key");
+    }
+  }
+  function tryComplete(){
+    state.exit.open = state.key.taken;
+    if (state.key.taken && state.player.x === state.exit.x && state.player.y === state.exit.y) {
+      const totalSteps = state.runBaseSteps + state.steps;
+      const totalTime = state.runBaseTime + state.time;
+      state.exit.reached = true;
+      state.complete = true;
+      state.gameOver = false;
+      if (state.levelIndex === LEVELS.length - 1) {
+        state.mode = "run-complete";
+        state.feedback = "Run complete. Press Restart for a fresh route.";
+        if (betterRun(totalSteps, totalTime)) saveBest({ steps: totalSteps, time: round(totalTime), levels: LEVELS.length });
+      } else {
+        state.mode = "level-complete";
+        state.feedback = "Floor clear. Take the next lift.";
+      }
+      state.lastAction = "complete";
+      sfx("clear");
+      updateUi();
+      return true;
+    }
+    return false;
+  }
+  function resolveTurn(kind, soundName){
+    markStep(kind);
+    if (detectPlayer()) return;
+    advanceGuards();
+    detectPlayer();
+    if (state.mode === "playing") sfx(soundName || "move");
+    updateUi();
+    render();
+  }
+  function movePlayer(dx, dy){
+    if (state.mode === "level-complete") return nextLevel();
+    if (state.mode === "run-complete") return newRun();
+    if (state.mode === "game-over") return restartLevel();
+    const nx = state.player.x + dx;
+    const ny = state.player.y + dy;
+    const door = doorAt(nx, ny);
+    if (!passable(nx, ny)) {
+      state.feedback = door && !door.open ? "Door locked. Find its switch." : "Blocked by shadow wall.";
+      state.lastAction = "blocked";
+      state.alert = { active: false, text: "Blocked", timer: .8, guardId: "", cells: [] };
+      sfx("block");
+      updateUi();
+      render();
+      return;
+    }
+    state.player.x = nx;
+    state.player.y = ny;
+    collectKeyIfHere();
+    if (tryComplete()) { render(); return; }
+    resolveTurn("move", "move");
+  }
+  function interactOrWait(){
+    if (state.mode === "level-complete") return nextLevel();
+    if (state.mode === "run-complete") return newRun();
+    if (state.mode === "game-over") return restartLevel();
+    const spots = [
+      { x: state.player.x, y: state.player.y },
+      { x: state.player.x + 1, y: state.player.y },
+      { x: state.player.x - 1, y: state.player.y },
+      { x: state.player.x, y: state.player.y + 1 },
+      { x: state.player.x, y: state.player.y - 1 }
+    ];
+    const sw = spots.map((cell) => switchAt(cell.x, cell.y)).find(Boolean);
+    if (sw && !sw.active) {
+      sw.active = true;
+      syncDoors();
+      state.feedback = `Switch ${sw.id.toUpperCase()} latched. Door ${sw.id.toUpperCase()} is open.`;
+      state.alert = { active: false, text: "Switch", timer: .8, guardId: "", cells: [] };
+      sfx("switch");
+      resolveTurn("switch", "door");
+    } else {
+      state.feedback = sw ? "Switch already latched. You wait." : "You wait in the dark.";
+      state.alert = { active: false, text: "Wait", timer: .8, guardId: "", cells: [] };
+      resolveTurn("wait", "wait");
+    }
+  }
+  function nextLevel(){
+    if (state.mode !== "level-complete") return;
+    const baseSteps = state.runBaseSteps + state.steps;
+    const baseTime = state.runBaseTime + state.time;
+    loadLevel(state.levelIndex + 1, baseSteps, baseTime);
+    sfx("next");
+  }
+  function update(dt){
+    dt = clamp(Number(dt) || 0, 0, .05);
+    if (state.mode === "playing") state.time += dt;
+    if (state.alert.timer > 0) {
+      state.alert.timer = Math.max(0, state.alert.timer - dt);
+      if (state.alert.timer === 0 && state.mode === "playing") {
+        state.alert.active = false;
+        state.alert.text = "Clear";
+      }
+    }
+    for (const guard of state.guards) {
+      guard.slide = Math.max(0, guard.slide - dt);
+    }
+    updateUi();
+  }
+  function updateUi(){
+    els.level.textContent = `${state.levelIndex + 1}/${LEVELS.length}`;
+    els.steps.textContent = String(state.steps);
+    els.time.textContent = formatTime(state.time);
+    els.key.textContent = state.key.taken ? "Yes" : "No";
+    els.keyPill.dataset.hot = state.key.taken ? "true" : "false";
+    els.best.textContent = state.best ? `${state.best.steps}/${formatTime(state.best.time)}` : "--";
+    els.alert.textContent = state.alert.active ? "Alert" : state.alert.text || "Clear";
+    els.alertPill.dataset.hot = state.mode === "game-over" || state.alert.active ? "true" : "false";
+    els.status.textContent = state.feedback;
+    els.next.disabled = state.mode !== "level-complete";
+    els.next.textContent = state.mode === "run-complete" ? "New Run" : "Next Level";
+    els.sound.textContent = state.soundOn ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.soundOn ? "true" : "false");
+  }
+  function view(){
+    const tile = Math.floor(Math.min((W - 72) / state.cols, (H - 78) / state.rows));
+    const gridW = tile * state.cols;
+    const gridH = tile * state.rows;
+    return { tile, ox: Math.floor((W - gridW) / 2), oy: Math.floor((H - gridH) / 2 + 18), gridW, gridH };
+  }
+  function cellRect(x, y){
+    const v = view();
+    return { x: v.ox + x * v.tile, y: v.oy + y * v.tile, size: v.tile };
+  }
+  function drawBackground(){
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#091724");
+    bg.addColorStop(1, "#050a12");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.globalAlpha = .2;
+    for (let i = 0; i < 84; i += 1) {
+      const x = (i * 97 + 33) % W;
+      const y = (i * 53 + 71 + state.time * (i % 5)) % H;
+      ctx.fillStyle = i % 4 === 0 ? "#7c9eff" : "#5eead4";
+      ctx.fillRect(x, y, 1 + (i % 3), 1 + (i % 2));
+    }
+    ctx.restore();
+    ctx.fillStyle = "rgba(94,234,212,.9)";
+    ctx.font = "900 15px ui-sans-serif,system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(state.level ? state.level.name : "Shadow Switch", W / 2, 30);
+  }
+  function drawMap(){
+    const v = view();
+    ctx.save();
+    ctx.translate(v.ox, v.oy);
+    ctx.fillStyle = "rgba(4,8,14,.72)";
+    ctx.fillRect(-8, -8, v.gridW + 16, v.gridH + 16);
+    for (let y = 0; y < state.rows; y += 1) {
+      for (let x = 0; x < state.cols; x += 1) {
+        const px = x * v.tile;
+        const py = y * v.tile;
+        if (state.map[y][x] === "#") {
+          const grd = ctx.createLinearGradient(px, py, px, py + v.tile);
+          grd.addColorStop(0, "#15243a");
+          grd.addColorStop(1, "#09111e");
+          ctx.fillStyle = grd;
+          ctx.fillRect(px + 1, py + 1, v.tile - 2, v.tile - 2);
+        } else {
+          ctx.fillStyle = (x + y) % 2 ? "#0b1723" : "#0d1b28";
+          ctx.fillRect(px + 1, py + 1, v.tile - 2, v.tile - 2);
+          ctx.strokeStyle = "rgba(94,234,212,.08)";
+          ctx.strokeRect(px + .5, py + .5, v.tile - 1, v.tile - 1);
+        }
+      }
+    }
+    ctx.restore();
+  }
+  function drawSight(){
+    const v = view();
+    ctx.save();
+    ctx.translate(v.ox, v.oy);
+    for (const guard of state.guards) {
+      const cells = guardSightCells(guard);
+      for (const cell of cells) {
+        const px = cell.x * v.tile;
+        const py = cell.y * v.tile;
+        const onPlayer = cell.x === state.player.x && cell.y === state.player.y;
+        ctx.fillStyle = onPlayer || guard.alert ? "rgba(251,113,133,.32)" : "rgba(251,191,36,.17)";
+        ctx.fillRect(px + 3, py + 3, v.tile - 6, v.tile - 6);
+      }
+    }
+    ctx.restore();
+  }
+  function drawObjects(){
+    const v = view();
+    ctx.save();
+    ctx.translate(v.ox, v.oy);
+    for (const door of state.doors) {
+      const x = door.x * v.tile;
+      const y = door.y * v.tile;
+      ctx.fillStyle = door.open ? "rgba(34,211,238,.18)" : "#5b2945";
+      ctx.fillRect(x + 6, y + 6, v.tile - 12, v.tile - 12);
+      ctx.strokeStyle = door.open ? "#5eead4" : "#fb7185";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x + 8, y + 8, v.tile - 16, v.tile - 16);
+      ctx.fillStyle = door.open ? "#5eead4" : "#fb7185";
+      ctx.font = `900 ${Math.max(10, v.tile * .28)}px ui-sans-serif,system-ui`;
+      ctx.textAlign = "center";
+      ctx.fillText(door.id.toUpperCase(), x + v.tile / 2, y + v.tile * .63);
+    }
+    for (const sw of state.switches) {
+      const cx = sw.x * v.tile + v.tile / 2;
+      const cy = sw.y * v.tile + v.tile / 2;
+      ctx.fillStyle = sw.active ? "#5eead4" : "#fbbf24";
+      ctx.shadowColor = sw.active ? "#5eead4" : "#fbbf24";
+      ctx.shadowBlur = sw.active ? 14 : 9;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - v.tile * .28);
+      ctx.lineTo(cx + v.tile * .28, cy);
+      ctx.lineTo(cx, cy + v.tile * .28);
+      ctx.lineTo(cx - v.tile * .28, cy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#06121f";
+      ctx.font = `950 ${Math.max(10, v.tile * .25)}px ui-sans-serif,system-ui`;
+      ctx.textAlign = "center";
+      ctx.fillText(sw.id.toUpperCase(), cx, cy + v.tile * .09);
+    }
+    if (!state.key.taken) {
+      const cx = state.key.x * v.tile + v.tile / 2;
+      const cy = state.key.y * v.tile + v.tile / 2;
+      ctx.strokeStyle = "#fbbf24";
+      ctx.lineWidth = 4;
+      ctx.shadowColor = "#fbbf24";
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.arc(cx - v.tile * .08, cy, v.tile * .13, 0, TAU);
+      ctx.moveTo(cx + v.tile * .05, cy);
+      ctx.lineTo(cx + v.tile * .3, cy);
+      ctx.moveTo(cx + v.tile * .2, cy);
+      ctx.lineTo(cx + v.tile * .2, cy + v.tile * .12);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    const ex = state.exit.x * v.tile;
+    const ey = state.exit.y * v.tile;
+    ctx.fillStyle = state.key.taken ? "rgba(94,234,212,.25)" : "rgba(124,158,255,.14)";
+    ctx.fillRect(ex + 5, ey + 5, v.tile - 10, v.tile - 10);
+    ctx.strokeStyle = state.key.taken ? "#5eead4" : "#7c9eff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ex + 7, ey + 7, v.tile - 14, v.tile - 14);
+    ctx.fillStyle = state.key.taken ? "#5eead4" : "#7c9eff";
+    ctx.beginPath();
+    ctx.moveTo(ex + v.tile * .34, ey + v.tile * .28);
+    ctx.lineTo(ex + v.tile * .7, ey + v.tile * .5);
+    ctx.lineTo(ex + v.tile * .34, ey + v.tile * .72);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawPatrols(){
+    const v = view();
+    ctx.save();
+    ctx.translate(v.ox, v.oy);
+    ctx.setLineDash([5, 7]);
+    for (const guard of state.guards) {
+      ctx.strokeStyle = "rgba(251,191,36,.24)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      guard.path.forEach((cell, i) => {
+        const x = cell.x * v.tile + v.tile / 2;
+        const y = cell.y * v.tile + v.tile / 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      if (guard.path.length > 2) {
+        const first = guard.path[0];
+        ctx.lineTo(first.x * v.tile + v.tile / 2, first.y * v.tile + v.tile / 2);
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  function drawGuards(){
+    const v = view();
+    ctx.save();
+    ctx.translate(v.ox, v.oy);
+    for (const guard of state.guards) {
+      const t = guard.slide > 0 ? guard.slide / .16 : 0;
+      const gx = (guard.x * (1 - t) + guard.prevX * t) * v.tile + v.tile / 2;
+      const gy = (guard.y * (1 - t) + guard.prevY * t) * v.tile + v.tile / 2;
+      const dir = directionVector(guard.dir);
+      const angle = Math.atan2(dir.y, dir.x);
+      ctx.save();
+      ctx.translate(gx, gy);
+      ctx.rotate(angle);
+      ctx.shadowColor = guard.alert ? "#fb7185" : "#fbbf24";
+      ctx.shadowBlur = guard.alert ? 20 : 12;
+      ctx.fillStyle = guard.alert ? "#fb7185" : "#fbbf24";
+      ctx.beginPath();
+      ctx.moveTo(v.tile * .34, 0);
+      ctx.lineTo(-v.tile * .24, -v.tile * .24);
+      ctx.lineTo(-v.tile * .12, 0);
+      ctx.lineTo(-v.tile * .24, v.tile * .24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#fff7d6";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "rgba(3,7,18,.82)";
+      ctx.font = `900 ${Math.max(9, v.tile * .2)}px ui-sans-serif,system-ui`;
+      ctx.textAlign = "center";
+      ctx.fillText(guard.id, gx, gy + v.tile * .44);
+    }
+    ctx.restore();
+  }
+  function drawPlayer(){
+    const v = view();
+    const cx = v.ox + state.player.x * v.tile + v.tile / 2;
+    const cy = v.oy + state.player.y * v.tile + v.tile / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.shadowColor = "#5eead4";
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "#5eead4";
+    ctx.beginPath();
+    ctx.arc(0, 0, v.tile * .25, 0, TAU);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#06121f";
+    ctx.beginPath();
+    ctx.arc(0, 0, v.tile * .1, 0, TAU);
+    ctx.fill();
+    if (state.key.taken) {
+      ctx.strokeStyle = "#fbbf24";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, v.tile * .34, -.6, TAU - .6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawOverlay(){
+    if (state.mode === "playing") return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.62)";
+    ctx.fillRect(0, 0, W, H);
+    const title = state.mode === "game-over" ? "ALERT" : state.mode === "run-complete" ? "RUN COMPLETE" : "FLOOR CLEAR";
+    const sub = state.mode === "game-over" ? "Caught in a light cone. Press R or Restart." : state.feedback;
+    ctx.textAlign = "center";
+    ctx.fillStyle = state.mode === "game-over" ? "#fb7185" : "#f8fbff";
+    ctx.font = "950 34px ui-sans-serif,system-ui";
+    ctx.fillText(title, W / 2, H / 2 - 22);
+    ctx.fillStyle = "#5eead4";
+    ctx.font = "850 16px ui-sans-serif,system-ui";
+    ctx.fillText(sub, W / 2, H / 2 + 14);
+    ctx.fillStyle = "rgba(230,237,243,.78)";
+    ctx.font = "750 13px ui-sans-serif,system-ui";
+    ctx.fillText(state.mode === "level-complete" ? "Space, Enter, or Next Level continues." : "Restart begins again.", W / 2, H / 2 + 42);
+    ctx.restore();
+  }
+  function render(){
+    drawBackground();
+    drawMap();
+    drawPatrols();
+    drawSight();
+    drawObjects();
+    drawGuards();
+    drawPlayer();
+    drawOverlay();
+  }
+  function frame(stamp){
+    if (!lastStamp) lastStamp = stamp;
+    const dt = (stamp - lastStamp) / 1000;
+    lastStamp = stamp;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  function keyMove(event){
+    const key = event.key.toLowerCase();
+    if (event.key === "ArrowLeft" || key === "a") return DIRS.left;
+    if (event.key === "ArrowRight" || key === "d") return DIRS.right;
+    if (event.key === "ArrowUp" || key === "w") return DIRS.up;
+    if (event.key === "ArrowDown" || key === "s") return DIRS.down;
+    return null;
+  }
+  function toggleFullscreen(){
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.();
+  }
+  function toggleSound(){
+    state.soundOn = !state.soundOn;
+    storage.set(SOUND_KEY, state.soundOn ? "1" : "0");
+    if (state.soundOn) sfx("toggle");
+    updateUi();
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.target && /input|textarea|select/i.test(event.target.tagName)) return;
+    const move = keyMove(event);
+    if (move || event.key === " " || event.key === "Enter") event.preventDefault();
+    if (move && !event.repeat) movePlayer(move.x, move.y);
+    else if ((event.key === " " || event.key === "Enter") && !event.repeat) interactOrWait();
+    const key = event.key.toLowerCase();
+    if (key === "r" && !event.repeat) restartLevel();
+    if (key === "f" && !event.repeat) toggleFullscreen();
+    if (key === "m" && !event.repeat) toggleSound();
+  });
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    canvas.focus({ preventScroll: true });
+  });
+  document.querySelectorAll("[data-move]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const parts = btn.dataset.move.split(",").map(Number);
+      movePlayer(parts[0], parts[1]);
+      canvas.focus({ preventScroll: true });
+    });
+  });
+  els.wait.addEventListener("click", () => {
+    interactOrWait();
+    canvas.focus({ preventScroll: true });
+  });
+  els.restart.addEventListener("click", () => {
+    restartLevel();
+    canvas.focus({ preventScroll: true });
+  });
+  els.next.addEventListener("click", () => {
+    nextLevel();
+    canvas.focus({ preventScroll: true });
+  });
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFullscreen);
+
+  function snapshot(){
+    const sight = state.guards.map((guard) => ({ guardId: guard.id, cells: guardSightCells(guard) }));
+    return {
+      game: "Shadow Switch",
+      coordinateSystem: `grid cells, origin top-left, x right, y down, ${state.cols} columns by ${state.rows} rows`,
+      mode: state.mode,
+      level: {
+        index: state.levelIndex,
+        number: state.levelIndex + 1,
+        total: LEVELS.length,
+        name: state.level.name
+      },
+      steps: state.steps,
+      time: round(state.time),
+      run: {
+        steps: state.runBaseSteps + state.steps,
+        time: round(state.runBaseTime + state.time)
+      },
+      player: { x: state.player.x, y: state.player.y },
+      guards: state.guards.map((guard) => ({
+        id: guard.id,
+        x: guard.x,
+        y: guard.y,
+        dir: guard.dir,
+        pathIndex: guard.pathIndex,
+        range: guard.range,
+        alert: guard.alert,
+        sightCells: guardSightCells(guard)
+      })),
+      switches: state.switches.map((sw) => ({ id: sw.id, x: sw.x, y: sw.y, active: sw.active })),
+      doors: state.doors.map((door) => ({ id: door.id, x: door.x, y: door.y, open: door.open })),
+      key: { x: state.key.x, y: state.key.y, taken: state.key.taken },
+      exit: { x: state.exit.x, y: state.exit.y, open: state.key.taken, reached: state.exit.reached },
+      detection: {
+        alertActive: state.alert.active,
+        alertText: state.alert.text,
+        guardId: state.alert.guardId,
+        alertTimer: round(state.alert.timer),
+        sight
+      },
+      feedback: {
+        text: state.feedback,
+        lastAction: state.lastAction,
+        lastSound: state.lastSound
+      },
+      best: state.best,
+      sound: {
+        enabled: state.soundOn,
+        audioReady: Boolean(audioCtx),
+        storageKey: SOUND_KEY
+      },
+      completion: {
+        levelComplete: state.mode === "level-complete",
+        runComplete: state.mode === "run-complete",
+        complete: state.complete,
+        gameOver: state.gameOver
+      },
+      storageKeys: {
+        best: BEST_KEY,
+        sound: SOUND_KEY
+      }
+    };
+  }
+  window.render_game_to_text = () => JSON.stringify(snapshot());
+  window.advanceTime = (ms) => {
+    const frames = Math.max(1, Math.min(1200, Math.round(Number(ms || 0) / (1000 / 60))));
+    for (let i = 0; i < frames; i += 1) update(1 / 60);
+    render();
+    return window.render_game_to_text();
+  };
+
+  loadLevel(0, 0, 0);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

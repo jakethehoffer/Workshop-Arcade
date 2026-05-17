@@ -44,6 +44,17 @@
   @media (max-width: 760px){
     :root{ --tile: clamp(34px, calc((100vw - 82px) / 8), 58px); --gap: 5px; --radius: 14px; }
   }
+  @media (max-width: 420px){
+    :root{ --tile: clamp(30px, calc((100vw - 64px) / 8), 50px); --gap: 4px; --radius: 12px; }
+    header,footer{padding-left:10px;padding-right:10px}
+    main{padding:0 6px}
+    .status{flex-wrap:wrap;justify-content:center}
+    .pill{font-size:.86rem;padding:6px 9px}
+    .controls{gap:6px}
+    .control-group{padding:3px 4px}
+    .control-group .btn,.control-group .select{padding:6px 7px}
+    .seg button{padding:7px 10px}
+  }
 
   *{box-sizing:border-box}
   html,body{
@@ -297,7 +308,7 @@
         <button type="button" id="flipBtn" class="btn">🔄 Flip</button>
       </div>
       <div class="control-group">
-        <button type="button" id="sndBtn" class="btn" aria-pressed="true">🔊 Sound</button>
+        <button type="button" id="sndBtn" class="btn" aria-pressed="true" aria-label="Sound on">🔊 Sound</button>
         <button type="button" id="helpBtn" class="btn">❓ Help</button>
       </div>
       <label id="autoFlipWrap" style="display:none;"><input type="checkbox" id="autoFlip"> Auto-flip board</label>
@@ -398,6 +409,9 @@ const feedback = {
   lastMoveAge: null,
   lastCaptureAge: null,
   lastCrownAge: null,
+  lastInvalidAge: null,
+  invalidFeedback: null,
+  invalidCount: 0,
   moveCount: 0,
   captureCount: 0,
   crownCount: 0,
@@ -432,12 +446,62 @@ const MOVE_STEP_MS = 420; // tweak 300–600 to taste
 const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
 
-/* 🔊 ADDED: lightweight synth SFX (no external files) */
+/* Lightweight synth SFX (no external files). Storage is defensive because some embeds block it. */
 const Sound = (() => {
+  const SOUND_STORAGE_KEY = 'checkers.sound.v1';
+  const LEGACY_SOUND_STORAGE_KEY = 'sndEnabled';
   const AC = window.AudioContext || window.webkitAudioContext;
   let ctx = null;
   let master = null;
-  let enabled = AC ? JSON.parse(localStorage.getItem('sndEnabled') ?? 'true') : false;
+  let lastSound = null;
+  let lastSoundAt = null;
+  let oscillatorCount = 0;
+
+  function storageGet(key){
+    try { return window.localStorage ? window.localStorage.getItem(key) : null; }
+    catch { return null; }
+  }
+
+  function storageSet(key, value){
+    try { if(window.localStorage) window.localStorage.setItem(key, value); }
+    catch {}
+  }
+
+  function storageRemove(key){
+    try { if(window.localStorage) window.localStorage.removeItem(key); }
+    catch {}
+  }
+
+  function readBool(key){
+    const raw = storageGet(key);
+    if(raw === null) return null;
+    if(raw === 'true') return true;
+    if(raw === 'false') return false;
+    try {
+      const parsed = JSON.parse(raw);
+      return typeof parsed === 'boolean' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function loadEnabled(){
+    const stored = readBool(SOUND_STORAGE_KEY);
+    if(stored !== null){
+      storageRemove(LEGACY_SOUND_STORAGE_KEY);
+      return stored;
+    }
+    const legacy = readBool(LEGACY_SOUND_STORAGE_KEY);
+    if(legacy !== null){
+      storageSet(SOUND_STORAGE_KEY, legacy ? 'true' : 'false');
+      storageRemove(LEGACY_SOUND_STORAGE_KEY);
+      return legacy;
+    }
+    return true;
+  }
+
+  const storedEnabled = loadEnabled();
+  let enabled = AC ? storedEnabled : false;
 
   function ensureContext(){
     if(!enabled || !AC) return null;
@@ -455,11 +519,23 @@ const Sound = (() => {
     if(active && active.state === 'suspended') active.resume().catch(()=>{});
   }
 
+  function note(name){
+    lastSound = name;
+    lastSoundAt = Math.round(performance.now());
+  }
+
+  function play(name, run){
+    note(name);
+    if(!enabled || !ctx || ctx.state !== 'running') return;
+    run();
+  }
+
   function pulse(freq=440, dur=0.08, type='sine'){
     if(!enabled || !ctx || ctx.state !== 'running') return;
     const now = ctx.currentTime;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
+    oscillatorCount++;
     o.type = type;
     o.frequency.setValueAtTime(freq, now);
     g.gain.setValueAtTime(0.0001, now);
@@ -482,34 +558,59 @@ const Sound = (() => {
 
   const api = {
     get enabled(){ return enabled; },
-    toggle(){ enabled = !enabled; localStorage.setItem('sndEnabled', JSON.stringify(enabled)); return enabled; },
+    get audioReady(){ return !!ctx && ctx.state === 'running'; },
+    get lastSound(){ return lastSound; },
+    get lastSoundAt(){ return lastSoundAt; },
+    get oscillatorCount(){ return oscillatorCount; },
+    get storageKey(){ return SOUND_STORAGE_KEY; },
+    toggle(){
+      enabled = !enabled;
+      storageSet(SOUND_STORAGE_KEY, enabled ? 'true' : 'false');
+      storageRemove(LEGACY_SOUND_STORAGE_KEY);
+      note(enabled ? 'sound-on' : 'sound-off');
+      return enabled;
+    },
     resume,
-    click(){ pulse(600,0.06,'square'); },
-    move(){ pulse(330,0.08,'triangle'); },
-    capture(){ noise(0.09); pulse(150,0.12,'sawtooth'); },
-    crown(){ pulse(700,0.12,'triangle'); setTimeout(()=>pulse(980,0.12,'triangle'),120); },
-    undo(){ pulse(240,0.09,'sine'); },
-    error(){ pulse(220,0.08,'sawtooth'); setTimeout(()=>pulse(170,0.08,'sawtooth'),70); },
-    start(){ pulse(520,0.10,'square'); },
-    gameover(win=true){
-      if(win){ pulse(784,0.12,'triangle'); setTimeout(()=>pulse(988,0.14,'triangle'),120); }
-      else { pulse(196,0.22,'sine'); }
-    }
+    click(){ play('ui-click', () => pulse(600,0.06,'square')); },
+    move(){ play('move', () => pulse(330,0.08,'triangle')); },
+    capture(){ play('capture', () => { noise(0.09); pulse(150,0.12,'sawtooth'); }); },
+    crown(){ play('crown', () => { pulse(700,0.12,'triangle'); setTimeout(()=>pulse(980,0.12,'triangle'),120); }); },
+    undo(){ play('undo', () => pulse(240,0.09,'sine')); },
+    invalidForcedCapture(){ play('invalid-forced-capture', () => { pulse(220,0.08,'sawtooth'); setTimeout(()=>pulse(170,0.08,'sawtooth'),70); }); },
+    error(){ api.invalidForcedCapture(); },
+    newGame(){ play('new-game', () => pulse(520,0.10,'square')); },
+    start(){ api.newGame(); },
+    modeChange(){ play('mode-change', () => { pulse(460,0.07,'square'); setTimeout(()=>pulse(620,0.08,'triangle'),75); }); },
+    difficulty(){ play('difficulty-change', () => { pulse(390,0.06,'triangle'); setTimeout(()=>pulse(520,0.06,'triangle'),65); }); },
+    aiMove(){ play('ai-move', () => pulse(260,0.07,'triangle')); },
+    win(){ play('win', () => { pulse(784,0.12,'triangle'); setTimeout(()=>pulse(988,0.14,'triangle'),120); }); },
+    loss(){ play('loss', () => pulse(196,0.22,'sine')); },
+    draw(){ play('draw', () => { pulse(330,0.11,'sine'); setTimeout(()=>pulse(330,0.11,'triangle'),120); }); },
+    gameover(outcome='win'){
+      if(outcome === 'draw') api.draw();
+      else if(outcome === 'win') api.win();
+      else api.loss();
+    },
   };
   return api;
 })();
 
-/* Mobile/desktop: unlock audio on first user gesture */           /* 🔊 ADDED */
+/* Mobile/desktop: unlock audio on first user gesture */
 document.addEventListener('pointerdown', () => Sound.resume(), { once:true });
+document.addEventListener('keydown', () => Sound.resume(), { once:true });
 
 function showGameOver(winnerText){
   locked = true;                  // freeze board interactions
   elGoWinner.textContent = winnerText;
   elGameOver.classList.add('show');
-  // 🔊 ADDED: win/lose jingle (AI vs human uses aiPlays to decide)
+  // Win/loss jingle in singleplayer; local two-player treats either winner as a human win.
+  if(winnerText === 'Draw'){
+    Sound.gameover('draw');
+    return;
+  }
   const winSide = (winnerText==='Red') ? RED : BLK;
   const humanWon = (mode === 'PVP') ? true : (winSide !== aiPlays);
-  Sound.gameover(humanWon);
+  Sound.gameover(humanWon ? 'win' : 'loss');
 }
 
 function hideGameOver(){
@@ -795,6 +896,9 @@ function resetFeedback(){
   feedback.lastMoveAge = null;
   feedback.lastCaptureAge = null;
   feedback.lastCrownAge = null;
+  feedback.lastInvalidAge = null;
+  feedback.invalidFeedback = null;
+  feedback.invalidCount = 0;
   feedback.moveCount = 0;
   feedback.captureCount = 0;
   feedback.crownCount = 0;
@@ -806,11 +910,25 @@ function stepFeedback(ms = 0){
   for(const key of ['lastMoveAge','lastCaptureAge','lastCrownAge']){
     if(feedback[key] !== null) feedback[key] += dt;
   }
+  if(feedback.lastInvalidAge !== null) feedback.lastInvalidAge += dt;
   feedback.activePopCount = feedback.lastMove && (
     (feedback.lastMoveAge !== null && feedback.lastMoveAge < 1.2) ||
     (feedback.lastCaptureAge !== null && feedback.lastCaptureAge < 1.2) ||
     (feedback.lastCrownAge !== null && feedback.lastCrownAge < 1.4)
   ) ? 1 : 0;
+}
+
+function recordInvalidFeedback(reason, r, c, message){
+  feedback.invalidCount++;
+  feedback.lastInvalidAge = 0;
+  feedback.invalidFeedback = {
+    reason,
+    square: inBounds(r, c) ? squareName(r, c) : null,
+    row: inBounds(r, c) ? r : null,
+    col: inBounds(r, c) ? c : null,
+    message,
+    turn: turn === RED ? 'red' : 'black',
+  };
 }
 
 function recordMoveFeedback(move, piece, capturedSquares, crowned){
@@ -935,13 +1053,21 @@ function onSquareClick(e){
 
   if(v!==0 && colorOf(v)===turn){
     if(mustContinueFrom && (mustContinueFrom.r!==r || mustContinueFrom.c!==c)){
+      recordInvalidFeedback('multi-jump-continuation', r, c, 'Finish the forced multi-jump with the same piece.');
       toast('Finish your multi-jump with the same piece.');
-      Sound.error(); /* 🔊 ADDED */
+      Sound.invalidForcedCapture();
       return;
+    }
+    const key = r+','+c;
+    const forcedCapture = forcedSources.size > 0 && !forcedSources.has(key);
+    if(forcedCapture){
+      recordInvalidFeedback('forced-capture-source', r, c, 'Capture is mandatory.');
+      toast('Capture is mandatory.');
+      Sound.invalidForcedCapture();
     }
     selected = {r,c};
     legalDest = generateMoves(board, turn).filter(m=> m.from[0]===r && m.from[1]===c);
-    Sound.click(); /* 🔊 ADDED */
+    if(!forcedCapture) Sound.click();
     render();
     return;
   }
@@ -953,6 +1079,11 @@ function onSquareClick(e){
     if(chosen){
       makePlayerMove(chosen);
     }else{
+      if(forcedSources.size > 0 || legalDest.some(m => m.caps.length)){
+        recordInvalidFeedback('forced-capture-target', r, c, 'Choose a highlighted capture landing square.');
+        toast('Choose a highlighted capture landing square.');
+        Sound.invalidForcedCapture();
+      }
       selected=null; legalDest=[]; render();
     }
   }
@@ -1023,7 +1154,8 @@ async function aiMove(){
   }
 
   pushHistory();
-await animateApplyMove(mv);
+  await animateApplyMove(mv);
+  Sound.aiMove();
 
 
   // After AI moves, check if the human has any moves left
@@ -1062,9 +1194,9 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
       board[cr][cc] = 0;
       capturedSquares.push([cr, cc]);
       Sound.capture?.();
+    } else {
+      Sound.move?.();
     }
-
-    Sound.move?.();
     render();
     await sleep(stepMs);
 
@@ -1159,12 +1291,23 @@ function renderGameToText(){
     acc[item.piece] = (acc[item.piece] || 0) + 1;
     return acc;
   }, {});
+  const invalidFeedback = feedback.invalidFeedback ? {
+    ...feedback.invalidFeedback,
+    age: age(feedback.lastInvalidAge),
+    active: feedback.lastInvalidAge !== null && feedback.lastInvalidAge < 1.4,
+  } : null;
   return JSON.stringify({
     game: 'Checkers',
     mode,
     turn: turn === RED ? 'red' : 'black',
     locked: !!locked,
     flipped: !!flipped,
+    soundEnabled: Sound.enabled,
+    audioReady: Sound.audioReady,
+    lastSound: Sound.lastSound,
+    oscillatorCount: Sound.oscillatorCount,
+    soundStorageKey: Sound.storageKey,
+    invalidFeedback,
     selected: selected ? squareName(selected.r, selected.c) : null,
     selectedLegalDestinations: selectedMoves,
     legalMoveCount: legal.length,
@@ -1188,9 +1331,12 @@ function renderGameToText(){
       lastMoveAge: age(feedback.lastMoveAge),
       lastCaptureAge: age(feedback.lastCaptureAge),
       lastCrownAge: age(feedback.lastCrownAge),
+      lastInvalidAge: age(feedback.lastInvalidAge),
       moveCount: feedback.moveCount,
       captureCount: feedback.captureCount,
       crownCount: feedback.crownCount,
+      invalidCount: feedback.invalidCount,
+      invalidFeedback,
       activePopCount: feedback.activePopCount,
       lastMove: feedback.lastMove
     }
@@ -1212,7 +1358,7 @@ window.advanceTime = function advanceTime(ms = 0){
 /* ===============
    Game Lifecycle
    =============== */
-function newGame(){
+function newGame(soundCue = 'new-game'){
   // Reset board orientation
   flipped = false;
   hideGameOver();
@@ -1225,7 +1371,8 @@ function newGame(){
   resetFeedback();
   initBoard();
   render();
-  Sound.start(); /* 🔊 ADDED */
+  if(soundCue === 'mode-change') Sound.modeChange();
+  else if(soundCue) Sound.newGame();
   if(mode==='SP' && aiPlays===RED){
     setTimeout(aiMove, 200);
   }
@@ -1253,25 +1400,26 @@ function setMode(next){
     elAutoFlip.checked = false; // Disable auto-flip when switching to singleplayer
   }
   toast(mode==='SP' ? 'Switched to Singleplayer. New game started.' : 'Switched to Two-Player. New game started.');
-  Sound.click(); /* 🔊 ADDED */
-  newGame();
+  newGame('mode-change');
 }
 
 /* 🔊 ADDED: sound toggle wiring */
 function updateSoundUI(){
   const on = Sound.enabled;
   elSnd.setAttribute('aria-pressed', on ? 'true' : 'false');
+  elSnd.setAttribute('aria-label', on ? 'Sound on' : 'Sound muted');
+  elSnd.title = on ? 'Sound on' : 'Sound muted';
   elSnd.textContent = on ? '🔊 Sound' : '🔇 Muted';
 }
 elSnd.addEventListener('click', ()=>{
-  Sound.resume();
-  Sound.toggle();
+  const enabled = Sound.toggle();
+  if(enabled) Sound.resume();
   updateSoundUI();
-  if (Sound.enabled) Sound.click();
+  if (enabled) Sound.click();
 });
 
 /* Wire up controls */
-elNew.addEventListener('click', ()=>{ Sound.click(); newGame(); });   /* 🔊 ADDED */
+elNew.addEventListener('click', ()=> newGame('new-game'));
 elUndo.addEventListener('click', undo); // ✅ FIX: actually call undo()
 elFlipBtn.addEventListener('click', ()=>{ 
   if(!locked) {
@@ -1316,7 +1464,7 @@ document.addEventListener('keydown', (e)=>{
 elDepth.addEventListener('change', e=>{
   aiDepth = +e.target.value;
   if(mode==='SP') toast(`AI strength: ${e.target.options[e.target.selectedIndex].text}`);
-  Sound.click(); /* 🔊 ADDED */
+  Sound.difficulty();
 });
 
 /* Boot */
@@ -1325,7 +1473,7 @@ aiDepth = +elDepth.value;
 if(elAutoFlipWrap) {
   elAutoFlipWrap.style.display = 'none'; // Hidden by default (SP mode)
 }
-newGame(); // render the board immediately on page load
+newGame(null); // render the board immediately on page load
 setMode('SP');
 updateSoundUI(); /* 🔊 ADDED */
 updateAiVisibility(); // ⬅️ safe extra call on boot

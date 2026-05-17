@@ -831,6 +831,42 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "shadow-switch": {
+      name: "open a switch route",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+            window.advanceTime(80);
+          };
+          for (const key of ["ArrowRight", "ArrowRight", "ArrowDown", "ArrowDown", "ArrowRight", " "]) {
+            press(key, key === " " ? "Space" : key);
+          }
+          window.advanceTime(180);
+        });
+      },
+    },
+    "deckforge-duel": {
+      name: "play cards and end turn",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const key = (value, code = value) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key: value, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key: value, code, bubbles: true }));
+            window.advanceTime(120);
+          };
+          key("1", "Digit1");
+          key("2", "Digit2");
+          key("Enter", "Enter");
+          window.advanceTime(650);
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {

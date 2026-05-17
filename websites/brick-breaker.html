@@ -211,7 +211,7 @@ kbd{
   <button type="button" id="btnPause" title="P">⏸️ Pause</button>
   <button type="button" id="btnRestart" title="R">🔄 Restart</button>
   <button type="button" id="btnMusic" title="M">🎵 Music: On</button>
-  <button type="button" id="btnSfx" title="V">🔊 SFX: On</button>
+  <button type="button" id="btnSfx" title="V">🔊 Sound: On</button>
   <button type="button" id="btnHelp" title="H">❓ Help</button>
 </div>
 
@@ -241,7 +241,7 @@ kbd{
     <div class="label">Music</div>
     <div class="keys"><kbd>M</kbd></div>
 
-    <div class="label">SFX</div>
+    <div class="label">Sound</div>
     <div class="keys"><kbd>V</kbd></div>
 
     <div class="label">Help</div>
@@ -404,11 +404,46 @@ window.addEventListener('keydown', (e) => {
   let sfxGain = null;      // SFX channel
   let musicGain = null;    // Music channel
   let musicTimer = null;   // Sequencer interval
-  let musicOn = true, sfxOn = true;
+  const SOUND_STORAGE_KEY = 'brick-breaker.sound.v1';
+  let audioUnlocked = false;
+  let soundEnabled = loadSoundEnabled();
+  let musicOn = true, sfxOn = soundEnabled;
+  let lastSound = null;
+  let soundCount = 0;
+  let oscillatorCount = 0;
+  let noiseCount = 0;
+
+  function loadSoundEnabled(){
+    try {
+      const raw = localStorage.getItem(SOUND_STORAGE_KEY);
+      if (raw === null) return true;
+      return raw === '1' || raw === 'true' || raw === 'on';
+    } catch {
+      return true;
+    }
+  }
+
+  function saveSoundEnabled(value){
+    try { localStorage.setItem(SOUND_STORAGE_KEY, value ? '1' : '0'); } catch {}
+  }
+
+  function audioReady(){
+    return !!audioCtx && audioUnlocked && audioCtx.state !== 'closed';
+  }
+
+  function updateAudioButtons(){
+    if (btnMusic) btnMusic.textContent = `🎵 Music: ${musicOn ? 'On' : 'Off'}`;
+    if (btnSfx) {
+      btnSfx.textContent = `🔊 Sound: ${soundEnabled ? 'On' : 'Off'}`;
+      btnSfx.setAttribute('aria-pressed', String(soundEnabled));
+    }
+  }
 
   function ensureAudio() {
+    if (!audioUnlocked || !soundEnabled) return false;
     if (!audioCtx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return false;
       audioCtx = new Ctx();
       master = audioCtx.createGain();
       sfxGain = audioCtx.createGain();
@@ -420,14 +455,32 @@ window.addEventListener('keydown', (e) => {
       musicGain.connect(master);
       master.connect(audioCtx.destination);
     }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(()=>{});
+    }
+    return true;
+  }
+
+  function unlockAudioOnce(){
+    audioUnlocked = true;
+    if (soundEnabled && ensureAudio() && musicOn) MUSIC.start();
+  }
+
+  function playSound(name, fn){
+    if (!soundEnabled || !sfxOn) return false;
+    if (!ensureAudio()) return false;
+    lastSound = name;
+    soundCount++;
+    fn();
+    return true;
   }
 
   function playBeep({freq=440, type='square', attack=0.005, decay=0.12, volume=0.9, slide=0}){
-    if (!sfxOn) return;
-    ensureAudio();
+    if (!ensureAudio()) return;
     const now = audioCtx.currentTime;
     const osc = audioCtx.createOscillator();
     const g = audioCtx.createGain();
+    oscillatorCount++;
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
     if (slide) osc.frequency.linearRampToValueAtTime(freq + slide, now + decay);
@@ -475,17 +528,17 @@ function updateBullets(dt){
         const hx = Math.max(br.x, Math.min(b.x, br.x+br.w));
         const hy = Math.max(br.y, Math.min(b.y, br.y+br.h));
 
-        if (SFX.hit) SFX.hit();
-
         onBrickHit(hx, hy);      // keep combo rules consistent with ball hits
 
         br.hp -= 1;              // bullet damage
         if (br.hp > 0){
+          if (SFX.hit) SFX.hit();
           const points = Math.round(20 * G.combo);
           recordBrickImpact(hx, hy, br, false, points);
           addScore(points);
           br.color = shade(br.color, -28);
         } else {
+          if (SFX.brickBreak) SFX.brickBreak();
           const points = Math.round(50 * G.combo);
           recordBrickImpact(hx, hy, br, true, points);
           addScore(points);
@@ -515,8 +568,7 @@ function drawBullets(){
 
 
   function noiseBurst({attack=0.005, decay=0.2, volume=0.6}){
-    if (!sfxOn) return;
-    ensureAudio();
+    if (!ensureAudio()) return;
     const now = audioCtx.currentTime;
     const bufferSize = audioCtx.sampleRate * (attack + decay);
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -530,20 +582,25 @@ function drawBullets(){
     src.buffer = buffer;
     src.connect(g).connect(sfxGain);
     src.start(now);
+    noiseCount++;
   }
 
   const SFX = {
-    wall(){ playBeep({freq: 320 + Math.random()*60, type:'square', decay:0.08, volume:0.6}); },
-    boom(){ noiseBurst({decay:0.35, volume:0.8}); },
-    paddle(){ playBeep({freq: 420 + Math.random()*100, type:'square', decay:0.1, slide:-100, volume:0.65}); },
-    brick(){ playBeep({freq: 600 + Math.random()*80, type:'sawtooth', decay:0.11, slide:-120}); },
-    lose(){ playBeep({freq: 140, type:'triangle', decay:0.4, volume:0.7}); noiseBurst({decay:0.25}); },
-    start(){ playBeep({freq: 880, type:'square', decay:0.16}); },
-    level(){ playBeep({freq: 660, type:'square', decay:0.12}); playBeep({freq:880,type:'square',decay:0.12}); },
-    power(){ playBeep({freq: 980, type:'square', decay:0.12}); },
-    shoot(){ playBeep({freq:1100, type:'square', decay:0.06, volume:0.45}); },
-hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
-    multiball(){ playBeep({freq: 740, type:'square', decay:0.12}); playBeep({freq: 920, type:'square', decay:0.12}); }
+    wall(){ playSound('wall-bounce', () => playBeep({freq: 320 + Math.random()*60, type:'square', decay:0.08, volume:0.6})); },
+    boom(){ playSound('explosion', () => noiseBurst({decay:0.35, volume:0.8})); },
+    paddle(){ playSound('paddle-hit', () => playBeep({freq: 420 + Math.random()*100, type:'square', decay:0.1, slide:-100, volume:0.65})); },
+    brick(){ playSound('brick-hit', () => playBeep({freq: 600 + Math.random()*80, type:'sawtooth', decay:0.11, slide:-120})); },
+    brickBreak(){ playSound('brick-break', () => { playBeep({freq: 700 + Math.random()*100, type:'triangle', decay:0.08, slide:160, volume:0.55}); playBeep({freq: 980, type:'square', decay:0.06, volume:0.35}); }); },
+    lose(){ playSound('life-lost', () => { playBeep({freq: 140, type:'triangle', decay:0.4, volume:0.7}); noiseBurst({decay:0.25}); }); },
+    gameOver(){ playSound('game-over', () => { playBeep({freq: 180, type:'sawtooth', decay:0.18, slide:-90, volume:0.68}); playBeep({freq: 90, type:'triangle', decay:0.46, volume:0.55}); noiseBurst({decay:0.32, volume:0.45}); }); },
+    start(){ playSound('launch', () => playBeep({freq: 880, type:'square', decay:0.16})); },
+    restart(){ playSound('restart', () => { playBeep({freq: 520, type:'square', decay:0.08, volume:0.5}); playBeep({freq: 780, type:'square', decay:0.12, volume:0.5}); }); },
+    level(){ playSound('level-start', () => { playBeep({freq: 660, type:'square', decay:0.12}); playBeep({freq:880,type:'square',decay:0.12}); }); },
+    levelClear(){ playSound('level-clear', () => { playBeep({freq: 740, type:'triangle', decay:0.1, volume:0.5}); playBeep({freq: 990, type:'triangle', decay:0.16, volume:0.55}); }); },
+    power(){ playSound('powerup', () => playBeep({freq: 980, type:'square', decay:0.12})); },
+    shoot(){ playSound('shoot', () => playBeep({freq:1100, type:'square', decay:0.06, volume:0.45})); },
+hit(){ playSound('brick-hit', () => playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35})); },
+    multiball(){ playSound('multiball', () => { playBeep({freq: 740, type:'square', decay:0.12}); playBeep({freq: 920, type:'square', decay:0.12}); }); }
   };
 
   // Simple chiptune music sequencer
@@ -560,8 +617,8 @@ hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
     ],
     toFreq(m){ return 440 * Math.pow(2, (m - 69)/12); },
     tick(){
-      if (!musicOn) return;
-      ensureAudio();
+      if (!musicOn || !soundEnabled) return;
+      if (!ensureAudio()) return;
       const pair = this.pattern[this.index % this.pattern.length];
       const [lead, bass] = pair;
       const now = audioCtx.currentTime;
@@ -571,6 +628,7 @@ hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
         const f = MUSIC.toFreq(midi);
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
+        oscillatorCount++;
         o.type = 'square';
         o.frequency.setValueAtTime(f, now);
         g.gain.setValueAtTime(0, now);
@@ -585,7 +643,7 @@ hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
       this.index++;
     },
     start(){
-      if (musicTimer || !musicOn) return;
+      if (musicTimer || !musicOn || !soundEnabled || !audioUnlocked) return;
       const ms = (60/this.tempo) * 1000 / 2; // 8th notes
       this.step = () => this.tick();
       musicTimer = setInterval(this.step, ms);
@@ -595,12 +653,30 @@ hit(){ playBeep({freq:820, type:'triangle', decay:0.05, volume:0.35}); },
 
   function toggleMusic(on){
     musicOn = on ?? !musicOn;
-    btnMusic.textContent = `🎵 Music: ${musicOn? 'On':'Off'}`;
-    if (!audioCtx) return; // not started yet
-    if (musicOn){ musicGain.gain.value = 0.25; MUSIC.start(); }
+    updateAudioButtons();
+    if (!audioReady()) return; // not started yet
+    if (musicOn && soundEnabled){ musicGain.gain.value = 0.25; MUSIC.start(); }
     else { MUSIC.stop(); musicGain.gain.value = 0; }
   }
-  function toggleSfx(on){ sfxOn = on ?? !sfxOn; btnSfx.textContent = `🔊 SFX: ${sfxOn? 'On':'Off'}`; }
+  function toggleSfx(on){
+    soundEnabled = on ?? !soundEnabled;
+    sfxOn = soundEnabled;
+    saveSoundEnabled(soundEnabled);
+    updateAudioButtons();
+    if (!soundEnabled) {
+      MUSIC.stop();
+      if (sfxGain) sfxGain.gain.value = 0;
+      if (musicGain) musicGain.gain.value = 0;
+      return;
+    }
+    if (ensureAudio()) {
+      if (sfxGain) sfxGain.gain.value = 0.9;
+      if (musicGain) musicGain.gain.value = musicOn ? 0.25 : 0;
+      if (musicOn) MUSIC.start();
+      SFX.start();
+    }
+  }
+  updateAudioButtons();
 
   // ===== Game State =====
   const G = {
@@ -638,9 +714,12 @@ gunCooldown: 0,       // ← NEW: autofire timer
       lastPowerupType: null,
       lastLifeLossAge: null,
       shieldSaveAge: null,
+      lastTactile: null,
+      lastTactileAge: null,
       impactCount: 0,
       brickBreakCount: 0,
-      powerupCollectCount: 0
+      powerupCollectCount: 0,
+      tactileCount: 0
     },
     brickPadding: 6,
     brickTop: 80,
@@ -664,6 +743,26 @@ comboTime: 0
 
   };
   let resumeOnClose = false;
+  let lastTactileAt = 0;
+
+function pulseTactile(kind){
+  const f = G.feedback;
+  f.lastTactile = kind;
+  f.lastTactileAge = 0;
+  f.tactileCount += 1;
+  if (!audioUnlocked || typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+  const now = performance.now();
+  const minGap = kind === 'life-lost' ? 180 : 45;
+  if (now - lastTactileAt < minGap) return;
+  lastTactileAt = now;
+  const patterns = {
+    'brick-hit': 8,
+    'brick-break': [10, 18, 8],
+    'paddle-hit': 10,
+    'life-lost': [28, 24, 36]
+  };
+  try { navigator.vibrate(patterns[kind] || 8); } catch {}
+}
 
 function openHelp(){
   if (!cardStart.hidden) return;
@@ -1145,13 +1244,12 @@ function restartGame(){
   if (elFinalBest) elFinalBest.textContent = highScore;
   cardOver.hidden = true;
   resetLevel(false);
-  if (audioCtx) SFX.start();
+  SFX.restart();
 }
 
   // ===== Input =====
-  function unlockAudioOnce(){ ensureAudio(); MUSIC.start(); }
-  addEventListener('pointerdown', unlockAudioOnce, {once: true});
-  addEventListener('keydown', unlockAudioOnce, {once: true});
+  addEventListener('pointerdown', unlockAudioOnce, {once: true, capture: true});
+  addEventListener('keydown', unlockAudioOnce, {once: true, capture: true});
   
   addEventListener('keydown', (e)=>{
     if (e.repeat) return;
@@ -1161,6 +1259,7 @@ function restartGame(){
       const anyStuck = G.balls.some(b=>b.stuck);
       if (anyStuck){
         for (const b of G.balls){ if (b.stuck){ b.stuck=false; b.vx = 0; b.vy = -Math.abs(b.speed); } }
+        SFX.start();
 } else if (G.waitingLaunch && cardStart.hidden) launchAllBalls();
     }
     if (e.key==='p'||e.key==='P') togglePause();
@@ -1279,10 +1378,13 @@ function resetFeedback(resetCounters = false){
   f.lastPowerupType = null;
   f.lastLifeLossAge = null;
   f.shieldSaveAge = null;
+  f.lastTactile = null;
+  f.lastTactileAge = null;
   if (resetCounters) {
     f.impactCount = 0;
     f.brickBreakCount = 0;
     f.powerupCollectCount = 0;
+    f.tactileCount = 0;
   }
 }
 
@@ -1325,6 +1427,7 @@ function recordBrickImpact(x, y, br, broke, points = 0){
     emitFeedbackPop(x, y - 8, text, broke ? '#fef3c7' : '#dffcff', broke ? 0.95 : 0.65);
   }
   if (br) br.hitFlash = Math.max(br.hitFlash || 0, broke ? 0.35 : 0.22);
+  pulseTactile(broke ? 'brick-break' : 'brick-hit');
   if (broke) {
     f.lastBrickBreakAge = 0;
     f.brickBreakCount += 1;
@@ -1340,6 +1443,7 @@ function recordPaddleHit(x, y){
   f.impactCount += 1;
   emitFeedbackRing(x, y, 'rgba(94, 234, 212, 0.9)', 38, 0.34, 3);
   emitFeedbackParticles(x, y, '#5eead4', 8, 90, 0.32);
+  pulseTactile('paddle-hit');
 }
 
 function recordPowerupCollect(pu){
@@ -1374,6 +1478,7 @@ function recordLifeLoss(x, y){
   emitFeedbackRing(x, y, '#fb7185', 70, 0.6, 5);
   emitFeedbackParticles(x, y, '#fb7185', 24, 150, 0.55);
   emitFeedbackPop(x, y - 28, '-1 LIFE', '#fecaca', 1);
+  pulseTactile('life-lost');
 }
 
 function recordLaunchFeedback(){
@@ -1389,7 +1494,7 @@ function updateFeedback(dt){
   f.screenShake = Math.max(0, f.screenShake - dt * 2.6);
   f.paddlePulse = Math.max(0, f.paddlePulse - dt * 2.4);
   f.launchPulse = Math.max(0, f.launchPulse - dt * 2.4);
-  for (const key of ['lastBrickHitAge','lastBrickBreakAge','lastPaddleHitAge','lastPowerupCollectAge','lastLifeLossAge','shieldSaveAge']) {
+  for (const key of ['lastBrickHitAge','lastBrickBreakAge','lastPaddleHitAge','lastPowerupCollectAge','lastLifeLossAge','shieldSaveAge','lastTactileAge']) {
     if (f[key] !== null) {
       f[key] += dt;
       if (f[key] > 4) f[key] = null;
@@ -1853,7 +1958,8 @@ if (b.y - b.r > css.h){
   // otherwise: lose the ball
   G.balls.splice(bi,1);
         if (G.balls.length===0){
-          G.lives--; elLives.textContent = G.lives; SFX.lose();
+          G.lives--; elLives.textContent = G.lives;
+          if (G.lives <= 0) SFX.gameOver(); else SFX.lose();
           recordLifeLoss(p.x, p.y - 12);
 if (G.lives <= 0){
   G.running = false;
@@ -1927,19 +2033,21 @@ if (b.vy > 0){
           // damage
       // damage
 const dmg = b.fire ? 2 : 1;
-br.hp -= dmg; SFX.brick();
+br.hp -= dmg;
 
 // combo logic now activates at 2+ successive hits within 2s
 onBrickHit(cx, cy);
 
 
 if (br.hp<=0){
+    SFX.brickBreak();
     if (br.type === 'BOMB'){ explodeBrick(br); }
   const points = Math.round(50 * G.combo);
   recordBrickImpact(cx, cy, br, true, points);
   addScore(points);
   maybeDropPower(br);
 } else {
+  SFX.brick();
   const points = Math.round(20 * G.combo);
   recordBrickImpact(cx, cy, br, false, points);
   addScore(points);
@@ -1975,6 +2083,7 @@ if (br.hp<=0){
 
     // Check level clear
     if (remaining===0){
+      SFX.levelClear();
       G.running = false; cardNext.hidden = false;
       setTimeout(()=>{ if(G.lives > 0) resetLevel(true); }, 900);
     }
@@ -3006,6 +3115,11 @@ for (const e of G.effects){
       highScore,
       level: G.level,
       lives: G.lives,
+      soundEnabled,
+      audioReady: audioReady(),
+      lastSound,
+      soundCount,
+      oscillatorCount,
       paddle: {
         x: diagNum(G.paddle.x),
         y: diagNum(G.paddle.y),
@@ -3053,15 +3167,29 @@ for (const e of G.effects){
         lastPowerupType: G.feedback.lastPowerupType,
         lastLifeLossAge: G.feedback.lastLifeLossAge === null ? null : diagNum(G.feedback.lastLifeLossAge),
         shieldSaveAge: G.feedback.shieldSaveAge === null ? null : diagNum(G.feedback.shieldSaveAge),
+        lastTactile: G.feedback.lastTactile,
+        lastTactileAge: G.feedback.lastTactileAge === null ? null : diagNum(G.feedback.lastTactileAge),
         impactCount: G.feedback.impactCount,
         brickBreakCount: G.feedback.brickBreakCount,
         powerupCollectCount: G.feedback.powerupCollectCount,
+        tactileCount: G.feedback.tactileCount,
         feedbackParticles: G.feedback.particles.length + G.feedback.rings.length,
         popupCount: G.feedback.pops.length,
         screenFlash: diagNum(G.feedback.screenFlash),
         screenShake: diagNum(G.feedback.screenShake)
       },
-      audio: { musicOn, sfxOn }
+      feedbackState: {
+        particles: G.feedback.particles.length,
+        rings: G.feedback.rings.length,
+        pops: G.feedback.pops.length,
+        paddlePulse: diagNum(G.feedback.paddlePulse),
+        launchPulse: diagNum(G.feedback.launchPulse),
+        screenFlash: diagNum(G.feedback.screenFlash),
+        screenShake: diagNum(G.feedback.screenShake),
+        lastTactile: G.feedback.lastTactile,
+        tactileCount: G.feedback.tactileCount
+      },
+      audio: { musicOn, sfxOn, soundEnabled, audioReady: audioReady(), lastSound, soundCount, oscillatorCount, noiseCount }
     });
   }
 

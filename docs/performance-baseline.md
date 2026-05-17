@@ -19,6 +19,23 @@ CI budgets:
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
 
+## Shadow Switch / Deckforge Duel audit (pass 71)
+
+Captured 2026-05-17 against `http://127.0.0.1:4222` (chromium @ 1280x800, network idle) after adding Shadow Switch and Deckforge Duel plus the parallel older-game audio polish bundle. The strict audit covered the catalog plus 32 manifest games, 33 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 108 ms | 74 ms | 🟢 74 ms | 🟢 176.8 KB | 34 | 0 |
+| Shadow Switch | 🟢 32 ms | 12 ms | 🟢 12 ms | 🟢 39.9 KB | 2 | 0 |
+| Deckforge Duel | 🟢 44 ms | 37 ms | 🟢 37 ms | 🟢 33.1 KB | 2 | 0 |
+| Brick Breaker | 🟡 1940 ms | 1922 ms | 🟢 1922 ms | 🟢 112.3 KB | 2 | 0 |
+| Checkers | 🟢 52 ms | 9 ms | 🟢 35 ms | 🟢 52.6 KB | 2 | 0 |
+| Minesweeper | 🟢 72 ms | 47 ms | 🟢 47 ms | 🟢 62.9 KB | 2 | 0 |
+| Lexica | 🟢 32 ms | 29 ms | 🟢 29 ms | 🟡 213.6 KB | 4 | 0 |
+| Idle Tycoon | 🟢 452 ms | 10 ms | 🟢 11 ms | 🟢 184.9 KB | 2 | 0 |
+
+Shadow Switch and Deckforge Duel stay well under the default 150 KB / 8 request game budget. The older-game audio polish kept Brick Breaker, Checkers, and Minesweeper under budget; Brick Breaker's FCP remained informational only and did not affect the CI strict gate. No console or page errors were reported across the audited URLs, and every page passed the strict meta/alt checks.
+
 ## Starline Strafe audit (pass 70)
 
 Captured 2026-05-17 against `http://127.0.0.1:4214` (chromium @ 1280x800, network idle) after adding Starline Strafe and the parallel audio/catalog/CI polish bundle. The strict audit covered the catalog plus 30 manifest games, 31 pages total.

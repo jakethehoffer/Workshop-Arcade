@@ -218,6 +218,14 @@
   // ===== Util =====
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const choice = (arr) => arr[Math.floor(Math.random()*arr.length)];
+  function safeGetStorage(key) {
+    try { return window.localStorage ? window.localStorage.getItem(key) : null; }
+    catch (_) { return null; }
+  }
+  function safeSetStorage(key, value) {
+    try { if (window.localStorage) window.localStorage.setItem(key, value); }
+    catch (_) {}
+  }
 
   // ===== rAF handle =====
   let rafId = null;
@@ -640,6 +648,7 @@
     if (flags === cell.adj) {
       addChordFeedback(c, r, true, hidden.length);
       hidden.forEach(([nc,nr]) => reveal(nc,nr));
+      if (hidden.length > 0 && !state.over) sfx('chord-open');
     } else {
       addChordFeedback(c, r, false, hidden.length);
       sfx('bump');
@@ -702,14 +711,14 @@
 
   function getBestTime(cols, rows, mines) {
     const key = BEST_KEY_PREFIX + bestKeyForConfig(cols, rows, mines);
-    const raw = localStorage.getItem(key);
+    const raw = safeGetStorage(key);
     const value = raw === null ? NaN : parseInt(raw, 10);
     return Number.isFinite(value) && value >= 0 ? value : null;
   }
 
   function setBestTime(cols, rows, mines, seconds) {
     const key = BEST_KEY_PREFIX + bestKeyForConfig(cols, rows, mines);
-    localStorage.setItem(key, String(seconds));
+    safeSetStorage(key, String(seconds));
   }
 
   function updateBestDisplay() {
@@ -1084,36 +1093,90 @@ function drawRaisedTile(x, y, s, hovered) {
   });
 
   // ===== Audio: SFX + simple generative music =====
+  const SFX_PREF_KEY = 'minesweeper.sfx.v1';
+  const MUSIC_PREF_KEY = 'minesweeper.music.v1';
   let audioCtx = null;
-  let sfxOn = true, musicOn = false;
+  const audioState = {
+    gestureSeen: false,
+    lastSound: null,
+    lastSoundAt: null,
+    soundCount: 0
+  };
   const sfxLed = document.getElementById('sfxLed');
   const musicLed = document.getElementById('musicLed');
 
+  function readAudioPreference(key, fallback) {
+    const stored = safeGetStorage(key);
+    if (stored === null || stored === undefined || stored === '') return fallback;
+    const normalized = String(stored).toLowerCase();
+    if (normalized === 'on' || normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'off' || normalized === 'false' || normalized === '0') return false;
+    return fallback;
+  }
+
+  let sfxOn = readAudioPreference(SFX_PREF_KEY, true);
+  let musicOn = readAudioPreference(MUSIC_PREF_KEY, false);
+
+  function noteAudioGesture(event) {
+    if (!event || event.isTrusted !== false) audioState.gestureSeen = true;
+  }
+
+  function hasAudioGesture() {
+    if (audioState.gestureSeen) return true;
+    try { return !!(navigator.userActivation && navigator.userActivation.hasBeenActive); }
+    catch (_) { return false; }
+  }
+
   function ensureAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!hasAudioGesture()) return null;
+    try {
+      if (!audioCtx) {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) return null;
+        audioCtx = new AudioCtor();
+      }
+      if (audioCtx.state === 'suspended') {
+        const resumed = audioCtx.resume();
+        if (resumed && typeof resumed.catch === 'function') resumed.catch(()=>{});
+      }
+      return audioCtx;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function recordSound(type) {
+    audioState.lastSound = type;
+    audioState.lastSoundAt = performance.now();
+  }
+
+  function audioSoundAge() {
+    return audioState.lastSoundAt === null ? null : Math.max(0, (performance.now() - audioState.lastSoundAt) / 1000);
   }
 
   function sfx(type) {
+    recordSound(type);
     if (!sfxOn) return;
-    ensureAudio();
-    const t0 = audioCtx.currentTime;
-    const vol = audioCtx.createGain(); vol.gain.value = 0.06; vol.connect(audioCtx.destination);
+    const audio = ensureAudio();
+    if (!audio) return;
+    const t0 = audio.currentTime;
+    const vol = audio.createGain(); vol.gain.value = 0.06; vol.connect(audio.destination);
 
     function beep(freqA, freqB, dur=0.08, wave='square') {
-      const o = audioCtx.createOscillator(); o.type = wave; o.frequency.setValueAtTime(freqA, t0);
+      const o = audio.createOscillator(); o.type = wave; o.frequency.setValueAtTime(freqA, t0);
       o.frequency.exponentialRampToValueAtTime(Math.max(1,freqB), t0+dur);
-      const g = audioCtx.createGain(); g.gain.setValueAtTime(1, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+      const g = audio.createGain(); g.gain.setValueAtTime(1, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
       o.connect(g).connect(vol); o.start(t0); o.stop(t0+dur);
     }
 
     function noise(dur=0.15, lp=800) {
-      const bufSize = Math.floor(audioCtx.sampleRate * dur);
-      const buffer = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const bufSize = Math.floor(audio.sampleRate * dur);
+      const buffer = audio.createBuffer(1, bufSize, audio.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i=0;i<bufSize;i++) data[i] = Math.random()*2-1;
-      const src = audioCtx.createBufferSource(); src.buffer = buffer;
-      const biquad = audioCtx.createBiquadFilter(); biquad.type='lowpass'; biquad.frequency.value = lp;
-      const g = audioCtx.createGain(); g.gain.setValueAtTime(1, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+      const src = audio.createBufferSource(); src.buffer = buffer;
+      const biquad = audio.createBiquadFilter(); biquad.type='lowpass'; biquad.frequency.value = lp;
+      const g = audio.createGain(); g.gain.setValueAtTime(1, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
       src.connect(biquad).connect(g).connect(vol);
       src.start(t0); src.stop(t0+dur);
     }
@@ -1123,17 +1186,21 @@ function drawRaisedTile(x, y, s, hovered) {
       case 'flag':   beep(360, 220, 0.08, 'square'); break;
       case 'unflag': beep(180, 420, 0.08, 'square'); break;
       case 'tick':   beep(880, 660, 0.04, 'triangle'); break;
+      case 'restart': beep(880, 660, 0.04, 'triangle'); break;
+      case 'chord-open': beep(720, 540, 0.06, 'square'); break;
       case 'bump':   beep(220, 200, 0.05, 'sawtooth'); break;
       case 'boom':   noise(0.28, 1400); beep(120, 60, 0.18, 'sawtooth'); break;
       case 'win':    beep(660, 990, 0.12, 'triangle'); setTimeout(()=>beep(440, 880, 0.12, 'triangle'), 60); break;
     }
+    audioState.soundCount++;
   }
 
   // Minimal generative chiptune loop
   let musicTimer = null;
   function startMusic() {
-    if (musicTimer) return;
-    ensureAudio();
+    if (!musicOn || musicTimer) return;
+    const audio = ensureAudio();
+    if (!audio) return;
     const tempo = 108; // BPM
     const stepMs = (60/tempo) * 1000 / 2; // 8th notes
     const scale = [0,2,3,5,7,10]; // minor-ish
@@ -1182,26 +1249,45 @@ function drawRaisedTile(x, y, s, hovered) {
   const sfxBtn = document.getElementById('sfxBtn');
   const musicBtn = document.getElementById('musicBtn');
 
+  function updateAudioButtons() {
+    if (sfxLed) {
+      sfxLed.classList.toggle('on', sfxOn);
+      sfxLed.classList.toggle('off', !sfxOn);
+    }
+    if (sfxBtn) {
+      sfxBtn.classList.toggle('is-on', sfxOn);
+      sfxBtn.setAttribute('aria-pressed', sfxOn ? 'true' : 'false');
+    }
+    if (musicLed) {
+      musicLed.classList.toggle('on', musicOn);
+      musicLed.classList.toggle('off', !musicOn);
+    }
+    if (musicBtn) {
+      musicBtn.classList.toggle('is-on', musicOn);
+      musicBtn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
+    }
+  }
+
   function toggleSfx() {
     sfxOn = !sfxOn;
-    sfxLed.classList.toggle('on', sfxOn);
-    sfxLed.classList.toggle('off', !sfxOn);
-    sfxBtn.classList.toggle('is-on', sfxOn);
-    sfxBtn.setAttribute('aria-pressed', sfxOn ? 'true' : 'false');
+    safeSetStorage(SFX_PREF_KEY, sfxOn ? 'on' : 'off');
+    updateAudioButtons();
     sfx('tick');
   }
 
   function toggleMusic() {
     musicOn = !musicOn;
-    musicLed.classList.toggle('on', musicOn);
-    musicLed.classList.toggle('off', !musicOn);
-    musicBtn.classList.toggle('is-on', musicOn);
-    musicBtn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
+    safeSetStorage(MUSIC_PREF_KEY, musicOn ? 'on' : 'off');
+    updateAudioButtons();
     sfx('tick');
-    ensureAudio();
     if (musicOn) startMusic(); else stopMusic();
   }
 
+  window.addEventListener('pointerdown', noteAudioGesture, { capture:true, passive:true });
+  window.addEventListener('click', noteAudioGesture, { capture:true, passive:true });
+  window.addEventListener('keydown', noteAudioGesture, { capture:true });
+
+  updateAudioButtons();
   sfxBtn.addEventListener('click', toggleSfx);
   musicBtn.addEventListener('click', toggleMusic);
 
@@ -1339,7 +1425,7 @@ function drawRaisedTile(x, y, s, hovered) {
   }
 
   resetBtn.addEventListener('click', ()=>{
-    sfx('tick');
+    sfx('restart');
     startNewGame();
   });
   diffSel.addEventListener('change', ()=>{
@@ -1485,6 +1571,7 @@ function drawRaisedTile(x, y, s, hovered) {
   function renderGameToText(){
     const summary = visibleCellSummary();
     const age = (value) => value === null ? null : Number(value.toFixed(2));
+    const lastSoundAge = audioSoundAge();
     return JSON.stringify({
       game: 'Minesweeper',
       coordinateSystem: 'grid cells, origin top-left, c right, r down',
@@ -1498,10 +1585,20 @@ function drawRaisedTile(x, y, s, hovered) {
       flagsPlaced: state.flagsPlaced,
       minesLeft: state.mines - state.flagsPlaced,
       timer: state.timer,
+      timerActive: !!state.timerId,
       flagMode: !!state.flagMode,
       hover: { c: state.hover.c, r: state.hover.r },
       helpOpen: !!helpOpen,
       preset: currentPreset,
+      audio: {
+        sfxOn: !!sfxOn,
+        musicOn: !!musicOn,
+        audioReady: !!audioCtx,
+        lastSound: audioState.lastSound,
+        lastSoundAge: lastSoundAge === null ? null : age(lastSoundAge),
+        soundCount: audioState.soundCount,
+        musicTimerActive: !!musicTimer
+      },
       feedback: {
         lastRevealAge: age(feedback.lastRevealAge),
         lastFlagAge: age(feedback.lastFlagAge),

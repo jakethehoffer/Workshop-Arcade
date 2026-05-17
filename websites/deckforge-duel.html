@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Deckforge Duel</title>
+<link rel="icon" href="data:," />
+<!-- workshop-meta:start -->
+<meta name="description" content="Play attack, shield, and focus cards against telegraphed enemy intents across three deterministic rounds." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/deckforge-duel.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Deckforge Duel — Workshop Arcade" />
+<meta property="og:description" content="Play attack, shield, and focus cards against telegraphed enemy intents across three deterministic rounds." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/deckforge-duel.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/deckforge-duel.svg" />
+<meta property="og:image:alt" content="Deckforge Duel cover art" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Deckforge Duel — Workshop Arcade" />
+<meta name="twitter:description" content="Play attack, shield, and focus cards against telegraphed enemy intents across three deterministic rounds." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/deckforge-duel.svg" />
+<!-- workshop-meta:end -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:18px 12px 24px;overflow-x:hidden;background:
+      radial-gradient(780px 500px at 14% -8%,rgba(94,234,212,.13),transparent 60%),
+      radial-gradient(720px 480px at 96% 4%,rgba(251,191,36,.11),transparent 62%),
+      linear-gradient(180deg,#0b0f14,#07101a 84%);
+  }
+  .brand{align-self:flex-start;line-height:1;user-select:none}
+  .brand .eyebrow{display:block;font-size:10px;text-transform:uppercase;color:#5eead4;font-weight:900}
+  .brand .title{display:block;margin-top:3px;font-size:22px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.2)}
+  .panel{width:100%;max-width:850px;display:flex;flex-direction:column;gap:9px}
+  .hud,.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .pill{
+    min-width:66px;padding:7px 9px;border:1px solid rgba(94,234,212,.24);border-radius:8px;
+    background:linear-gradient(180deg,rgba(20,30,50,.94),rgba(11,17,32,.95));
+    box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.04);text-align:center;line-height:1.05;
+  }
+  .pill .label{display:block;font-size:9px;color:rgba(94,234,212,.86);font-weight:900;text-transform:uppercase}
+  .pill .value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
+  .pill[data-hot="true"]{border-color:rgba(251,191,36,.66);box-shadow:0 0 18px rgba(251,191,36,.12),0 6px 14px rgba(0,0,0,.25)}
+  .stage{border:1px solid rgba(94,234,212,.28);border-radius:12px;overflow:hidden;background:#07101a;box-shadow:0 18px 38px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}
+  canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(251,191,36,.82);outline-offset:-4px}
+  .status{min-height:20px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .btn{
+    border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(20,30,50,.95),rgba(11,17,32,.96));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:850;text-transform:uppercase;padding:8px 10px;cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .btn[aria-pressed="true"],.btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
+  .btn:hover{border-color:rgba(94,234,212,.58)}
+  .help{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
+  @media (max-width:560px){
+    body{padding:11px 7px 18px;gap:8px}
+    .brand .title{font-size:18px}
+    .panel{gap:7px}
+    .pill{min-width:54px;padding:6px 6px}
+    .pill .value{font-size:14px}
+    .btn{padding:8px 8px;font-size:11px}
+    .help{font-size:11px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Deckforge Duel</span></div>
+<main class="panel" aria-label="Deckforge Duel game">
+  <div class="hud" aria-label="Duel status">
+    <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">1/3</span></div>
+    <div class="pill"><span class="label">Turn</span><span class="value" id="turnValue">1</span></div>
+    <div class="pill" id="energyPill"><span class="label">Energy</span><span class="value" id="energyValue">3</span></div>
+    <div class="pill"><span class="label">HP</span><span class="value" id="hpValue">44</span></div>
+    <div class="pill"><span class="label">Combo</span><span class="value" id="comboValue">0</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </div>
+  <div class="stage"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Deckforge Duel canvas. Play numbered cards, block telegraphed enemy intents, and clear three rounds."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Play cards, then end turn before the enemy strikes.</div>
+  <div class="toolbar" aria-label="Duel controls">
+    <button class="btn primary" type="button" id="endBtn">End Turn</button>
+    <button class="btn" type="button" id="restartBtn">Restart</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button class="btn" type="button" id="fullBtn">Fullscreen</button>
+  </div>
+  <div class="help">Tap cards or press 1-5 to play. Enter ends turn or confirms. R restarts, F fullscreen, M/S toggles sound. Focus boosts your next attack.</div>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const keys = { best: "deckforge-duel.best.v1", sound: "deckforge-duel.sound.v1" };
+  const els = {
+    round: document.getElementById("roundValue"),
+    turn: document.getElementById("turnValue"),
+    energy: document.getElementById("energyValue"),
+    energyPill: document.getElementById("energyPill"),
+    hp: document.getElementById("hpValue"),
+    combo: document.getElementById("comboValue"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    status: document.getElementById("statusLine"),
+    end: document.getElementById("endBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    full: document.getElementById("fullBtn")
+  };
+  const storage = {
+    get(key, fallback){ try { const value = localStorage.getItem(key); return value === null ? fallback : value; } catch (_) { return fallback; } },
+    set(key, value){ try { localStorage.setItem(key, String(value)); } catch (_) {} }
+  };
+  const cards = {
+    strike: { id: "strike", name: "Strike", type: "Attack", cost: 1, damage: 6, color: "#fb7185", text: "Deal 6 + focus." },
+    guard: { id: "guard", name: "Guard", type: "Shield", cost: 1, block: 7, color: "#5eead4", text: "Gain 7 block." },
+    focus: { id: "focus", name: "Focus", type: "Focus", cost: 0, focus: 3, draw: 1, color: "#fbbf24", text: "+3 focus. Draw 1." },
+    lance: { id: "lance", name: "Lance", type: "Attack", cost: 2, damage: 10, pierce: 3, color: "#f97316", text: "Deal 10. Pierce 3." },
+    bulwark: { id: "bulwark", name: "Bulwark", type: "Shield", cost: 2, block: 12, color: "#7c9eff", text: "Gain 12 block." },
+    spark: { id: "spark", name: "Spark", type: "Attack", cost: 1, damage: 4, draw: 1, color: "#c084fc", text: "Deal 4. Draw 1." },
+    channel: { id: "channel", name: "Channel", type: "Focus", cost: 1, focus: 2, energy: 2, color: "#22d3ee", text: "+2 focus. Gain 2 energy." },
+    riposte: { id: "riposte", name: "Riposte", type: "Shield", cost: 1, block: 5, damage: 3, color: "#34d399", text: "Block 5. Deal 3." }
+  };
+  const baseDeck = ["strike","guard","focus","strike","spark","guard","lance","bulwark","channel","riposte","strike","focus"];
+  const roundData = [
+    { name: "Ash Core", hp: 30, color: "#fb7185", intents: [
+      { label: "Slash", kind: "attack", damage: 7 },
+      { label: "Casing", kind: "shield", block: 6 },
+      { label: "Heavy Cut", kind: "attack", damage: 9 },
+      { label: "Overheat", kind: "focus", charge: 4 }
+    ]},
+    { name: "Iron Hex", hp: 40, color: "#fbbf24", intents: [
+      { label: "Hammer", kind: "attack", damage: 10 },
+      { label: "Brace", kind: "guarded", block: 5, damage: 5 },
+      { label: "Static Sap", kind: "sap", damage: 6, drain: 1 },
+      { label: "Charge Coil", kind: "focus", charge: 5 }
+    ]},
+    { name: "Void Regent", hp: 52, color: "#c084fc", intents: [
+      { label: "Twin Rift", kind: "attack", damage: 8, hits: 2 },
+      { label: "Prism Guard", kind: "shield", block: 10 },
+      { label: "Repair", kind: "repair", heal: 7 },
+      { label: "Crush", kind: "attack", damage: 15 },
+      { label: "Dark Focus", kind: "focus", charge: 6 }
+    ]}
+  ];
+  const state = {
+    mode: "player",
+    round: 1,
+    turn: 1,
+    energy: 3,
+    energyPenalty: 0,
+    combo: 0,
+    streak: 0,
+    bestStreak: 0,
+    focus: 0,
+    score: 0,
+    best: Number(storage.get(keys.best, "0")) || 0,
+    sound: storage.get(keys.sound, "1") !== "0",
+    player: { hp: 44, maxHp: 44, block: 0 },
+    enemy: { name: "", hp: 1, maxHp: 1, block: 0, charge: 0, color: "#fb7185" },
+    deck: [],
+    hand: [],
+    discard: [],
+    cardRects: [],
+    effects: [],
+    enemyTimer: 0,
+    time: 0,
+    feedback: "Play cards, then end turn before the enemy strikes.",
+    feedbackTime: 2,
+    lastSound: "none",
+    win: false,
+    gameOver: false
+  };
+  let audioCtx = null;
+  let lastStamp = 0;
+
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+  function card(id){ return cards[id]; }
+  function setFeedback(text, seconds = 1.5){
+    state.feedback = text;
+    state.feedbackTime = seconds;
+  }
+  function makeDeck(round){
+    const deck = baseDeck.slice();
+    if (round >= 2) deck.push("lance","guard");
+    if (round >= 3) deck.push("spark","bulwark","channel");
+    return deck;
+  }
+  function intentForTurn(){
+    const data = roundData[state.round - 1];
+    return data.intents[(state.turn - 1) % data.intents.length];
+  }
+  function intentText(intent = intentForTurn()){
+    const bonus = state.enemy.charge && intent.damage ? ` +${state.enemy.charge}` : "";
+    if (intent.kind === "attack") return `${intent.label}: ${intent.hits || 1}x ${intent.damage}${bonus}`;
+    if (intent.kind === "shield") return `${intent.label}: block ${intent.block}`;
+    if (intent.kind === "guarded") return `${intent.label}: block ${intent.block}, hit ${intent.damage}${bonus}`;
+    if (intent.kind === "sap") return `${intent.label}: hit ${intent.damage}${bonus}, -${intent.drain} energy`;
+    if (intent.kind === "repair") return `${intent.label}: heal ${intent.heal}`;
+    return `${intent.label}: next attack +${intent.charge}`;
+  }
+  function ensureAudio(){
+    if (!state.sound || audioCtx) return;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+  }
+  function beep(freq, dur = .06, gain = .035, type = "triangle"){
+    if (!state.sound) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") { try { audioCtx.resume(); } catch (_) {} }
+    const start = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const amp = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    amp.gain.setValueAtTime(gain, start);
+    amp.gain.exponentialRampToValueAtTime(.001, start + dur);
+    osc.connect(amp).connect(audioCtx.destination);
+    osc.start(start);
+    osc.stop(start + dur);
+  }
+  function sfx(name){
+    state.lastSound = state.sound ? name : "muted:" + name;
+    if (!state.sound) return;
+    if (name === "attack") { beep(190,.05,.035,"sawtooth"); setTimeout(() => beep(360,.06,.03,"triangle"), 28); }
+    else if (name === "shield") beep(250,.08,.04,"square");
+    else if (name === "focus") { beep(520,.05,.03,"sine"); setTimeout(() => beep(690,.07,.025,"sine"), 42); }
+    else if (name === "deny") beep(110,.09,.035,"sawtooth");
+    else if (name === "enemy") beep(145,.1,.04,"sawtooth");
+    else if (name === "round") { beep(420,.08,.035,"triangle"); setTimeout(() => beep(620,.1,.03,"triangle"), 70); }
+    else if (name === "win") { beep(470,.08,.035,"sine"); setTimeout(() => beep(720,.12,.035,"sine"), 95); }
+    else beep(320,.05,.025,"triangle");
+  }
+  function saveBest(){
+    if (state.score > state.best) {
+      state.best = state.score;
+      storage.set(keys.best, state.best);
+    }
+  }
+  function drawCards(count){
+    for (let i = 0; i < count && state.hand.length < 5; i++) {
+      if (!state.deck.length && state.discard.length) {
+        state.deck = state.discard.splice(0);
+      }
+      if (!state.deck.length) return;
+      state.hand.push(state.deck.shift());
+    }
+  }
+  function startRound(round, fresh = false){
+    const data = roundData[round - 1];
+    state.round = round;
+    state.turn = 1;
+    state.mode = "player";
+    state.energyPenalty = 0;
+    state.energy = 2 + round;
+    state.combo = 0;
+    state.focus = 0;
+    state.player.block = 0;
+    if (!fresh) state.player.hp = Math.min(state.player.maxHp, state.player.hp + 5);
+    state.enemy = { name: data.name, hp: data.hp, maxHp: data.hp, block: 0, charge: 0, color: data.color };
+    state.deck = makeDeck(round);
+    state.hand = [];
+    state.discard = [];
+    drawCards(5);
+    state.win = false;
+    state.gameOver = false;
+    setFeedback(`Round ${round}: ${state.enemy.name} intends ${intentText()}.`, 2);
+    updateHud();
+    render();
+  }
+  function restart(){
+    state.score = 0;
+    state.streak = 0;
+    state.bestStreak = 0;
+    state.player.hp = state.player.maxHp;
+    state.effects = [];
+    state.lastSound = "none";
+    startRound(1, true);
+  }
+  function finish(win){
+    state.win = win;
+    state.gameOver = true;
+    state.mode = win ? "won" : "lost";
+    if (win) state.score += 300 + state.player.hp * 10 + state.bestStreak * 15;
+    saveBest();
+    setFeedback(win ? "Forge complete. Victory secured." : "The forge went cold. Run defeated.", 3);
+    sfx(win ? "win" : "enemy");
+    updateHud();
+    render();
+  }
+  function addEffect(x, y, color, label){
+    state.effects.push({ x, y, color, label, t: .55, life: .55 });
+  }
+  function dealDamage(raw, pierce = 0, label = "Hit"){
+    let damage = Math.max(0, raw | 0);
+    const bypass = Math.min(pierce, damage);
+    const blockable = damage - bypass;
+    const absorbed = Math.min(state.enemy.block, blockable);
+    state.enemy.block -= absorbed;
+    damage = bypass + blockable - absorbed;
+    state.enemy.hp = Math.max(0, state.enemy.hp - damage);
+    state.score += damage * 9 + absorbed * 2 + state.combo * 3;
+    addEffect(682, 172, "#fb7185", `-${damage}`);
+    setFeedback(`${label} dealt ${damage}${absorbed ? ` after ${absorbed} block` : ""}.`);
+    sfx("attack");
+    if (state.enemy.hp <= 0) completeRound();
+  }
+  function playCard(index){
+    if (state.mode !== "player") return;
+    const id = state.hand[index];
+    if (!id) return;
+    const c = card(id);
+    if (state.energy < c.cost) {
+      setFeedback(`Need ${c.cost} energy for ${c.name}.`);
+      sfx("deny");
+      updateHud();
+      render();
+      return;
+    }
+    state.energy -= c.cost;
+    state.hand.splice(index, 1);
+    state.discard.push(id);
+    state.combo += 1;
+    state.streak += 1;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    state.score += 5 + state.combo * 2;
+    if (c.block) {
+      state.player.block += c.block;
+      state.score += c.block * 2;
+      addEffect(220, 238, c.color, `+${c.block}`);
+      sfx("shield");
+    }
+    if (c.focus) {
+      state.focus += c.focus;
+      state.score += c.focus * 7;
+      addEffect(448, 238, c.color, `Focus +${c.focus}`);
+      sfx("focus");
+    }
+    if (c.energy) {
+      state.energy = Math.min(6, state.energy + c.energy);
+      addEffect(448, 294, "#fbbf24", `Energy +${c.energy}`);
+    }
+    if (c.damage) {
+      const bonus = state.focus + (state.combo >= 3 ? 1 : 0);
+      state.focus = 0;
+      dealDamage(c.damage + bonus, c.pierce || 0, c.name);
+    } else {
+      setFeedback(`${c.name} forged momentum.`);
+    }
+    if (c.draw) drawCards(c.draw);
+    if (state.mode === "player" && !state.hand.length) setFeedback("Hand empty. End turn to face the intent.");
+    updateHud();
+    render();
+  }
+  function completeRound(){
+    state.score += state.round * 140 + state.streak * 5;
+    saveBest();
+    sfx("round");
+    if (state.round >= 3) {
+      finish(true);
+      return;
+    }
+    state.mode = "between";
+    setFeedback(`Round ${state.round} cleared. Press Enter or Continue.`);
+    updateHud();
+  }
+  function endTurn(){
+    if (state.mode === "between") {
+      startRound(state.round + 1);
+      sfx("focus");
+      return;
+    }
+    if (state.mode === "won" || state.mode === "lost") {
+      restart();
+      return;
+    }
+    if (state.mode !== "player") return;
+    state.mode = "enemy";
+    state.enemyTimer = .42;
+    setFeedback(`${state.enemy.name} acts: ${intentText()}.`);
+    sfx("focus");
+    updateHud();
+    render();
+  }
+  function resolveEnemy(){
+    const intent = intentForTurn();
+    let blocked = 0;
+    let taken = 0;
+    if (intent.block) {
+      state.enemy.block += intent.block;
+      addEffect(682, 238, "#7c9eff", `+${intent.block}`);
+    }
+    if (intent.heal) {
+      const before = state.enemy.hp;
+      state.enemy.hp = Math.min(state.enemy.maxHp, state.enemy.hp + intent.heal);
+      addEffect(682, 172, "#34d399", `+${state.enemy.hp - before}`);
+    }
+    if (intent.charge) {
+      state.enemy.charge += intent.charge;
+      addEffect(682, 294, "#fbbf24", `Charge +${intent.charge}`);
+    }
+    if (intent.drain) state.energyPenalty = intent.drain;
+    if (intent.damage) {
+      const hits = intent.hits || 1;
+      const charge = state.enemy.charge;
+      state.enemy.charge = 0;
+      for (let i = 0; i < hits; i++) {
+        const hit = intent.damage + (i === 0 ? charge : 0);
+        const absorb = Math.min(state.player.block, hit);
+        state.player.block -= absorb;
+        blocked += absorb;
+        taken += hit - absorb;
+      }
+      state.player.hp = Math.max(0, state.player.hp - taken);
+      addEffect(220, 172, taken ? "#fb7185" : "#5eead4", taken ? `-${taken}` : "Blocked");
+    }
+    if (blocked) state.score += blocked * 3;
+    if (taken > 0) state.streak = 0;
+    sfx("enemy");
+    if (state.player.hp <= 0) {
+      finish(false);
+      return;
+    }
+    state.turn += 1;
+    state.mode = "player";
+    state.player.block = 0;
+    state.energy = Math.max(1, 2 + state.round - state.energyPenalty);
+    state.energyPenalty = 0;
+    state.combo = 0;
+    state.focus = 0;
+    drawCards(5 - state.hand.length);
+    setFeedback(`Turn ${state.turn}: ${state.enemy.name} intends ${intentText()}.`);
+    updateHud();
+  }
+  function updateHud(){
+    els.round.textContent = `${state.round}/3`;
+    els.turn.textContent = String(state.turn);
+    els.energy.textContent = String(state.energy);
+    els.hp.textContent = `${state.player.hp}/${state.player.maxHp}`;
+    els.combo.textContent = `${state.combo}/${state.streak}`;
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.best);
+    els.status.textContent = state.feedback;
+    els.energyPill.dataset.hot = state.energy > 0 && state.mode === "player" ? "true" : "false";
+    els.end.textContent = state.mode === "between" ? "Continue" : state.mode === "won" || state.mode === "lost" ? "New Run" : "End Turn";
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.sound ? "true" : "false");
+  }
+  function update(dt){
+    state.time += dt;
+    if (state.feedbackTime > 0) state.feedbackTime -= dt;
+    for (let i = state.effects.length - 1; i >= 0; i--) {
+      const e = state.effects[i];
+      e.t -= dt;
+      e.y -= dt * 18;
+      if (e.t <= 0) state.effects.splice(i, 1);
+    }
+    if (state.mode === "enemy") {
+      state.enemyTimer -= dt;
+      if (state.enemyTimer <= 0) resolveEnemy();
+    }
+  }
+  function roundRect(x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function fillTextCentered(text, x, y, size = 16, color = "#e6edf3", weight = 800){
+    ctx.fillStyle = color;
+    ctx.font = `${weight} ${size}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y);
+  }
+  function bar(x, y, w, h, value, max, color, back = "rgba(15,23,42,.9)"){
+    ctx.fillStyle = back;
+    roundRect(x, y, w, h, h / 2);
+    ctx.fill();
+    ctx.fillStyle = color;
+    roundRect(x, y, w * clamp(value / max, 0, 1), h, h / 2);
+    ctx.fill();
+  }
+  function drawCore(x, y, side, hp, maxHp, block, color, name){
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = .12 + i * .08;
+      ctx.beginPath();
+      ctx.arc(0, 0, 54 + i * 14 + Math.sin(state.time * 2 + i) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(7,16,26,.95)";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 48, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, 0, 20 + Math.sin(state.time * 4) * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#07101a";
+    ctx.beginPath();
+    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    fillTextCentered(name, x, y - 76, 17, "#f8fbff", 900);
+    bar(x - 72, y + 68, 144, 12, hp, maxHp, color);
+    fillTextCentered(`${hp}/${maxHp}`, x, y + 94, 14, "#e6edf3", 900);
+    if (block > 0) {
+      ctx.fillStyle = "rgba(94,234,212,.14)";
+      roundRect(x - 44, y + 108, 88, 24, 8);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(94,234,212,.72)";
+      ctx.stroke();
+      fillTextCentered(`Block ${block}`, x, y + 121, 13, "#5eead4", 900);
+    }
+    fillTextCentered(side, x, y + 148, 11, "rgba(170,184,210,.9)", 800);
+  }
+  function drawCard(c, x, y, w, h, index){
+    const affordable = state.mode === "player" && state.energy >= c.cost;
+    ctx.save();
+    ctx.shadowColor = affordable ? c.color : "rgba(0,0,0,.45)";
+    ctx.shadowBlur = affordable ? 18 : 8;
+    ctx.fillStyle = affordable ? "rgba(16,25,42,.98)" : "rgba(15,23,42,.76)";
+    roundRect(x, y, w, h, 12);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = affordable ? c.color : "rgba(148,163,184,.28)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = c.color;
+    roundRect(x + 10, y + 10, 30, 30, 9);
+    ctx.fill();
+    fillTextCentered(String(c.cost), x + 25, y + 25, 16, "#07101a", 950);
+    fillTextCentered(String(index + 1), x + w - 20, y + 24, 13, "#aab8d2", 900);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#f8fbff";
+    ctx.font = "900 16px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(c.name, x + 12, y + 50);
+    ctx.fillStyle = c.color;
+    ctx.font = "850 11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(c.type.toUpperCase(), x + 12, y + 73);
+    ctx.fillStyle = "#aab8d2";
+    ctx.font = "750 12px ui-sans-serif, system-ui, sans-serif";
+    const words = c.text.split(" ");
+    let line = "";
+    let ty = y + 96;
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > w - 24 && line) {
+        ctx.fillText(line, x + 12, ty);
+        line = word;
+        ty += 16;
+      } else {
+        line = test;
+      }
+    }
+    ctx.fillText(line, x + 12, ty);
+    ctx.restore();
+  }
+  function drawArena(){
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#071421");
+    bg.addColorStop(.72, "#07101a");
+    bg.addColorStop(1, "#050812");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(94,234,212,.12)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 34; y <= H; y += 56) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 48; i++) {
+      const x = (i * 83 + 31) % W;
+      const y = (i * 137 + 47 + state.time * (8 + i % 5)) % H;
+      ctx.fillStyle = i % 5 === 0 ? "rgba(251,191,36,.45)" : "rgba(94,234,212,.38)";
+      ctx.fillRect(x, y, 2, 2);
+    }
+    ctx.strokeStyle = "rgba(94,234,212,.28)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(280, 188);
+    ctx.bezierCurveTo(360, 110, 540, 110, 620, 188);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(280, 264);
+    ctx.bezierCurveTo(370, 332, 530, 332, 620, 264);
+    ctx.stroke();
+  }
+  function drawPiles(){
+    const piles = [
+      { label: "Deck", count: state.deck.length, x: 35, y: 372, color: "#5eead4" },
+      { label: "Discard", count: state.discard.length, x: 785, y: 372, color: "#fbbf24" }
+    ];
+    for (const p of piles) {
+      ctx.fillStyle = "rgba(11,17,32,.86)";
+      roundRect(p.x, p.y, 80, 118, 10);
+      ctx.fill();
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      fillTextCentered(p.label, p.x + 40, p.y + 34, 12, p.color, 900);
+      fillTextCentered(String(p.count), p.x + 40, p.y + 68, 28, "#f8fbff", 950);
+    }
+  }
+  function drawOverlay(){
+    if (state.mode !== "between" && state.mode !== "won" && state.mode !== "lost") return;
+    ctx.fillStyle = "rgba(5,8,18,.72)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(11,17,32,.96)";
+    roundRect(250, 138, 400, 166, 16);
+    ctx.fill();
+    ctx.strokeStyle = state.win ? "#5eead4" : state.mode === "lost" ? "#fb7185" : "#fbbf24";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    const title = state.mode === "between" ? `Round ${state.round} Clear` : state.win ? "Victory" : "Defeat";
+    fillTextCentered(title, 450, 184, 30, "#f8fbff", 950);
+    fillTextCentered(state.feedback, 450, 228, 15, "#aab8d2", 850);
+    fillTextCentered(state.mode === "between" ? "Press Enter to continue" : "Press Enter or R for a new run", 450, 264, 14, "#5eead4", 900);
+  }
+  function render(){
+    drawArena();
+    drawCore(220, 184, "PLAYER", state.player.hp, state.player.maxHp, state.player.block, "#5eead4", "Forge Pilot");
+    drawCore(682, 184, "ENEMY", state.enemy.hp, state.enemy.maxHp, state.enemy.block, state.enemy.color, state.enemy.name);
+    ctx.fillStyle = "rgba(11,17,32,.88)";
+    roundRect(330, 36, 240, 92, 12);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(251,191,36,.48)";
+    ctx.stroke();
+    fillTextCentered("Enemy Intent", 450, 58, 12, "#fbbf24", 950);
+    fillTextCentered(intentText(), 450, 88, 17, "#f8fbff", 900);
+    fillTextCentered(`Focus ${state.focus}  Streak ${state.streak}`, 450, 116, 12, "#aab8d2", 850);
+    drawPiles();
+    state.cardRects = [];
+    const n = state.hand.length;
+    const cw = 126;
+    const ch = 146;
+    const gap = 10;
+    const total = n * cw + Math.max(0, n - 1) * gap;
+    let x = (W - total) / 2;
+    const y = 386;
+    for (let i = 0; i < n; i++) {
+      const c = card(state.hand[i]);
+      state.cardRects.push({ x, y, w: cw, h: ch, index: i });
+      drawCard(c, x, y, cw, ch, i);
+      x += cw + gap;
+    }
+    for (const e of state.effects) {
+      ctx.globalAlpha = clamp(e.t / e.life, 0, 1);
+      fillTextCentered(e.label, e.x, e.y, 20, e.color, 950);
+      ctx.globalAlpha = 1;
+    }
+    if (state.mode === "enemy") {
+      fillTextCentered("Enemy resolving...", 450, 346, 16, "#fbbf24", 950);
+    } else if (state.mode === "player") {
+      fillTextCentered(state.feedback, 450, 346, 14, "#5eead4", 900);
+    }
+    drawOverlay();
+  }
+  function frame(stamp){
+    const dt = Math.min(.05, (stamp - lastStamp) / 1000 || 1 / 60);
+    lastStamp = stamp;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  function canvasPoint(event){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * W / rect.width,
+      y: (event.clientY - rect.top) * H / rect.height
+    };
+  }
+  function toggleSound(){
+    state.sound = !state.sound;
+    storage.set(keys.sound, state.sound ? "1" : "0");
+    updateHud();
+    if (state.sound) sfx("focus");
+  }
+  function toggleFullscreen(){
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else canvas.parentElement.requestFullscreen?.();
+  }
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    canvas.focus();
+    const p = canvasPoint(event);
+    const hit = state.cardRects.find((rect) => p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h);
+    if (hit) playCard(hit.index);
+  });
+  document.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    if (key >= "1" && key <= "5") {
+      event.preventDefault();
+      playCard(Number(key) - 1);
+    } else if (key === "enter") {
+      event.preventDefault();
+      endTurn();
+    } else if (key === "r") {
+      event.preventDefault();
+      restart();
+      sfx("focus");
+    } else if (key === "f") {
+      event.preventDefault();
+      toggleFullscreen();
+    } else if (key === "m" || key === "s") {
+      event.preventDefault();
+      toggleSound();
+    }
+  });
+  els.end.addEventListener("click", () => { canvas.focus(); endTurn(); });
+  els.restart.addEventListener("click", () => { canvas.focus(); restart(); sfx("focus"); });
+  els.sound.addEventListener("click", () => { canvas.focus(); toggleSound(); });
+  els.full.addEventListener("click", () => { canvas.focus(); toggleFullscreen(); });
+
+  function snapshot(){
+    const intent = intentForTurn();
+    return {
+      mode: state.mode,
+      round: state.round,
+      turn: state.turn,
+      energy: state.energy,
+      player: { hp: state.player.hp, maxHp: state.player.maxHp, block: state.player.block },
+      enemy: { name: state.enemy.name, hp: state.enemy.hp, maxHp: state.enemy.maxHp, block: state.enemy.block, charge: state.enemy.charge },
+      hand: { size: state.hand.length, names: state.hand.map((id) => card(id).name) },
+      deck: { size: state.deck.length, names: state.deck.map((id) => card(id).name) },
+      discard: { size: state.discard.length, names: state.discard.map((id) => card(id).name) },
+      enemyIntent: { label: intent.label, kind: intent.kind, damage: intent.damage || 0, block: intent.block || 0, charge: intent.charge || 0, heal: intent.heal || 0, drain: intent.drain || 0, text: intentText(intent) },
+      score: state.score,
+      combo: state.combo,
+      streak: state.streak,
+      bestStreak: state.bestStreak,
+      best: state.best,
+      sound: { enabled: state.sound, key: keys.sound, last: state.lastSound },
+      feedbackText: state.feedback,
+      feedback: {
+        text: state.feedback,
+        active: state.feedbackTime > 0,
+        age: Math.max(0, 3 - state.feedbackTime),
+        effectCount: state.effects.length,
+        lastSound: state.lastSound
+      },
+      gameOver: state.gameOver,
+      win: state.win
+    };
+  }
+  window.render_game_to_text = () => JSON.stringify(snapshot());
+  window.advanceTime = (ms) => {
+    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < steps; i++) update(1 / 60);
+    render();
+    return window.render_game_to_text();
+  };
+
+  restart();
+  updateHud();
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
