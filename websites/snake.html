@@ -747,9 +747,6 @@
       const currentlyOn = (currentLabel.indexOf('On')>-1);
       Music.setEnabled(!currentlyOn);
     }
-    else if(c==='KeyN'){
-      toggleSound();
-    }
     // prevent page scroll with arrows/space on some browsers
     if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c)) e.preventDefault();
   }
@@ -761,23 +758,6 @@
     const currentlyOn = (currentLabel.indexOf('On')>-1);
     Music.setEnabled(!currentlyOn);
   }
-  function updateSoundLabels(){
-    const label = soundEnabled ? 'Sound: On' : 'Sound: Off';
-    if(soundToggleLabel) soundToggleLabel.textContent = label;
-    if(soundPillLabel) soundPillLabel.textContent = label;
-    if(soundPill) {
-      soundPill.setAttribute('aria-label', `Toggle sound, currently ${soundEnabled ? 'on' : 'off'}`);
-      soundPill.title = `Toggle sound (${soundEnabled ? 'on' : 'off'}) (N)`;
-      soundPill.setAttribute('aria-pressed', String(soundEnabled));
-    }
-    if(soundToggleBtn) soundToggleBtn.setAttribute('aria-pressed', String(soundEnabled));
-  }
-  function toggleSound(){
-    soundEnabled = !soundEnabled;
-    writeSetting(SOUND_KEY, soundEnabled);
-    lastSound = soundEnabled ? 'sound-on' : 'sound-off';
-    updateSoundLabels();
-  }
 
   upBtn.addEventListener('click', ()=>{ queueDir({x:0,y:-1}); if(!running&&!gameOver) start(); });
   downBtn.addEventListener('click', ()=>{ queueDir({x:0,y:1}); if(!running&&!gameOver) start(); });
@@ -787,8 +767,6 @@
   if(startMobileBtn) startMobileBtn.addEventListener('click', activateStartMobile);
   musicToggleBtn.addEventListener('click', toggleMusic);
   musicPill.addEventListener('click', toggleMusic);
-  if(soundToggleBtn) soundToggleBtn.addEventListener('click', toggleSound);
-  if(soundPill) soundPill.addEventListener('click', toggleSound);
 
   // Help menu
   let wasRunningBeforeHelp = false;
@@ -880,10 +858,6 @@
         label: musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent,
         playing: !Music.paused()
       },
-      sound: {
-        enabled: !!soundEnabled,
-        lastSound
-      },
       feedback: {
         lastEvent: feedback.lastEvent,
         lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 1000) / 1000,
@@ -892,12 +866,8 @@
         resumeCount: feedback.resumeCount,
         queuedTurnCount: feedback.queuedTurnCount,
         acceptedTurnCount: feedback.acceptedTurnCount,
-        foodCount: feedback.foodCount,
-        deathCount: feedback.deathCount,
         lastQueuedDirection: feedback.lastQueuedDirection,
-        lastAcceptedDirection: feedback.lastAcceptedDirection,
-        tactileActive: feedback.activeCueCount > 0,
-        lastSound
+        lastAcceptedDirection: feedback.lastAcceptedDirection
       }
     });
   }
@@ -917,7 +887,6 @@
 
   // init
   Music.updateLabels();
-  updateSoundLabels();
   newGame();
   requestAnimationFrame(loop);
 })();
