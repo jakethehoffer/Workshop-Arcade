@@ -28,7 +28,8 @@ const mimeTypes = new Map([
   [".webp", "image/webp"],
   [".mp3", "audio/mpeg"],
   [".wav", "audio/wav"],
-  [".ogg", "audio/ogg"]
+  [".ogg", "audio/ogg"],
+  [".webmanifest", "application/manifest+json"]
 ]);
 
 function addFailure(label, message) {
