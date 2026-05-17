@@ -71,10 +71,20 @@ async function checkCatalog() {
   requireMatch(`${indexPath} cardT <img>`, imgAttrs, /\bdecoding=["']async["']/, 'decoding="async" (avoids main-thread decode blocking)');
 
   // The render() function must opt the first cards into eager + high
-  // fetchpriority and the rest into lazy + low. Look for the ABOVE_FOLD_COVERS
-  // constant and the corresponding branches.
-  if (!/const\s+ABOVE_FOLD_COVERS\s*=\s*\d+/.test(src)) {
-    fail(`${indexPath}: missing ABOVE_FOLD_COVERS constant in render() logic`);
+  // fetchpriority and the rest into lazy + low. The threshold can be a
+  // viewport-aware helper (preferred — adjusts the eager count to the
+  // actual screen size) or a numeric constant (legacy form).
+  const hasFunction = /function\s+aboveFoldCoverCount\s*\(/.test(src);
+  const hasConstant = /const\s+ABOVE_FOLD_COVERS\s*=\s*\d+/.test(src);
+  if (!hasFunction && !hasConstant) {
+    fail(`${indexPath}: missing viewport-aware aboveFoldCoverCount() helper or ABOVE_FOLD_COVERS constant in render() logic`);
+  }
+  if (hasFunction) {
+    // The viewport helper should return different counts for different
+    // viewport widths so mobile does not pay for desktop's eager budget.
+    if (!/window\.innerWidth/.test(src)) {
+      fail(`${indexPath}: aboveFoldCoverCount() must read window.innerWidth to scale to the viewport`);
+    }
   }
   if (!/img\.loading\s*=\s*['"]eager['"]/.test(src)) {
     fail(`${indexPath}: render() must set img.loading="eager" for above-the-fold cards`);

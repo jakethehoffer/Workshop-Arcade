@@ -972,22 +972,31 @@ function update(){
   render();
 }
 
-// Number of cards likely visible above the fold on a typical desktop viewport.
+// Number of cards likely visible above the fold for the current viewport.
 // Their covers get eager loading + high fetch priority so the LCP candidate
 // is fetched immediately; later covers stay lazy so off-screen ones don't
-// compete for bandwidth on first paint.
-const ABOVE_FOLD_COVERS = 6;
+// compete for bandwidth on first paint. Tuned from live measurements: at
+// 375x812 only ~1-2 cards are visible above the fold, so eagerly fetching
+// 6 wasted ~4 cover requests on mobile; desktop at 1280x800 fits ~6 cards
+// above the fold, so the desktop branch keeps the prior value.
+function aboveFoldCoverCount() {
+  const w = (typeof window !== 'undefined' && window.innerWidth) || 1280;
+  if (w <= 600) return 3;   // phone: 1-2 visible + small fast-scroll buffer
+  if (w <= 1024) return 4;  // tablet: 2-3 visible + buffer
+  return 6;                 // desktop: 4-6 visible + buffer
+}
 
 function render(){
   els.grid.innerHTML = '';
   els.grid.setAttribute('aria-busy','true');
   const frag = document.createDocumentFragment();
+  const aboveFold = aboveFoldCoverCount();
   let cardIndex = 0;
   for(const g of state.filtered){
     const card = els.cardT.content.firstElementChild.cloneNode(true);
     const img = card.querySelector('img');
     img.alt = `${g.title} cover`;
-    if (cardIndex < ABOVE_FOLD_COVERS) {
+    if (cardIndex < aboveFold) {
       img.loading = 'eager';
       img.setAttribute('fetchpriority', 'high');
     } else {
