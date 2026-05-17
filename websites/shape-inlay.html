@@ -149,6 +149,11 @@
         box-shadow: none;
       }
 
+      .btn.sound-toggle {
+        padding-inline: 14px;
+        min-width: 108px;
+      }
+
       .layout {
         display: grid;
         grid-template-columns: minmax(240px, 300px) 1fr;
@@ -509,6 +514,11 @@
           flex: 1 1 auto;
           text-align: center;
         }
+
+        .btn.sound-toggle {
+          flex: 0 1 auto;
+          min-width: 96px;
+        }
       }
     </style>
     <script src="workshop-runtime.js"></script>
@@ -524,6 +534,7 @@
         <div class="mast-actions">
           <button class="btn" id="startBtn" type="button">Start run</button>
           <button class="btn secondary" id="resetBtn" type="button">New track</button>
+          <button class="btn secondary sound-toggle" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
         </div>
       </header>
 
@@ -600,6 +611,7 @@
         const overlayBtn = document.getElementById("overlayBtn");
         const startBtn = document.getElementById("startBtn");
         const resetBtn = document.getElementById("resetBtn");
+        const soundBtn = document.getElementById("soundBtn");
         const distanceEl = document.getElementById("distance");
         const speedEl = document.getElementById("speed");
         const bestEl = document.getElementById("best");
@@ -680,6 +692,33 @@
           shake: 0
         };
 
+        const SOUND_KEY = "slope-runner.sound.v1";
+        const SOUND_COOLDOWNS = {
+          steer: 160,
+          danger: 700,
+          nearMiss: 420
+        };
+        const audioState = {
+          enabled: readSoundPreference(),
+          context: null,
+          gestureSeen: false,
+          lastSound: null,
+          lastSoundAt: null,
+          soundCount: 0,
+          oscillatorCount: 0,
+          rateLimits: {
+            steer: null,
+            danger: null,
+            nearMiss: null
+          },
+          rateLimitSkips: {
+            steer: 0,
+            danger: 0,
+            nearMiss: 0
+          },
+          lastRateLimit: null
+        };
+
         const feedback = {
           dangerCue: 0,
           dangerObstacle: null,
@@ -740,6 +779,208 @@
 
         function randRange(min, max) {
           return min + Math.random() * (max - min);
+        }
+
+        function safeStorageGet(key) {
+          try {
+            return window.localStorage ? window.localStorage.getItem(key) : null;
+          } catch (error) {
+            return null;
+          }
+        }
+
+        function safeStorageSet(key, value) {
+          try {
+            if (window.localStorage) {
+              window.localStorage.setItem(key, value);
+            }
+          } catch (error) {
+            // Storage may be unavailable in private or embedded contexts.
+          }
+        }
+
+        function readSoundPreference() {
+          const stored = safeStorageGet(SOUND_KEY);
+          return stored === null ? true : stored !== "off";
+        }
+
+        function writeSoundPreference(enabled) {
+          safeStorageSet(SOUND_KEY, enabled ? "on" : "off");
+        }
+
+        function updateSoundButton() {
+          if (!soundBtn) return;
+          soundBtn.textContent = audioState.enabled ? "Sound On" : "Muted";
+          soundBtn.setAttribute("aria-pressed", audioState.enabled ? "true" : "false");
+          soundBtn.title = audioState.enabled ? "Turn sound effects off" : "Turn sound effects on";
+        }
+
+        function noteAudioGesture() {
+          audioState.gestureSeen = true;
+        }
+
+        function soundNow() {
+          return window.performance && typeof window.performance.now === "function"
+            ? window.performance.now()
+            : Date.now();
+        }
+
+        function getAudioContext() {
+          if (!audioState.enabled || !audioState.gestureSeen) {
+            return null;
+          }
+          if (navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+            return null;
+          }
+          const AudioCtor = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtor) {
+            return null;
+          }
+          if (!audioState.context) {
+            try {
+              audioState.context = new AudioCtor();
+            } catch (error) {
+              return null;
+            }
+          }
+          if (audioState.context.state === "suspended" && typeof audioState.context.resume === "function") {
+            audioState.context.resume().catch(() => {});
+          }
+          return audioState.context;
+        }
+
+        function claimSoundRateLimit(limiter, soundName) {
+          const cooldown = SOUND_COOLDOWNS[limiter] || 0;
+          if (!cooldown) {
+            audioState.lastRateLimit = null;
+            return true;
+          }
+          const now = soundNow();
+          const last = audioState.rateLimits[limiter];
+          if (last !== null && now - last < cooldown) {
+            const remaining = Math.max(0, (cooldown - (now - last)) / 1000);
+            audioState.rateLimitSkips[limiter] += 1;
+            audioState.lastRateLimit = {
+              limiter,
+              sound: soundName,
+              remaining: Number(remaining.toFixed(2))
+            };
+            return false;
+          }
+          audioState.rateLimits[limiter] = now;
+          audioState.lastRateLimit = null;
+          return true;
+        }
+
+        function soundPattern(name, details = {}) {
+          const steerBase = details.direction === "left" ? 330 : 430;
+          const patterns = {
+            start: [
+              { freq: 240, to: 460, duration: 0.1, type: "sine", gain: 0.04 },
+              { freq: 620, duration: 0.11, delay: 0.07, type: "triangle", gain: 0.026 }
+            ],
+            steer: [
+              { freq: steerBase, to: steerBase + 120, duration: 0.07, type: "triangle", gain: 0.028 }
+            ],
+            "near-miss": [
+              { freq: 820, to: 560, duration: 0.11, type: "triangle", gain: 0.044 },
+              { freq: 980, duration: 0.07, delay: 0.045, type: "sine", gain: 0.025 }
+            ],
+            "edge-danger": [
+              { freq: 150, to: 96, duration: 0.18, type: "sawtooth", gain: 0.032 }
+            ],
+            crash: [
+              { freq: 170, to: 72, duration: 0.24, type: "triangle", gain: 0.055 },
+              { freq: 96, to: 54, duration: 0.19, delay: 0.05, type: "sawtooth", gain: 0.032 }
+            ],
+            "new-best": [
+              { freq: 520, to: 820, duration: 0.1, type: "sine", gain: 0.04 },
+              { freq: 760, to: 1120, duration: 0.14, delay: 0.08, type: "triangle", gain: 0.036 },
+              { freq: 1320, duration: 0.12, delay: 0.17, type: "sine", gain: 0.022 }
+            ]
+          };
+          return patterns[name] || patterns.start;
+        }
+
+        function playSound(name, options = {}) {
+          if (!audioState.enabled || !audioState.gestureSeen) {
+            return false;
+          }
+          const audio = getAudioContext();
+          if (!audio) {
+            return false;
+          }
+          if (options.limiter && !claimSoundRateLimit(options.limiter, name)) {
+            return false;
+          }
+          audioState.lastRateLimit = null;
+          const now = audio.currentTime;
+          soundPattern(name, options).forEach((tone) => {
+            const start = now + (tone.delay || 0);
+            const duration = tone.duration || 0.1;
+            const osc = audio.createOscillator();
+            const gain = audio.createGain();
+            osc.type = tone.type || "sine";
+            osc.frequency.setValueAtTime(tone.freq, start);
+            if (tone.to) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(1, tone.to), start + duration);
+            }
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(tone.gain || 0.03, start + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+            osc.connect(gain);
+            gain.connect(audio.destination);
+            osc.start(start);
+            osc.stop(start + duration + 0.02);
+            osc.addEventListener("ended", () => {
+              gain.disconnect();
+              osc.disconnect();
+            });
+            audioState.oscillatorCount += 1;
+          });
+          audioState.lastSound = name;
+          audioState.lastSoundAt = soundNow();
+          audioState.soundCount += 1;
+          return true;
+        }
+
+        function playEdgeDangerSound() {
+          if (state.running && state.risk > 0.78) {
+            playSound("edge-danger", { limiter: "danger" });
+          }
+        }
+
+        function soundRateLimitDiagnostics() {
+          const now = soundNow();
+          return Object.keys(SOUND_COOLDOWNS).reduce((out, limiter) => {
+            const last = audioState.rateLimits[limiter];
+            const cooldown = SOUND_COOLDOWNS[limiter];
+            const elapsed = last === null ? null : now - last;
+            out[limiter] = {
+              cooldown: Number((cooldown / 1000).toFixed(2)),
+              lastAge: elapsed === null ? null : Number((elapsed / 1000).toFixed(2)),
+              remaining: elapsed === null ? 0 : Number(Math.max(0, (cooldown - elapsed) / 1000).toFixed(2)),
+              skipped: audioState.rateLimitSkips[limiter]
+            };
+            return out;
+          }, {});
+        }
+
+        function soundDiagnostics() {
+          const age = audioState.lastSoundAt === null ? null : Math.max(0, (soundNow() - audioState.lastSoundAt) / 1000);
+          return {
+            enabled: audioState.enabled,
+            persistedKey: SOUND_KEY,
+            gestureSeen: audioState.gestureSeen,
+            audioReady: !!audioState.context,
+            audioState: audioState.context ? audioState.context.state : null,
+            lastSound: audioState.lastSound,
+            lastSoundAge: age === null ? null : Number(age.toFixed(2)),
+            soundCount: audioState.soundCount,
+            oscillatorCount: audioState.oscillatorCount,
+            rateLimits: soundRateLimitDiagnostics(),
+            lastRateLimit: audioState.lastRateLimit
+          };
         }
 
         function resizeCanvas() {
@@ -974,6 +1215,7 @@
           emitParticles(worldX, config.ballZ, "#ffd46a", 12, 0.9);
           emitRing(worldX, config.ballZ, "rgba(255, 212, 106, 0.95)", 0.5);
           emitPop("CLOSE", worldX, config.ballZ, "#ffd46a");
+          playSound("near-miss", { limiter: "nearMiss" });
         }
 
         function resetFeedback() {
@@ -1001,12 +1243,16 @@
           if (type === "start") {
             feedback.startCount += 1;
             emitRing(state.ballX, config.ballZ, "rgba(101, 230, 255, 0.95)", 0.46);
+            playSound("start");
           }
           if (type === "steer") {
             feedback.steerCount += 1;
             feedback.lastSteerDirection = details.direction || null;
             emitRing(state.ballX, config.ballZ, "rgba(255, 226, 109, 0.95)", 0.38);
             emitPop(details.direction === "left" ? "LEFT" : "RIGHT", state.ballX, config.ballZ, "#ffe26d");
+            if (state.running) {
+              playSound("steer", { limiter: "steer", direction: details.direction });
+            }
           }
         }
 
@@ -1022,6 +1268,7 @@
             width: Math.round(danger.width * 10) / 10
           } : null;
           feedback.edgePulse += ((state.running ? clamp((state.risk - 0.66) / 0.34, 0, 1) : 0) - feedback.edgePulse) * Math.min(1, dt * 10);
+          playEdgeDangerSound();
           if (feedback.lastEventAge !== null) {
             feedback.lastEventAge += dt;
             feedback.activeCueCount = feedback.lastEventAge <= 1.2 ? 1 : 0;
@@ -1365,10 +1612,12 @@
           emitParticles(state.ballX, config.ballZ, "#ff6b8f", 24, 1.35);
           emitRing(state.ballX, config.ballZ, "rgba(255, 107, 143, 0.95)", 0.62);
           emitPop("BREAK", state.ballX, config.ballZ, "#ff6b8f");
+          playSound("crash");
           const distance = Math.floor(state.distance / 10);
           if (distance > state.best) {
             state.best = distance;
             try { localStorage.setItem("slope-best", String(state.best)); } catch(e) {}
+            playSound("new-best");
           }
           showOverlay("Run ended", `${reason} Distance ${distance}m.`, "Run it back");
           updateHud();
@@ -1461,13 +1710,32 @@
         }
 
         startBtn.addEventListener("click", () => {
+          noteAudioGesture();
           if (state.running && !confirm("Abandon current run?")) return;
           startGame();
         });
-        overlayBtn.addEventListener("click", startGame);
-        resetBtn.addEventListener("click", resetGame);
+        overlayBtn.addEventListener("click", () => {
+          noteAudioGesture();
+          startGame();
+        });
+        resetBtn.addEventListener("click", () => {
+          noteAudioGesture();
+          resetGame();
+        });
+        if (soundBtn) {
+          soundBtn.addEventListener("click", () => {
+            noteAudioGesture();
+            audioState.enabled = !audioState.enabled;
+            writeSoundPreference(audioState.enabled);
+            updateSoundButton();
+            if (audioState.enabled) {
+              playSound("start");
+            }
+          });
+        }
 
         window.addEventListener("keydown", (event) => {
+          noteAudioGesture();
           if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
             if (!input.left) {
               recordActionFeedback("steer", { direction: "left" });
@@ -1502,6 +1770,7 @@
           if (overlay.classList.contains("show")) {
             return;
           }
+          noteAudioGesture();
           input.pointer = true;
           input.pointerId = event.pointerId;
           updatePointer(event);
@@ -1535,11 +1804,13 @@
 
         window.addEventListener("resize", resizeCanvas);
 
+        updateSoundButton();
         resizeCanvas();
         resetGame();
 
         function renderGameToText() {
           const current = getSegmentAt(config.ballZ);
+          const audioDiagnostics = soundDiagnostics();
           return JSON.stringify({
             state: state.crashed ? "game-over" : (state.running ? "playing" : "title"),
             running: state.running,
@@ -1571,6 +1842,8 @@
               lastSteerDirection: feedback.lastSteerDirection,
               feedbackParticles: feedbackParticles.length + feedbackRings.length + feedbackPops.length
             },
+            audio: audioDiagnostics,
+            sound: audioDiagnostics,
             input: {
               left: input.left,
               right: input.right,

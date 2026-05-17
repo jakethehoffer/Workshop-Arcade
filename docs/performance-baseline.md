@@ -19,6 +19,22 @@ CI budgets:
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
 
+## Starline Strafe audit (pass 70)
+
+Captured 2026-05-17 against `http://127.0.0.1:4214` (chromium @ 1280x800, network idle) after adding Starline Strafe and the parallel audio/catalog/CI polish bundle. The strict audit covered the catalog plus 30 manifest games, 31 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 84 ms | 92 ms | 🟢 92 ms | 🟢 188.8 KB | 34 | 0 |
+| Starline Strafe | 🟢 36 ms | 15 ms | 🟢 15 ms | 🟢 38.1 KB | 2 | 0 |
+| Klondike Solitaire | 🟢 44 ms | 11 ms | 🟢 11 ms | 🟢 47.8 KB | 2 | 0 |
+| Block Drop | 🟢 40 ms | 23 ms | 🟢 24 ms | 🟢 52.2 KB | 2 | 0 |
+| Slope Runner | 🟢 72 ms | 40 ms | 🟢 40 ms | 🟢 65.9 KB | 2 | 0 |
+| Idle Tycoon | 🟢 476 ms | 13 ms | 🟢 15 ms | 🟢 184.9 KB | 2 | 0 |
+| Lexica | 🟢 52 ms | 38 ms | 🟢 38 ms | 🟡 213.6 KB | 4 | 0 |
+
+Starline Strafe stays well under the default 150 KB / 8 request game budget. No console or page errors were reported across the audited URLs, and every page passed the strict meta/alt checks.
+
 ## Circuit Putt audit (pass 66)
 
 Captured 2026-05-15 against `http://127.0.0.1:4192` (chromium @ 1280x800, network idle) after adding Circuit Putt. The strict audit covered the catalog plus 26 manifest games, 27 pages total.

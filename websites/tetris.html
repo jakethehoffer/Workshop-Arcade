@@ -217,10 +217,44 @@
   let helpUp = false;
   let helpMode = 'start';      // 'start' | 'pause'
 
-  const SOUND_KEY = 'M';
+  const SOUND_SHORTCUT = 'M';
+  const SOUND_STORAGE_KEY = 'blockdrop.sound.v1';
 
   let audioCtx=null;
-  let muted = false; // 🔊 global mute flag
+  const audioState = {
+    gestureSeen: false,
+    lastSound: null,
+    lastSoundAt: null,
+    soundCount: 0
+  };
+  let muted = !readSoundPreference();
+
+  function readSoundPreference(){
+    try{
+      const stored = window.localStorage?.getItem(SOUND_STORAGE_KEY);
+      if(stored === null || stored === undefined) return true;
+      return stored !== 'off' && stored !== 'false' && stored !== '0';
+    }catch(_){
+      return true;
+    }
+  }
+
+  function writeSoundPreference(enabled){
+    try{ window.localStorage?.setItem(SOUND_STORAGE_KEY, enabled ? 'on' : 'off'); }catch(_){}
+  }
+
+  function noteAudioGesture(event){
+    if(!event || event.isTrusted !== false) audioState.gestureSeen = true;
+  }
+
+  function hasAudioGesture(){
+    if(audioState.gestureSeen) return true;
+    try{
+      return !!(navigator.userActivation && navigator.userActivation.hasBeenActive);
+    }catch(_){
+      return false;
+    }
+  }
 
   function helpFocusables(){
     return helpEl ? [...helpEl.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0) : [];
@@ -237,30 +271,63 @@
     }
   }
 
-  function ensureAudio(){ try{ if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; audioCtx=new AC(); } if(audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} }
-  function sfx(freq=600,dur=0.06,type='square',gain=0.06){
+  function ensureAudio(){
+    try{
+      if(muted || !hasAudioGesture()) return null;
+      if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null; audioCtx=new AC(); }
+      if(audioCtx.state==='suspended'){
+        const resume = audioCtx.resume();
+        if(resume && typeof resume.catch === 'function') resume.catch(()=>{});
+      }
+      return audioCtx;
+    }catch(_){
+      return null;
+    }
+  }
+  function audioSoundAge(){
+    return audioState.lastSoundAt === null ? null : Math.max(0, (performance.now() - audioState.lastSoundAt) / 1000);
+  }
+  function sfx(name,freq=600,dur=0.06,type='square',gain=0.06){
+    audioState.lastSound = name;
+    audioState.lastSoundAt = performance.now();
     if(muted) return;
     try{
-      ensureAudio(); if(!audioCtx) return;
-      const t=audioCtx.currentTime;
-      const o=audioCtx.createOscillator();
-      const g=audioCtx.createGain();
+      const audio = ensureAudio(); if(!audio) return;
+      const t=audio.currentTime;
+      const o=audio.createOscillator();
+      const g=audio.createGain();
       o.type=type; o.frequency.setValueAtTime(freq,t);
       g.gain.setValueAtTime(gain,t);
       g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-      o.connect(g).connect(audioCtx.destination);
+      o.connect(g).connect(audio.destination);
       o.start(); o.stop(t+dur);
+      audioState.soundCount++;
     }catch(_){}
   }
-  const SFX={ move:()=>sfx(520,0.05,'square',0.05), rotate:()=>sfx(740,0.06,'sine',0.06), drop:()=>sfx(280,0.07,'triangle',0.06), clear:()=>sfx(980,0.08,'sine',0.07) };
+  const SFX={
+    move:()=>sfx('move',520,0.05,'square',0.05),
+    rotate:()=>sfx('rotate',740,0.06,'sine',0.06),
+    drop:()=>sfx('drop',280,0.07,'triangle',0.06),
+    clear:()=>sfx('clear',980,0.08,'sine',0.07),
+    hold:()=>sfx('hold',460,0.07,'triangle',0.055),
+    invalidHold:()=>sfx('invalid-hold',150,0.08,'sawtooth',0.045),
+    pause:()=>sfx('pause',240,0.08,'triangle',0.04),
+    resume:()=>sfx('resume',620,0.06,'sine',0.055),
+    levelUp:()=>sfx('level-up',1040,0.11,'sine',0.06),
+    topOut:()=>sfx('top-out',110,0.18,'triangle',0.07)
+  };
+
+  window.addEventListener('pointerdown', noteAudioGesture, { capture:true, passive:true });
+  window.addEventListener('click', noteAudioGesture, { capture:true, passive:true });
+  window.addEventListener('keydown', noteAudioGesture, { capture:true });
 
   const music={ on:false, loop:null, gain:null, note:0, bass:0, tempo:150 };
   const MELODY=[523.25,587.33,659.25,698.46,659.25,587.33,523.25,440.00,523.25,659.25,784.00,659.25,587.33,523.25,440.00,392.00];
   const BASS=[130.81,130.81,98.00,98.00,146.83,146.83,123.47,123.47];
   function startMusic(){
     if(muted) return;
-    ensureAudio(); if(!audioCtx) return;
-    if(!music.gain){ music.gain=audioCtx.createGain(); music.gain.gain.value=0.16; music.gain.connect(audioCtx.destination); }
+    const audio = ensureAudio(); if(!audio) return;
+    if(!music.gain){ music.gain=audio.createGain(); music.gain.gain.value=0.16; music.gain.connect(audio.destination); }
     if(music.on) return;
     music.on=true;
     music.loop=setInterval(()=>{
@@ -530,6 +597,7 @@
     feedback.lastLevelUpAge = 0;
     pushPop(W / 2, 3.1, 'LEVEL ' + nextLevel, '#f9a857', 1000, 0.82);
     feedback.screenFlash = Math.max(feedback.screenFlash, 0.24);
+    SFX.levelUp();
   }
 
   function recordTopOut(piece){
@@ -539,6 +607,7 @@
     feedback.screenFlash = Math.max(feedback.screenFlash, 0.85);
     feedback.screenShake = Math.max(feedback.screenShake, 0.82);
     pushPop(W / 2, 5, 'TOP OUT', '#fb7185', 1200, 0.9);
+    SFX.topOut();
   }
 
   function updateFeedback(dt){
@@ -649,10 +718,12 @@
   function drawNext(){ drawMini(nextCtx, nextCanvas, peekNext()); }
 
   function doHold(){
-    if(!running||gameOver||!cur||holdUsed) return;
+    if(!running||gameOver||!cur) return;
+    if(holdUsed){ SFX.invalidHold(); return; }
     const prev = holdType;
     holdType = cur.type;
     drawHold();
+    SFX.hold();
     if(prev==null){ cur = spawnWithType(nextType()); }
     else { cur = spawnWithType(prev); }
     if(!cur) return;
@@ -1041,6 +1112,7 @@
     if(running){
       running = false;
       clearMoveState();
+      SFX.pause();
       stopMusic();
       showHelp('pause');                 // show instructions on pause
     } else {
@@ -1051,6 +1123,7 @@
         if (statusEl) statusEl.textContent = 'Press P to Pause';
         updateStartPanel();
         ensureAudio(); if (!muted) startMusic();
+        SFX.resume();
       }
     }
   }
@@ -1089,8 +1162,7 @@
   requestAnimationFrame(loop);
 
   function onKey(e){
-    if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && e.code !== 'Tab' && e.code !== 'Escape') return;
-    if (e.code === 'Key' + SOUND_KEY){
+    if (e.code === 'Key' + SOUND_SHORTCUT){
       e.preventDefault();
       setMuted(!muted);
       return;
@@ -1125,6 +1197,7 @@
       }
       return;
     }
+    if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && e.code !== 'Tab' && e.code !== 'Escape') return;
 
     const isLeft = (e.code === 'ArrowLeft' || e.code === 'KeyA');
     const isRight = (e.code === 'ArrowRight' || e.code === 'KeyD');
@@ -1205,15 +1278,16 @@
   const soundBtn = document.getElementById('soundBtn');
   function updateSoundBtn(){
     const label = muted ? 'Sound: Off' : 'Sound: On';
-    const text = label + ' (' + SOUND_KEY + ')';
+    const text = label + ' (' + SOUND_SHORTCUT + ')';
     if(soundBtn){
       soundBtn.textContent = text;
-      soundBtn.setAttribute('aria-label', 'Toggle sound (' + SOUND_KEY + ')');
+      soundBtn.setAttribute('aria-label', 'Toggle sound (' + SOUND_SHORTCUT + ')');
+      soundBtn.setAttribute('aria-pressed', muted ? 'false' : 'true');
     }
     if(helpMute) helpMute.textContent = text;
   }
   function setMuted(m){
-    muted = m; updateSoundBtn();
+    muted = !!m; writeSoundPreference(!muted); updateSoundBtn();
     if(muted){ stopMusic(); } else if(running && !gameOver){ ensureAudio(); startMusic(); }
   }
   if (soundBtn) soundBtn.addEventListener('click', ()=> setMuted(!muted));
@@ -1236,6 +1310,7 @@
       if (statusEl) statusEl.textContent = 'Press P to Pause';
       updateStartPanel();
       ensureAudio(); if (!muted) startMusic();
+      SFX.resume();
     }
   }
 
@@ -1274,6 +1349,7 @@
 
   function renderGameToText(){
     const occupied = occupiedCells();
+    const lastSoundAge = audioSoundAge();
     return JSON.stringify({
       game: 'Block Drop',
       coordinateSystem: 'grid cells, origin top-left, x right, y down',
@@ -1326,6 +1402,17 @@
         popupCount: feedback.pops.length,
         screenFlash: round(feedback.screenFlash, 3),
         screenShake: round(feedback.screenShake, 3)
+      },
+      audio: {
+        muted: !!muted,
+        soundEnabled: !muted,
+        musicOn: !!music.on,
+        audioReady: !!audioCtx,
+        audioState: audioCtx ? audioCtx.state : null,
+        lastSound: audioState.lastSound,
+        lastSoundAge: lastSoundAge === null ? null : round(lastSoundAge),
+        soundCount: audioState.soundCount,
+        persistedKey: SOUND_STORAGE_KEY
       },
       muted: !!muted,
       status: statusEl.textContent

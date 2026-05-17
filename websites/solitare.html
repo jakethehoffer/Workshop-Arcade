@@ -204,6 +204,7 @@
       <div class="control-group">
         <button type="button" id="undo">Undo</button>
         <button type="button" id="hint" class="good">Hint</button>
+        <button type="button" id="soundToggle" aria-pressed="true" title="Turn sound effects off">Sound On</button>
         <button type="button" id="autoComplete" class="good" title="Finish the game automatically" style="display:none">
           Auto-Complete
         </button>
@@ -264,6 +265,158 @@
   function fmtTime(s){const m=Math.floor(s/60), ss=(s%60).toString().padStart(2,"0");return `${m}:${ss}`}
   function el(q){return document.querySelector(q)}
   function els(q){return Array.from(document.querySelectorAll(q))}
+
+  // ===== Audio =====
+  const SOUND_KEY = 'solitaire.sound.v1';
+  const audioState = {
+    enabled: readSoundPreference(),
+    context: null,
+    gestureSeen: false,
+    lastSound: null,
+    lastSoundAt: null,
+    soundCount: 0
+  };
+  const gameFeedback = {
+    lastMove: null,
+    lastMoveAt: null,
+    legalMoveCount: 0,
+    tableauMoveCount: 0,
+    foundationMoveCount: 0,
+    undoCount: 0,
+    lastUndoAt: null,
+    hintCount: 0,
+    noMoveHintCount: 0,
+    lastHint: null,
+    lastHintAt: null,
+    winCount: 0,
+    lastWinAt: null,
+    winActive: false
+  };
+
+  function readSoundPreference(){
+    try{
+      return window.localStorage?.getItem(SOUND_KEY) !== 'off';
+    }catch{
+      return true;
+    }
+  }
+
+  function writeSoundPreference(enabled){
+    try{
+      window.localStorage?.setItem(SOUND_KEY, enabled ? 'on' : 'off');
+    }catch{
+      // Storage can be blocked in private or embedded contexts.
+    }
+  }
+
+  function updateSoundToggle(){
+    const btn = el('#soundToggle');
+    if(!btn) return;
+    btn.textContent = audioState.enabled ? 'Sound On' : 'Sound Off';
+    btn.setAttribute('aria-pressed', audioState.enabled ? 'true' : 'false');
+    btn.title = audioState.enabled ? 'Turn sound effects off' : 'Turn sound effects on';
+  }
+
+  function noteAudioGesture(){
+    audioState.gestureSeen = true;
+  }
+  window.addEventListener('pointerdown', noteAudioGesture, {capture:true, passive:true});
+  window.addEventListener('keydown', noteAudioGesture, {capture:true});
+  window.addEventListener('touchstart', noteAudioGesture, {capture:true, passive:true});
+
+  function getAudioContext(){
+    if(!audioState.enabled || !audioState.gestureSeen) return null;
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtor) return null;
+    if(!audioState.context) audioState.context = new AudioCtor();
+    if(audioState.context.state === 'suspended'){
+      try{
+        const resume = audioState.context.resume?.();
+        resume?.catch?.(()=>{});
+      }catch{}
+    }
+    return audioState.context;
+  }
+
+  function soundPattern(kind){
+    const patterns = {
+      'stock-draw': [[420,0,0.025,0.09,'sine'], [540,0.035,0.018,0.08,'sine']],
+      'stock-recycle': [[280,0,0.026,0.12,'triangle'], [380,0.05,0.022,0.11,'triangle']],
+      'tableau-move': [[360,0,0.024,0.08,'sine'], [470,0.035,0.018,0.08,'sine']],
+      'foundation-move': [[520,0,0.027,0.09,'sine'], [720,0.045,0.022,0.11,'sine']],
+      undo: [[300,0,0.023,0.09,'triangle'], [210,0.04,0.018,0.08,'triangle']],
+      hint: [[660,0,0.021,0.08,'sine'], [880,0.045,0.018,0.08,'sine']],
+      'no-move': [[160,0,0.026,0.12,'square'], [120,0.055,0.018,0.1,'square']],
+      'draw-toggle': [[440,0,0.021,0.07,'sine'], [330,0.04,0.016,0.07,'sine']],
+      'new-deal': [[300,0,0.022,0.08,'sine'], [460,0.04,0.021,0.09,'sine'], [620,0.08,0.018,0.1,'sine']],
+      win: [[520,0,0.026,0.1,'sine'], [660,0.06,0.025,0.11,'sine'], [880,0.12,0.022,0.16,'sine']]
+    };
+    return patterns[kind] || patterns.hint;
+  }
+
+  function playSound(kind){
+    if(!audioState.enabled) return;
+    audioState.lastSound = kind;
+    audioState.lastSoundAt = performance.now();
+    audioState.soundCount++;
+    const audio = getAudioContext();
+    if(!audio) return;
+    const now = audio.currentTime || 0;
+    soundPattern(kind).forEach(([freq, offset, gainValue, duration, type])=>{
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = type || 'sine';
+      osc.frequency?.setValueAtTime?.(freq, now + offset);
+      gain.gain?.setValueAtTime?.(0.0001, now + offset);
+      gain.gain?.exponentialRampToValueAtTime?.(gainValue, now + offset + 0.012);
+      gain.gain?.exponentialRampToValueAtTime?.(0.0001, now + offset + duration);
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + duration + 0.02);
+    });
+  }
+
+  function ageFrom(ts){
+    return ts === null ? null : Math.max(0, (performance.now() - ts) / 1000);
+  }
+
+  function roundedAge(ts){
+    const age = ageFrom(ts);
+    return age === null ? null : Number(age.toFixed(2));
+  }
+
+  function recordLegalMove(kind){
+    gameFeedback.lastMove = kind;
+    gameFeedback.lastMoveAt = performance.now();
+    gameFeedback.legalMoveCount++;
+    if(kind === 'tableau-move') gameFeedback.tableauMoveCount++;
+    if(kind === 'foundation-move') gameFeedback.foundationMoveCount++;
+  }
+
+  function recordUndoFeedback(){
+    gameFeedback.undoCount++;
+    gameFeedback.lastUndoAt = performance.now();
+  }
+
+  function recordHintFeedback(kind){
+    gameFeedback.hintCount++;
+    gameFeedback.lastHint = kind;
+    gameFeedback.lastHintAt = performance.now();
+    if(kind === 'no-move') gameFeedback.noMoveHintCount++;
+  }
+
+  function updateWinFeedback(won){
+    if(!won){
+      gameFeedback.winActive = false;
+      return;
+    }
+    if(gameFeedback.winActive) return;
+    gameFeedback.winActive = true;
+    gameFeedback.winCount++;
+    gameFeedback.lastWinAt = performance.now();
+    playSound('win');
+  }
 
   // ===== Game State =====
   const state = {
@@ -342,6 +495,8 @@ function runAutoCompleteStep(){
       state.piles.f[si].push(top);
       maybeFlipAfterMove();
       flashPile(pilesEls.f[si]);
+      recordLegalMove('foundation-move');
+      playSound('foundation-move');
       moved = true;
     }
   }
@@ -354,6 +509,8 @@ function runAutoCompleteStep(){
       state.piles.waste.pop();
       state.piles.f[si].push(top);
       flashPile(pilesEls.f[si]);
+      recordLegalMove('foundation-move');
+      playSound('foundation-move');
       moved = true;
     }
   }
@@ -513,8 +670,10 @@ function startAutoComplete(){
     }
 
     // HUD
+    const won = isWon();
+    updateWinFeedback(won);
     el('#moves').textContent = state.moves;
-    el('#status').textContent = isWon()? 'You win! 🎉' : recommendStatus();
+    el('#status').textContent = won? 'You win! 🎉' : recommendStatus();
 updateAutoCompleteVisibility();   // <-- add this line
     
   }
@@ -527,10 +686,11 @@ updateAutoCompleteVisibility();   // <-- add this line
   }
 
   // ===== Dealing / New Game =====
-  function deal(seed){
+  function deal(seed, options = {}){
     // ✅ CHANGED: seed ignores any DOM input; uses provided seed or random
     state.seed = (seed ?? (Math.floor(Math.random()*1e9)>>>0));
     lastAction = 'new-deal';
+    gameFeedback.winActive = false;
     const rng = mulberry32(state.seed);
     const deck = seededShuffle(newDeck(), rng);
 
@@ -552,6 +712,7 @@ updateAutoCompleteVisibility();   // <-- add this line
     state.initial = snapshot();
     render();
     updateTimeHud();
+    if(options.sound) playSound('new-deal');
   }
 
   // ✂ REMOVED: hashSeed + updateSeedHud (no seed input anymore)
@@ -580,7 +741,7 @@ updateAutoCompleteVisibility();   // <-- add this line
   function snapshot(){ return deepClone({seed: state.seed, drawOne: state.drawOne, unlimited: state.unlimited, piles: state.piles, moves: state.moves, time: state.time, stockCycles: state.stockCycles}) }
   function restore(snap){ Object.assign(state, deepClone(snap)); render(); updateTimeHud() }
   function pushHistory(label){ state.history.push(snapshot()); state.future.length=0; state.moves++; lastAction = label || 'move'; }
-  function undo(){ if(state.history.length){ const cur=snapshot(); const prev=state.history.pop(); state.future.push(cur); restore(prev); lastAction = 'undo'; render() } }
+  function undo(){ if(state.history.length){ const cur=snapshot(); const prev=state.history.pop(); state.future.push(cur); restore(prev); lastAction = 'undo'; recordUndoFeedback(); playSound('undo'); render() } }
 
   // ===== Stock/Waste actions =====
   pilesEls.stock.addEventListener('click', ()=>{
@@ -594,6 +755,7 @@ updateAutoCompleteVisibility();   // <-- add this line
       state.piles.waste = [];
       state.stockCycles++;
       recordStockFeedback('stock-recycle', recycled);
+      playSound('stock-recycle');
       render();
       flashPile(pilesEls.stock);
       flashPile(pilesEls.waste);
@@ -603,6 +765,7 @@ updateAutoCompleteVisibility();   // <-- add this line
     const drawN = state.drawOne? 1 : Math.min(3, state.piles.stock.length);
     for(let i=0;i<drawN;i++) state.piles.waste.push(state.piles.stock.pop());
     recordStockFeedback('stock-draw', drawN);
+    playSound('stock-draw');
     render();
     flashPile(pilesEls.stock);
     flashPile(pilesEls.waste);
@@ -718,6 +881,8 @@ updateAutoCompleteVisibility();   // <-- add this line
     removeFromSource(drag);
     state.piles.f[si].push(topCard);
     maybeFlipAfterMove();
+    recordLegalMove('foundation-move');
+    playSound('foundation-move');
     render();
 updateAutoCompleteVisibility();
   }
@@ -730,6 +895,8 @@ updateAutoCompleteVisibility();
         removeFromSource(drag);
         state.piles.t[ti].up.push(...drag.cards);
         maybeFlipAfterMove();
+        recordLegalMove('tableau-move');
+        playSound('tableau-move');
         render();
       }
     }
@@ -788,6 +955,8 @@ updateAutoCompleteVisibility();
       } else { return }
       state.piles.f[si].push(card);
       maybeFlipAfterMove();
+      recordLegalMove('foundation-move');
+      playSound('foundation-move');
       render(); 
 updateAutoCompleteVisibility();
     }
@@ -896,7 +1065,7 @@ function describe(card){ return `${RANK_TXT[card.r]}${SUIT_SYM[card.s]}`; }
 function doHint(){
   const moves = listAllMoves({forHint:true}); // 👈 use hint-safe list
   clearSuggestions();
-  if(moves.length===0){ flashStatus('No moves', 'bad'); return }
+  if(moves.length===0){ recordHintFeedback('no-move'); playSound('no-move'); flashStatus('No moves', 'bad'); return }
 
   const m = moves[0];
   let msg = '';
@@ -938,6 +1107,8 @@ function doHint(){
     }
   }
 
+  recordHintFeedback(m.type);
+  playSound('hint');
   flashStatus(msg);
 }
 
@@ -984,6 +1155,13 @@ function doHint(){
       stuck: !isWon() && noMoves && stockEmpty && noWaste,
       status: el('#status').textContent,
       lastAction,
+      audio: {
+        soundEnabled: !!audioState.enabled,
+        audioReady: !!audioState.context,
+        lastSound: audioState.lastSound,
+        lastSoundAge: audioState.lastSoundAt === null ? null : Number(ageFrom(audioState.lastSoundAt).toFixed(2)),
+        soundCount: audioState.soundCount
+      },
       layout: {
         viewport: {width: window.innerWidth, height: window.innerHeight},
         mobile: window.matchMedia('(max-width: 480px)').matches,
@@ -1001,7 +1179,21 @@ function doHint(){
         drawCount: stockFeedback.drawCount,
         recycleCount: stockFeedback.recycleCount,
         lastCardsMoved: stockFeedback.lastCardsMoved,
-        lastStockAction: stockFeedback.lastStockAction
+        lastStockAction: stockFeedback.lastStockAction,
+        lastMove: gameFeedback.lastMove,
+        lastMoveAge: roundedAge(gameFeedback.lastMoveAt),
+        legalMoveCount: gameFeedback.legalMoveCount,
+        tableauMoveCount: gameFeedback.tableauMoveCount,
+        foundationMoveCount: gameFeedback.foundationMoveCount,
+        undoCount: gameFeedback.undoCount,
+        lastUndoAge: roundedAge(gameFeedback.lastUndoAt),
+        hintCount: gameFeedback.hintCount,
+        noMoveHintCount: gameFeedback.noMoveHintCount,
+        lastHint: gameFeedback.lastHint,
+        lastHintAge: roundedAge(gameFeedback.lastHintAt),
+        winCount: gameFeedback.winCount,
+        lastWinAge: roundedAge(gameFeedback.lastWinAt),
+        winActive: gameFeedback.winActive
       }
     });
   }
@@ -1015,16 +1207,22 @@ function doHint(){
   };
 
   // ===== Controls =====
-  el('#newDeal').addEventListener('click', ()=> deal());
+  el('#newDeal').addEventListener('click', ()=> deal(undefined, {sound:true}));
   el('#restart').addEventListener('click', ()=>{ if(state.initial){ restore(state.initial); lastAction = 'restart'; render() } });
   el('#undo').addEventListener('click', undo);
   el('#hint').addEventListener('click', doHint);
   el('#autoComplete').addEventListener('click', startAutoComplete);
+  el('#soundToggle').addEventListener('click', ()=>{
+    audioState.enabled = !audioState.enabled;
+    writeSoundPreference(audioState.enabled);
+    updateSoundToggle();
+  });
 
   // ✂ REMOVED: Auto button listener
 el('#drawOne').addEventListener('change', (e)=>{
   state.drawOne = e.target.checked;
   updateDrawModeLabel();
+  playSound('draw-toggle');
   flashStatus(state.drawOne ? 'Draw mode: 1' : 'Draw mode: 3');
 });
 
@@ -1032,7 +1230,7 @@ el('#drawOne').addEventListener('change', (e)=>{
   window.addEventListener('keydown', (e)=>{
     if(e.key==='z' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); undo() }
     if(e.key==='h'){ e.preventDefault(); doHint() }
-    if(e.key==='n'){ e.preventDefault(); deal() }
+    if(e.key==='n'){ e.preventDefault(); deal(undefined, {sound:true}) }
     if(e.key==='r'){ e.preventDefault(); if(state.initial) restore(state.initial) }
     // ✂ REMOVED: 'a' shortcut for auto-finish
   })
@@ -1041,6 +1239,7 @@ el('#drawOne').addEventListener('change', (e)=>{
 // Start game
 state.drawOne = el('#drawOne').checked;  // now true by default
 updateDrawModeLabel();
+updateSoundToggle();
 deal();
   // ✂ REMOVED: reading unlimited from DOM (always true now)
 })();

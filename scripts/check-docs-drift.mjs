@@ -44,6 +44,107 @@ for (const file of validationSurfaces) {
 }
 
 const workflow = fs.readFileSync(path.join(root, '.github/workflows/validate-catalog.yml'), 'utf8');
+const workflowLines = workflow.split(/\r?\n/);
+
+const requiredWorkflowJobs = [
+  {
+    id: 'catalog-docs-a11y',
+    label: 'catalog/docs/a11y',
+    commands: ['validate-catalog.ps1', 'npm run test:docs', 'npm run test:a11y']
+  },
+  {
+    id: 'game-smoke',
+    label: 'game smoke',
+    commands: ['npm run test:games']
+  },
+  {
+    id: 'performance-audit',
+    label: 'performance audit',
+    commands: ['npm run audit:perf:ci']
+  },
+  {
+    id: 'render-capture',
+    label: 'render capture',
+    commands: ['npm run capture:games:ci']
+  }
+];
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function findWorkflowJobBlock(jobId) {
+  const jobStartPattern = new RegExp(`^  ${escapeRegex(jobId)}:\\s*$`);
+  const nextJobPattern = /^  [A-Za-z0-9_-]+:\s*$/;
+  const start = workflowLines.findIndex((line) => jobStartPattern.test(line));
+
+  if (start === -1) {
+    return '';
+  }
+
+  let end = workflowLines.length;
+  for (let index = start + 1; index < workflowLines.length; index += 1) {
+    if (nextJobPattern.test(workflowLines[index])) {
+      end = index;
+      break;
+    }
+  }
+
+  return workflowLines.slice(start, end).join('\n');
+}
+
+for (const job of requiredWorkflowJobs) {
+  const block = findWorkflowJobBlock(job.id);
+  if (!block) {
+    issues.push(`.github/workflows/validate-catalog.yml: missing ${job.label} job "${job.id}"`);
+    continue;
+  }
+
+  for (const command of job.commands) {
+    if (!block.includes(command)) {
+      issues.push(`.github/workflows/validate-catalog.yml: ${job.label} job must run "${command}"`);
+    }
+  }
+}
+
+function findArtifactUploadBlock(artifactName) {
+  const artifactLine = workflowLines.findIndex((line) => line.trim() === `name: ${artifactName}`);
+  if (artifactLine === -1) {
+    return '';
+  }
+
+  let start = artifactLine;
+  while (start > 0 && !workflowLines[start].startsWith('      - name: ')) {
+    start -= 1;
+  }
+
+  let end = workflowLines.length;
+  for (let index = artifactLine + 1; index < workflowLines.length; index += 1) {
+    if (workflowLines[index].startsWith('      - name: ')) {
+      end = index;
+      break;
+    }
+  }
+
+  return workflowLines.slice(start, end).join('\n');
+}
+
+for (const artifactName of ['performance-audit', 'render-ranking']) {
+  const artifactBlock = findArtifactUploadBlock(artifactName);
+  if (!artifactBlock) {
+    issues.push(`.github/workflows/validate-catalog.yml: missing "${artifactName}" artifact upload`);
+    continue;
+  }
+
+  if (!artifactBlock.includes('uses: actions/upload-artifact@v7')) {
+    issues.push(`.github/workflows/validate-catalog.yml: "${artifactName}" artifact upload must use actions/upload-artifact@v7`);
+  }
+
+  if (!artifactBlock.includes('retention-days: 14')) {
+    issues.push(`.github/workflows/validate-catalog.yml: "${artifactName}" artifact must retain for 14 days`);
+  }
+}
+
 const docsIndex = workflow.indexOf('npm run test:docs');
 const a11yIndex = workflow.indexOf('npm run test:a11y');
 const gamesIndex = workflow.indexOf('npm run test:games');

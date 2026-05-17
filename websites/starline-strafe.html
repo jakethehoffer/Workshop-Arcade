@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Starline Strafe</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Strafe through a five-wave neon starfield, volley shots into raiders, dash through danger, and keep your shields online." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/starline-strafe.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Starline Strafe — Workshop Arcade" />
+<meta property="og:description" content="Strafe through a five-wave neon starfield, volley shots into raiders, dash through danger, and keep your shields online." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/starline-strafe.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/starline-strafe.svg" />
+<meta property="og:image:alt" content="Starline Strafe cover art" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Starline Strafe — Workshop Arcade" />
+<meta name="twitter:description" content="Strafe through a five-wave neon starfield, volley shots into raiders, dash through danger, and keep your shields online." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/starline-strafe.svg" />
+<!-- workshop-meta:end -->
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:18px 12px 24px;overflow-x:hidden;background:
+      radial-gradient(780px 520px at 12% -10%,rgba(94,234,212,.14),transparent 60%),
+      radial-gradient(720px 520px at 92% 3%,rgba(124,158,255,.12),transparent 62%),
+      linear-gradient(180deg,#0b0f14,#07101a 82%);
+  }
+  .brand{align-self:flex-start;line-height:1;user-select:none}
+  .brand .eyebrow{display:block;font-size:10px;text-transform:uppercase;color:rgba(94,234,212,.88);font-weight:800}
+  .brand .title{display:block;margin-top:3px;font-size:22px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.2)}
+  .panel{width:100%;max-width:850px;display:flex;flex-direction:column;gap:10px}
+  .hud,.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .pill{
+    min-width:74px;padding:7px 10px;border:1px solid rgba(94,234,212,.24);border-radius:8px;
+    background:linear-gradient(180deg,rgba(20,30,50,.94),rgba(11,17,32,.95));
+    box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.04);text-align:center;line-height:1.05;
+  }
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,.68);box-shadow:0 0 20px rgba(94,234,212,.16),0 6px 14px rgba(0,0,0,.25)}
+  .pill .label{display:block;font-size:9px;color:rgba(94,234,212,.86);font-weight:900;text-transform:uppercase}
+  .pill .value{display:block;margin-top:2px;font-size:18px;font-weight:950;font-variant-numeric:tabular-nums}
+  .stage{border:1px solid rgba(94,234,212,.28);border-radius:12px;overflow:hidden;background:#07101a;box-shadow:0 18px 38px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}
+  canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(94,234,212,.8);outline-offset:-4px}
+  .status{min-height:20px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .btn{
+    border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(20,30,50,.95),rgba(11,17,32,.96));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:850;text-transform:uppercase;padding:8px 11px;cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .btn[aria-pressed="true"],.btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
+  .btn:hover{border-color:rgba(94,234,212,.56)}
+  .help{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
+  @media (max-width:560px){
+    body{padding:12px 8px 18px;gap:8px}
+    .brand .title{font-size:18px}
+    .panel{gap:8px}
+    .pill{min-width:58px;padding:6px 7px}
+    .pill .value{font-size:15px}
+    .btn{padding:8px 8px;font-size:11px}
+    .help{font-size:11px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Starline Strafe</span></div>
+<main class="panel" aria-label="Starline Strafe game">
+  <div class="hud" aria-label="Starline Strafe status">
+    <div class="pill"><span class="label">Wave</span><span class="value" id="waveValue">1/5</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill" id="shieldPill"><span class="label">Shields</span><span class="value" id="shieldValue">4</span></div>
+    <div class="pill" id="dashPill"><span class="label">Dash</span><span class="value" id="dashValue">Ready</span></div>
+  </div>
+  <div class="stage"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Top-down starfield shooter canvas. Move with WASD or arrow keys, aim with pointer or I J K L, shoot with pointer hold or Enter, and dash with Space."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start, aim, and hold fire.</div>
+  <div class="toolbar" aria-label="Game controls">
+    <button class="btn primary" type="button" id="startBtn">Start</button>
+    <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button class="btn" type="button" id="fullBtn">Fullscreen</button>
+  </div>
+  <div class="help">WASD/arrows move. Mouse or touch aims and fires. I/J/K/L aim, Enter fires. Space dash, R restart, F fullscreen, M sound. On touch, drag the lower-left area to move and hold elsewhere to shoot.</div>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const TAU = Math.PI * 2;
+  const PLAYER_R = 14;
+  const keys = {
+    best: "starline-strafe.bestScore.v1",
+    sound: "starline-strafe.sound.v1"
+  };
+  const els = {
+    wave: document.getElementById("waveValue"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    shield: document.getElementById("shieldValue"),
+    shieldPill: document.getElementById("shieldPill"),
+    dash: document.getElementById("dashValue"),
+    dashPill: document.getElementById("dashPill"),
+    status: document.getElementById("statusLine"),
+    start: document.getElementById("startBtn"),
+    sound: document.getElementById("soundBtn"),
+    full: document.getElementById("fullBtn")
+  };
+  const storage = {
+    get(key, fallback){
+      try {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      } catch (_) {
+        return fallback;
+      }
+    },
+    set(key, value){
+      try { window.localStorage.setItem(key, String(value)); } catch (_) {}
+    }
+  };
+  const enemyTypes = {
+    scout: { hp: 1, speed: 88, r: 13, score: 45, color: "#fb7185", turn: .8 },
+    dart: { hp: 1, speed: 132, r: 10, score: 65, color: "#fbbf24", turn: 1.4 },
+    bruiser: { hp: 4, speed: 58, r: 20, score: 135, color: "#7c9eff", turn: .55 },
+    warden: { hp: 6, speed: 46, r: 24, score: 220, color: "#c084fc", turn: .38 }
+  };
+  const waves = [
+    [
+      { t: .2, type: "scout", x: -34, y: 100 },
+      { t: .75, type: "scout", x: 934, y: 180 },
+      { t: 1.3, type: "scout", x: 440, y: -34 },
+      { t: 1.85, type: "scout", x: 250, y: 594 },
+      { t: 2.5, type: "scout", x: 934, y: 420 },
+      { t: 3.05, type: "scout", x: -34, y: 345 }
+    ],
+    [
+      { t: .15, type: "dart", x: 150, y: -34 },
+      { t: .55, type: "scout", x: 934, y: 92 },
+      { t: .95, type: "dart", x: 750, y: 594 },
+      { t: 1.45, type: "scout", x: -34, y: 472 },
+      { t: 1.95, type: "bruiser", x: 934, y: 330 },
+      { t: 2.75, type: "dart", x: -34, y: 160 },
+      { t: 3.3, type: "scout", x: 410, y: -34 },
+      { t: 3.85, type: "scout", x: 530, y: 594 }
+    ],
+    [
+      { t: .1, type: "bruiser", x: -34, y: 128 },
+      { t: .45, type: "dart", x: 934, y: 98 },
+      { t: .9, type: "scout", x: 330, y: -34 },
+      { t: 1.25, type: "dart", x: 934, y: 460 },
+      { t: 1.85, type: "bruiser", x: 520, y: 594 },
+      { t: 2.4, type: "scout", x: -34, y: 410 },
+      { t: 2.9, type: "dart", x: 210, y: 594 },
+      { t: 3.45, type: "scout", x: 934, y: 260 },
+      { t: 4.0, type: "bruiser", x: 450, y: -34 }
+    ],
+    [
+      { t: .1, type: "dart", x: -34, y: 78 },
+      { t: .35, type: "dart", x: 934, y: 488 },
+      { t: .8, type: "scout", x: 252, y: -34 },
+      { t: 1.15, type: "bruiser", x: 934, y: 178 },
+      { t: 1.7, type: "scout", x: -34, y: 310 },
+      { t: 2.05, type: "dart", x: 610, y: 594 },
+      { t: 2.45, type: "bruiser", x: -34, y: 478 },
+      { t: 3.05, type: "scout", x: 748, y: -34 },
+      { t: 3.45, type: "dart", x: 934, y: 280 },
+      { t: 4.0, type: "bruiser", x: 336, y: 594 },
+      { t: 4.65, type: "scout", x: -34, y: 170 }
+    ],
+    [
+      { t: .1, type: "warden", x: 450, y: -42 },
+      { t: .5, type: "dart", x: -34, y: 78 },
+      { t: .85, type: "dart", x: 934, y: 486 },
+      { t: 1.25, type: "bruiser", x: 150, y: 594 },
+      { t: 1.6, type: "scout", x: 934, y: 122 },
+      { t: 1.95, type: "scout", x: -34, y: 442 },
+      { t: 2.35, type: "bruiser", x: 760, y: 594 },
+      { t: 2.85, type: "dart", x: 285, y: -34 },
+      { t: 3.25, type: "dart", x: 625, y: -34 },
+      { t: 3.8, type: "bruiser", x: 934, y: 320 },
+      { t: 4.25, type: "scout", x: -34, y: 245 },
+      { t: 4.75, type: "warden", x: 450, y: 604 },
+      { t: 5.25, type: "dart", x: 934, y: 210 },
+      { t: 5.65, type: "scout", x: -34, y: 525 }
+    ]
+  ];
+  const stars = Array.from({ length: 112 }, (_, i) => ({
+    x: (i * 73 + 29) % W,
+    y: (i * 151 + 47) % H,
+    r: .7 + (i % 4) * .45,
+    layer: 1 + (i % 3),
+    tint: i % 5 === 0 ? "#7c9eff" : i % 7 === 0 ? "#fbbf24" : "#5eead4"
+  }));
+
+  let audioCtx = null;
+  let enemyId = 1;
+  let bulletId = 1;
+  let lastStamp = 0;
+  const downKeys = new Set();
+  const aimKeys = { up: false, down: false, left: false, right: false };
+  const pointerZones = new Map();
+  const input = {
+    move: { x: 0, y: 0 },
+    touchMove: { x: 0, y: 0 },
+    touchOrigin: null,
+    firing: false,
+    pointerAim: false,
+    keyboardFiring: false
+  };
+  const player = {
+    x: W / 2,
+    y: H / 2,
+    vx: 0,
+    vy: 0,
+    aim: -Math.PI / 2,
+    fireCooldown: 0,
+    dashCooldown: 0,
+    dashTimer: 0,
+    invulnerable: 0
+  };
+  const state = {
+    mode: "ready",
+    wave: 1,
+    waveTime: 0,
+    spawned: 0,
+    breakTimer: 0,
+    score: 0,
+    best: Number(storage.get(keys.best, "0")) || 0,
+    shields: 4,
+    bullets: [],
+    enemies: [],
+    sparks: [],
+    soundOn: storage.get(keys.sound, "1") !== "0",
+    win: false,
+    gameOver: false,
+    time: 0,
+    feedback: {
+      text: "Press Start, aim, and hold fire.",
+      timer: 2,
+      lastEvent: "ready",
+      shots: 0,
+      kills: 0,
+      damage: 0,
+      dashes: 0,
+      waveClears: 0
+    },
+    lastSound: "none"
+  };
+
+  function clamp(value, min, max){
+    return Math.max(min, Math.min(max, value));
+  }
+  function round(value){
+    return Math.round(value * 100) / 100;
+  }
+  function normalize(x, y){
+    const len = Math.hypot(x, y);
+    return len > .0001 ? { x: x / len, y: y / len, len } : { x: 0, y: 0, len: 0 };
+  }
+  function setFeedback(text, event = "info", seconds = 1.35){
+    state.feedback.text = text;
+    state.feedback.timer = seconds;
+    state.feedback.lastEvent = event;
+  }
+  function ensureAudio(){
+    if (!state.soundOn || audioCtx) return;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+  }
+  function beep(name){
+    if (!state.soundOn) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") { try { audioCtx.resume(); } catch (_) {} }
+    const cfg = {
+      shot: [610, .045, .018, "triangle"],
+      dash: [250, .085, .035, "sawtooth"],
+      hit: [740, .05, .025, "square"],
+      hurt: [130, .11, .045, "sawtooth"],
+      clear: [860, .12, .04, "sine"],
+      win: [520, .18, .045, "sine"],
+      start: [420, .08, .035, "triangle"],
+      toggle: [680, .06, .03, "sine"]
+    }[name] || [320, .05, .02, "sine"];
+    state.lastSound = name;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = cfg[3];
+    osc.frequency.setValueAtTime(cfg[0], now);
+    if (name === "win") osc.frequency.exponentialRampToValueAtTime(1180, now + cfg[1]);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(cfg[2], now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + cfg[1]);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + cfg[1] + .02);
+  }
+  function saveBest(){
+    if (state.score > state.best) {
+      state.best = state.score;
+      storage.set(keys.best, state.best);
+    }
+  }
+  function resetRun(){
+    player.x = W / 2;
+    player.y = H / 2;
+    player.vx = 0;
+    player.vy = 0;
+    player.aim = -Math.PI / 2;
+    player.fireCooldown = 0;
+    player.dashCooldown = 0;
+    player.dashTimer = 0;
+    player.invulnerable = 0;
+    state.mode = "ready";
+    state.wave = 1;
+    state.waveTime = 0;
+    state.spawned = 0;
+    state.breakTimer = 0;
+    state.score = 0;
+    state.shields = 4;
+    state.bullets.length = 0;
+    state.enemies.length = 0;
+    state.sparks.length = 0;
+    state.win = false;
+    state.gameOver = false;
+    state.feedback = { text: "Press Start, aim, and hold fire.", timer: 2, lastEvent: "ready", shots: 0, kills: 0, damage: 0, dashes: 0, waveClears: 0 };
+    input.firing = false;
+    input.keyboardFiring = false;
+    updateUi();
+    render();
+  }
+  function startRun(){
+    if (state.mode === "playing") return;
+    if (state.mode === "win" || state.mode === "gameover") {
+      resetRun();
+    }
+    state.mode = "playing";
+    state.win = false;
+    state.gameOver = false;
+    setFeedback("Wave 1 inbound.", "start", 1.5);
+    beep("start");
+    canvas.focus({ preventScroll: true });
+    updateUi();
+  }
+  function finishGame(victory){
+    state.win = victory;
+    state.gameOver = !victory;
+    state.mode = victory ? "win" : "gameover";
+    input.firing = false;
+    input.keyboardFiring = false;
+    saveBest();
+    setFeedback(victory ? "Sector clear. Press R to run it back." : "Shields down. Press R to restart.", victory ? "win" : "gameover", 4);
+    beep(victory ? "win" : "hurt");
+    updateUi();
+  }
+  function spawnEnemy(spec){
+    const type = enemyTypes[spec.type];
+    state.enemies.push({
+      id: enemyId++,
+      type: spec.type,
+      x: spec.x,
+      y: spec.y,
+      vx: 0,
+      vy: 0,
+      hp: type.hp,
+      maxHp: type.hp,
+      speed: type.speed,
+      r: type.r,
+      score: type.score,
+      color: type.color,
+      seed: enemyId * 1.73 + state.wave * .41,
+      age: 0
+    });
+  }
+  function fireVolley(){
+    if (state.mode === "ready") startRun();
+    if (state.mode !== "playing" || player.fireCooldown > 0) return;
+    player.fireCooldown = .18;
+    const spreads = [-.16, 0, .16];
+    for (const spread of spreads) {
+      const angle = player.aim + spread;
+      state.bullets.push({
+        id: bulletId++,
+        x: player.x + Math.cos(angle) * (PLAYER_R + 8),
+        y: player.y + Math.sin(angle) * (PLAYER_R + 8),
+        vx: Math.cos(angle) * 560,
+        vy: Math.sin(angle) * 560,
+        life: .82,
+        r: 4,
+        damage: 1
+      });
+    }
+    state.feedback.shots += 1;
+    setFeedback("Volley away.", "shot", .45);
+    beep("shot");
+  }
+  function dash(){
+    if (state.mode === "ready") startRun();
+    if (state.mode !== "playing" || player.dashCooldown > 0) return;
+    const move = currentMoveVector();
+    const dir = move.len > .05 ? move : { x: Math.cos(player.aim), y: Math.sin(player.aim), len: 1 };
+    player.vx = dir.x * 760;
+    player.vy = dir.y * 760;
+    player.dashCooldown = 1.55;
+    player.dashTimer = .15;
+    player.invulnerable = Math.max(player.invulnerable, .34);
+    state.feedback.dashes += 1;
+    setFeedback("Dash burn.", "dash", .7);
+    beep("dash");
+  }
+  function currentMoveVector(){
+    const keyboard = {
+      x: (downKeys.has("right") ? 1 : 0) - (downKeys.has("left") ? 1 : 0),
+      y: (downKeys.has("down") ? 1 : 0) - (downKeys.has("up") ? 1 : 0)
+    };
+    const combined = normalize(keyboard.x + input.touchMove.x, keyboard.y + input.touchMove.y);
+    return combined;
+  }
+  function updateAimFromPoint(x, y){
+    const dx = x - player.x;
+    const dy = y - player.y;
+    if (Math.hypot(dx, dy) > 4) {
+      player.aim = Math.atan2(dy, dx);
+      input.pointerAim = true;
+    }
+  }
+  function updateKeyboardAim(){
+    const x = (aimKeys.right ? 1 : 0) - (aimKeys.left ? 1 : 0);
+    const y = (aimKeys.down ? 1 : 0) - (aimKeys.up ? 1 : 0);
+    if (x || y) {
+      player.aim = Math.atan2(y, x);
+      input.pointerAim = false;
+    }
+  }
+  function addSpark(x, y, color, count, size){
+    for (let i = 0; i < count; i += 1) {
+      const angle = (i / count) * TAU + state.time * .73;
+      state.sparks.push({
+        x,
+        y,
+        vx: Math.cos(angle) * (40 + i * 8),
+        vy: Math.sin(angle) * (40 + i * 8),
+        life: .3 + (i % 3) * .05,
+        maxLife: .35,
+        color,
+        size
+      });
+    }
+  }
+  function update(dt){
+    dt = clamp(dt, 0, .05);
+    state.time += dt;
+    state.feedback.timer = Math.max(0, state.feedback.timer - dt);
+    if (state.feedback.timer <= 0) {
+      if (state.mode === "playing") state.feedback.text = `Wave ${state.wave}: keep strafing.`;
+      if (state.mode === "break") state.feedback.text = `Wave ${state.wave - 1} clear. Next wave in ${state.breakTimer.toFixed(1)}.`;
+    }
+    updateKeyboardAim();
+    player.fireCooldown = Math.max(0, player.fireCooldown - dt);
+    player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+    player.dashTimer = Math.max(0, player.dashTimer - dt);
+    player.invulnerable = Math.max(0, player.invulnerable - dt);
+    for (const spark of state.sparks) {
+      spark.x += spark.vx * dt;
+      spark.y += spark.vy * dt;
+      spark.life -= dt;
+    }
+    state.sparks = state.sparks.filter((spark) => spark.life > 0);
+    if (state.mode === "ready" || state.mode === "win" || state.mode === "gameover") {
+      return;
+    }
+    if (state.mode === "break") {
+      state.breakTimer -= dt;
+      if (state.breakTimer <= 0) {
+        state.mode = "playing";
+        state.waveTime = 0;
+        state.spawned = 0;
+        setFeedback(`Wave ${state.wave} inbound.`, "start", 1.2);
+        beep("start");
+      }
+      return;
+    }
+
+    state.waveTime += dt;
+    const queue = waves[state.wave - 1] || [];
+    while (state.spawned < queue.length && queue[state.spawned].t <= state.waveTime) {
+      spawnEnemy(queue[state.spawned++]);
+    }
+
+    const move = currentMoveVector();
+    const accel = player.dashTimer > 0 ? 3.4 : 11;
+    const targetVx = move.x * 245;
+    const targetVy = move.y * 245;
+    player.vx += (targetVx - player.vx) * clamp(accel * dt, 0, 1);
+    player.vy += (targetVy - player.vy) * clamp(accel * dt, 0, 1);
+    player.x = clamp(player.x + player.vx * dt, 28, W - 28);
+    player.y = clamp(player.y + player.vy * dt, 28, H - 28);
+    if (player.x <= 28 || player.x >= W - 28) player.vx *= -.15;
+    if (player.y <= 28 || player.y >= H - 28) player.vy *= -.15;
+
+    if (input.firing || input.keyboardFiring) fireVolley();
+
+    for (const bullet of state.bullets) {
+      bullet.x += bullet.vx * dt;
+      bullet.y += bullet.vy * dt;
+      bullet.life -= dt;
+    }
+    state.bullets = state.bullets.filter((bullet) => bullet.life > 0 && bullet.x > -40 && bullet.x < W + 40 && bullet.y > -40 && bullet.y < H + 40);
+
+    for (const enemy of state.enemies) {
+      enemy.age += dt;
+      const toPlayer = normalize(player.x - enemy.x, player.y - enemy.y);
+      const side = Math.sin(enemy.age * 3.1 + enemy.seed) * 24;
+      const sidex = -toPlayer.y * side;
+      const sidey = toPlayer.x * side;
+      enemy.vx += ((toPlayer.x * enemy.speed + sidex) - enemy.vx) * clamp(enemyTypes[enemy.type].turn * dt * 3, 0, 1);
+      enemy.vy += ((toPlayer.y * enemy.speed + sidey) - enemy.vy) * clamp(enemyTypes[enemy.type].turn * dt * 3, 0, 1);
+      enemy.x += enemy.vx * dt;
+      enemy.y += enemy.vy * dt;
+    }
+
+    for (const bullet of state.bullets) {
+      if (bullet.dead) continue;
+      for (const enemy of state.enemies) {
+        if (enemy.dead) continue;
+        const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+        if (dist <= bullet.r + enemy.r) {
+          bullet.dead = true;
+          enemy.hp -= bullet.damage;
+          enemy.vx += Math.cos(player.aim) * 32;
+          enemy.vy += Math.sin(player.aim) * 32;
+          addSpark(bullet.x, bullet.y, enemy.color, 5, 3);
+          setFeedback("Hit confirmed.", "hit", .5);
+          beep("hit");
+          if (enemy.hp <= 0) {
+            enemy.dead = true;
+            state.score += enemy.score + state.wave * 8;
+            state.feedback.kills += 1;
+            saveBest();
+            addSpark(enemy.x, enemy.y, enemy.color, 10, 4);
+            setFeedback(`${enemy.type} down +${enemy.score}.`, "kill", .9);
+          }
+          break;
+        }
+      }
+    }
+    state.bullets = state.bullets.filter((bullet) => !bullet.dead);
+    state.enemies = state.enemies.filter((enemy) => !enemy.dead);
+
+    for (const enemy of state.enemies) {
+      const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+      if (dist <= enemy.r + PLAYER_R && player.invulnerable <= 0) {
+        state.shields -= 1;
+        state.feedback.damage += 1;
+        player.invulnerable = 1.05;
+        enemy.hp -= 1;
+        const away = normalize(player.x - enemy.x, player.y - enemy.y);
+        player.vx += away.x * 360;
+        player.vy += away.y * 360;
+        enemy.vx -= away.x * 140;
+        enemy.vy -= away.y * 140;
+        addSpark(player.x, player.y, "#fb7185", 12, 5);
+        setFeedback(`Shield hit. ${Math.max(0, state.shields)} remaining.`, "damage", 1.2);
+        beep("hurt");
+        if (enemy.hp <= 0) enemy.dead = true;
+        if (state.shields <= 0) {
+          state.shields = 0;
+          finishGame(false);
+          break;
+        }
+      }
+    }
+    state.enemies = state.enemies.filter((enemy) => !enemy.dead);
+
+    if (state.mode === "playing" && state.spawned >= queue.length && state.enemies.length === 0) {
+      state.feedback.waveClears += 1;
+      state.score += 250 + state.wave * 85 + state.shields * 35;
+      saveBest();
+      if (state.wave >= waves.length) {
+        finishGame(true);
+      } else {
+        state.wave += 1;
+        state.mode = "break";
+        state.breakTimer = 1.35;
+        player.invulnerable = Math.max(player.invulnerable, .75);
+        setFeedback(`Wave ${state.wave - 1} clear.`, "clear", 1.4);
+        beep("clear");
+      }
+    }
+    updateUi();
+  }
+  function updateUi(){
+    els.wave.textContent = `${Math.min(state.wave, waves.length)}/${waves.length}`;
+    els.score.textContent = String(Math.floor(state.score));
+    els.best.textContent = String(Math.floor(state.best));
+    els.shield.textContent = String(state.shields);
+    els.shieldPill.dataset.hot = player.invulnerable > 0 || state.shields <= 1 ? "true" : "false";
+    els.dash.textContent = player.dashCooldown <= 0 ? "Ready" : player.dashCooldown.toFixed(1);
+    els.dashPill.dataset.hot = player.dashCooldown <= 0 ? "true" : "false";
+    els.status.textContent = state.feedback.text;
+    els.start.textContent = state.mode === "playing" || state.mode === "break" ? "Restart" : state.mode === "ready" ? "Start" : "Restart";
+    els.sound.textContent = state.soundOn ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.soundOn ? "true" : "false");
+  }
+  function drawBackground(){
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#071522");
+    bg.addColorStop(1, "#050914");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    for (const star of stars) {
+      const driftX = (star.x + Math.sin(state.time * .18 + star.y * .01) * star.layer * 8 + state.time * star.layer * 8) % W;
+      const driftY = (star.y + state.time * star.layer * 11) % H;
+      ctx.globalAlpha = .22 + star.layer * .18;
+      ctx.fillStyle = star.tint;
+      ctx.beginPath();
+      ctx.arc(driftX, driftY, star.r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = "rgba(94,234,212,.1)";
+    ctx.lineWidth = 1;
+    for (let x = 50; x < W; x += 50) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 40; y < H; y += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(94,234,212,.22)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(24, 24, W - 48, H - 48);
+  }
+  function drawPlayer(){
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.aim);
+    ctx.globalAlpha = player.invulnerable > 0 && Math.floor(state.time * 18) % 2 === 0 ? .55 : 1;
+    ctx.shadowColor = player.dashTimer > 0 ? "#fbbf24" : "#5eead4";
+    ctx.shadowBlur = player.dashTimer > 0 ? 28 : 16;
+    ctx.fillStyle = "#5eead4";
+    ctx.beginPath();
+    ctx.moveTo(22, 0);
+    ctx.lineTo(-13, -12);
+    ctx.lineTo(-7, 0);
+    ctx.lineTo(-13, 12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#e6fff9";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#06121f";
+    ctx.beginPath();
+    ctx.arc(2, 0, 5, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = .68;
+    ctx.strokeStyle = player.dashCooldown <= 0 ? "#fbbf24" : "rgba(94,234,212,.5)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 24 + (player.dashCooldown <= 0 ? Math.sin(state.time * 8) * 2 : 0), -Math.PI / 2, -Math.PI / 2 + TAU * (player.dashCooldown <= 0 ? 1 : 1 - player.dashCooldown / 1.55));
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawBullets(){
+    for (const bullet of state.bullets) {
+      ctx.save();
+      ctx.strokeStyle = "#6cf0d8";
+      ctx.shadowColor = "#5eead4";
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(bullet.x - bullet.vx * .018, bullet.y - bullet.vy * .018);
+      ctx.lineTo(bullet.x, bullet.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  function drawEnemies(){
+    for (const enemy of state.enemies) {
+      const type = enemyTypes[enemy.type];
+      const hp = clamp(enemy.hp / enemy.maxHp, 0, 1);
+      ctx.save();
+      ctx.translate(enemy.x, enemy.y);
+      ctx.rotate(Math.atan2(player.y - enemy.y, player.x - enemy.x));
+      ctx.shadowColor = type.color;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = type.color;
+      if (enemy.type === "dart") {
+        ctx.beginPath();
+        ctx.moveTo(enemy.r + 6, 0);
+        ctx.lineTo(-enemy.r, -enemy.r);
+        ctx.lineTo(-enemy.r * .4, 0);
+        ctx.lineTo(-enemy.r, enemy.r);
+        ctx.closePath();
+        ctx.fill();
+      } else if (enemy.type === "bruiser" || enemy.type === "warden") {
+        polygon(enemy.r, enemy.type === "warden" ? 7 : 6);
+        ctx.fill();
+      } else {
+        polygon(enemy.r, 5);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,.72)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "rgba(3,7,18,.78)";
+      ctx.fillRect(enemy.x - enemy.r, enemy.y - enemy.r - 10, enemy.r * 2, 4);
+      ctx.fillStyle = "#5eead4";
+      ctx.fillRect(enemy.x - enemy.r, enemy.y - enemy.r - 10, enemy.r * 2 * hp, 4);
+    }
+  }
+  function polygon(radius, sides){
+    ctx.beginPath();
+    for (let i = 0; i < sides; i += 1) {
+      const angle = (i / sides) * TAU;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+  function drawSparks(){
+    for (const spark of state.sparks) {
+      ctx.save();
+      ctx.globalAlpha = clamp(spark.life / spark.maxLife, 0, 1);
+      ctx.fillStyle = spark.color;
+      ctx.shadowColor = spark.color;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(spark.x, spark.y, spark.size, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  function drawOverlay(){
+    if (state.mode === "playing") return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.58)";
+    ctx.fillRect(0, 0, W, H);
+    const title = state.mode === "win" ? "SECTOR CLEAR" : state.mode === "gameover" ? "SHIELDS DOWN" : state.mode === "break" ? "WAVE CLEAR" : "STARLINE STRAFE";
+    const subtitle = state.mode === "ready" ? "Five deterministic waves. Volley fire, dash, and keep shields online." : state.feedback.text;
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f8fbff";
+    ctx.font = "950 34px ui-sans-serif,system-ui";
+    ctx.fillText(title, W / 2, H / 2 - 24);
+    ctx.fillStyle = "#5eead4";
+    ctx.font = "850 16px ui-sans-serif,system-ui";
+    ctx.fillText(subtitle, W / 2, H / 2 + 12);
+    ctx.fillStyle = "rgba(230,237,243,.78)";
+    ctx.font = "750 13px ui-sans-serif,system-ui";
+    ctx.fillText("Pointer hold shoots. Space dashes. R restarts.", W / 2, H / 2 + 39);
+    ctx.restore();
+  }
+  function render(){
+    drawBackground();
+    drawBullets();
+    drawEnemies();
+    drawSparks();
+    drawPlayer();
+    ctx.save();
+    ctx.strokeStyle = "rgba(94,234,212,.42)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 9]);
+    ctx.beginPath();
+    ctx.moveTo(player.x + Math.cos(player.aim) * 30, player.y + Math.sin(player.aim) * 30);
+    ctx.lineTo(player.x + Math.cos(player.aim) * 82, player.y + Math.sin(player.aim) * 82);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    drawOverlay();
+  }
+  function frame(stamp){
+    if (!lastStamp) lastStamp = stamp;
+    const dt = (stamp - lastStamp) / 1000;
+    lastStamp = stamp;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  function keyToMove(event){
+    const key = event.key.toLowerCase();
+    if (event.key === "ArrowLeft" || key === "a") return "left";
+    if (event.key === "ArrowRight" || key === "d") return "right";
+    if (event.key === "ArrowUp" || key === "w") return "up";
+    if (event.key === "ArrowDown" || key === "s") return "down";
+    return "";
+  }
+  function keyToAim(event){
+    const key = event.key.toLowerCase();
+    if (key === "j") return "left";
+    if (key === "l") return "right";
+    if (key === "i") return "up";
+    if (key === "k") return "down";
+    return "";
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.target && /input|textarea|select/i.test(event.target.tagName)) return;
+    const move = keyToMove(event);
+    const aim = keyToAim(event);
+    if (move || aim || event.key === " " || event.key === "Enter") event.preventDefault();
+    if (move) downKeys.add(move);
+    if (aim) aimKeys[aim] = true;
+    if (event.key === " " && !event.repeat) dash();
+    if (event.key === "Enter" || event.key.toLowerCase() === "z") {
+      input.keyboardFiring = true;
+      if (state.mode === "ready") startRun();
+    }
+    const key = event.key.toLowerCase();
+    if (key === "r") resetRun();
+    if (key === "f") toggleFullscreen();
+    if (key === "m") toggleSound();
+  });
+  document.addEventListener("keyup", (event) => {
+    const move = keyToMove(event);
+    const aim = keyToAim(event);
+    if (move) {
+      event.preventDefault();
+      downKeys.delete(move);
+    }
+    if (aim) {
+      event.preventDefault();
+      aimKeys[aim] = false;
+    }
+    if (event.key === "Enter" || event.key.toLowerCase() === "z") input.keyboardFiring = false;
+  });
+  function canvasPoint(event){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) / rect.width * W,
+      y: (event.clientY - rect.top) / rect.height * H
+    };
+  }
+  function beginPointer(event){
+    canvas.focus({ preventScroll: true });
+    try { canvas.setPointerCapture?.(event.pointerId); } catch (_) {}
+    const point = canvasPoint(event);
+    const moveZone = event.pointerType === "touch" && point.x < W * .45 && point.y > H * .38;
+    pointerZones.set(event.pointerId, { mode: moveZone ? "move" : "fire", origin: point });
+    if (moveZone) {
+      input.touchOrigin = point;
+      input.touchMove = { x: 0, y: 0 };
+      if (state.mode === "ready") startRun();
+    } else {
+      updateAimFromPoint(point.x, point.y);
+      input.firing = true;
+      if (state.mode === "ready") startRun();
+    }
+  }
+  function movePointer(event){
+    const zone = pointerZones.get(event.pointerId);
+    const point = canvasPoint(event);
+    if (!zone) {
+      if (event.pointerType !== "touch") updateAimFromPoint(point.x, point.y);
+      return;
+    }
+    if (zone.mode === "move") {
+      const dx = point.x - zone.origin.x;
+      const dy = point.y - zone.origin.y;
+      const n = normalize(dx, dy);
+      input.touchMove = { x: n.x * clamp(n.len / 54, 0, 1), y: n.y * clamp(n.len / 54, 0, 1) };
+    } else {
+      updateAimFromPoint(point.x, point.y);
+    }
+  }
+  function endPointer(event){
+    const zone = pointerZones.get(event.pointerId);
+    pointerZones.delete(event.pointerId);
+    if (!zone) return;
+    if (zone.mode === "move") {
+      input.touchMove = { x: 0, y: 0 };
+      input.touchOrigin = null;
+    } else {
+      input.firing = Array.from(pointerZones.values()).some((item) => item.mode === "fire");
+    }
+  }
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    beginPointer(event);
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    event.preventDefault();
+    movePointer(event);
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    event.preventDefault();
+    endPointer(event);
+  });
+  canvas.addEventListener("pointercancel", (event) => {
+    event.preventDefault();
+    endPointer(event);
+  });
+  function toggleFullscreen(){
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.();
+  }
+  function toggleSound(){
+    state.soundOn = !state.soundOn;
+    storage.set(keys.sound, state.soundOn ? "1" : "0");
+    if (state.soundOn) beep("toggle");
+    updateUi();
+  }
+  els.start.addEventListener("click", () => {
+    if (state.mode === "ready") startRun();
+    else resetRun();
+  });
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFullscreen);
+
+  function snapshot(){
+    return {
+      game: "Starline Strafe",
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down, width 900, height 560",
+      mode: state.mode,
+      wave: state.wave,
+      waveTotal: waves.length,
+      waveTime: round(state.waveTime),
+      spawned: state.spawned,
+      waveQueue: (waves[state.wave - 1] || []).length,
+      score: Math.floor(state.score),
+      best: Math.floor(state.best),
+      shields: state.shields,
+      player: {
+        x: round(player.x),
+        y: round(player.y),
+        vx: round(player.vx),
+        vy: round(player.vy),
+        aimAngle: round(player.aim),
+        aim: { x: round(Math.cos(player.aim)), y: round(Math.sin(player.aim)) },
+        dashCooldown: round(player.dashCooldown),
+        dashReady: player.dashCooldown <= 0,
+        dashing: player.dashTimer > 0,
+        invulnerable: round(player.invulnerable)
+      },
+      bullets: {
+        count: state.bullets.length,
+        visible: state.bullets.slice(0, 10).map((bullet) => ({ id: bullet.id, x: round(bullet.x), y: round(bullet.y), vx: round(bullet.vx), vy: round(bullet.vy), life: round(bullet.life) }))
+      },
+      enemies: {
+        count: state.enemies.length,
+        visible: state.enemies.slice(0, 10).map((enemy) => ({ id: enemy.id, type: enemy.type, x: round(enemy.x), y: round(enemy.y), vx: round(enemy.vx), vy: round(enemy.vy), hp: enemy.hp, maxHp: enemy.maxHp }))
+      },
+      feedback: {
+        text: state.feedback.text,
+        timer: round(state.feedback.timer),
+        lastEvent: state.feedback.lastEvent,
+        shots: state.feedback.shots,
+        kills: state.feedback.kills,
+        damage: state.feedback.damage,
+        dashes: state.feedback.dashes,
+        waveClears: state.feedback.waveClears,
+        sparkCount: state.sparks.length
+      },
+      audio: {
+        soundOn: state.soundOn,
+        audioReady: Boolean(audioCtx),
+        lastSound: state.lastSound
+      },
+      input: {
+        firing: input.firing || input.keyboardFiring,
+        move: currentMoveVector(),
+        pointerAim: input.pointerAim
+      },
+      win: state.win,
+      gameOver: state.gameOver
+    };
+  }
+  window.render_game_to_text = () => JSON.stringify(snapshot());
+  window.advanceTime = (ms) => {
+    const steps = Math.max(1, Math.min(1200, Math.round(Number(ms || 0) / (1000 / 60))));
+    for (let i = 0; i < steps; i += 1) update(1 / 60);
+    render();
+    return window.render_game_to_text();
+  };
+
+  updateUi();
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

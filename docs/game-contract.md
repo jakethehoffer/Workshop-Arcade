@@ -56,4 +56,4 @@ npm run capture:games:ci
 npm run audit:perf:ci
 ```
 
-Every captured surface in `npm run capture:games:ci` must score 0, and CI uploads the compact render-ranking report. Use `npm run capture:games` for optional local contact-sheet review when you want to inspect desktop/mobile surfaces without strict CI failure handling. Use `npm ci` first when Node dependencies are not installed.
+Every captured surface in `npm run capture:games:ci` must score 0, and the CI render capture job uploads the compact render-ranking report. Use `npm run capture:games` for optional local contact-sheet review when you want to inspect desktop/mobile surfaces without strict CI failure handling. Use `npm ci` first when Node dependencies are not installed.

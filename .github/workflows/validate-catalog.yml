@@ -6,8 +6,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  catalog:
-    name: Catalog links and assets
+  catalog-docs-a11y:
+    name: Catalog, docs, and accessibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run catalog validator
+        shell: pwsh
+        run: ./scripts/validate-catalog.ps1
+
+      - name: Run docs drift check
+        run: npm run test:docs
+
+      - name: Run accessibility regression check
+        run: npm run test:a11y
+
+  game-smoke:
+    name: Game smoke tests
     runs-on: ubuntu-latest
 
     steps:
@@ -26,18 +53,28 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Run catalog validator
-        shell: pwsh
-        run: ./scripts/validate-catalog.ps1
-
-      - name: Run docs drift check
-        run: npm run test:docs
-
-      - name: Run accessibility regression check
-        run: npm run test:a11y
-
       - name: Run game smoke tests
         run: npm run test:games
+
+  performance-audit:
+    name: Performance audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
 
       - name: Run performance and SEO regression audit
         shell: bash
@@ -70,6 +107,26 @@ jobs:
           path: test-results/lighthouse-baseline/**/report.md
           if-no-files-found: ignore
           retention-days: 14
+
+  render-capture:
+    name: Render capture
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
 
       - name: Run rendered-quality regression capture
         run: npm run capture:games:ci

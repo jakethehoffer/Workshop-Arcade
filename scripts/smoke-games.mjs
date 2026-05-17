@@ -8,6 +8,13 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const manifestPath = path.join(repoRoot, "websites", "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const failures = [];
+const categoryCounts = new Map([["All", manifest.length]]);
+
+for (const game of manifest) {
+  for (const tag of game.tags || []) {
+    categoryCounts.set(tag, (categoryCounts.get(tag) || 0) + 1);
+  }
+}
 
 const mimeTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -26,6 +33,10 @@ const mimeTypes = new Map([
 
 function addFailure(label, message) {
   failures.push(`${label}: ${message}`);
+}
+
+function countForCategory(category) {
+  return categoryCounts.get(category) || 0;
 }
 
 function isIgnoredLocalUrl(url) {
@@ -107,6 +118,128 @@ function observePage(page, baseUrl, label) {
   });
 }
 
+async function getFilterChips(page) {
+  return await page.locator("#filters .chip").evaluateAll((chips) => chips.map((chip) => ({
+    category: chip.dataset.category || "",
+    count: Number(chip.dataset.count || Number.NaN),
+    text: (chip.textContent || "").replace(/\s+/g, " ").trim(),
+    active: chip.getAttribute("data-active"),
+    pressed: chip.getAttribute("aria-pressed")
+  })));
+}
+
+async function assertActiveCategory(page, category, label) {
+  const chips = await getFilterChips(page);
+  const target = chips.find((chip) => chip.category === category);
+  if (!target) {
+    addFailure(label, `missing active category chip for ${category}`);
+    return;
+  }
+  if (target.active !== "true" || target.pressed !== "true") {
+    addFailure(label, `category ${category} is not active after tag selection`);
+  }
+
+  for (const chip of chips) {
+    if (chip.category !== category && (chip.active === "true" || chip.pressed === "true")) {
+      addFailure(label, `category ${chip.category} is active while ${category} should be active`);
+    }
+  }
+}
+
+async function assertVisibleCardsMatchCategory(page, category, label) {
+  if (category === "All" || category === "Recently") return;
+  const mismatches = await page.locator(".card").evaluateAll((cards, selectedCategory) => cards
+    .map((card) => ({
+      title: card.querySelector(".title")?.textContent?.trim() || "unknown",
+      tags: [...card.querySelectorAll(".tag")].map((tag) => tag.dataset.category || tag.textContent?.trim() || "")
+    }))
+    .filter((card) => !card.tags.includes(selectedCategory)), category);
+  if (mismatches.length) {
+    addFailure(label, `cards without ${category} tag after filtering: ${mismatches.map((card) => card.title).join(", ")}`);
+  }
+}
+
+async function assertTagFilterState(page, category, label) {
+  await assertActiveCategory(page, category, label);
+  const modalOpen = await page.locator("#playerModal").evaluate((modal) => !modal.hidden);
+  if (modalOpen) {
+    addFailure(label, "card tag opened the player modal");
+  }
+  const visibleCount = await page.locator(".card").count();
+  const expectedCount = countForCategory(category);
+  if (visibleCount !== expectedCount) {
+    addFailure(label, `expected ${expectedCount} cards for ${category}, found ${visibleCount}`);
+  }
+  await assertVisibleCardsMatchCategory(page, category, label);
+}
+
+async function checkFilterChips(page) {
+  const chips = await getFilterChips(page);
+  for (const [category, expectedCount] of categoryCounts) {
+    const chip = chips.find((candidate) => candidate.category === category);
+    if (!chip) {
+      addFailure("catalog", `missing ${category} filter chip with data-category`);
+      continue;
+    }
+    if (chip.count !== expectedCount) {
+      addFailure("catalog", `${category} filter chip expected count ${expectedCount}, found ${chip.count}`);
+    }
+    if (!new RegExp(`(^|\\D)${expectedCount}(\\D|$)`).test(chip.text)) {
+      addFailure("catalog", `${category} filter chip text is missing count ${expectedCount}: ${chip.text}`);
+    }
+  }
+  const allChip = chips.find((chip) => chip.category === "All");
+  if (!allChip || allChip.active !== "true" || allChip.pressed !== "true") {
+    addFailure("catalog", "All filter chip is not active by default");
+  }
+}
+
+async function checkCardTagFiltering(page) {
+  const firstTag = page.locator(".card .tag").first();
+  const tagMeta = await firstTag.evaluate((tag) => ({
+    tagName: tag.tagName,
+    type: tag.getAttribute("type"),
+    category: tag.dataset.category || "",
+    text: (tag.textContent || "").trim(),
+    tabIndex: tag.tabIndex
+  }));
+  const category = tagMeta.category || tagMeta.text;
+
+  if (tagMeta.tagName !== "BUTTON" || tagMeta.type !== "button") {
+    addFailure("catalog", `card tag should be a button, found ${tagMeta.tagName.toLowerCase()}`);
+  }
+  if (!tagMeta.category) {
+    addFailure("catalog", `card tag is missing data-category: ${tagMeta.text}`);
+  }
+  if (tagMeta.tabIndex < 0) {
+    addFailure("catalog", `card tag is not keyboard focusable: ${tagMeta.text}`);
+  }
+
+  await firstTag.click();
+  await page.waitForTimeout(100);
+  await assertTagFilterState(page, category, "catalog");
+
+  const allChip = page.locator('#filters .chip[data-category="All"]');
+  if (await allChip.count()) {
+    await allChip.click();
+    await page.waitForTimeout(100);
+    await assertActiveCategory(page, "All", "catalog");
+  } else {
+    addFailure("catalog", "cannot reset card-tag test because All chip is missing data-category");
+  }
+
+  const keyboardTag = page.locator(".card .tag").first();
+  const keyboardCategory = await keyboardTag.evaluate((tag) => tag.dataset.category || (tag.textContent || "").trim());
+  await keyboardTag.focus();
+  const focused = await keyboardTag.evaluate((tag) => document.activeElement === tag);
+  if (!focused) {
+    addFailure("catalog", `card tag cannot receive keyboard focus: ${keyboardCategory}`);
+  }
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(100);
+  await assertTagFilterState(page, keyboardCategory, "catalog");
+}
+
 async function checkCatalog(browser, baseUrl) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   observePage(page, baseUrl, "catalog");
@@ -117,6 +250,9 @@ async function checkCatalog(browser, baseUrl) {
   if (cardCount !== manifest.length) {
     addFailure("catalog", `expected ${manifest.length} cards, found ${cardCount}`);
   }
+
+  await checkFilterChips(page);
+  await checkCardTagFiltering(page);
 
   const sandbox = await page.locator("#playerFrame").getAttribute("sandbox");
   if (sandbox !== "allow-scripts allow-forms allow-pointer-lock") {

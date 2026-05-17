@@ -21,7 +21,7 @@ npm run capture:games:ci
 npm run audit:perf:ci
 ```
 
-These are the publish-ready gates mirrored by CI: docs drift, accessibility, game smoke coverage, strict render capture, and strict performance audit. `npm run capture:games` is useful for optional local contact-sheet review, but `npm run capture:games:ci` is the enforced publish gate and every rendered surface must score 0.
+These are the publish-ready gates mirrored by CI: docs drift, accessibility, game smoke coverage, strict render capture, and strict performance audit. CI groups them as catalog/docs/a11y, game smoke, performance audit, and render capture jobs. `npm run capture:games` is useful for optional local contact-sheet review, but `npm run capture:games:ci` is the enforced publish gate and every rendered surface must score 0.
 
 ## Remove a Game
 

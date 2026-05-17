@@ -789,6 +789,48 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "starline-strafe": {
+      name: "start, shoot, and dash",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          const canvas = document.querySelector("#game");
+          if (!canvas || typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(900);
+          const rect = canvas.getBoundingClientRect();
+          const snap = JSON.parse(window.render_game_to_text());
+          const enemy = (snap.enemies && snap.enemies[0]) || { x: 690, y: 260 };
+          const toClient = (x, y) => ({
+            x: rect.left + (x / 900) * rect.width,
+            y: rect.top + (y / 560) * rect.height
+          });
+          const aim = toClient(enemy.x, enemy.y);
+          const dispatchPointer = (type, point, buttons) => {
+            canvas.dispatchEvent(new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 12,
+              pointerType: "mouse",
+              isPrimary: true,
+              button: 0,
+              buttons,
+              clientX: point.x,
+              clientY: point.y
+            }));
+          };
+          dispatchPointer("pointerdown", aim, 1);
+          for (let i = 0; i < 44; i += 1) {
+            window.advanceTime(1000 / 60);
+          }
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+          window.advanceTime(90);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
+          dispatchPointer("pointerup", aim, 0);
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {

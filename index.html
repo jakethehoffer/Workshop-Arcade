@@ -92,11 +92,14 @@
     .chip{background:linear-gradient(180deg,rgba(20,30,50,0.55),rgba(11,17,32,0.55));
       border:1px solid rgba(94,234,212,0.14);padding:8px 12px;border-radius:999px;
       font-weight:700;color:var(--muted);cursor:pointer;user-select:none;
-      letter-spacing:0.04em;font-size:13px;transition:border-color 0.15s ease,color 0.15s ease,background 0.15s ease}
+      letter-spacing:0.04em;font-size:13px;transition:border-color 0.15s ease,color 0.15s ease,background 0.15s ease;
+      display:inline-flex;align-items:center;gap:7px}
+    .chip-count{font-variant-numeric:tabular-nums;color:rgba(94,234,212,0.8);font-size:12px}
     .chip:hover{border-color:rgba(94,234,212,0.35);color:#e6edf3}
     .chip[data-active="true"]{background:linear-gradient(180deg,rgba(94,234,212,0.18),rgba(11,17,32,0.92));
       color:#e6edf3;border-color:rgba(94,234,212,0.55);
       box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 14px rgba(94,234,212,0.18)}
+    .chip[data-active="true"] .chip-count{color:#e6edf3}
 
     .controls{max-width:var(--maxw);margin:0 auto;padding:8px 16px 0;display:flex;gap:12px;align-items:center}
     .controls small#resultCount{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
@@ -128,9 +131,10 @@
     .title{font-weight:800;font-size:16px;letter-spacing:.2px}
     .subtitle{font-size:12.5px;color:var(--muted);line-height:1.2}
     .tags{display:flex;gap:8px;flex-wrap:wrap}
-    .tag{font-size:10.5px;padding:3px 8px;border:1px solid rgba(94,234,212,0.18);border-radius:999px;
+    .tag{font:inherit;font-size:10.5px;padding:3px 8px;border:1px solid rgba(94,234,212,0.18);border-radius:999px;
       color:rgba(94,234,212,0.85);letter-spacing:0.08em;text-transform:uppercase;font-weight:700;
-      background:rgba(94,234,212,0.05)}
+      background:rgba(94,234,212,0.05);cursor:pointer}
+    .tag:hover,.tag[data-active="true"]{border-color:rgba(94,234,212,0.45);color:#e6edf3;background:rgba(94,234,212,0.11)}
     .row{display:flex;align-items:center;gap:10px}
     .card-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
 
@@ -254,7 +258,7 @@
     }
 
     /* Focus outlines for accessibility */
-    .chip:focus-visible, .btn:focus-visible, .play:focus-visible, .improve:focus-visible,
+    .chip:focus-visible, .tag:focus-visible, .btn:focus-visible, .play:focus-visible, .improve:focus-visible,
     .icon-btn:focus-visible, .mini-btn:focus-visible, .thumb:focus-visible,
     .queue-row:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
   </style>
@@ -453,6 +457,7 @@ const FALLBACK_GAMES = [
   { id:"neon-drift", title:"Neon Drift", subtitle:"Thread a neon racing loop, hit every checkpoint, and boost through three laps.", tags:["Racing","Arcade","Action"], slug:"neon-drift", url:"websites/neon-drift.html", cover:"covers/neon-drift.svg", addedAt:"2026-05-15", popularity:55 },
   { id:"signal-siege", title:"Signal Siege", subtitle:"Build and upgrade towers across three lanes to hold six deterministic signal waves.", tags:["Strategy","Action","Defense"], slug:"signal-siege", url:"websites/signal-siege.html", cover:"covers/signal-siege.svg", addedAt:"2026-05-16", popularity:54 },
   { id:"pinball-foundry", title:"Pinball Foundry", subtitle:"Launch steel through a compact foundry table with flippers, bumpers, rollovers, lanes, and three balls.", tags:["Arcade","Physics","Action"], slug:"pinball-foundry", url:"websites/pinball-foundry.html", cover:"covers/pinball-foundry.svg", addedAt:"2026-05-16", popularity:53 },
+  { id:"starline-strafe", title:"Starline Strafe", subtitle:"Strafe through a five-wave neon starfield, volley shots into raiders, dash through danger, and keep your shields online.", tags:["Arcade","Action","Shooter"], slug:"starline-strafe", url:"websites/starline-strafe.html", cover:"covers/starline-strafe.svg", addedAt:"2026-05-16", popularity:52 },
   { id:"minesweeper", title:"Minesweeper", subtitle:"Sweep the field without hitting a mine. SFX and music included.", tags:["Puzzle","Strategy"], slug:"minesweeper", url:"websites/minesweeper.html", cover:"covers/minesweeper.svg", addedAt:"2025-09-22", popularity:82 },
   { id:"solitaire", title:"Klondike Solitaire", subtitle:"The timeless card game, fully playable in your browser.", tags:["Board","Strategy"], slug:"solitaire", url:"websites/solitare.html", cover:"covers/solitaire.svg", addedAt:"2025-09-25", popularity:80 },
   { id:"wordle", title:"Lexica", subtitle:"Guess the five-letter word in six tries.", tags:["Puzzle"], slug:"wordle", url:"websites/wordle.html", cover:"covers/wordle.svg", addedAt:"2025-09-28", popularity:89 },
@@ -466,7 +471,7 @@ const FALLBACK_GAMES = [
   { id:"cosmic-fact-match", title:"Cosmic Fact Match", subtitle:"Match original space heroes and rivals from clues.", tags:["Puzzle"], slug:"cosmic-fact-match", url:"websites/cosmic-fact-match.html", cover:"covers/cosmic-fact-match.svg", addedAt:"2025-10-22", popularity:73 }
 ];
 
-const CATEGORY_ORDER = ["All","Arcade","Puzzle","Board","Strategy","Action","Defense","Endless","Physics","Sports","Racing","Rhythm"];
+const CATEGORY_ORDER = ["All","Arcade","Puzzle","Board","Strategy","Action","Shooter","Defense","Endless","Physics","Sports","Racing","Rhythm"];
 const DRAFTS_KEY = "workshop_arcade_drafts_v1";
 const GITHUB_ISSUE_URL = "https://github.com/jakethehoffer/Workshop-Arcade/issues/new";
 
@@ -684,15 +689,39 @@ function buildFilters(){
 
   els.filters.innerHTML = '';
   for(const name of categories){
+    const count = categoryCount(name);
     const chip = document.createElement('button');
     chip.className = 'chip';
     chip.type = 'button';
-    chip.textContent = name;
+    chip.dataset.category = name;
+    chip.dataset.count = String(count);
+    chip.setAttribute('aria-label', `${name}, ${count} ${count === 1 ? 'game' : 'games'}`);
+    const label = document.createElement('span');
+    label.className = 'chip-label';
+    label.textContent = name;
+    const countLabel = document.createElement('span');
+    countLabel.className = 'chip-count';
+    countLabel.textContent = String(count);
+    chip.append(label, countLabel);
     chip.setAttribute('data-active', name === state.category);
     chip.setAttribute('aria-pressed', name === state.category ? 'true' : 'false');
-    chip.addEventListener('click', ()=>{ state.category = name; update(); });
+    chip.addEventListener('click', ()=> setCategory(name));
     els.filters.appendChild(chip);
   }
+}
+
+function categoryCount(category){
+  if(category === 'All') return state.games.length;
+  if(category === 'Recently'){
+    const slugs = new Set(state.games.map(g => g.slug));
+    return state.recentPlays.filter(slug => slugs.has(slug)).length;
+  }
+  return state.games.filter(g => (g.tags||[]).includes(category)).length;
+}
+
+function setCategory(category){
+  state.category = category;
+  update();
 }
 
 // Search helpers
@@ -703,7 +732,7 @@ els.sort.addEventListener('change', ()=>{ state.sort = els.sort.value; update();
 function update(){
   // active chip UI
   for(const chip of els.filters.children){
-    const active = chip.textContent === state.category;
+    const active = chip.dataset.category === state.category;
     chip.setAttribute('data-active', active);
     chip.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
@@ -745,8 +774,19 @@ function render(){
 
     const tags = card.querySelector('.tags');
     for(const t of (g.tags||[])){
-      const span = document.createElement('span');
-      span.className = 'tag'; span.textContent = t; tags.appendChild(span);
+      const tag = document.createElement('button');
+      tag.className = 'tag';
+      tag.type = 'button';
+      tag.textContent = t;
+      tag.dataset.category = t;
+      tag.setAttribute('aria-label', `Filter by ${t}`);
+      tag.setAttribute('data-active', t === state.category);
+      tag.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        setCategory(t);
+      });
+      tags.appendChild(tag);
     }
 
     const playBtn = card.querySelector('.play');
