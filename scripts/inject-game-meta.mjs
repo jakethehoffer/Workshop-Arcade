@@ -23,6 +23,10 @@ const SITE = "https://jakethehoffer.github.io/Workshop-Arcade";
 const RAW = "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main";
 const MARK_START = "<!-- workshop-meta:start -->";
 const MARK_END = "<!-- workshop-meta:end -->";
+const JSONLD_MARK_START = "<!-- workshop-jsonld:start -->";
+const JSONLD_MARK_END = "<!-- workshop-jsonld:end -->";
+
+export { JSONLD_MARK_START, JSONLD_MARK_END };
 
 function escapeAttr(s) {
   return String(s || "")
@@ -70,6 +74,75 @@ function injectBlock(html, block) {
   return html.replace(/<\/title>/i, "</title>\n" + block);
 }
 
+function escapeForScriptBlock(json) {
+  // </script> inside a JSON string literal would close the surrounding
+  // <script> tag and break the page. Escape the forward slash so the parser
+  // still sees valid JSON.
+  return json.replace(/<\/script/gi, "<\\/script");
+}
+
+export function buildGameJsonLd(game) {
+  const description = game.subtitle || "A standalone HTML5 game from the Workshop Arcade catalog.";
+  const canonical = SITE + "/" + game.url;
+  const image = RAW + "/" + game.cover;
+  const tags = Array.isArray(game.tags) ? game.tags.filter((tag) => typeof tag === "string" && tag.trim()) : [];
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    name: game.title,
+    description,
+    url: canonical,
+    image,
+    applicationCategory: "Game",
+    operatingSystem: "Any",
+    gamePlatform: "Web Browser",
+    inLanguage: "en",
+    author: {
+      "@type": "Organization",
+      name: "Workshop Arcade",
+      url: SITE + "/",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Workshop Arcade",
+      url: SITE + "/",
+    },
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+    },
+  };
+  if (tags.length) {
+    data.genre = tags;
+  }
+  const json = JSON.stringify(data, null, 2);
+  return [
+    JSONLD_MARK_START,
+    '<script type="application/ld+json">',
+    escapeForScriptBlock(json),
+    "</script>",
+    JSONLD_MARK_END,
+  ].join("\n");
+}
+
+function injectJsonLd(html, block) {
+  const escapedStart = JSONLD_MARK_START.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  const escapedEnd = JSONLD_MARK_END.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  const reBlock = new RegExp(escapedStart + "[\\s\\S]*?" + escapedEnd, "g");
+  if (reBlock.test(html)) return html.replace(reBlock, block);
+  // First insertion: place the JSON-LD block immediately after the existing
+  // workshop-meta block if present (so all SEO-related blocks live together
+  // in the head); otherwise fall back to after </title>.
+  const escMetaEnd = MARK_END.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  const reMetaEnd = new RegExp(escMetaEnd);
+  if (reMetaEnd.test(html)) {
+    return html.replace(reMetaEnd, MARK_END + "\n" + block);
+  }
+  return html.replace(/<\/title>/i, "</title>\n" + block);
+}
+
 async function main() {
   const manifestPath = join(repoRoot, "websites", "manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
@@ -83,7 +156,9 @@ async function main() {
       continue;
     }
     const block = buildBlock(game);
-    const next = injectBlock(html, block);
+    const jsonLdBlock = buildGameJsonLd(game);
+    let next = injectBlock(html, block);
+    next = injectJsonLd(next, jsonLdBlock);
     if (next !== html) {
       await writeFile(filePath, next);
       touched++;
@@ -93,4 +168,11 @@ async function main() {
   console.log("\nUpdated " + touched + " game file" + (touched === 1 ? "" : "s") + " of " + manifest.length + " manifest entries.");
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+// Only run the injector when this file is invoked directly (e.g. via
+// `npm run inject:meta`). Importing the module for its exported helpers
+// — as scripts/check-game-jsonld.mjs does — must not rewrite game files
+// as a side effect.
+const invokedDirectly = process.argv[1]?.endsWith("inject-game-meta.mjs");
+if (invokedDirectly) {
+  main().catch((err) => { console.error(err); process.exit(1); });
+}
