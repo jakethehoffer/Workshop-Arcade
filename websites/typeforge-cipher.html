@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Typeforge Cipher</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Type falling cipher fragments across four neon columns before integrity fails." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/typeforge-cipher.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Typeforge Cipher — Workshop Arcade" />
+<meta property="og:description" content="Type falling cipher fragments across four neon columns before integrity fails." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/typeforge-cipher.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/typeforge-cipher.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Typeforge Cipher — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Typeforge Cipher — Workshop Arcade" />
+<meta name="twitter:description" content="Type falling cipher fragments across four neon columns before integrity fails." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/typeforge-cipher.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Typeforge Cipher",
+  "description": "Type falling cipher fragments across four neon columns before integrity fails.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/typeforge-cipher.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/typeforge-cipher.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Arcade",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Type falling cipher fragments across four neon columns before integrity fails." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="icon" href="../covers/app-icon.svg" type="image/svg+xml" />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(920px 620px at 12% -8%,rgba(94,234,212,0.14),transparent 60%),
+      radial-gradient(760px 540px at 92% 4%,rgba(124,158,255,0.12),transparent 62%),
+      linear-gradient(180deg,#0b0f14,#070b12 82%);
+    display:flex;justify-content:center;padding:18px 12px 24px;overflow-x:hidden;
+  }
+  .shell{width:min(980px,100%);display:flex;flex-direction:column;gap:10px}
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.86);font-weight:800}
+  .brand .title{font-size:24px;letter-spacing:0;text-transform:uppercase;font-weight:900;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.22)}
+  .hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  .pill{
+    min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 9px;border-radius:8px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.93),rgba(11,17,32,0.93));
+    border:1px solid rgba(94,234,212,0.22);
+    box-shadow:0 7px 16px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.04);
+    line-height:1.05;
+  }
+  .pill[data-warn="true"]{border-color:rgba(251,113,133,0.62);box-shadow:0 0 20px rgba(251,113,133,0.13),0 7px 16px rgba(0,0,0,0.25)}
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,0.72);box-shadow:0 0 20px rgba(94,234,212,0.16),0 7px 16px rgba(0,0,0,0.25)}
+  .label{font-size:9px;text-transform:uppercase;color:rgba(94,234,212,0.82);font-weight:800;white-space:nowrap}
+  .value{font-size:18px;font-weight:900;color:#e6edf3;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stage-wrap{
+    width:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(94,234,212,0.28);
+    background:linear-gradient(180deg,rgba(12,20,35,0.96),rgba(6,11,20,0.98));
+    box-shadow:0 20px 44px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:3/2;max-height:68vh;background:#07101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:-4px}
+  .rail{
+    display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+    background:rgba(8,14,25,0.78);border:1px solid rgba(94,234,212,0.18);border-radius:8px;padding:8px 10px;
+  }
+  .typed{min-width:0;color:#e6edf3;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .typed span{color:#5eead4}
+  .status{font-size:12px;text-transform:uppercase;color:rgba(94,234,212,0.86);font-weight:800;text-align:right;white-space:nowrap}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{
+    min-height:40px;border-radius:8px;border:1px solid rgba(94,234,212,0.24);
+    background:linear-gradient(180deg,rgba(20,30,50,0.94),rgba(11,17,32,0.94));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0;padding:8px 12px;cursor:pointer;
+    box-shadow:0 7px 16px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  button.primary{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;box-shadow:0 10px 22px rgba(34,211,238,0.25)}
+  button:hover{border-color:rgba(94,234,212,0.58)}
+  .columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .column-btn{font-size:13px;min-height:44px}
+  .column-btn[data-active="true"]{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a}
+  .hint{color:#9fb0c8;font-size:12px;line-height:1.35;text-align:center}
+  .type-bridge{position:absolute;left:-1000px;top:auto;width:1px;height:1px;opacity:0}
+  @media (max-width:720px){
+    body{padding:12px 8px 18px}
+    .shell{gap:8px}
+    .brand .title{font-size:19px}
+    .hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .pill{padding:7px 7px}
+    .value{font-size:16px}
+    canvas{max-height:54vh}
+    .rail{grid-template-columns:1fr;gap:4px}
+    .status{text-align:left;white-space:normal;min-height:16px}
+    .hint{font-size:11px}
+    .controls button{flex:1 1 108px}
+  }
+  @media (max-width:420px){
+    .hud{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .column-btn{padding:8px 5px}
+  }
+</style>
+</head>
+<body>
+<script src="workshop-runtime.js"></script>
+<main class="shell" aria-label="Typeforge Cipher game">
+  <div class="brand">
+    <span class="eyebrow">Workshop Arcade</span>
+    <span class="title">Typeforge Cipher</span>
+  </div>
+  <section class="hud" aria-label="Run status">
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill" id="comboPill"><span class="label">Combo</span><span class="value" id="comboValue">0</span></div>
+    <div class="pill"><span class="label">Accuracy</span><span class="value" id="accuracyValue">100%</span></div>
+    <div class="pill"><span class="label">Wave</span><span class="value" id="waveValue">1/6</span></div>
+    <div class="pill" id="integrityPill"><span class="label">Integrity</span><span class="value" id="integrityValue">100</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage-wrap">
+    <canvas id="game" width="900" height="600" tabindex="0" aria-label="Type falling cipher fragments. Use Tab, arrows, or column buttons to focus columns, then type the active fragment."></canvas>
+  </div>
+  <input id="typingBridge" class="type-bridge" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Type cipher fragment" />
+  <div class="rail" aria-live="polite">
+    <div class="typed" id="typedValue">Column <span>1</span>: waiting for token</div>
+    <div class="status" id="statusLine">Press Enter or Start.</div>
+  </div>
+  <div class="columns" aria-label="Column focus controls">
+    <button class="column-btn" type="button" data-column="0">1 Column</button>
+    <button class="column-btn" type="button" data-column="1">2 Column</button>
+    <button class="column-btn" type="button" data-column="2">3 Column</button>
+    <button class="column-btn" type="button" data-column="3">4 Column</button>
+  </div>
+  <div class="controls">
+    <button class="primary" type="button" id="startBtn">Start</button>
+    <button type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button type="button" id="fullscreenBtn">Fullscreen</button>
+  </div>
+  <div class="hint">Type letters, Backspace edits, Enter submits. Tab/arrows or 1-4 change column. R restarts, F fullscreen, M sound.</div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const bridge = document.getElementById("typingBridge");
+  const els = {
+    score: document.getElementById("scoreValue"),
+    combo: document.getElementById("comboValue"),
+    comboPill: document.getElementById("comboPill"),
+    accuracy: document.getElementById("accuracyValue"),
+    wave: document.getElementById("waveValue"),
+    integrity: document.getElementById("integrityValue"),
+    integrityPill: document.getElementById("integrityPill"),
+    best: document.getElementById("bestValue"),
+    typed: document.getElementById("typedValue"),
+    status: document.getElementById("statusLine"),
+    start: document.getElementById("startBtn"),
+    sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn"),
+    columns: Array.from(document.querySelectorAll(".column-btn"))
+  };
+
+  const W = 900;
+  const H = 600;
+  const COLS = 4;
+  const TOTAL_WAVES = 6;
+  const BEST_KEY = "typeforge-cipher.bestScore.v1";
+  const SOUND_KEY = "typeforge-cipher.sound.v1";
+  const ALPHABET = "ABCDEGHJKLNPQSTUVWXYZ";
+  const laneColors = ["#5eead4","#22d3ee","#7c9eff","#f472b6"];
+  const topY = 88;
+  const failY = 546;
+  const tokenW = 152;
+  const tokenH = 42;
+  const laneGap = 18;
+  const laneW = 180;
+  const laneX0 = (W - (COLS * laneW + (COLS - 1) * laneGap)) / 2;
+  let audioCtx = null;
+  let lastFrame = 0;
+  let lastSound = "none";
+
+  function safeGet(key, fallback){
+    try {
+      const raw = localStorage.getItem(key);
+      return raw === null ? fallback : raw;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function safeSet(key, value){
+    try { localStorage.setItem(key, String(value)); } catch (_) {}
+  }
+  function loadBestScore(){
+    const raw = Number(safeGet(BEST_KEY, "0"));
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+  }
+  function loadSound(){
+    const raw = safeGet(SOUND_KEY, "true");
+    return raw !== "false";
+  }
+  function clamp(value, min, max){
+    return Math.max(min, Math.min(max, value));
+  }
+  function seeded(seed){
+    let s = seed >>> 0;
+    return function(){
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+  function fragment(rng, wave, index){
+    const len = 2 + ((wave + index + Math.floor(rng() * 9)) % 4);
+    let text = "";
+    for (let i = 0; i < len; i += 1) {
+      text += ALPHABET[Math.floor(rng() * ALPHABET.length)];
+    }
+    return text;
+  }
+  function buildWaveDefs(){
+    const rng = seeded(0xC1F3A9);
+    const defs = [];
+    for (let wave = 1; wave <= TOTAL_WAVES; wave += 1) {
+      const count = 5 + wave * 2;
+      const interval = Math.max(560, 1120 - wave * 82);
+      const speed = 58 + wave * 9;
+      const tokens = [];
+      for (let i = 0; i < count; i += 1) {
+        const lane = (i * 3 + wave + Math.floor(rng() * 4)) % COLS;
+        tokens.push({
+          index: i,
+          lane,
+          text: fragment(rng, wave, i),
+          offset: 720 + i * interval + (lane % 2) * 110,
+          speed
+        });
+      }
+      defs.push({ wave, tokens });
+    }
+    return defs;
+  }
+
+  const waveDefs = buildWaveDefs();
+  const state = {
+    mode: "ready",
+    wave: 1,
+    time: 0,
+    score: 0,
+    bestScore: loadBestScore(),
+    combo: 0,
+    maxCombo: 0,
+    integrity: 100,
+    currentInput: "",
+    focusedColumn: 0,
+    focusedTokenId: null,
+    tokens: [],
+    tokenSeq: 0,
+    correctChars: 0,
+    wrongChars: 0,
+    accuracy: 100,
+    message: "Press Enter or Start.",
+    flashUntil: 0,
+    flashKind: "idle",
+    lastWaveAt: 0,
+    userGesture: false,
+    soundEnabled: loadSound(),
+    complete: false,
+    gameOver: false
+  };
+  const feedback = {
+    cleared: 0,
+    wrong: 0,
+    missed: 0,
+    focus: 0,
+    wave: 0,
+    complete: 0,
+    gameOver: 0,
+    soundToggle: 0
+  };
+
+  function ensureAudio(){
+    if (!state.userGesture || !state.soundEnabled) return null;
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch (_) {
+      audioCtx = null;
+    }
+    return audioCtx;
+  }
+  function tone(name, freq, durMs, gain, type, delayMs){
+    if (!state.soundEnabled) {
+      lastSound = "muted:" + name;
+      return;
+    }
+    const ac = ensureAudio();
+    if (!ac) return;
+    if (ac.state === "suspended") { try { ac.resume(); } catch (_) {} }
+    const start = ac.currentTime + (delayMs || 0) / 1000;
+    const osc = ac.createOscillator();
+    const amp = ac.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, start);
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(gain || 0.045, start + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + durMs / 1000);
+    osc.connect(amp).connect(ac.destination);
+    osc.start(start);
+    osc.stop(start + durMs / 1000 + 0.03);
+    lastSound = name;
+  }
+  function play(name){
+    if (name === "clear") {
+      tone(name, 420 + Math.min(360, state.combo * 18), 82, 0.052, "square", 0);
+      tone(name, 700 + Math.min(420, state.combo * 16), 110, 0.026, "sine", 38);
+    } else if (name === "wrong") {
+      tone(name, 176, 120, 0.055, "triangle", 0);
+      tone(name, 122, 150, 0.04, "triangle", 72);
+    } else if (name === "wave") {
+      tone(name, 330, 90, 0.04, "sine", 0);
+      tone(name, 494, 110, 0.04, "sine", 75);
+    } else if (name === "complete") {
+      [523,659,784,1047].forEach((freq, i) => tone(name, freq, 150, 0.04, "sine", i * 78));
+    } else if (name === "focus") {
+      tone(name, 240 + state.focusedColumn * 72, 55, 0.028, "sine", 0);
+    }
+  }
+
+  function tokenY(token){
+    return topY + ((state.time - token.spawnAt) / 1000) * token.speed;
+  }
+  function laneX(lane){
+    return laneX0 + lane * (laneW + laneGap);
+  }
+  function tokenRect(token){
+    const x = laneX(token.lane) + (laneW - tokenW) / 2;
+    const y = tokenY(token);
+    return { x, y, w: tokenW, h: tokenH };
+  }
+  function isVisible(token){
+    if (token.status !== "pending") return false;
+    const y = tokenY(token);
+    return state.time >= token.spawnAt && y > topY - tokenH - 14 && y < failY + tokenH + 4;
+  }
+  function visibleTokens(){
+    return state.tokens.filter(isVisible).sort((a, b) => tokenY(b) - tokenY(a));
+  }
+  function pendingTokens(){
+    return state.tokens.filter((token) => token.status === "pending");
+  }
+  function activeToken(){
+    const visible = visibleTokens().filter((token) => token.lane === state.focusedColumn);
+    if (!visible.length) return null;
+    if (state.focusedTokenId !== null) {
+      const chosen = visible.find((token) => token.id === state.focusedTokenId);
+      if (chosen) return chosen;
+    }
+    return visible[0];
+  }
+  function updateAccuracy(){
+    const attempts = state.correctChars + state.wrongChars;
+    state.accuracy = attempts ? Math.round((state.correctChars / attempts) * 100) : 100;
+  }
+  function setMessage(text, kind){
+    state.message = text;
+    state.flashKind = kind || "idle";
+    state.flashUntil = state.time + 420;
+  }
+  function saveBest(){
+    if (state.score > state.bestScore) {
+      state.bestScore = state.score;
+      safeSet(BEST_KEY, state.bestScore);
+    }
+  }
+  function resetRun(){
+    state.mode = "ready";
+    state.wave = 1;
+    state.time = 0;
+    state.score = 0;
+    state.combo = 0;
+    state.maxCombo = 0;
+    state.integrity = 100;
+    state.currentInput = "";
+    state.focusedColumn = 0;
+    state.focusedTokenId = null;
+    state.tokens = [];
+    state.tokenSeq = 0;
+    state.correctChars = 0;
+    state.wrongChars = 0;
+    state.accuracy = 100;
+    state.message = "Press Enter or Start.";
+    state.complete = false;
+    state.gameOver = false;
+    state.lastWaveAt = 0;
+    render();
+  }
+  function startRun(){
+    state.mode = "playing";
+    state.wave = 1;
+    state.time = 0;
+    state.score = 0;
+    state.combo = 0;
+    state.maxCombo = 0;
+    state.integrity = 100;
+    state.currentInput = "";
+    state.focusedTokenId = null;
+    state.tokens = [];
+    state.tokenSeq = 0;
+    state.correctChars = 0;
+    state.wrongChars = 0;
+    state.accuracy = 100;
+    state.complete = false;
+    state.gameOver = false;
+    spawnWave(1);
+    setMessage("Wave 1 armed.", "wave");
+    play("wave");
+    focusBridge();
+  }
+  function spawnWave(wave){
+    const def = waveDefs[wave - 1];
+    for (const spec of def.tokens) {
+      state.tokens.push({
+        id: state.tokenSeq++,
+        wave,
+        lane: spec.lane,
+        text: spec.text,
+        spawnAt: state.time + spec.offset,
+        speed: spec.speed,
+        status: "pending",
+        clearedAt: null
+      });
+    }
+    state.lastWaveAt = state.time;
+    feedback.wave += 1;
+  }
+  function maybeAdvanceWave(){
+    if (state.mode !== "playing") return;
+    if (pendingTokens().length > 0) return;
+    if (state.wave >= TOTAL_WAVES) {
+      completeRun();
+      return;
+    }
+    state.wave += 1;
+    state.currentInput = "";
+    state.focusedTokenId = null;
+    spawnWave(state.wave);
+    setMessage("Wave " + state.wave + " armed.", "wave");
+    play("wave");
+  }
+  function completeRun(){
+    if (state.mode !== "playing") return;
+    state.mode = "complete";
+    state.complete = true;
+    state.currentInput = "";
+    state.focusedTokenId = null;
+    saveBest();
+    setMessage("Cipher sealed. Run complete.", "complete");
+    feedback.complete += 1;
+    play("complete");
+  }
+  function loseRun(){
+    if (state.mode === "gameOver") return;
+    state.mode = "gameOver";
+    state.gameOver = true;
+    state.currentInput = "";
+    saveBest();
+    setMessage("Integrity lost. Press R.", "gameOver");
+    feedback.gameOver += 1;
+    play("wrong");
+  }
+  function drain(amount, reason){
+    state.integrity = clamp(state.integrity - amount, 0, 100);
+    state.combo = 0;
+    state.wrongChars += 1;
+    updateAccuracy();
+    feedback.wrong += 1;
+    setMessage(reason + " -" + amount + " integrity", "wrong");
+    play("wrong");
+    if (state.integrity <= 0) loseRun();
+  }
+  function clearToken(token){
+    if (!token || token.status !== "pending") return;
+    token.status = "cleared";
+    token.clearedAt = state.time;
+    state.combo += 1;
+    state.maxCombo = Math.max(state.maxCombo, state.combo);
+    updateAccuracy();
+    const gained = token.text.length * 90 + state.wave * 45 + state.combo * 28;
+    state.score += gained;
+    state.focusedTokenId = null;
+    state.currentInput = "";
+    feedback.cleared += 1;
+    setMessage("Cleared " + token.text + " +" + gained, "clear");
+    play("clear");
+    maybeAdvanceWave();
+  }
+  function missToken(token){
+    if (!token || token.status !== "pending") return;
+    token.status = "missed";
+    token.clearedAt = state.time;
+    state.combo = 0;
+    state.wrongChars += token.text.length;
+    state.currentInput = token.id === state.focusedTokenId ? "" : state.currentInput;
+    if (token.id === state.focusedTokenId) state.focusedTokenId = null;
+    updateAccuracy();
+    feedback.missed += 1;
+    state.integrity = clamp(state.integrity - (10 + state.wave), 0, 100);
+    setMessage("Leak in column " + (token.lane + 1), "missed");
+    play("wrong");
+    if (state.integrity <= 0) loseRun();
+    else maybeAdvanceWave();
+  }
+  function focusColumn(column, tokenId){
+    state.focusedColumn = ((column % COLS) + COLS) % COLS;
+    state.focusedTokenId = Number.isInteger(tokenId) ? tokenId : null;
+    state.currentInput = "";
+    feedback.focus += 1;
+    setMessage("Column " + (state.focusedColumn + 1) + " focused.", "focus");
+    play("focus");
+    focusBridge();
+  }
+  function processLetter(letter){
+    if (state.mode === "ready") {
+      startRun();
+      return;
+    }
+    if (state.mode === "complete" || state.mode === "gameOver") return;
+    if (state.mode !== "playing") return;
+    const token = activeToken();
+    if (!token) {
+      drain(4, "No token");
+      return;
+    }
+    const next = token.text[state.currentInput.length];
+    if (letter !== next) {
+      drain(6, "Bad glyph");
+      return;
+    }
+    state.currentInput += letter;
+    state.correctChars += 1;
+    updateAccuracy();
+    if (state.currentInput === token.text) clearToken(token);
+    else setMessage("Typing " + state.currentInput, "typing");
+  }
+  function submitInput(){
+    if (state.mode === "ready") {
+      startRun();
+      return;
+    }
+    if (state.mode === "complete" || state.mode === "gameOver") {
+      startRun();
+      return;
+    }
+    const token = activeToken();
+    if (token && state.currentInput === token.text) clearToken(token);
+    else if (state.currentInput.length > 0) {
+      state.currentInput = "";
+      drain(5, "Bad submit");
+    }
+  }
+  function backspace(){
+    if (state.mode !== "playing") return;
+    if (state.currentInput.length) {
+      state.currentInput = state.currentInput.slice(0, -1);
+      setMessage("Input edited.", "typing");
+    }
+  }
+  function toggleSound(){
+    state.soundEnabled = !state.soundEnabled;
+    safeSet(SOUND_KEY, state.soundEnabled ? "true" : "false");
+    feedback.soundToggle += 1;
+    updateHud();
+    if (state.soundEnabled) play("focus");
+    else lastSound = "muted";
+  }
+  function toggleFullscreen(){
+    const root = document.querySelector(".shell");
+    if (!document.fullscreenElement && root.requestFullscreen) {
+      root.requestFullscreen().catch(function(){});
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function(){});
+    }
+  }
+  function focusBridge(){
+    try { bridge.focus({ preventScroll: true }); } catch (_) {}
+  }
+  function markGesture(){
+    state.userGesture = true;
+  }
+
+  function update(dt){
+    if (state.mode !== "playing") return;
+    state.time += dt * 1000;
+    for (const token of state.tokens) {
+      if (token.status === "pending" && state.time >= token.spawnAt && tokenY(token) > failY) {
+        missToken(token);
+        if (state.mode !== "playing") break;
+      }
+    }
+  }
+  function drawRounded(x,y,w,h,r,fill,stroke){
+    ctx.beginPath();
+    ctx.roundRect(x,y,w,h,r);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+  function drawBackground(){
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,"#0a1322");
+    bg.addColorStop(1,"#050a12");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,W,H);
+    const teal = ctx.createRadialGradient(108,60,20,108,60,560);
+    teal.addColorStop(0,"rgba(94,234,212,0.17)");
+    teal.addColorStop(1,"rgba(94,234,212,0)");
+    ctx.fillStyle = teal;
+    ctx.fillRect(0,0,W,H);
+    const pink = ctx.createRadialGradient(760,492,20,760,492,520);
+    pink.addColorStop(0,"rgba(244,114,182,0.12)");
+    pink.addColorStop(1,"rgba(244,114,182,0)");
+    ctx.fillStyle = pink;
+    ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = "rgba(94,234,212,0.07)";
+    ctx.lineWidth = 1;
+    for (let y = 80; y < H; y += 38) {
+      ctx.beginPath();
+      ctx.moveTo(36, y);
+      ctx.lineTo(W - 36, y);
+      ctx.stroke();
+    }
+  }
+  function drawColumns(){
+    for (let lane = 0; lane < COLS; lane += 1) {
+      const x = laneX(lane);
+      const active = lane === state.focusedColumn;
+      drawRounded(x, 76, laneW, 476, 14, active ? "rgba(94,234,212,0.12)" : "rgba(10,18,31,0.58)", active ? "rgba(94,234,212,0.55)" : "rgba(94,234,212,0.17)");
+      ctx.fillStyle = active ? laneColors[lane] : "rgba(230,237,243,0.42)";
+      ctx.font = "900 16px ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("COL " + (lane + 1), x + laneW / 2, 106);
+      ctx.globalAlpha = active ? 0.8 : 0.28;
+      ctx.strokeStyle = laneColors[lane];
+      ctx.lineWidth = active ? 4 : 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 20, failY - 16);
+      ctx.lineTo(x + laneW - 20, failY - 16);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+  function drawTokens(){
+    const active = activeToken();
+    const tokens = visibleTokens().slice().reverse();
+    for (const token of tokens) {
+      const rect = tokenRect(token);
+      const isActive = active && active.id === token.id;
+      const laneColor = laneColors[token.lane];
+      const y = rect.y;
+      const danger = y > failY - 86;
+      const grad = ctx.createLinearGradient(rect.x, y, rect.x, y + rect.h);
+      grad.addColorStop(0, isActive ? "#eafffb" : laneColor);
+      grad.addColorStop(1, danger ? "#fb7185" : laneColor);
+      ctx.shadowColor = danger ? "#fb7185" : laneColor;
+      ctx.shadowBlur = isActive ? 22 : danger ? 16 : 8;
+      drawRounded(rect.x, rect.y, rect.w, rect.h, 10, grad, isActive ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.14)");
+      ctx.shadowBlur = 0;
+      ctx.textAlign = "center";
+      ctx.font = "900 22px ui-monospace,SFMono-Regular,Consolas,monospace";
+      ctx.fillStyle = "#07101a";
+      ctx.fillText(token.text, rect.x + rect.w / 2, rect.y + 28);
+      if (isActive && state.currentInput) {
+        ctx.fillStyle = "rgba(7,16,26,0.72)";
+        ctx.fillRect(rect.x + 10, rect.y + rect.h - 8, Math.max(6, (rect.w - 20) * state.currentInput.length / token.text.length), 4);
+      }
+    }
+  }
+  function drawInputRail(){
+    const active = activeToken();
+    const railY = 24;
+    const railW = 410;
+    const railX = (W - railW) / 2;
+    drawRounded(railX, railY, railW, 34, 10, "rgba(6,12,23,0.72)", "rgba(94,234,212,0.28)");
+    ctx.textAlign = "center";
+    ctx.font = "900 15px ui-monospace,SFMono-Regular,Consolas,monospace";
+    const target = active ? active.text : "NO TOKEN";
+    ctx.fillStyle = "#9fb0c8";
+    ctx.fillText("INPUT " + state.currentInput + " / " + target, W / 2, railY + 23);
+  }
+  function drawOverlay(){
+    if (state.mode === "playing") return;
+    ctx.fillStyle = "rgba(3,7,18,0.64)";
+    ctx.fillRect(18,18,W-36,H-36);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "900 46px ui-sans-serif, system-ui";
+    const title = state.mode === "complete" ? "CIPHER SEALED" : state.mode === "gameOver" ? "INTEGRITY LOST" : "TYPEFORGE CIPHER";
+    ctx.fillText(title, W / 2, H / 2 - 34);
+    ctx.fillStyle = "rgba(94,234,212,0.92)";
+    ctx.font = "800 18px ui-sans-serif, system-ui";
+    ctx.fillText(state.message, W / 2, H / 2 + 8);
+    ctx.fillStyle = "rgba(230,237,243,0.78)";
+    ctx.font = "700 14px ui-sans-serif, system-ui";
+    ctx.fillText("Enter starts. Tab/arrows focus columns. Type the highlighted fragment.", W / 2, H / 2 + 42);
+  }
+  function render(){
+    drawBackground();
+    drawColumns();
+    drawTokens();
+    drawInputRail();
+    drawOverlay();
+    updateHud();
+  }
+  function updateHud(){
+    const active = activeToken();
+    els.score.textContent = String(state.score);
+    els.combo.textContent = String(state.combo);
+    els.accuracy.textContent = state.accuracy + "%";
+    els.wave.textContent = state.wave + "/" + TOTAL_WAVES;
+    els.integrity.textContent = String(Math.round(state.integrity));
+    els.best.textContent = String(Math.max(state.bestScore, state.score));
+    els.comboPill.dataset.hot = state.combo >= 4 ? "true" : "false";
+    els.integrityPill.dataset.warn = state.integrity <= 32 ? "true" : "false";
+    els.status.textContent = state.message;
+    els.start.textContent = state.mode === "playing" ? "Restart" : state.mode === "ready" ? "Start" : "New Run";
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Muted";
+    els.sound.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
+    els.columns.forEach((button, index) => {
+      button.dataset.active = index === state.focusedColumn ? "true" : "false";
+    });
+    if (active) {
+      const typed = state.currentInput || "";
+      const rest = active.text.slice(typed.length);
+      els.typed.innerHTML = "Column <span>" + (state.focusedColumn + 1) + "</span>: " + typed + "<span>" + rest + "</span>";
+    } else {
+      els.typed.innerHTML = "Column <span>" + (state.focusedColumn + 1) + "</span>: waiting for token";
+    }
+  }
+  function frame(ts){
+    if (!lastFrame) lastFrame = ts;
+    const dt = Math.min(0.033, Math.max(0, (ts - lastFrame) / 1000));
+    lastFrame = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  function canvasPoint(event){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
+  }
+  function tokenAt(point){
+    const tokens = visibleTokens();
+    for (const token of tokens) {
+      const r = tokenRect(token);
+      if (point.x >= r.x && point.x <= r.x + r.w && point.y >= r.y && point.y <= r.y + r.h) return token;
+    }
+    return null;
+  }
+  function handlePointer(event){
+    markGesture();
+    event.preventDefault();
+    if (state.mode === "ready") startRun();
+    const point = canvasPoint(event);
+    const token = tokenAt(point);
+    if (token) focusColumn(token.lane, token.id);
+    else {
+      const lane = clamp(Math.floor((point.x - laneX0) / (laneW + laneGap)), 0, COLS - 1);
+      focusColumn(lane);
+    }
+  }
+  function handleKey(event){
+    markGesture();
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const key = event.key;
+    const lower = key.toLowerCase();
+    if (lower === "r") {
+      event.preventDefault();
+      startRun();
+      return;
+    }
+    if (lower === "f") {
+      event.preventDefault();
+      toggleFullscreen();
+      return;
+    }
+    if (lower === "m") {
+      event.preventDefault();
+      toggleSound();
+      return;
+    }
+    if (key === "Enter") {
+      event.preventDefault();
+      submitInput();
+      return;
+    }
+    if (key === "Backspace") {
+      event.preventDefault();
+      backspace();
+      return;
+    }
+    if (key === "Tab") {
+      event.preventDefault();
+      focusColumn(state.focusedColumn + (event.shiftKey ? -1 : 1));
+      return;
+    }
+    if (key === "ArrowLeft" || key === "ArrowUp") {
+      event.preventDefault();
+      focusColumn(state.focusedColumn - 1);
+      return;
+    }
+    if (key === "ArrowRight" || key === "ArrowDown") {
+      event.preventDefault();
+      focusColumn(state.focusedColumn + 1);
+      return;
+    }
+    if (/^[1-4]$/.test(key)) {
+      event.preventDefault();
+      focusColumn(Number(key) - 1);
+      return;
+    }
+    if (/^[a-zA-Z]$/.test(key)) {
+      event.preventDefault();
+      processLetter(key.toUpperCase());
+    }
+  }
+  function handleBeforeInput(event){
+    markGesture();
+    const type = event.inputType || "";
+    if (type === "deleteContentBackward") {
+      event.preventDefault();
+      backspace();
+      bridge.value = "";
+      return;
+    }
+    if (event.data && /^[a-zA-Z]+$/.test(event.data)) {
+      event.preventDefault();
+      for (const char of event.data.toUpperCase()) processLetter(char);
+      bridge.value = "";
+    }
+  }
+
+  canvas.addEventListener("pointerdown", handlePointer);
+  canvas.addEventListener("click", focusBridge);
+  document.addEventListener("keydown", handleKey);
+  bridge.addEventListener("beforeinput", handleBeforeInput);
+  bridge.addEventListener("input", function(){ bridge.value = ""; });
+  els.start.addEventListener("click", function(){ markGesture(); startRun(); });
+  els.sound.addEventListener("click", function(){ markGesture(); toggleSound(); });
+  els.fullscreen.addEventListener("click", function(){ markGesture(); toggleFullscreen(); });
+  els.columns.forEach(function(button){
+    button.addEventListener("click", function(){
+      markGesture();
+      const column = Number(button.dataset.column);
+      focusColumn(column);
+    });
+  });
+  document.addEventListener("fullscreenchange", render);
+
+  function renderGameToText(){
+    const active = activeToken();
+    return JSON.stringify({
+      mode: state.mode,
+      wave: state.wave,
+      time: Math.round(state.time),
+      score: state.score,
+      bestScore: Math.max(state.bestScore, state.score),
+      combo: state.combo,
+      maxCombo: state.maxCombo,
+      accuracy: state.accuracy,
+      integrity: Math.round(state.integrity),
+      currentInput: state.currentInput,
+      focusedColumn: state.focusedColumn,
+      activeToken: active ? { text: active.text, lane: active.lane, y: Math.round(tokenY(active)), state: "active" } : null,
+      visibleTokens: visibleTokens().slice(0, 12).map(function(token){
+        const isActive = active && active.id === token.id;
+        return {
+          text: token.text,
+          lane: token.lane,
+          y: Math.round(tokenY(token)),
+          state: isActive ? "active" : token.status
+        };
+      }),
+      feedback: {
+        cleared: feedback.cleared,
+        wrong: feedback.wrong,
+        missed: feedback.missed,
+        focus: feedback.focus,
+        wave: feedback.wave,
+        complete: feedback.complete,
+        gameOver: feedback.gameOver,
+        soundToggle: feedback.soundToggle
+      },
+      soundEnabled: state.soundEnabled,
+      lastSound: lastSound,
+      complete: state.complete,
+      gameOver: state.gameOver
+    });
+  }
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms){
+    const steps = Math.max(1, Math.round((Number(ms) || 0) / (1000 / 60)));
+    for (let i = 0; i < steps; i += 1) update(1 / 60);
+    render();
+    return renderGameToText();
+  };
+
+  updateHud();
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
