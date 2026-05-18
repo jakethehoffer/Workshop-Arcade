@@ -34,6 +34,7 @@ npm run test:pwa
 npm run test:fallback-pages
 npm run test:game-jsonld
 npm run test:seo
+npm run test:feed
 npm run test:a11y
 npm run test:games
 npm run capture:games:ci
@@ -49,6 +50,7 @@ npm run audit:perf:ci
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
 - `npm run test:game-jsonld` checks that every manifest game page has the JSON-LD `VideoGame` block emitted by `scripts/inject-game-meta.mjs` and that its name/url/image match the manifest. Run `npm run inject:meta` after editing the manifest to refresh.
 - `npm run test:seo` verifies `sitemap.xml`, `robots.txt`, and the JSON-LD `ItemList` block in `index.html` all mirror the current `websites/manifest.json`. Run `npm run build:sitemap` after editing the manifest to regenerate them.
+- `npm run test:feed` verifies `feed.json` is a valid JSON Feed 1.1 mirror of the current manifest (newest-first, schema.org-aligned), and that `index.html` exposes the matching `<link rel="alternate" type="application/feed+json">` for auto-discovery. Run `npm run build:feed` after editing the manifest to regenerate it.
 - `npm run test:a11y` enforces the static accessibility regression rules: every `<canvas>` declares `aria-label` or `aria-hidden="true"`, every `<iframe>` declares a non-empty `title`, and every `role="dialog"`/`role="alertdialog"` declares `aria-modal="true"` plus an accessible name.
 - `npm run test:games` starts a local static server, verifies the catalog player modal and Workshop issue-URL flow, and opens every manifest game on desktop and mobile viewports.
 - `npm run capture:games:ci` runs the rendered-quality harness in strict mode and fails if any captured surface scores above 0. For optional local review, `npm run capture:games` writes the same ranked contact sheet under `test-results/render-ranking/<timestamp>/` without CI strictness.
@@ -82,3 +84,5 @@ npm run build:sitemap
 ```
 
 `npm run test:seo` runs in CI (and is part of the publish-ready check list above) so any drift between the manifest and these surfaces fails before merge.
+
+Feed readers and aggregators that prefer structured machine-readable input can subscribe to [`feed.json`](feed.json) — a JSON Feed 1.1 representation of the catalog, newest game first, regenerated alongside the sitemap. `npm run build:feed` rebuilds it; `npm run test:feed` enforces byte-equality and ordering in CI. `index.html` auto-discovers it via `<link rel="alternate" type="application/feed+json">`.
