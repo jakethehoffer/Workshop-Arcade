@@ -80,6 +80,7 @@ npm run audit:perf:ci
 - `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
 - `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly `test:games` (slow) and `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
 - `npm run test:contributor-onboarding` keeps the first-time-setup story aligned: `npm run setup` exists and pins Playwright chromium, `.devcontainer/devcontainer.json` uses a Playwright image + runs `npm ci && npm run setup` on create + forwards at least one static-server port, and `README.md` mentions both `npm run setup` and Codespaces.
+- `npm run test:architecture-doc` keeps `ARCHITECTURE.md` honest: required sections (manifest, generators, validators, CI, add-a-game) are present, every generator script + every regeneration command in the add-a-game recipe is named, and the doc never references a script that no longer exists on disk.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
@@ -101,7 +102,7 @@ npm run audit:perf:ci
 
 CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:a11y`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 21 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 
