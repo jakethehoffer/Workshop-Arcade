@@ -32,6 +32,7 @@ npm run test:tools
 npm run test:capture-recipes
 npm run test:catalog-perf
 npm run test:deep-links
+npm run test:random-game
 npm run test:pwa
 npm run test:fallback-pages
 npm run test:game-jsonld
@@ -51,6 +52,7 @@ npm run audit:perf:ci
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
 - `npm run test:deep-links` locks in the per-game deep-link + Share contract: the catalog parses `#play=<slug>` on cold load and via `hashchange`, `openPlayer` keeps the URL hash in sync, and the player modal exposes a Share button wired to the Web Share API with a `navigator.clipboard.writeText` fallback so a single tap shares the canonical deep-link URL.
+- `npm run test:random-game` locks in the "🎲 Random" header button + `r` keyboard shortcut: a `pickRandomGame()` function reads from `state.filtered` (falling back to `state.games`) so the random pick respects whatever filter the user has applied, the keyboard handler skips while the focus is in an `<input>`/`<textarea>`/`contentEditable` surface, and the click + key paths both end in `openPlayer`.
 - `npm run test:pwa` verifies `app.webmanifest`, `sw.js`, and the matching `<link rel="manifest">` / service worker registration in `index.html` so the catalog stays installable and offline-capable.
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
 - `npm run test:game-jsonld` checks that every manifest game page has the JSON-LD `VideoGame` block emitted by `scripts/inject-game-meta.mjs` and that its name/url/image match the manifest. Run `npm run inject:meta` after editing the manifest to refresh.
