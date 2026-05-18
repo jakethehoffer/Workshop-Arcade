@@ -23,6 +23,9 @@ const FALLBACK_DATE = '2025-09-01';
 export const JSONLD_MARK_START = '<!-- workshop-catalog-jsonld:start -->';
 export const JSONLD_MARK_END = '<!-- workshop-catalog-jsonld:end -->';
 
+export const WEBSITE_MARK_START = '<!-- workshop-website-jsonld:start -->';
+export const WEBSITE_MARK_END = '<!-- workshop-website-jsonld:end -->';
+
 function escapeXml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -139,9 +142,52 @@ export function renderItemListBlock(manifest) {
   ].join('\n');
 }
 
-export function injectItemList(html, block) {
-  const escapedStart = JSONLD_MARK_START.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-  const escapedEnd = JSONLD_MARK_END.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+// Schema.org WebSite + SearchAction enables Google's "Sitelinks Search
+// Box" feature: when a search for "Workshop Arcade" surfaces our result,
+// Google renders a search box beneath it that deep-links straight into
+// our catalog at /?q={query}. The SearchAction's urlTemplate must match
+// the URL state contract enforced by scripts/check-url-filters.mjs.
+//
+// https://developers.google.com/search/docs/appearance/structured-data/sitelinks-searchbox
+export function buildWebSite() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Workshop Arcade',
+    alternateName: 'Workshop Arcade — Browser Games',
+    url: SITE,
+    description: 'A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser.',
+    inLanguage: 'en',
+    publisher: {
+      '@type': 'Organization',
+      name: 'Workshop Arcade',
+      url: SITE,
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${SITE}?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+export function renderWebSiteBlock() {
+  const json = JSON.stringify(buildWebSite(), null, 2);
+  return [
+    WEBSITE_MARK_START,
+    '<script type="application/ld+json">',
+    escapeForScriptBlock(json),
+    '</script>',
+    WEBSITE_MARK_END,
+  ].join('\n');
+}
+
+function injectMarkerBlock(html, block, markStart, markEnd) {
+  const escapedStart = markStart.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const escapedEnd = markEnd.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
   const reBlock = new RegExp(`${escapedStart}[\\s\\S]*?${escapedEnd}`);
   if (reBlock.test(html)) {
     return html.replace(reBlock, block);
@@ -150,6 +196,14 @@ export function injectItemList(html, block) {
   // alongside the other meta/link tags but does not displace any existing
   // ones a future contributor might add.
   return html.replace(/<\/head>/i, `${block}\n</head>`);
+}
+
+export function injectItemList(html, block) {
+  return injectMarkerBlock(html, block, JSONLD_MARK_START, JSONLD_MARK_END);
+}
+
+export function injectWebSite(html, block) {
+  return injectMarkerBlock(html, block, WEBSITE_MARK_START, WEBSITE_MARK_END);
 }
 
 async function writeSitemap(manifest) {
@@ -162,13 +216,15 @@ async function writeSitemap(manifest) {
 async function writeIndexJsonLd(manifest) {
   const indexPath = join(repoRoot, 'index.html');
   const html = await readFile(indexPath, 'utf8');
-  const block = renderItemListBlock(manifest);
-  const next = injectItemList(html, block);
+  const itemListBlock = renderItemListBlock(manifest);
+  const webSiteBlock = renderWebSiteBlock();
+  let next = injectItemList(html, itemListBlock);
+  next = injectWebSite(next, webSiteBlock);
   if (next !== html) {
     await writeFile(indexPath, next, 'utf8');
-    console.log(`Updated index.html JSON-LD ItemList with ${manifest.length} games.`);
+    console.log(`Updated index.html JSON-LD blocks: ItemList (${manifest.length} games) + WebSite SearchAction.`);
   } else {
-    console.log(`index.html JSON-LD ItemList already up to date (${manifest.length} games).`);
+    console.log(`index.html JSON-LD blocks already up to date (${manifest.length} games + WebSite SearchAction).`);
   }
 }
 
