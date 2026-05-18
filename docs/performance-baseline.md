@@ -19,6 +19,24 @@ CI budgets:
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
 
+## Codex next-max-parallel — 40-game catalog (pass 73)
+
+Captured 2026-05-18 against `http://127.0.0.1:4174` (chromium @ 1280x800, network idle) after merging Crate Circuit, Prism Relay, and Vector Pool (and the catalog perf-budget bump to 280 KB / 44 requests + drift assertions). The strict audit covered the catalog plus 40 manifest games, 41 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 344 ms | 121 ms | 🟢 125 ms | 🟡 267.1 KB | 44 | 0 |
+| Crate Circuit | 🟢 36 ms | 11 ms | 🟢 11 ms | 🟢 34.6 KB | 2 | 0 |
+| Prism Relay | 🟢 36 ms | 12 ms | 🟢 12 ms | 🟢 38.9 KB | 2 | 0 |
+| Vector Pool | 🟢 44 ms | 15 ms | 🟢 15 ms | 🟢 41.1 KB | 2 | 0 |
+| Stack Tide | 🟢 40 ms | 12 ms | 🟢 12 ms | 🟢 27.5 KB | 2 | 0 |
+| Packet Pilot | 🟢 36 ms | 11 ms | 🟢 11 ms | 🟢 39.6 KB | 2 | 0 |
+| Typeforge Cipher | 🟢 44 ms | 31 ms | 🟢 31 ms | 🟢 36.7 KB | 2 | 0 |
+| Lexica | 🟢 48 ms | 16 ms | 🟢 17 ms | 🟡 215.9 KB | 4 | 0 |
+| Idle Tycoon | 🟢 460 ms | 11 ms | 🟢 12 ms | 🟢 186.0 KB | 2 | 0 |
+
+All three new games stay well under the default 150 KB / 8 request game budget. The catalog page is now at **44 requests — exactly the new budget cap** (zero headroom: every additional game adds one more cover request), and at 267.1 KB the catalog is back into the "yellow" 200-500 KB transfer band but still 12.9 KB under its 280 KB CI budget. The next budget refresh (or a cover-bundling pass) will be needed before the catalog grows past 40 games. No console or page errors were reported across audited URLs, and every page passed the strict meta/alt checks.
+
 ## Shadow Switch / Deckforge Duel audit (pass 71)
 
 Captured 2026-05-17 against `http://127.0.0.1:4222` (chromium @ 1280x800, network idle) after adding Shadow Switch and Deckforge Duel plus the parallel older-game audio polish bundle. The strict audit covered the catalog plus 32 manifest games, 33 pages total.
@@ -144,6 +162,15 @@ Caveats on the first-audit FCPs: the high values on Catalog / Memory Match / Neo
 No console or page errors across any audited URL. Zero `img` elements missing `alt`. Every catalog accessibility audit static check (`npm run test:a11y` rules 1-4) passes.
 
 ## Largest resource per page
+
+### After codex next-max-parallel pass (pass 73)
+
+- Strict local CI audit now covers 41 pages: the catalog plus 40 manifest games.
+- **Catalog**: 267.1 KB / 44 requests, inside the 280 KB / 44 request CI budget — but at the request cap with zero headroom for game 41.
+- **Crate Circuit**: 34.6 KB / 2 requests, inside the default 150 KB / 8 request game budget.
+- **Prism Relay**: 38.9 KB / 2 requests, inside the default 150 KB / 8 request game budget.
+- **Vector Pool**: 41.1 KB / 2 requests, inside the default 150 KB / 8 request game budget.
+- Largest game resources remain expected: **Lexica** uses `websites/words5.js` at 155.5 KB under its 300 KB exception, and **Idle Tycoon** ships 186.0 KB under its 225 KB exception. No console or page errors appeared across audited URLs.
 
 ### After Gemline/Dungeon + tool-gate bundle (pass 72)
 

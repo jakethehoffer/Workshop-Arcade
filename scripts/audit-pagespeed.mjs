@@ -19,9 +19,11 @@ const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--ci");
 const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jakethehoffer.github.io/Workshop-Arcade");
 
-// Catalog grows by ~1 request + ~3-5 KB per new game cover. Keep some headroom
-// over the current 37-game footprint so adding one or two more games doesn't
-// instantly bust the budget — refresh both numbers when the cushion runs out.
+// Catalog grows by ~1 request + ~3-5 KB per new game cover. At the 40-game
+// footprint the catalog is at 267.1 KB / 44 requests — right at the request cap
+// with zero headroom, so the next new game must arrive with a refreshed budget
+// here (and the docs-drift check will require matching bumps in
+// docs/performance-baseline.md + ARCHITECTURE.md).
 const BUDGETS = {
   Catalog: { transferKb: 280, requests: 44 },
   "Idle Tycoon": { transferKb: 225, requests: 8 },
