@@ -37,6 +37,7 @@ npm run test:keyboard-help
 npm run test:pwa
 npm run test:sw-update-toast
 npm run test:fallback-pages
+npm run test:og-images
 npm run test:game-jsonld
 npm run test:seo
 npm run test:feed
@@ -59,6 +60,7 @@ npm run audit:perf:ci
 - `npm run test:pwa` verifies `app.webmanifest`, `sw.js`, and the matching `<link rel="manifest">` / service worker registration in `index.html` so the catalog stays installable and offline-capable.
 - `npm run test:sw-update-toast` locks in the SW update notification UI: an `aside#swUpdateToast` with `role="status"`/`aria-live="polite"` hidden by default, the registration's `updatefound` listener watches the installing worker's `statechange` and surfaces the toast only when `navigator.serviceWorker.controller` is non-null (i.e. real update, not first install), and the Reload button calls `window.location.reload()` so PWA users aren't silently stuck on stale cache after a deploy.
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
+- `npm run test:og-images` verifies every manifest game has a matching 1200×630 share card under `covers/og/<slug>.svg`, that the SVG contains the game's title text, and that `scripts/inject-game-meta.mjs` writes `og:image` / `twitter:image` pointing at it with `og:image:width=1200` + `og:image:height=630` so Twitter, Slack, Discord, Facebook, and LinkedIn render proper full-size unfurls. Run `npm run build:og-images` after editing the manifest to regenerate.
 - `npm run test:game-jsonld` checks that every manifest game page has the JSON-LD `VideoGame` block emitted by `scripts/inject-game-meta.mjs` and that its name/url/image match the manifest. Run `npm run inject:meta` after editing the manifest to refresh.
 - `npm run test:seo` verifies `sitemap.xml`, `robots.txt`, and the JSON-LD `ItemList` block in `index.html` all mirror the current `websites/manifest.json`. Run `npm run build:sitemap` after editing the manifest to regenerate them.
 - `npm run test:feed` verifies `feed.json` is a valid JSON Feed 1.1 mirror of the current manifest (newest-first, schema.org-aligned), and that `index.html` exposes the matching `<link rel="alternate" type="application/feed+json">` for auto-discovery. Run `npm run build:feed` after editing the manifest to regenerate it.
