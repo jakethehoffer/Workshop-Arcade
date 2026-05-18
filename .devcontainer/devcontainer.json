@@ -1,0 +1,55 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "Workshop Arcade",
+
+  // Microsoft's Playwright image ships chromium + system deps preinstalled,
+  // so `npm run test:games` works the moment the container finishes building
+  // without the visitor having to run `npx playwright install --with-deps`.
+  // Pinning to v1.59.1-jammy matches the playwright version in package.json
+  // so the bundled browser matches the test harness.
+  "image": "mcr.microsoft.com/playwright:v1.59.1-jammy",
+
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "forwardPorts": [3000, 4173, 8000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Workshop Arcade (npx serve)",
+      "onAutoForward": "openPreview"
+    },
+    "4173": {
+      "label": "Workshop Arcade (npm start, CI port)",
+      "onAutoForward": "silent"
+    },
+    "8000": {
+      "label": "Workshop Arcade (python -m http.server)",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Install JS deps + verify Playwright browsers are still in sync after
+  // checkout. The Playwright base image has chromium baked in, but a
+  // post-create `npm run setup` is cheap and self-heals if a contributor
+  // bumps the playwright version.
+  "postCreateCommand": "npm ci && npm run setup",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-github-actions",
+        "ms-playwright.playwright",
+        "ms-vscode.live-server",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "files.eol": "\n",
+        "editor.formatOnSave": false
+      }
+    }
+  },
+
+  "remoteUser": "pwuser"
+}
