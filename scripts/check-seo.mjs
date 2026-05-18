@@ -35,6 +35,10 @@ function fail(message) {
   issues.push(message);
 }
 
+function normalizeNewlines(value) {
+  return String(value).replace(/\r\n/g, '\n');
+}
+
 async function exists(relative) {
   try {
     await stat(join(repoRoot, relative));
@@ -51,7 +55,7 @@ async function checkSitemap(manifest) {
   }
   const committed = await readFile(join(repoRoot, 'sitemap.xml'), 'utf8');
   const expected = await buildSitemap(manifest);
-  if (committed !== expected) {
+  if (normalizeNewlines(committed) !== normalizeNewlines(expected)) {
     fail('sitemap.xml: drifted from websites/manifest.json — run `npm run build:sitemap` to refresh');
   }
 
@@ -111,7 +115,7 @@ async function checkIndexJsonLd(manifest) {
   }
   const committedBlock = html.slice(startIndex, endIndex + JSONLD_MARK_END.length);
   const expectedBlock = renderItemListBlock(manifest);
-  if (committedBlock !== expectedBlock) {
+  if (normalizeNewlines(committedBlock) !== normalizeNewlines(expectedBlock)) {
     fail('index.html: JSON-LD ItemList drifted from websites/manifest.json — run `npm run build:sitemap` to refresh');
   }
 
@@ -147,7 +151,7 @@ async function checkIndexWebSiteJsonLd() {
   }
   const committed = html.slice(startIndex, endIndex + WEBSITE_MARK_END.length);
   const expected = renderWebSiteBlock();
-  if (committed !== expected) {
+  if (normalizeNewlines(committed) !== normalizeNewlines(expected)) {
     fail('index.html: WebSite JSON-LD drifted — run `npm run build:sitemap` to refresh');
   }
 

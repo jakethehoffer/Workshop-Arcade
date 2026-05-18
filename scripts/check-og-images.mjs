@@ -13,7 +13,7 @@
 //      render it without cropping or letterboxing.
 //   3. The SVG body contains the game's title text so the share card
 //      actually shows what game it links to.
-//   4. The committed SVG is byte-identical to what
+//   4. The committed SVG is content-identical to what
 //      scripts/build-og-images.mjs would produce right now, so
 //      manifest edits can't silently desync the share cards.
 //   5. scripts/inject-game-meta.mjs writes og:image (and twitter:image)
@@ -31,6 +31,10 @@ const issues = [];
 
 function fail(message) {
   issues.push(message);
+}
+
+function normalizeNewlines(value) {
+  return String(value).replace(/\r\n/g, '\n');
 }
 
 async function exists(absolute) {
@@ -71,7 +75,7 @@ async function checkGame(game) {
   }
 
   const expected = buildOgSvg(game);
-  if (committed !== expected) {
+  if (normalizeNewlines(committed) !== normalizeNewlines(expected)) {
     fail(`${relative}: drifted from manifest — run \`npm run build:og-images\` to refresh`);
   }
 }
@@ -89,7 +93,7 @@ async function checkSiteOgImage(manifest) {
   }
   const committed = await readFile(join(repoRoot, relative), 'utf8');
   const expected = buildSiteOgSvg(manifest);
-  if (committed !== expected) {
+  if (normalizeNewlines(committed) !== normalizeNewlines(expected)) {
     fail(`${relative}: drifted from manifest (currently ${manifest.length} games) — run \`npm run build:og-images\` to refresh`);
   }
   const countNeedle = `>${manifest.length} GAMES<`;

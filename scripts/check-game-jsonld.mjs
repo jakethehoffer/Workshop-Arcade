@@ -27,6 +27,10 @@ function fail(message) {
   issues.push(message);
 }
 
+function normalizeNewlines(value) {
+  return String(value).replace(/\r\n/g, '\n');
+}
+
 async function exists(absolute) {
   try {
     await stat(absolute);
@@ -66,7 +70,7 @@ async function checkGame(game) {
 
   const committed = html.slice(startIndex, endIndex + JSONLD_MARK_END.length);
   const expected = buildGameJsonLd(game);
-  if (committed !== expected) {
+  if (normalizeNewlines(committed) !== normalizeNewlines(expected)) {
     fail(`${game.url}: JSON-LD drifted from manifest — run \`npm run inject:meta\` to refresh`);
   }
 

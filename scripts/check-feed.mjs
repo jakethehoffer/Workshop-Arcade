@@ -3,10 +3,10 @@
 //
 // Verifies:
 //   1. feed.json exists, parses, and matches what scripts/build-feed.mjs
-//      would currently produce from websites/manifest.json (byte-equal
-//      after dropping the synthetic _newest_date helper). Drift means
-//      a contributor added or edited a manifest entry without rerunning
-//      `npm run build:feed`.
+//      would currently produce from websites/manifest.json (line-ending
+//      agnostic after dropping the synthetic _newest_date helper). Drift
+//      means a contributor added or edited a manifest entry without
+//      rerunning `npm run build:feed`.
 //   2. The top-level feed object declares the JSON Feed 1.1 version,
 //      a same-origin feed_url, and a non-empty items array.
 //   3. Each item's url points to an existing manifest game and the items
@@ -29,6 +29,10 @@ function fail(message) {
   issues.push(message);
 }
 
+function normalizeNewlines(value) {
+  return String(value).replace(/\r\n/g, '\n');
+}
+
 async function exists(relative) {
   try {
     await stat(join(repoRoot, relative));
@@ -49,7 +53,7 @@ async function checkFeed(manifest) {
   // eslint-disable-next-line no-unused-vars
   const { _newest_date, ...publicFeed } = expected;
   const expectedText = JSON.stringify(publicFeed, null, 2) + '\n';
-  if (committed !== expectedText) {
+  if (normalizeNewlines(committed) !== normalizeNewlines(expectedText)) {
     fail('feed.json: drifted from websites/manifest.json — run `npm run build:feed` to refresh');
   }
 
