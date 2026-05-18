@@ -179,6 +179,7 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
         return {
           id: element.id || "",
           className: typeof element.className === "string" ? element.className : "",
+          disabled: Boolean(element.disabled),
           tag: element.tagName.toLowerCase(),
           text,
           visible,
@@ -199,7 +200,18 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
         ["button", "a", "input", "select", "textarea"].includes(item.tag) ||
         /\bbutton\b/i.test(item.text)
       );
-      const primaryAction = controls.find((item) => /^(guess|start|play|new|resume|deal|run|begin|tap|launch|restart)\b/i.test(item.text));
+      // Prefer the visually-styled .primary CTA (the catalog convention for "this is the main button"),
+      // but only when it's actually actionable. A disabled .primary button (e.g. Prism Relay's
+      // "Next Stage" before the stage is solved) is a future affordance, not the current primary
+      // action — fall through to the verb-regex match in that case so the scorer measures the
+      // button the player is meant to press right now.
+      const isPrimaryStyled = (item) => /(^|\s)primary(\s|$)/i.test(item.className || "");
+      // `next` is intentionally omitted: most "Next <thing>" buttons are disabled until a stage
+      // is solved, so picking them up as the current primary would be misleading.
+      const verbRegex = /^(guess|start|play|new|resume|deal|run|begin|tap|launch|restart|shoot|fire|throw|submit|spin|attack|continue)\b/i;
+      const primaryAction =
+        controls.find((item) => isPrimaryStyled(item) && !item.disabled) ||
+        controls.find((item) => !item.disabled && verbRegex.test(item.text));
       const canvases = Array.from(document.querySelectorAll("canvas")).map((canvas) => {
         const rect = canvas.getBoundingClientRect();
         return {
@@ -1458,15 +1470,32 @@ function parseRenderState(record) {
 
 function isSecondaryResetAction(record) {
   const text = record.metrics?.primaryAction?.text || "";
-  if (!/^play again\b/i.test(text)) return false;
-  const state = parseRenderState(record);
-  if (!state) return false;
 
-  return (
-    state.ready === true &&
-    (state.finished === false || state.won === false || state.dialogs?.gameOver === false) &&
-    state.dialogs?.gameOver !== true
-  );
+  // Original case: "Play Again" sitting under the fold post-game-over is a true
+  // secondary action — the run ended, this button restarts, not drives play.
+  if (/^play again\b/i.test(text)) {
+    const state = parseRenderState(record);
+    if (!state) return false;
+    return (
+      state.ready === true &&
+      (state.finished === false || state.won === false || state.dialogs?.gameOver === false) &&
+      state.dialogs?.gameOver !== true
+    );
+  }
+
+  // Canvas-dominated games (Pinball Foundry, deep maze games, etc.) often style
+  // a "Reset" or "Restart" button as the visually-primary CTA because there's
+  // no other meaningful button — but the *real* primary surface is the canvas,
+  // and Reset is a meta-control the player reaches for after a run ends. When
+  // the canvas covers a meaningful fraction of the viewport, treat reset-style
+  // primaries as secondary so a tall canvas doesn't get penalised for parking
+  // its only button below the 70% threshold.
+  const canvasAreaRatio = Number(record.metrics?.largestCanvas?.areaRatio) || 0;
+  if (canvasAreaRatio >= 0.35 && /^(reset|restart|new game|new run)\b/i.test(text)) {
+    return true;
+  }
+
+  return false;
 }
 
 function isBenignTextOverflow(record, item) {
