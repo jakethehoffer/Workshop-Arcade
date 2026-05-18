@@ -24,7 +24,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildOgSvg, loadManifest } from './build-og-images.mjs';
+import { buildOgSvg, buildSiteOgSvg, loadManifest } from './build-og-images.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const issues = [];
@@ -76,6 +76,28 @@ async function checkGame(game) {
   }
 }
 
+async function checkSiteOgImage(manifest) {
+  // covers/og-image.svg is the site-level share card used when the
+  // catalog ROOT URL itself is shared (referenced by og:image in
+  // index.html). It hard-coded "20 GAMES" for a long time even after
+  // the catalog grew to 30+ games; this assertion makes sure the
+  // count stays in lock-step with manifest length forever.
+  const relative = 'covers/og-image.svg';
+  if (!(await exists(join(repoRoot, relative)))) {
+    fail(`${relative}: file missing — site-level share card is required for the catalog root URL`);
+    return;
+  }
+  const committed = await readFile(join(repoRoot, relative), 'utf8');
+  const expected = buildSiteOgSvg(manifest);
+  if (committed !== expected) {
+    fail(`${relative}: drifted from manifest (currently ${manifest.length} games) — run \`npm run build:og-images\` to refresh`);
+  }
+  const countNeedle = `>${manifest.length} GAMES<`;
+  if (!committed.includes(countNeedle)) {
+    fail(`${relative}: must include the count badge "${manifest.length} GAMES" so social previews stay current`);
+  }
+}
+
 async function checkInjectMeta() {
   const path = 'scripts/inject-game-meta.mjs';
   if (!(await exists(join(repoRoot, path)))) {
@@ -98,6 +120,7 @@ const manifest = await loadManifest();
 for (const game of manifest) {
   await checkGame(game);
 }
+await checkSiteOgImage(manifest);
 await checkInjectMeta();
 
 if (issues.length > 0) {
@@ -108,4 +131,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log(`OG image check passed: ${manifest.length} games have matching 1200x630 share cards and inject-game-meta.mjs points at them.`);
+console.log(`OG image check passed: ${manifest.length} per-game share cards + site-level covers/og-image.svg (${manifest.length} GAMES badge) + inject-game-meta wiring all in sync.`);
