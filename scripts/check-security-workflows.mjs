@@ -92,11 +92,26 @@ async function checkCodeql() {
   }
 
   // CodeQL actions + language coverage
-  if (!/uses:\s*github\/codeql-action\/init@v3/.test(src)) {
-    fail(`${path}: must use github/codeql-action/init@v3 (the current major)`);
+  // Accept any non-deprecated codeql-action major. Pinning a single
+  // major (e.g. only v3) makes the Dependabot upgrade PR fail this
+  // check, which is exactly the wrong signal — Dependabot is the
+  // intended driver of these bumps. v3 and v4 are both currently
+  // supported by GitHub; older majors are out of support.
+  const supportedMajors = ['v3', 'v4'];
+  const initMatch = src.match(/uses:\s*github\/codeql-action\/init@(v\d+)/);
+  const analyzeMatch = src.match(/uses:\s*github\/codeql-action\/analyze@(v\d+)/);
+  if (!initMatch) {
+    fail(`${path}: must use github/codeql-action/init@<major>`);
+  } else if (!supportedMajors.includes(initMatch[1])) {
+    fail(`${path}: codeql-action/init pinned to ${initMatch[1]}, which is outside the supported majors (${supportedMajors.join(', ')}). Bump it or extend the allowlist.`);
   }
-  if (!/uses:\s*github\/codeql-action\/analyze@v3/.test(src)) {
-    fail(`${path}: must use github/codeql-action/analyze@v3`);
+  if (!analyzeMatch) {
+    fail(`${path}: must use github/codeql-action/analyze@<major>`);
+  } else if (!supportedMajors.includes(analyzeMatch[1])) {
+    fail(`${path}: codeql-action/analyze pinned to ${analyzeMatch[1]}, which is outside the supported majors (${supportedMajors.join(', ')}). Bump it or extend the allowlist.`);
+  }
+  if (initMatch && analyzeMatch && initMatch[1] !== analyzeMatch[1]) {
+    fail(`${path}: codeql-action/init (${initMatch[1]}) and codeql-action/analyze (${analyzeMatch[1]}) must be pinned to the same major so init's output matches what analyze expects`);
   }
   if (!/javascript-typescript/.test(src)) {
     fail(`${path}: must analyze the "javascript-typescript" language (covers both inline JS and .mjs tooling)`);
