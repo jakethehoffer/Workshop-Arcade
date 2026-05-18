@@ -1,0 +1,47 @@
+# Dependabot configuration for Workshop Arcade.
+#
+# Surface area is intentionally small — the project ships as a static
+# site, so the only npm dependency is Playwright (used by the local
+# test:games / capture:games / audit:perf scripts) and the
+# CI workflows pin a handful of actions/* versions. Weekly checks keep
+# both up to date without overwhelming the PR queue.
+#
+# Docs: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Playwright + any future dev/runtime deps.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+    groups:
+      playwright:
+        patterns:
+          - "playwright"
+          - "@playwright/*"
+
+  # actions/checkout, actions/setup-node, actions/upload-artifact, etc.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
