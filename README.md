@@ -20,7 +20,16 @@ Then open `http://localhost:8000/`.
 
 ## Validation And Smoke Tests
 
-Before publishing catalog changes, run:
+Run every fast gate in one command:
+
+```powershell
+npm ci
+npm test
+```
+
+`npm test` invokes `scripts/run-fast-tests.mjs`, which auto-discovers every `test:*` npm script and runs them in sequence with a per-gate PASS/FAIL summary. `npm run test:all` adds the slow `test:games` Playwright suite on top, and `npm run test:games` runs that one alone.
+
+For a full publish-ready check (the same shape CI runs), step through individually so the per-stage CI feedback matches:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix
@@ -53,6 +62,7 @@ npm run audit:perf:ci
 - `npm run test:docs` keeps contributor-facing validation docs aligned with the current publish-ready CI gates.
 - `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `humans.txt` (humanstxt.org format with `/* TEAM */`), and `package.json` declares `"license": "MIT"` so npm + GitHub language detection match the LICENSE file.
 - `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
+- `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly `test:games` (slow) and `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
