@@ -241,6 +241,25 @@
     .draft-row strong{font-size:13px}
     .draft-row span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
     .mini-btn{border:1px solid #28415f;background:#101a2a;color:var(--ink);border-radius:8px;padding:7px 9px;cursor:pointer}
+    /* Service-worker update toast — surfaces when the registration's
+       updatefound event fires while there's already a controlling SW,
+       so PWA users aren't silently stuck on stale cache after a deploy. */
+    .sw-update-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      z-index:110;max-width:calc(100% - 24px);pointer-events:none}
+    .sw-update-toast[hidden]{display:none}
+    .sw-update-card{
+      display:flex;gap:12px;align-items:center;
+      background:var(--panel);color:var(--ink);
+      border:1px solid var(--stroke);border-radius:14px;
+      box-shadow:var(--shadow);padding:10px 12px 10px 14px;
+      pointer-events:auto;
+    }
+    .sw-update-icon{color:var(--accent);display:flex;align-items:center}
+    .sw-update-body{display:flex;flex-direction:column;gap:2px;line-height:1.25;font-size:13px}
+    .sw-update-body strong{font-weight:800;letter-spacing:0.02em}
+    .sw-update-body span{color:var(--muted);font-size:12px}
+    .sw-update-actions{display:flex;gap:8px;align-items:center;margin-left:6px}
+
     /* Help dialog (native <dialog>) — small centered card listing the
        keyboard shortcuts so the (R)/(Ctrl+/)/(Esc) hints elsewhere in
        the UI are discoverable in one place. Native dialog handles
@@ -747,6 +766,22 @@
       referrerpolicy="no-referrer"
       loading="eager"></iframe>
   </section>
+
+  <aside id="swUpdateToast" class="sw-update-toast" role="status" aria-live="polite" hidden>
+    <div class="sw-update-card">
+      <div class="sw-update-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 3v4h-4M6 21v-4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="sw-update-body">
+        <strong>New version available</strong>
+        <span>Reload to pick up the latest catalog and game updates.</span>
+      </div>
+      <div class="sw-update-actions">
+        <button class="btn primary" type="button" id="swUpdateReloadBtn">Reload</button>
+        <button class="icon-btn" type="button" id="swUpdateDismissBtn" aria-label="Dismiss update notice">×</button>
+      </div>
+    </div>
+  </aside>
 
   <footer>
     <div class="foot">
@@ -1839,10 +1874,40 @@ renderDrafts();
 // blocks the catalog load. Failures are non-fatal: the site keeps working
 // without offline support.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {
+  window.addEventListener('load', async () => {
+    let registration;
+    try {
+      registration = await navigator.serviceWorker.register('sw.js');
+    } catch {
       // Registration failures (file:// protocol, private mode, etc.) are expected
       // off the live site and intentionally swallowed to keep the console clean.
+      return;
+    }
+    // Surface a small "new version available" toast when the registration
+    // installs a NEW worker while an existing one is still controlling the
+    // page. We don't auto-reload because the user might be mid-game inside
+    // the player modal — let them pick the moment.
+    const toast = document.getElementById('swUpdateToast');
+    const reloadBtn = document.getElementById('swUpdateReloadBtn');
+    const dismissBtn = document.getElementById('swUpdateDismissBtn');
+    function showSwUpdateToast(){
+      if (toast) toast.hidden = false;
+    }
+    function hideSwUpdateToast(){
+      if (toast) toast.hidden = true;
+    }
+    if (reloadBtn) reloadBtn.addEventListener('click', () => { window.location.reload(); });
+    if (dismissBtn) dismissBtn.addEventListener('click', hideSwUpdateToast);
+    registration.addEventListener('updatefound', () => {
+      const installing = registration.installing;
+      if (!installing) return;
+      installing.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+          // A previous SW is still in control, so this 'installed' event
+          // means an UPDATE (not a first-time install) is ready.
+          showSwUpdateToast();
+        }
+      });
     });
   });
 }

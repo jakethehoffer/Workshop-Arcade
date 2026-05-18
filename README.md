@@ -35,6 +35,7 @@ npm run test:deep-links
 npm run test:random-game
 npm run test:keyboard-help
 npm run test:pwa
+npm run test:sw-update-toast
 npm run test:fallback-pages
 npm run test:game-jsonld
 npm run test:seo
@@ -56,6 +57,7 @@ npm run audit:perf:ci
 - `npm run test:random-game` locks in the "🎲 Random" header button + `r` keyboard shortcut: a `pickRandomGame()` function reads from `state.filtered` (falling back to `state.games`) so the random pick respects whatever filter the user has applied, the keyboard handler skips while the focus is in an `<input>`/`<textarea>`/`contentEditable` surface, and the click + key paths both end in `openPlayer`.
 - `npm run test:keyboard-help` locks in the keyboard shortcuts help overlay: the header `?` button opens a native `<dialog>` that documents the `?`, `R`, `Ctrl`+`/`, `Esc`, and `Tab` shortcuts via `<kbd>` elements; the `?` key handler accepts both `e.key === '?'` and Shift+`/` (different keyboard layouts), skips while typing in an editable surface, and ignores modifier-key combos.
 - `npm run test:pwa` verifies `app.webmanifest`, `sw.js`, and the matching `<link rel="manifest">` / service worker registration in `index.html` so the catalog stays installable and offline-capable.
+- `npm run test:sw-update-toast` locks in the SW update notification UI: an `aside#swUpdateToast` with `role="status"`/`aria-live="polite"` hidden by default, the registration's `updatefound` listener watches the installing worker's `statechange` and surfaces the toast only when `navigator.serviceWorker.controller` is non-null (i.e. real update, not first install), and the Reload button calls `window.location.reload()` so PWA users aren't silently stuck on stale cache after a deploy.
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
 - `npm run test:game-jsonld` checks that every manifest game page has the JSON-LD `VideoGame` block emitted by `scripts/inject-game-meta.mjs` and that its name/url/image match the manifest. Run `npm run inject:meta` after editing the manifest to refresh.
 - `npm run test:seo` verifies `sitemap.xml`, `robots.txt`, and the JSON-LD `ItemList` block in `index.html` all mirror the current `websites/manifest.json`. Run `npm run build:sitemap` after editing the manifest to regenerate them.
