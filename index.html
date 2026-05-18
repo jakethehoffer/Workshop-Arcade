@@ -1024,6 +1024,10 @@ function trapModalFocus(e){
     state.games = normalizeGames(FALLBACK_GAMES);
   }
   state.recentPlays = loadRecentPlays();
+  // Honor ?q=, ?tag=, ?sort= from the URL on cold load so bookmarked
+  // and shared filter URLs land on the right view. Defaults silently
+  // restore to "All" / no query / newest when params are missing.
+  applyUrlStateFromLocation();
   buildFilters();
   populateWorkshopGames();
   update();
@@ -1092,13 +1096,57 @@ function categoryCount(category){
 
 function setCategory(category){
   state.category = category;
+  syncStateToUrl();
   update();
 }
 
+// Catalog URL state — bookmarkable, shareable, and restored on reload.
+// ?q=snake&tag=Arcade&sort=pop is parsed at startup, kept in sync as
+// the user types / picks chips / changes the sort, and reapplied when
+// the user hits the back button (popstate). Defaults (empty query,
+// "All" tag, "new" sort) are omitted so the canonical URL stays /
+// without query noise.
+const VALID_SORT_VALUES = new Set(['new', 'az', 'pop']);
+
+function syncStateToUrl(){
+  if (typeof URLSearchParams === 'undefined') return;
+  const params = new URLSearchParams();
+  if (state.query) params.set('q', state.query);
+  if (state.category && state.category !== 'All') params.set('tag', state.category);
+  if (state.sort && state.sort !== 'new') params.set('sort', state.sort);
+  const next = params.toString();
+  const href = location.pathname + (next ? `?${next}` : '') + location.hash;
+  if (href === location.pathname + location.search + location.hash) return;
+  try { history.replaceState(history.state, '', href); } catch {}
+}
+
+function applyUrlStateFromLocation(){
+  if (typeof URLSearchParams === 'undefined') return;
+  const params = new URLSearchParams(location.search);
+  const q = params.get('q');
+  state.query = typeof q === 'string' ? q.trim().toLowerCase() : '';
+  if (els.q) els.q.value = q || '';
+  const tag = params.get('tag');
+  if (tag && (tag === 'Recently' || CATEGORY_ORDER.includes(tag) || state.games.some(g => (g.tags||[]).includes(tag)))) {
+    state.category = tag;
+  } else {
+    state.category = 'All';
+  }
+  const sort = params.get('sort');
+  state.sort = sort && VALID_SORT_VALUES.has(sort) ? sort : 'new';
+  if (els.sort) els.sort.value = state.sort;
+}
+
 // Search helpers
-els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim().toLowerCase(); update(); });
+els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim().toLowerCase(); syncStateToUrl(); update(); });
 window.addEventListener('keydown', (e)=>{ if(modalFocus.active) return; if((e.ctrlKey||e.metaKey) && e.key === '/'){ els.q.focus(); e.preventDefault(); }});
-els.sort.addEventListener('change', ()=>{ state.sort = els.sort.value; update(); });
+els.sort.addEventListener('change', ()=>{ state.sort = els.sort.value; syncStateToUrl(); update(); });
+window.addEventListener('popstate', () => {
+  // Back/forward button — re-read URL state and refresh the visible filter UI.
+  applyUrlStateFromLocation();
+  if (typeof buildFilters === 'function') buildFilters();
+  update();
+});
 
 // Random game: pick from the currently-filtered list so the choice honors
 // any active category / search the user is browsing. Falls back to the
