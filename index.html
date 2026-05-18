@@ -241,6 +241,34 @@
     .draft-row strong{font-size:13px}
     .draft-row span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
     .mini-btn{border:1px solid #28415f;background:#101a2a;color:var(--ink);border-radius:8px;padding:7px 9px;cursor:pointer}
+    /* Help dialog (native <dialog>) — small centered card listing the
+       keyboard shortcuts so the (R)/(Ctrl+/)/(Esc) hints elsewhere in
+       the UI are discoverable in one place. Native dialog handles
+       focus trapping + Esc-to-close for free. */
+    .help-btn{font-weight:800;line-height:1;width:34px;height:34px;
+      display:inline-flex;align-items:center;justify-content:center;
+      font-size:18px;color:var(--ink);background:transparent;
+      border:1px solid var(--stroke);border-radius:10px;cursor:pointer}
+    .help-btn:hover{border-color:rgba(94,234,212,0.4)}
+    .help-dialog{
+      max-width:440px;width:calc(100% - 32px);padding:0;
+      border:1px solid var(--stroke);border-radius:var(--radius);
+      background:var(--panel);color:var(--ink);box-shadow:var(--shadow);
+    }
+    .help-dialog::backdrop{background:rgba(2,6,12,0.6);backdrop-filter:blur(2px)}
+    .help-dialog .help-card{padding:18px 20px;margin:0;display:grid;gap:14px}
+    .help-dialog .help-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .help-dialog h2{margin:0;font-size:18px;letter-spacing:0.04em}
+    .help-dialog .help-list{margin:0;display:grid;grid-template-columns:auto 1fr;
+      column-gap:18px;row-gap:10px;font-size:13.5px;line-height:1.4}
+    .help-dialog .help-list dt{display:flex;gap:4px;align-items:center;
+      color:var(--muted);white-space:nowrap}
+    .help-dialog .help-list dd{margin:0;color:var(--ink)}
+    .help-dialog kbd{font:inherit;font-weight:700;font-size:11.5px;
+      padding:3px 7px;border-radius:6px;background:#0c1929;
+      border:1px solid var(--stroke);color:var(--accent);
+      box-shadow:inset 0 -1px 0 rgba(0,0,0,0.5)}
+    .help-dialog .help-hint{margin:0;font-size:12px;color:var(--muted);line-height:1.4}
     .player-modal{position:fixed;inset:0;z-index:90;background:#050910;display:grid;grid-template-rows:auto 1fr}
     .player-modal[hidden]{display:none}
     .player-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;
@@ -557,6 +585,7 @@
         <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg>
         <span>Random</span>
       </button>
+      <button class="icon-btn help-btn" type="button" id="helpBtn" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)">?</button>
       <a class="btn primary" href="#" id="submitGameBtn">Workshop</a>
     </div>
     <div class="filters" id="filters" aria-label="Filters">
@@ -681,6 +710,23 @@
       </div>
     </section>
   </div>
+
+  <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpDialogTitle">
+    <form method="dialog" class="help-card">
+      <div class="help-head">
+        <h2 id="helpDialogTitle">Keyboard shortcuts</h2>
+        <button class="icon-btn" type="submit" aria-label="Close" value="cancel">×</button>
+      </div>
+      <dl class="help-list">
+        <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
+        <dt><kbd>R</kbd></dt><dd>Play a random game from the current filter</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>/</kbd></dt><dd>Focus the search box</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close the player, Workshop, or this help</dd>
+        <dt><kbd>Tab</kbd></dt><dd>Cycle through every filter, sort, card, and action</dd>
+      </dl>
+      <p class="help-hint">Shortcuts are skipped while you're typing in a search box, the Workshop form, or another text input.</p>
+    </form>
+  </dialog>
 
   <section class="player-modal" id="playerModal" role="dialog" aria-modal="true" aria-labelledby="playerTitle" tabindex="-1" hidden>
     <div class="player-bar">
@@ -824,6 +870,8 @@ const els = {
   workshopClose: document.getElementById('workshopClose'),
   submitGameBtn: document.getElementById('submitGameBtn'),
   randomGameBtn: document.getElementById('randomGameBtn'),
+  helpBtn: document.getElementById('helpBtn'),
+  helpDialog: document.getElementById('helpDialog'),
   playerModal: document.getElementById('playerModal'),
   playerShare: document.getElementById('playerShare'),
   playerStatus: document.getElementById('playerStatus'),
@@ -1040,6 +1088,41 @@ if (els.randomGameBtn) {
     openRandomGame(e.currentTarget);
   });
 }
+
+// Keyboard shortcuts help — native <dialog> handles focus trapping and
+// Esc-to-close, so toggleHelpDialog() just flips between showModal()
+// and close(). Wire both the header button click and the "?" key.
+function isTypingInEditableSurface(target){
+  if (!target) return false;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return true;
+  if (target.isContentEditable) return true;
+  return false;
+}
+
+function toggleHelpDialog(){
+  const dialog = els.helpDialog;
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+  if (dialog.open) {
+    dialog.close();
+  } else {
+    dialog.showModal();
+  }
+}
+
+if (els.helpBtn) {
+  els.helpBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleHelpDialog();
+  });
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key !== '?' && !(e.key === '/' && e.shiftKey)) return;
+  if (isTypingInEditableSurface(e.target)) return;
+  e.preventDefault();
+  toggleHelpDialog();
+});
 
 // "r" keyboard shortcut for Random game. Skip when the user is typing in
 // an editable surface so it doesn't hijack normal text entry.
