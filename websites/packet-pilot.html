@@ -920,6 +920,13 @@
       soundEnabled: state.soundEnabled,
       lastSound,
       feedback: state.feedback,
+      feedbackMs: Math.round(state.feedbackMs),
+      feedbackActive:
+        state.feedbackMs > 0 ||
+        state.mode === "running" ||
+        state.mode === "stage-clear" ||
+        state.packets.length > 0,
+      packetCount: state.packets.length,
       complete: state.complete,
       gameOver: state.gameOver
     });

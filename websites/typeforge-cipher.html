@@ -931,8 +931,14 @@
         wave: feedback.wave,
         complete: feedback.complete,
         gameOver: feedback.gameOver,
-        soundToggle: feedback.soundToggle
+        soundToggle: feedback.soundToggle,
+        flashKind: state.flashKind,
+        flashRemaining: Math.max(0, state.flashUntil - state.time),
+        lastMessage: state.message
       },
+      feedbackActive:
+        state.flashUntil > state.time ||
+        (state.mode === "playing" && state.currentInput.length > 0),
       soundEnabled: state.soundEnabled,
       lastSound: lastSound,
       complete: state.complete,
