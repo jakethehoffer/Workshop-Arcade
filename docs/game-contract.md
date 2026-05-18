@@ -50,6 +50,8 @@ Run these before opening a PR:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
 npm run test:docs
+npm run test:tools
+npm run test:capture-recipes
 npm run test:a11y
 npm run test:games
 npm run capture:games:ci

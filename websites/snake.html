@@ -164,6 +164,7 @@
     <div class="pill" id="status">Press Space to start</div>
     <button class="pill button primary-start" id="startMobileBtn" type="button">Start</button>
     <button class="pill button utility-pill has-hotkey" id="musicPill" type="button" title="Toggle music (M)" aria-label="Toggle music"><span class="icon" aria-hidden="true">♪</span><span class="label">Music: On</span><span class="hotkey">M</span></button>
+    <button class="pill button utility-pill has-hotkey" id="soundPill" type="button" title="Toggle sound (N)" aria-label="Toggle sound"><span class="icon" aria-hidden="true">◉</span><span class="label">Sound: On</span><span class="hotkey">N</span></button>
     <button class="pill button utility-pill has-hotkey" id="helpBtn" type="button" title="How to Play (H)" aria-label="How to Play"><span class="icon" aria-hidden="true">?</span><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
   <div class="btns">
@@ -173,6 +174,7 @@
     <button class="btn" id="downBtn" type="button" aria-label="Move down">⬇︎</button>
     <button class="btn" id="restartBtn" type="button">Restart</button>
     <button class="btn has-hotkey" id="musicToggle" type="button" aria-label="Toggle music"><span class="label">Music: On</span><span class="hotkey">M</span></button>
+    <button class="btn has-hotkey" id="soundToggle" type="button" aria-label="Toggle sound"><span class="label">Sound: On</span><span class="hotkey">N</span></button>
     <button class="btn has-hotkey" id="helpBtnMobile" type="button" aria-label="How to play"><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
 
@@ -221,9 +223,13 @@
   const downBtn=document.getElementById('downBtn');
   const restartBtn=document.getElementById('restartBtn');
   const musicToggleBtn=document.getElementById('musicToggle');
+  const soundToggleBtn=document.getElementById('soundToggle');
   const musicPill=document.getElementById('musicPill');
+  const soundPill=document.getElementById('soundPill');
   const musicToggleLabel=musicToggleBtn ? musicToggleBtn.querySelector('.label') : null;
+  const soundToggleLabel=soundToggleBtn ? soundToggleBtn.querySelector('.label') : null;
   const musicPillLabel=musicPill ? musicPill.querySelector('.label') : null;
+  const soundPillLabel=soundPill ? soundPill.querySelector('.label') : null;
   const helpBtn=document.getElementById('helpBtn');
   const helpBtnMobile=document.getElementById('helpBtnMobile');
   const helpOverlay=document.getElementById('helpOverlay');
@@ -244,6 +250,12 @@
   }
 
   let audioCtx=null;
+  const SOUND_KEY='neon-snake.sound.v1';
+  const MUSIC_KEY='neon-snake.music.v1';
+  function readSetting(key, fallback){ try{ return JSON.parse(localStorage.getItem(key) ?? JSON.stringify(fallback)); }catch(_){ return fallback; } }
+  function writeSetting(key, value){ try{ localStorage.setItem(key, JSON.stringify(value)); }catch(_){} }
+  let soundEnabled=!!readSetting(SOUND_KEY, true);
+  let lastSound='none';
   function ensureAC(){
     if(!audioCtx){
       const AC=window.AudioContext||window.webkitAudioContext;
@@ -255,6 +267,7 @@
   }
 
   function beep(freq=600,dur=0.07,type='square',gain=0.06){
+    if(!soundEnabled) return;
     try{
       const ac=ensureAC(); if(!ac) return;
       const t=ac.currentTime;
@@ -270,17 +283,17 @@
     }catch(_){}
   }
   const SFX={
-    move:()=>beep(520,0.04,'square',0.035),
-    eat:()=>beep(880,0.10,'sine',0.07),
-    die:()=>beep(180,0.18,'triangle',0.09),
-    start:()=>beep(700,0.08,'sine',0.06),
-    pause:()=>beep(300,0.06,'square',0.04)
+    move:()=>{ lastSound=soundEnabled?'move':'muted-move'; beep(520,0.04,'square',0.035); },
+    eat:()=>{ lastSound=soundEnabled?'food':'muted-food'; beep(880,0.10,'sine',0.07); },
+    die:()=>{ lastSound=soundEnabled?'death':'muted-death'; beep(180,0.18,'triangle',0.09); },
+    start:()=>{ lastSound=soundEnabled?'start':'muted-start'; beep(700,0.08,'sine',0.06); },
+    pause:()=>{ lastSound=soundEnabled?'pause':'muted-pause'; beep(300,0.06,'square',0.04); }
   };
 
   // --------- Procedural Background Music ----------
   // Lightweight step sequencer with bass + hi-hat + airy pad
   const Music=(function(){
-    let enabled=true;     // user toggle
+    let enabled=!!readSetting(MUSIC_KEY, true);     // user toggle
     let playing=false;    // currently running
     let interval=null;    // scheduler
     let step=0;           // 16th notes counter
@@ -375,6 +388,7 @@
     }
     function setEnabled(v){
       enabled=!!v;
+      writeSetting(MUSIC_KEY, enabled);
       if(!enabled) stop(true);
       if(enabled && !playing) start();
       updateLabels();
@@ -443,6 +457,8 @@
     resumeCount: 0,
     queuedTurnCount: 0,
     acceptedTurnCount: 0,
+    foodCount: 0,
+    deathCount: 0,
     lastQueuedDirection: null,
     lastAcceptedDirection: null
   };
@@ -478,6 +494,8 @@
       resumeCount: 0,
       queuedTurnCount: 0,
       acceptedTurnCount: 0,
+      foodCount: 0,
+      deathCount: 0,
       lastQueuedDirection: null,
       lastAcceptedDirection: null
     });
@@ -536,10 +554,12 @@
     }
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
     if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
+      recordSnakeFeedback('death');
       gameOver=true; running=false; statusEl.textContent='Game Over — Press Space'; SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
     }
     snake.unshift(head);
     if(food && head.x===food.x && head.y===food.y){
+      recordSnakeFeedback('food');
       score+=1; updateHUD(); spawnFood(); SFX.eat();
     } else {
       snake.pop(); SFX.move();
@@ -570,6 +590,8 @@
       feedback.acceptedTurnCount += 1;
       feedback.lastAcceptedDirection = detail.direction || null;
     }
+    if(type === 'food') feedback.foodCount += 1;
+    if(type === 'death') feedback.deathCount += 1;
   }
 
   function stepSnakeFeedback(dt){
@@ -747,6 +769,9 @@
       const currentlyOn = (currentLabel.indexOf('On')>-1);
       Music.setEnabled(!currentlyOn);
     }
+    else if(c==='KeyN'){
+      toggleSound();
+    }
     // prevent page scroll with arrows/space on some browsers
     if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c)) e.preventDefault();
   }
@@ -758,6 +783,23 @@
     const currentlyOn = (currentLabel.indexOf('On')>-1);
     Music.setEnabled(!currentlyOn);
   }
+  function updateSoundLabels(){
+    const label = soundEnabled ? 'Sound: On' : 'Sound: Off';
+    if(soundToggleLabel) soundToggleLabel.textContent = label;
+    if(soundPillLabel) soundPillLabel.textContent = label;
+    if(soundPill) {
+      soundPill.setAttribute('aria-label', `Toggle sound, currently ${soundEnabled ? 'on' : 'off'}`);
+      soundPill.title = `Toggle sound (${soundEnabled ? 'on' : 'off'}) (N)`;
+      soundPill.setAttribute('aria-pressed', String(soundEnabled));
+    }
+    if(soundToggleBtn) soundToggleBtn.setAttribute('aria-pressed', String(soundEnabled));
+  }
+  function toggleSound(){
+    soundEnabled = !soundEnabled;
+    writeSetting(SOUND_KEY, soundEnabled);
+    lastSound = soundEnabled ? 'sound-on' : 'sound-off';
+    updateSoundLabels();
+  }
 
   upBtn.addEventListener('click', ()=>{ queueDir({x:0,y:-1}); if(!running&&!gameOver) start(); });
   downBtn.addEventListener('click', ()=>{ queueDir({x:0,y:1}); if(!running&&!gameOver) start(); });
@@ -767,6 +809,8 @@
   if(startMobileBtn) startMobileBtn.addEventListener('click', activateStartMobile);
   musicToggleBtn.addEventListener('click', toggleMusic);
   musicPill.addEventListener('click', toggleMusic);
+  if(soundToggleBtn) soundToggleBtn.addEventListener('click', toggleSound);
+  if(soundPill) soundPill.addEventListener('click', toggleSound);
 
   // Help menu
   let wasRunningBeforeHelp = false;
@@ -858,6 +902,10 @@
         label: musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent,
         playing: !Music.paused()
       },
+      sound: {
+        enabled: !!soundEnabled,
+        lastSound
+      },
       feedback: {
         lastEvent: feedback.lastEvent,
         lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 1000) / 1000,
@@ -866,8 +914,12 @@
         resumeCount: feedback.resumeCount,
         queuedTurnCount: feedback.queuedTurnCount,
         acceptedTurnCount: feedback.acceptedTurnCount,
+        foodCount: feedback.foodCount,
+        deathCount: feedback.deathCount,
         lastQueuedDirection: feedback.lastQueuedDirection,
-        lastAcceptedDirection: feedback.lastAcceptedDirection
+        lastAcceptedDirection: feedback.lastAcceptedDirection,
+        tactileActive: feedback.activeCueCount > 0,
+        lastSound
       }
     });
   }
@@ -887,6 +939,7 @@
 
   // init
   Music.updateLabels();
+  updateSoundLabels();
   newGame();
   requestAnimationFrame(loop);
 })();

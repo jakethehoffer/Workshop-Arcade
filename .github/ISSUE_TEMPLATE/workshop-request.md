@@ -31,6 +31,8 @@ labels: "workshop-request, enhancement"
 - [ ] `scripts/validate-catalog.ps1 -Fix` has been run when catalog metadata changed.
 - [ ] `scripts/validate-catalog.ps1` passes before publishing.
 - [ ] `npm run test:docs` passes before publishing.
+- [ ] `npm run test:tools` passes before publishing.
+- [ ] `npm run test:capture-recipes` passes before publishing.
 - [ ] `npm run test:a11y` passes before publishing.
 - [ ] `npm run test:games` passes before publishing.
 - [ ] `npm run capture:games:ci` passes before publishing.

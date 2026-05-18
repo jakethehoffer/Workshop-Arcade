@@ -338,6 +338,35 @@ async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {
     addFailure(label, "page appears blank or non-interactive");
   }
 
+  const diagnostics = await page.evaluate(() => {
+    const result = {
+      hasRender: typeof window.render_game_to_text === "function",
+      hasAdvance: typeof window.advanceTime === "function",
+      parseable: false,
+      textType: null,
+      error: null
+    };
+    if (!result.hasRender) return result;
+    try {
+      const text = window.render_game_to_text();
+      result.textType = typeof text;
+      JSON.parse(String(text));
+      result.parseable = true;
+    } catch (error) {
+      result.error = error && error.message ? error.message : String(error);
+    }
+    return result;
+  });
+  if (!diagnostics.hasRender) {
+    addFailure(label, "missing render_game_to_text() diagnostic hook");
+  }
+  if (!diagnostics.hasAdvance) {
+    addFailure(label, "missing advanceTime(ms) deterministic hook");
+  }
+  if (diagnostics.hasRender && (!diagnostics.parseable || diagnostics.textType !== "string")) {
+    addFailure(label, `render_game_to_text() must return parseable JSON string (${diagnostics.error || diagnostics.textType})`);
+  }
+
   if (labelSuffix === "mobile") {
     const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
     if (overflow > 2) {

@@ -7,6 +7,8 @@ const root = process.cwd();
 const requiredCommands = [
   'validate-catalog.ps1',
   'npm run test:docs',
+  'npm run test:tools',
+  'npm run test:capture-recipes',
   'npm run test:a11y',
   'npm run test:games',
   'npm run capture:games:ci',
@@ -50,7 +52,7 @@ const requiredWorkflowJobs = [
   {
     id: 'catalog-docs-a11y',
     label: 'catalog/docs/a11y',
-    commands: ['validate-catalog.ps1', 'npm run test:docs', 'npm run test:a11y']
+    commands: ['validate-catalog.ps1', 'npm run test:docs', 'npm run test:tools', 'npm run test:capture-recipes', 'npm run test:a11y']
   },
   {
     id: 'game-smoke',

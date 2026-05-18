@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--ci");
+const CHECK_RECIPES = args.has("--check-recipes");
 const manifest = JSON.parse(await readFile(path.join(repoRoot, "websites", "manifest.json"), "utf8"));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outputRoot = path.join(repoRoot, "test-results", "render-ranking", stamp);
@@ -33,6 +34,11 @@ const mimeTypes = new Map([
   [".wav", "audio/wav"],
   [".webp", "image/webp"],
 ]);
+
+if (CHECK_RECIPES) {
+  checkCaptureRecipes();
+  process.exit(0);
+}
 
 await mkdir(shotsDir, { recursive: true });
 
@@ -867,6 +873,73 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "gemline-cascade": {
+      name: "perform first valid gem swap",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const snap = JSON.parse(window.render_game_to_text());
+          const swap = snap.firstValidSwap || (snap.validSwaps && snap.validSwaps[0]);
+          const canvas = document.querySelector("#game");
+          if (!swap || !canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const pad = 42;
+          const cell = (720 - pad * 2) / 8;
+          const point = (cellRef) => ({
+            x: rect.left + ((pad + cellRef.c * cell + cell / 2) / 720) * rect.width,
+            y: rect.top + ((pad + cellRef.r * cell + cell / 2) / 720) * rect.height
+          });
+          const tap = (cellRef) => {
+            const p = point(cellRef);
+            canvas.dispatchEvent(new PointerEvent("pointerdown", {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 31,
+              pointerType: "mouse",
+              isPrimary: true,
+              button: 0,
+              buttons: 1,
+              clientX: p.x,
+              clientY: p.y
+            }));
+            window.advanceTime(40);
+          };
+          tap(swap.from);
+          tap(swap.to);
+          window.advanceTime(360);
+        });
+      },
+    },
+    "dungeon-circuit": {
+      name: "move toward first dungeon target",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          document.querySelector("#newBtn")?.click();
+          const press = (key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code: key, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code: key, bubbles: true }));
+            window.advanceTime(90);
+          };
+          for (let i = 0; i < 16; i += 1) {
+            const snap = JSON.parse(window.render_game_to_text());
+            const target = snap.nextTarget || snap.exit;
+            if (!target || !snap.player) break;
+            const dx = target.x - snap.player.x;
+            const dy = target.y - snap.player.y;
+            if (Math.abs(dx) + Math.abs(dy) <= 1) {
+              press(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "ArrowRight" : "ArrowLeft") : (dy > 0 ? "ArrowDown" : "ArrowUp"));
+              break;
+            }
+            press(Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "ArrowRight" : "ArrowLeft") : (dy > 0 ? "ArrowDown" : "ArrowUp"));
+          }
+          window.advanceTime(220);
+        });
+      },
+    },
     solitaire: {
       name: "draw from stock",
       run: async (page) => {
@@ -953,6 +1026,35 @@ function getInteractionRecipe(slug) {
   return recipes[slug] || null;
 }
 
+function checkCaptureRecipes() {
+  const missing = [];
+  const invalid = [];
+  const duplicateSlugs = new Set();
+  const seen = new Set();
+
+  for (const game of manifest) {
+    if (seen.has(game.slug)) duplicateSlugs.add(game.slug);
+    seen.add(game.slug);
+    const recipe = getInteractionRecipe(game.slug);
+    if (!recipe) {
+      missing.push(game.slug);
+      continue;
+    }
+    if (typeof recipe.name !== "string" || recipe.name.trim().length === 0 || typeof recipe.run !== "function") {
+      invalid.push(game.slug);
+    }
+  }
+
+  if (missing.length || invalid.length || duplicateSlugs.size) {
+    if (missing.length) console.error(`Missing capture recipes: ${missing.join(", ")}`);
+    if (invalid.length) console.error(`Invalid capture recipes: ${invalid.join(", ")}`);
+    if (duplicateSlugs.size) console.error(`Duplicate manifest slugs: ${Array.from(duplicateSlugs).join(", ")}`);
+    process.exit(1);
+  }
+
+  console.log(`Capture recipe preflight passed for ${manifest.length} manifest games.`);
+}
+
 function scoreInteraction({ recipe, error, hasRenderText, preState, eventState, postState, eventSignals, signals, feedbackActive, issues }) {
   const reasons = [];
   let score = 0;
@@ -1006,6 +1108,7 @@ function extractFeedbackActive(state) {
   if (!state || typeof state !== "object") return { active: false, keys: [] };
 
   const keys = [];
+  if (state.feedbackActive === true) keys.push("feedbackActive");
   const roots = [];
   if (state.feedback && typeof state.feedback === "object") roots.push(["feedback", state.feedback]);
   for (const rootKey of ["effects", "particles", "rings", "pops", "popups", "animations", "lastMove", "moveFeedback"]) {

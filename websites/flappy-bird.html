@@ -80,6 +80,8 @@
     box-shadow:0 10px 28px rgba(3,8,16,0.35), inset 0 1px 0 rgba(255,255,255,0.16);
   }
   .help-btn:hover { background:rgba(9,30,49,0.9); }
+  .sound-btn { right:auto; left:12px; }
+  .sound-btn[aria-pressed="false"] { color:#cbd5e1; border-color:rgba(203,213,225,0.28); }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(2,8,18,0.78); }
   .overlay.show { display:grid; pointer-events:auto; }
   .help-card { background:linear-gradient(180deg, #0f2537, #081827); border:1px solid rgba(125,229,237,0.34); padding:24px 26px; border-radius:16px; max-width:min(92vw, 500px); box-shadow:0 18px 46px rgba(0,0,0,.62); pointer-events:auto; color:#d7f7fb; }
@@ -96,6 +98,7 @@
 <body>
 <canvas id="game" tabindex="0" aria-label="Sky Hopper game canvas"></canvas>
 <button class="help-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">❓ Help</button>
+<button class="help-btn sound-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Toggle sound" title="Sound">Sound On</button>
 
 <!-- Help Menu -->
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -134,6 +137,7 @@
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha: false }); // better perf for full-screen
+const soundBtn = document.getElementById("soundBtn");
 
 /* ----- HiDPI fullscreen + virtual world ----- */
 let dpr = window.devicePixelRatio || 1;
@@ -166,8 +170,12 @@ let score = 0;
 let gameOver = false;
 let started = false;
 const HS_KEY = "skyhopper_highscore";
+const SOUND_KEY = "sky-hopper.sound.v1";
 let highScore = 0;
 try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
+let soundEnabled = true;
+try { soundEnabled = JSON.parse(localStorage.getItem(SOUND_KEY) ?? "true"); } catch(_) {}
+let lastSound = "none";
 let newBestThisRun = false;
 
 const feedback = {};
@@ -185,6 +193,13 @@ function resetFeedback() {
   feedback.cues = [];
 }
 resetFeedback();
+
+function syncSoundButton() {
+  if (!soundBtn) return;
+  soundBtn.textContent = soundEnabled ? "Sound On" : "Sound Off";
+  soundBtn.setAttribute("aria-pressed", String(soundEnabled));
+  soundBtn.setAttribute("aria-label", `Toggle sound, currently ${soundEnabled ? "on" : "off"}`);
+}
 
 function feedbackColor(type) {
   return {
@@ -256,6 +271,7 @@ const ARP_PATTERN = [0, 1, 2, 1, 0, 2, 1, 2];
 let music = { isOn: false, timer: null, nextTime: 0, step: 0 };
 
 function ensureAudio() {
+  if (!soundEnabled) return;
   if (!audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) {
@@ -470,6 +486,7 @@ function scheduleMusicStep(time, step) {
 }
 
 function startMusic(resetStep = false) {
+  if (!soundEnabled) return;
   ensureAudio();
   if (!audioCtx || music.isOn) return;
   music.isOn = true;
@@ -492,12 +509,14 @@ function stopMusic() {
 }
 
 function resumeAudio() {
+  if (!soundEnabled) return;
   ensureAudio();
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
 
 const SFX = {
   flap() {
+    lastSound = soundEnabled ? "flap" : "muted-flap";
     ensureAudio();
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
@@ -521,6 +540,7 @@ const SFX = {
     });
   },
   score() {
+    lastSound = soundEnabled ? "score" : "muted-score";
     ensureAudio();
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
@@ -550,6 +570,7 @@ const SFX = {
     });
   },
   hit() {
+    lastSound = soundEnabled ? "hit" : "muted-hit";
     ensureAudio();
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
@@ -572,6 +593,7 @@ const SFX = {
     });
   },
   newHigh() {
+    lastSound = soundEnabled ? "new-high" : "muted-new-high";
     ensureAudio();
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
@@ -1395,7 +1417,16 @@ function renderGameToText() {
     feedback: getFeedbackDiagnostics(),
     layout: getLayoutDiagnostics(),
     musicOn: !!music.isOn,
-    audioReady: !!audioCtx
+    audioReady: !!audioCtx,
+    soundEnabled,
+    lastSound,
+    tactile: {
+      lastEvent: feedback.lastEvent,
+      active: feedback.screenFlash > 0 || feedback.screenShake > 0 || feedback.cues.length > 0,
+      screenFlash: Math.round(feedback.screenFlash * 1000) / 1000,
+      screenShake: Math.round(feedback.screenShake * 1000) / 1000,
+      cueCount: feedback.cues.length
+    }
   });
 }
 
@@ -1429,6 +1460,14 @@ function doFlapOrStart() {
 const helpBtn = document.getElementById('helpBtn');
 const helpOverlay = document.getElementById('helpOverlay');
 const helpClose = document.getElementById('helpClose');
+soundBtn.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  if (!soundEnabled) stopMusic();
+  try { localStorage.setItem(SOUND_KEY, JSON.stringify(soundEnabled)); } catch(_) {}
+  lastSound = soundEnabled ? 'sound-on' : 'sound-off';
+  syncSoundButton();
+});
+syncSoundButton();
 const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let activeDialogTrigger = null;

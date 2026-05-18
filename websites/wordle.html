@@ -403,6 +403,9 @@ const REVEAL_WAIT = FLIP_MS + (COLS-1)*STEP_MS + 50; // ADDED: total wait before
 // ===== Sound engine (offline; no audio files) =====  // ADDED
 const AudioFX = (() => {                               // ADDED
   let ctx = null;                                      // ADDED
+  let lastSound = 'none';
+  let soundAttemptCount = 0;
+  let oscillatorCount = 0;
   const ensure = () => {                               // ADDED
     if (!ctx) {                                        // ADDED
       try { ctx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} // ADDED
@@ -411,14 +414,18 @@ const AudioFX = (() => {                               // ADDED
     return ctx;                                        // ADDED
   };                                                   // ADDED
 
-  const enabled = () => soundChk?.checked && !!ctx;    // ADDED
-  const start = () => ensure();                        // ADDED
+  const enabled = () => !!soundChk?.checked;           // ADDED
+  const start = () => { if(enabled()) ensure(); };     // ADDED
 
-  function beep(freq, dur=0.08, gain=0.03, type='sine', whenMs=0){ // ADDED
-    const c = ensure(); if (!enabled()) return;        // ADDED
+  function beep(name, freq, dur=0.08, gain=0.03, type='sine', whenMs=0){ // ADDED
+    soundAttemptCount += 1;
+    lastSound = enabled() ? name : `muted-${name}`;
+    if (!enabled()) return;                            // ADDED
+    const c = ensure(); if (!c) return;                // ADDED
     const t0 = c.currentTime + whenMs/1000;            // ADDED
     const o = c.createOscillator();                    // ADDED
     const g = c.createGain();                          // ADDED
+    oscillatorCount += 1;
     o.type = type; o.frequency.value = freq;           // ADDED
     g.gain.setValueAtTime(0, t0);                      // ADDED
     g.gain.linearRampToValueAtTime(gain, t0+0.005);    // ADDED
@@ -428,20 +435,21 @@ const AudioFX = (() => {                               // ADDED
   }                                                    // ADDED
 
   // Per-event helpers                                     // ADDED
-  const key    = () => beep(520, 0.03, 0.02, 'triangle');   // ADDED
-  const back   = () => beep(260, 0.04, 0.02, 'sawtooth');   // ADDED
-  const enter  = () => beep(600, 0.06, 0.03, 'triangle');   // ADDED
-  const error  = () => beep(160, 0.20, 0.05, 'square');     // ADDED
+  const key    = () => beep('key', 520, 0.03, 0.02, 'triangle');   // ADDED
+  const back   = () => beep('backspace', 260, 0.04, 0.02, 'sawtooth');   // ADDED
+  const enter  = () => beep('submit', 600, 0.06, 0.03, 'triangle');   // ADDED
+  const error  = () => beep('invalid-submit', 160, 0.20, 0.05, 'square');     // ADDED
   const tile   = (state, i=0) => {                          // ADDED
     const d = i * STEP_MS;                                  // ADDED
-    if (state==='c') beep(880, 0.09, 0.04, 'sine', d);      // ADDED
-    else if (state==='p') beep(660, 0.09, 0.035, 'sine', d);// ADDED
-    else beep(440, 0.07, 0.03, 'sine', d);                  // ADDED
+    if (state==='c') beep('tile-correct', 880, 0.09, 0.04, 'sine', d);      // ADDED
+    else if (state==='p') beep('tile-present', 660, 0.09, 0.035, 'sine', d);// ADDED
+    else beep('tile-absent', 440, 0.07, 0.03, 'sine', d);                  // ADDED
   };                                                        // ADDED
-  const success = () => [523.25,659.25,783.99].forEach((f,i)=>beep(f,0.12,0.05,'sine',i*120)); // ADDED
-  const fail    = () => [392,330,262].forEach((f,i)=>beep(f,0.14,0.05,'sine',i*140));          // ADDED
+  const success = () => [523.25,659.25,783.99].forEach((f,i)=>beep(i?'win':'win-start',f,0.12,0.05,'sine',i*120)); // ADDED
+  const fail    = () => [392,330,262].forEach((f,i)=>beep(i?'loss':'loss-start',f,0.14,0.05,'sine',i*140));          // ADDED
+  const diagnostics = () => ({ lastSound, soundAttemptCount, oscillatorCount, audioReady: !!ctx, soundEnabled: enabled() });
 
-  return { start, key, back, enter, error, tile, success, fail }; // ADDED
+  return { start, key, back, enter, error, tile, success, fail, diagnostics }; // ADDED
 })();                                                      // ADDED
 
 
@@ -457,6 +465,8 @@ const AudioFX = (() => {                               // ADDED
     backspaceCount: 0,
     submitCount: 0,
     invalidCount: 0,
+    winCount: 0,
+    lossCount: 0,
     lastInput: null
   };
 
@@ -524,6 +534,8 @@ const AudioFX = (() => {                               // ADDED
       backspaceCount: 0,
       submitCount: 0,
       invalidCount: 0,
+      winCount: 0,
+      lossCount: 0,
       lastInput: null
     });
 
@@ -574,6 +586,8 @@ const AudioFX = (() => {                               // ADDED
     if(type === 'backspace') inputFeedback.backspaceCount += 1;
     if(type === 'guess-submit') inputFeedback.submitCount += 1;
     if(type === 'invalid-input') inputFeedback.invalidCount += 1;
+    if(type === 'win') inputFeedback.winCount += 1;
+    if(type === 'loss') inputFeedback.lossCount += 1;
     pulseActiveRow();
   }
   function stepInputFeedback(ms){
@@ -650,6 +664,7 @@ const AudioFX = (() => {                               // ADDED
   overTitle.textContent = won ? 'You Win!' : 'Game Over';
   overMsg.textContent = won ? `Solved in ${guesses.length}/6` : 'Out of tries.';
   overSecret.textContent = secret.toUpperCase();
+    recordInputFeedback(won ? 'win' : 'loss', secret);
     won ? AudioFX.success() : AudioFX.fail();                   // ADDED
   try { over.showModal(); } catch(e){                      // CHANGED: robust open
     try { over.show(); } catch(e2){ over.setAttribute('open',''); }
@@ -662,10 +677,11 @@ const AudioFX = (() => {                               // ADDED
     if(finished) return;
     if(current.length!==COLS){ recordInputFeedback('invalid-input', current); flashRow('Not enough letters.'); return; }
 
-    if(guesses.includes(current)){ flashRow('Already guessed that word.'); return; }
+    if(guesses.includes(current)){ recordInputFeedback('invalid-input', current); flashRow('Already guessed that word.'); return; }
 
     // STRICT: must be in dictionary
     if(!STRICT.has(current)){
+      recordInputFeedback('invalid-input', current);
       flashRow('Not in dictionary.');
       return;
     }
@@ -682,10 +698,10 @@ const AudioFX = (() => {                               // ADDED
         });
       });
       for(const [i, ch] of Object.entries(greens)){
-        if(current[i] !== ch){ flashRow('Hard mode: keep green letters in place.'); return; }
+        if(current[i] !== ch){ recordInputFeedback('invalid-input', current); flashRow('Hard mode: keep green letters in place.'); return; }
       }
       for(const ch of yellows){
-        if(!current.includes(ch)){ flashRow('Hard mode: reuse revealed letters.'); return; }
+        if(!current.includes(ch)){ recordInputFeedback('invalid-input', current); flashRow('Hard mode: reuse revealed letters.'); return; }
       }
     }
 
@@ -806,6 +822,7 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
       keyboard,
       hardMode: !!hardChk.checked,
       sound: !!soundChk.checked,
+      audio: AudioFX.diagnostics(),
       finished: !!finished,
       answer: finished ? secret : null,
       answerLength: secret.length,
@@ -823,7 +840,11 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
         backspaceCount: inputFeedback.backspaceCount,
         submitCount: inputFeedback.submitCount,
         invalidCount: inputFeedback.invalidCount,
-        lastInput: inputFeedback.lastInput
+        winCount: inputFeedback.winCount,
+        lossCount: inputFeedback.lossCount,
+        lastInput: inputFeedback.lastInput,
+        tactileActive: inputFeedback.activeCueCount > 0,
+        lastSound: AudioFX.diagnostics().lastSound
       }
     });
   }
