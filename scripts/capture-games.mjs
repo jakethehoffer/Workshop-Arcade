@@ -1021,6 +1021,40 @@ function getInteractionRecipe(slug) {
         await settlePage(page, 200);
       },
     },
+    "packet-pilot": {
+      name: "cycle a router and start the packet flow",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#cycleBtn");
+        await settlePage(page, 60);
+        await clickSelectorIfVisible(page, "#flowBtn");
+        await page.evaluate(() => {
+          if (typeof window.advanceTime === "function") window.advanceTime(900);
+        });
+      },
+    },
+    "typeforge-cipher": {
+      name: "start a wave and type the active token",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#startBtn");
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          window.advanceTime(400);
+          const snap = JSON.parse(window.render_game_to_text());
+          const text = snap.activeToken?.text || (snap.visibleTokens && snap.visibleTokens[0]?.text) || "";
+          for (const ch of text.slice(0, 3)) {
+            const key = String(ch);
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code: `Key${key.toUpperCase()}`, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code: `Key${key.toUpperCase()}`, bubbles: true }));
+            window.advanceTime(80);
+          }
+          window.advanceTime(220);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

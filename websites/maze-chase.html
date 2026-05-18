@@ -423,7 +423,7 @@
             <span>Lives</span>
             <strong id="lives">3</strong>
           </div>
-          <button class="hud-action" id="mute-btn" type="button">Mute</button>
+          <button class="hud-action" id="mute-btn" type="button" aria-pressed="false">Mute</button>
           <button class="hud-action" id="pause-btn" type="button">Pause</button>
         </div>
 
@@ -687,7 +687,85 @@
           sfx: 0.38,
         };
 
-        const savedMuted = localStorage.getItem("mazeChaseMuted") === "1";
+        const SOUND_STORAGE_KEY = "maze-chase.sound.v1";
+        const LEGACY_MUTED_STORAGE_KEY = "mazeChaseMuted";
+        const soundCounterKeys = {
+          start: "start",
+          restart: "restart",
+          pellet: "pellet",
+          "power-pellet": "powerPellet",
+          fruit: "fruit",
+          "ghost-eat": "ghostEat",
+          "player-death": "playerDeath",
+          "level-clear": "levelClear",
+          "game-over": "gameOver",
+          "audio-unavailable": "unavailableAction",
+          "action-unavailable": "unavailableAction",
+        };
+
+        function readStorageValue(key) {
+          try {
+            return localStorage.getItem(key);
+          } catch (error) {
+            return null;
+          }
+        }
+
+        function writeStorageValue(key, value) {
+          try {
+            localStorage.setItem(key, value);
+          } catch (error) {
+            // Storage can be unavailable in privacy-restricted contexts.
+          }
+        }
+
+        function persistedSoundValueToMuted(value) {
+          if (value === null) {
+            return null;
+          }
+          const normalized = String(value).toLowerCase();
+          if (["1", "true", "on", "enabled"].includes(normalized)) {
+            return false;
+          }
+          if (["0", "false", "off", "disabled"].includes(normalized)) {
+            return true;
+          }
+          return null;
+        }
+
+        function persistedMutedValueToMuted(value) {
+          if (value === null) {
+            return null;
+          }
+          const normalized = String(value).toLowerCase();
+          if (["1", "true", "muted"].includes(normalized)) {
+            return true;
+          }
+          if (["0", "false", "unmuted"].includes(normalized)) {
+            return false;
+          }
+          return null;
+        }
+
+        function persistSoundPreference(isMuted) {
+          writeStorageValue(SOUND_STORAGE_KEY, isMuted ? "0" : "1");
+          writeStorageValue(LEGACY_MUTED_STORAGE_KEY, isMuted ? "1" : "0");
+        }
+
+        function getPersistedMuted() {
+          const storedSound = persistedSoundValueToMuted(readStorageValue(SOUND_STORAGE_KEY));
+          if (storedSound !== null) {
+            return storedSound;
+          }
+          const legacyMuted = persistedMutedValueToMuted(readStorageValue(LEGACY_MUTED_STORAGE_KEY));
+          if (legacyMuted !== null) {
+            persistSoundPreference(legacyMuted);
+            return legacyMuted;
+          }
+          return false;
+        }
+
+        const savedMuted = getPersistedMuted();
 
         const audio = {
           ctx: null,
@@ -699,6 +777,22 @@
           musicOn: false,
           lastPelletSound: 0,
           muted: savedMuted,
+          lastSound: null,
+          lastSoundStatus: "none",
+          soundCount: 0,
+          soundCounts: {
+            start: 0,
+            restart: 0,
+            pellet: 0,
+            powerPellet: 0,
+            fruit: 0,
+            ghostEat: 0,
+            playerDeath: 0,
+            levelClear: 0,
+            gameOver: 0,
+            unavailableAction: 0,
+          },
+          unavailableNotified: false,
         };
 
         const musicPattern = [
@@ -762,13 +856,45 @@
           tileSize = size / width;
         }
 
+        function recordSoundDiagnostic(name, status = "scheduled") {
+          audio.lastSound = name;
+          audio.lastSoundStatus = status;
+          audio.soundCount += 1;
+          const counterKey = soundCounterKeys[name] || "unavailableAction";
+          audio.soundCounts[counterKey] = (audio.soundCounts[counterKey] || 0) + 1;
+        }
+
+        function audioBlockStatus() {
+          if (audio.muted) {
+            return "muted";
+          }
+          if (!audio.ctx || !audio.sfxGain) {
+            return "not-ready";
+          }
+          return null;
+        }
+
+        function canScheduleNamedSound(name) {
+          const status = audioBlockStatus();
+          if (status) {
+            recordSoundDiagnostic(name, status);
+            return false;
+          }
+          recordSoundDiagnostic(name);
+          return true;
+        }
+
         function initAudio() {
           if (audio.ctx) {
-            return;
+            return true;
           }
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           if (!AudioCtx) {
-            return;
+            if (!audio.unavailableNotified) {
+              audio.unavailableNotified = true;
+              recordSoundDiagnostic("audio-unavailable", "unavailable");
+            }
+            return false;
           }
           audio.ctx = new AudioCtx();
           audio.master = audio.ctx.createGain();
@@ -782,12 +908,16 @@
           audio.sfxGain = audio.ctx.createGain();
           audio.sfxGain.gain.value = audioLevels.sfx;
           audio.sfxGain.connect(audio.master);
+          return true;
         }
 
-        function unlockAudio() {
+        function unlockAudio(options = {}) {
+          if (audio.muted && !options.force) {
+            return false;
+          }
           initAudio();
           if (!audio.ctx) {
-            return;
+            return false;
           }
           if (audio.ctx.state === "suspended") {
             audio.ctx.resume();
@@ -796,6 +926,7 @@
             audio.unlocked = true;
             setMusicState(state.phase);
           }
+          return true;
         }
 
         function playTone(freq, duration, type, volume, when, endFreq, bus) {
@@ -823,20 +954,33 @@
           osc.stop(startTime + duration + 0.05);
         }
 
+        function playStartSound(name = "start") {
+          if (!canScheduleNamedSound(name)) {
+            return;
+          }
+          const now = audio.ctx.currentTime;
+          const base = name === "restart" ? 293.66 : 329.63;
+          playTone(base, 0.1, "triangle", 0.14, now, base * 1.25);
+          playTone(base * 1.5, 0.12, "sine", 0.1, now + 0.08, base * 1.75);
+        }
+
         function playPelletSound() {
-          if (!audio.ctx) {
+          if (audioBlockStatus()) {
+            canScheduleNamedSound("pellet");
             return;
           }
           const now = audio.ctx.currentTime;
           if (now - audio.lastPelletSound < 0.05) {
+            recordSoundDiagnostic("pellet", "throttled");
             return;
           }
           audio.lastPelletSound = now;
+          recordSoundDiagnostic("pellet");
           playTone(420, 0.04, "sine", 0.11, null, 320);
         }
 
         function playPowerSound() {
-          if (!audio.ctx) {
+          if (!canScheduleNamedSound("power-pellet")) {
             return;
           }
           const now = audio.ctx.currentTime;
@@ -845,26 +989,47 @@
         }
 
         function playGhostEatSound() {
+          if (!canScheduleNamedSound("ghost-eat")) {
+            return;
+          }
           playTone(196, 0.2, "triangle", 0.24, null, 130);
         }
 
         function playDeathSound() {
-          const now = audio.ctx ? audio.ctx.currentTime : 0;
+          if (!canScheduleNamedSound("player-death")) {
+            return;
+          }
+          const now = audio.ctx.currentTime;
           playTone(360, 0.32, "sine", 0.26, now, 160);
           playTone(200, 0.28, "sine", 0.18, now + 0.1, 120);
         }
 
         function playLevelClearSound() {
-          const now = audio.ctx ? audio.ctx.currentTime : 0;
+          if (!canScheduleNamedSound("level-clear")) {
+            return;
+          }
+          const now = audio.ctx.currentTime;
           playTone(261.63, 0.18, "triangle", 0.2, now);
           playTone(329.63, 0.18, "triangle", 0.2, now + 0.18);
           playTone(392.0, 0.22, "triangle", 0.2, now + 0.36);
         }
 
         function playFruitSound() {
-          const now = audio.ctx ? audio.ctx.currentTime : 0;
+          if (!canScheduleNamedSound("fruit")) {
+            return;
+          }
+          const now = audio.ctx.currentTime;
           playTone(523.25, 0.16, "triangle", 0.22, now, 380);
           playTone(659.25, 0.16, "triangle", 0.18, now + 0.08, 440);
+        }
+
+        function playGameOverSound() {
+          if (!canScheduleNamedSound("game-over")) {
+            return;
+          }
+          const now = audio.ctx.currentTime + 0.1;
+          playTone(220, 0.24, "triangle", 0.14, now, 164.81);
+          playTone(146.83, 0.32, "sine", 0.12, now + 0.18, 110);
         }
 
         function scheduleMusic() {
@@ -933,7 +1098,7 @@
 
         function setMuted(isMuted) {
           audio.muted = isMuted;
-          localStorage.setItem("mazeChaseMuted", isMuted ? "1" : "0");
+          persistSoundPreference(isMuted);
           if (audio.ctx && audio.master) {
             const target = isMuted ? 0 : audioLevels.master;
             audio.master.gain.setTargetAtTime(target, audio.ctx.currentTime, 0.06);
@@ -947,8 +1112,13 @@
         }
 
         function toggleMute() {
-          unlockAudio();
-          setMuted(!audio.muted);
+          const nextMuted = !audio.muted;
+          if (nextMuted) {
+            setMuted(true);
+            return;
+          }
+          setMuted(false);
+          unlockAudio({ force: true });
         }
 
         function clamp(value, min, max) {
@@ -1307,6 +1477,7 @@
         function handleStartAction() {
           unlockAudio();
           if (state.phase === "ready") {
+            playStartSound("start");
             startPlay();
             return;
           }
@@ -1318,13 +1489,21 @@
             resetDotCountersForLevel();
             resetPositions();
             updateHud();
+            playStartSound("start");
             startPlay();
             return;
           }
           if (state.phase === "gameover") {
             resetGame();
+            playStartSound("restart");
             startPlay();
           }
+        }
+
+        function handleResetAction() {
+          unlockAudio();
+          resetGame();
+          playStartSound("restart");
         }
 
         function togglePause() {
@@ -1335,7 +1514,9 @@
           }
           if (state.phase === "paused") {
             startPlay();
+            return;
           }
+          recordSoundDiagnostic("action-unavailable", audio.muted ? "muted" : "unavailable");
         }
 
         function tileAt(col, row) {
@@ -1974,6 +2155,7 @@
           playDeathSound();
           updateHud();
           if (state.lives <= 0) {
+            playGameOverSound();
             setPhase("gameover", "Game Over", "Press Enter to retry.");
             return;
           }
@@ -2412,10 +2594,29 @@
               hitCount: feedback.counters.hit,
               feedbackParticles: feedback.particles.length + feedback.rings.length,
               popupCount: feedback.pops.length,
+              counts: {
+                pellet: feedback.counters.pellet,
+                power: feedback.counters.power,
+                fruit: feedback.counters.fruit,
+                ghostEat: feedback.counters.ghostEat,
+                hit: feedback.counters.hit,
+                particles: feedback.particles.length + feedback.rings.length,
+                popups: feedback.pops.length
+              },
               screenFlash: round(feedback.screenFlash, 3),
               screenShake: round(feedback.screenShake, 3)
             },
-            audio: { muted: !!audio.muted, unlocked: !!audio.unlocked, musicOn: !!audio.musicOn },
+            audio: {
+              soundEnabled: !audio.muted,
+              muted: !!audio.muted,
+              audioReady: !!audio.ctx,
+              lastSound: audio.lastSound,
+              soundCount: audio.soundCount,
+              unlocked: !!audio.unlocked,
+              musicOn: !!audio.musicOn,
+              lastSoundStatus: audio.lastSoundStatus,
+              soundCounts: { ...audio.soundCounts }
+            },
             overlay: { visible: overlay.classList.contains("show"), title: overlayTitle.textContent },
             controls: { pauseLabel: pauseBtn.textContent, mutedLabel: muteBtn.textContent }
           });
@@ -2446,11 +2647,13 @@
             event.target.closest &&
             event.target.closest("button, a, input, select, textarea") &&
             event.key !== "Escape" &&
-            event.key !== "Tab"
+            event.key !== "Tab" &&
+            event.key !== "m" &&
+            event.key !== "M"
           ) {
             return;
           }
-          if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) {
+          if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "m", "M"].includes(event.key)) {
             event.preventDefault();
           }
           if (
@@ -2475,7 +2678,9 @@
           ) {
             unlockAudio();
           }
-          if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
+          if (event.key === "m" || event.key === "M") {
+            toggleMute();
+          } else if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
             handleDirection("up");
           } else if (event.key === "ArrowDown" || event.key === "s" || event.key === "S") {
             handleDirection("down");
@@ -2493,7 +2698,7 @@
         function bindControls() {
           document.addEventListener("keydown", handleKeydown);
           startBtn.addEventListener("click", handleStartAction);
-          resetBtn.addEventListener("click", resetGame);
+          resetBtn.addEventListener("click", handleResetAction);
           pauseBtn.addEventListener("click", togglePause);
           muteBtn.addEventListener("click", toggleMute);
         }

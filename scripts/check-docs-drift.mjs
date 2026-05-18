@@ -4,44 +4,78 @@ import process from 'node:process';
 
 const root = process.cwd();
 
-const requiredCommands = [
+const humanRequiredCommands = [
   'validate-catalog.ps1',
-  'npm run test:docs',
-  'npm run test:tools',
-  'npm run test:capture-recipes',
-  'npm run test:a11y',
+  'npm test',
   'npm run test:games',
   'npm run capture:games:ci',
   'npm run audit:perf:ci'
 ];
 
-const validationSurfaces = [
+const generatorCommands = [
+  'npm run inject:meta',
+  'npm run build:sitemap',
+  'npm run build:feed',
+  'npm run build:og-images'
+];
+
+const humanValidationSurfaces = [
   'README.md',
   'CONTRIBUTING.md',
   'docs/game-contract.md',
   '.github/pull_request_template.md',
   '.github/ISSUE_TEMPLATE/workshop-request.md',
   '.github/workflows/workshop-request.yml',
-  '.github/workflows/workshop-draft-pr.yml',
-  '.github/workflows/validate-catalog.yml'
+  '.github/workflows/workshop-draft-pr.yml'
+];
+
+const generatorSurfaces = [
+  'README.md',
+  'CONTRIBUTING.md',
+  'docs/game-contract.md',
+  'ARCHITECTURE.md'
 ];
 
 const issues = [];
 
-for (const file of validationSurfaces) {
+function readText(file) {
   const absolute = path.join(root, file);
-  let text = '';
   try {
-    text = fs.readFileSync(absolute, 'utf8');
+    return fs.readFileSync(absolute, 'utf8');
   } catch (error) {
     issues.push(`${file}: unable to read (${error.message})`);
-    continue;
+    return '';
   }
+}
 
-  for (const command of requiredCommands) {
+function requireCommands(file, commands, label) {
+  const text = readText(file);
+  if (!text) return;
+  for (const command of commands) {
     if (!text.includes(command)) {
-      issues.push(`${file}: missing required validation command "${command}"`);
+      issues.push(`${file}: missing required ${label} command "${command}"`);
     }
+  }
+}
+
+for (const file of humanValidationSurfaces) {
+  requireCommands(file, humanRequiredCommands, 'publish-gate');
+}
+
+for (const file of generatorSurfaces) {
+  requireCommands(file, generatorCommands, 'generator');
+}
+
+const packageJson = JSON.parse(readText('package.json') || '{}');
+const scripts = packageJson.scripts || {};
+const fastGateScripts = Object.keys(scripts)
+  .filter((name) => name.startsWith('test:') && !['test:games', 'test:all'].includes(name))
+  .sort();
+
+for (const script of fastGateScripts) {
+  const command = `npm run ${script}`;
+  if (!readText('README.md').includes(command)) {
+    issues.push(`README.md: missing fast-gate command "${command}"`);
   }
 }
 
@@ -52,7 +86,10 @@ const requiredWorkflowJobs = [
   {
     id: 'catalog-docs-a11y',
     label: 'catalog/docs/a11y',
-    commands: ['validate-catalog.ps1', 'npm run test:docs', 'npm run test:tools', 'npm run test:capture-recipes', 'npm run test:a11y']
+    commands: [
+      'validate-catalog.ps1',
+      ...fastGateScripts.map((script) => `npm run ${script}`)
+    ]
   },
   {
     id: 'game-smoke',
@@ -170,4 +207,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log(`Docs drift check passed for ${validationSurfaces.length} validation surfaces.`);
+console.log(`Docs drift check passed for ${humanValidationSurfaces.length} validation surfaces.`);

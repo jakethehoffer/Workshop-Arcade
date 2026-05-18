@@ -9,21 +9,27 @@ Workshop Arcade is intentionally static: games are single HTML files in `website
 3. Update `websites/manifest.json`.
 4. Include `websites/workshop-runtime.js` before game scripts so sandboxed play has safe storage fallback.
 5. Follow `docs/game-contract.md` (in particular: visual cohesion pattern, modal/overlay accessibility, and diagnostic hooks).
-6. Run:
+6. Regenerate derived surfaces when the manifest changes:
+
+```powershell
+npm run inject:meta
+npm run build:sitemap
+npm run build:feed
+npm run build:og-images
+```
+
+7. Run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
-npm run test:docs
-npm run test:tools
-npm run test:capture-recipes
-npm run test:a11y
+npm test
 npm run test:games
 npm run capture:games:ci
 npm run audit:perf:ci
 ```
 
-These are the publish-ready gates mirrored by CI: docs drift, tooling syntax, capture recipe preflight, accessibility, game smoke coverage, strict render capture, and strict performance audit. CI groups them as catalog/docs/a11y, game smoke, performance audit, and render capture jobs. `npm run capture:games` is useful for optional local contact-sheet review, but `npm run capture:games:ci` is the enforced publish gate and every rendered surface must score 0.
+These are the publish-ready gates mirrored by CI: catalog validation, every fast `test:*` gate through `npm test`, game smoke coverage, strict render capture, and strict performance audit. CI groups them as catalog/docs/a11y, game smoke, performance audit, and render capture jobs. `npm run capture:games` is useful for optional local contact-sheet review, but `npm run capture:games:ci` is the enforced publish gate and every rendered surface must score 0.
 
 ## Remove a Game
 

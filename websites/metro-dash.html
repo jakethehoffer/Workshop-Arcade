@@ -73,16 +73,24 @@
     display:block;
   }
   canvas#game:focus-visible { outline:3px solid #4fc3f7; outline-offset:-6px; }
+  .hud-controls {
+    position:fixed; top:12px; right:12px; z-index:50;
+    display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px;
+    max-width:calc(100vw - 24px);
+  }
   .hud-btn {
-    position:fixed; top:12px; z-index:50;
     background:rgba(4,10,24,0.66); border:1px solid rgba(79,195,247,0.35);
     color:#e9fbff; padding:8px 12px; border-radius:9px; font-weight:800;
-    cursor:pointer; font-size:14px; backdrop-filter:blur(8px);
+    cursor:pointer; font-size:14px; line-height:1; white-space:nowrap; backdrop-filter:blur(8px);
     transition: background 0.15s;
   }
   .hud-btn:hover { background:rgba(0,0,0,0.8); }
-  #pauseBtn { right:72px; display:none; }
-  #helpBtn  { right:12px; }
+  .hud-toggle[aria-pressed="false"] {
+    color:#b7c3ce;
+    border-color:rgba(255,255,255,0.18);
+    background:rgba(4,10,24,0.5);
+  }
+  #pauseBtn { display:none; }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.75); }
   .overlay.show { display:grid; pointer-events:auto; }
   .card { background:linear-gradient(135deg,#1e1e2f,#16162a); border:1px solid rgba(255,255,255,0.1); padding:28px 30px; border-radius:18px; max-width:min(92vw,460px); box-shadow:0 20px 60px rgba(0,0,0,.7); pointer-events:auto; color:#c8c8d8; }
@@ -96,18 +104,25 @@
   .btn-primary { background:linear-gradient(135deg,#4fc3f7,#0288d1); color:#fff; }
   .btn-warn { background:linear-gradient(135deg,#ff9800,#e65100); color:#fff; }
   @media (max-width: 640px) {
-    .hud-btn { top:10px; padding:7px 10px; font-size:12px; }
-    #pauseBtn { right:64px; }
+    .hud-controls { top:8px; right:8px; gap:6px; max-width:calc(100vw - 16px); }
+    .hud-btn { padding:7px 8px; font-size:12px; border-radius:8px; }
     .card { padding:20px; border-radius:14px; }
     .card h2 { font-size:20px; }
+  }
+  @media (max-width: 380px) {
+    .hud-btn { padding:6px 7px; font-size:11px; }
   }
 </style>
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
 <canvas id="game" tabindex="0" aria-label="Metro Dash game canvas"></canvas>
-<button class="hud-btn" id="pauseBtn" type="button" aria-label="Pause or resume" title="Pause (P)">&#x23F8; Pause</button>
-<button class="hud-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">? Help</button>
+<div class="hud-controls" aria-label="Game controls">
+  <button class="hud-btn hud-toggle" id="soundToggle" type="button" aria-label="Toggle sound effects" aria-pressed="true" title="Sound effects">SFX On</button>
+  <button class="hud-btn hud-toggle" id="musicToggle" type="button" aria-label="Toggle music" aria-pressed="true" title="Music">BGM On</button>
+  <button class="hud-btn" id="pauseBtn" type="button" aria-label="Pause or resume" title="Pause (P)">&#x23F8; Pause</button>
+  <button class="hud-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">? Help</button>
+</div>
 
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="card">
@@ -175,6 +190,21 @@ function projS(z) { return lerp(1, 0.015, z); }
 const particles = [];
 const scorePops = [];
 const pickupRings = [];
+function createFeedbackCounters() {
+  return {
+    start: 0,
+    restart: 0,
+    laneChange: 0,
+    jump: 0,
+    dodge: 0,
+    pickup: 0,
+    nearMiss: 0,
+    crash: 0,
+    newBest: 0,
+    pause: 0,
+    resume: 0
+  };
+}
 const feedback = {
   nearMissCount: 0,
   dangerCue: 0,
@@ -184,6 +214,9 @@ const feedback = {
   lastNearMissAge: 999,
   lastEvent: null,
   lastEventAge: null,
+  lastDiagnosticEvent: null,
+  lastDiagnosticEventAge: null,
+  eventCounters: createFeedbackCounters(),
   activeCueCount: 0,
   startCount: 0,
   laneChangeCount: 0,
@@ -220,6 +253,9 @@ function updateFeedback(dt60) {
     feedback.lastEventAge += dt60;
     feedback.activeCueCount = feedback.lastEventAge <= 42 ? 1 : 0;
   }
+  if (feedback.lastDiagnosticEventAge !== null) {
+    feedback.lastDiagnosticEventAge += dt60;
+  }
   feedback.dangerCue = Math.max(0, feedback.dangerCue - 0.08 * dt60);
   feedback.crashFlash = Math.max(0, feedback.crashFlash - 0.045 * dt60);
   for (let i = scorePops.length - 1; i >= 0; i--) {
@@ -236,17 +272,35 @@ function updateFeedback(dt60) {
     if (r.life <= 0) pickupRings.splice(i, 1);
   }
 }
+function recordDiagnosticEvent(type, counterKey) {
+  feedback.lastDiagnosticEvent = type;
+  feedback.lastDiagnosticEventAge = 0;
+  const key = counterKey || type;
+  if (feedback.eventCounters && Object.prototype.hasOwnProperty.call(feedback.eventCounters, key)) {
+    feedback.eventCounters[key] += 1;
+  }
+}
 function recordActionFeedback(type, details = {}) {
   feedback.lastEvent = type;
   feedback.lastEventAge = 0;
   feedback.activeCueCount = 1;
-  if (type === "start") feedback.startCount += 1;
+  if (type === "start") {
+    feedback.startCount += 1;
+    recordDiagnosticEvent("start");
+  }
   if (type === "lane-change") {
     feedback.laneChangeCount += 1;
     feedback.lastLaneDelta = details.delta || 0;
+    recordDiagnosticEvent("lane-change", "laneChange");
   }
-  if (type === "jump") feedback.jumpCount += 1;
-  if (type === "slide") feedback.slideCount += 1;
+  if (type === "jump") {
+    feedback.jumpCount += 1;
+    recordDiagnosticEvent("jump");
+  }
+  if (type === "slide") {
+    feedback.slideCount += 1;
+    recordDiagnosticEvent("dodge");
+  }
   const px = projX(player.laneX, PLAYER_Z);
   const py = projY(PLAYER_Z) - 44 * projS(PLAYER_Z);
   if (type === "lane-change") {
@@ -712,6 +766,7 @@ function updateObstacles(dt60) {
         o.nearMissFired = true;
         feedback.nearMissCount++;
         feedback.lastNearMissAge = 0;
+        recordDiagnosticEvent("near-miss", "nearMiss");
         feedback.dangerCue = Math.max(feedback.dangerCue, 0.7);
         feedback.dangerLane = player.targetLane;
         const px = projX(player.laneX, PLAYER_Z);
@@ -719,6 +774,7 @@ function updateObstacles(dt60) {
         emitScorePop("CLOSE", px, py, "#7dd3fc");
         emitParticles(px, py, "#7dd3fc", 6, 3, 18);
         triggerShake(2, 5);
+        SFX.nearMiss();
       }
     }
   }
@@ -860,6 +916,7 @@ function updateCoins(dt60) {
         c.collected = true; coins += 10; SFX.coin();
         const cx2 = projX(c.lane, c.z), cy2 = projY(c.z) - 20 * projS(c.z);
         feedback.lastPickupAge = 0;
+        recordDiagnosticEvent("pickup");
         emitParticles(cx2, cy2, "#ffd700", 12, 4.8, 22);
         emitPickupRing(cx2, cy2, "#ffd700");
         emitScorePop("+10", cx2, cy2 - 18 * projS(c.z), "#ffe08a");
@@ -896,11 +953,39 @@ function drawCoins() {
 
 /* ===== AUDIO ===== */
 let audioCtx = null, masterGain = null, sfxGain = null, musicGain = null;
+let audioGestureReady = false;
+const SOUND_PREF_KEY = "metro-dash.sound.v1";
+const MUSIC_PREF_KEY = "metro-dash.music.v1";
+const audioPrefs = {
+  soundEnabled: readAudioPreference(SOUND_PREF_KEY, true),
+  musicEnabled: readAudioPreference(MUSIC_PREF_KEY, true)
+};
+const audioStats = { lastSound: null, soundCount: 0 };
+
+function readAudioPreference(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    if (value === null) return fallback;
+    if (value === "1" || value === "true" || value === "on") return true;
+    if (value === "0" || value === "false" || value === "off") return false;
+  } catch (_) {}
+  return fallback;
+}
+function writeAudioPreference(key, value) {
+  try { localStorage.setItem(key, value ? "1" : "0"); } catch (_) {}
+}
+function markAudioGesture() {
+  audioGestureReady = true;
+}
+["pointerdown", "keydown", "touchstart"].forEach(type => {
+  window.addEventListener(type, markAudioGesture, { capture: true, passive: true });
+});
 
 function ensureAudio() {
-  if (audioCtx) return;
+  if (audioCtx) return true;
+  if (!audioGestureReady) return false;
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
+  if (!AC) return false;
   audioCtx = new AC();
   masterGain = audioCtx.createGain(); masterGain.gain.value = 0.8;
   const comp = audioCtx.createDynamicsCompressor();
@@ -908,26 +993,50 @@ function ensureAudio() {
   masterGain.connect(comp); comp.connect(audioCtx.destination);
   sfxGain = audioCtx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(masterGain);
   musicGain = audioCtx.createGain(); musicGain.gain.value = 0.2; musicGain.connect(masterGain);
+  return true;
 }
-function resumeAudio() { ensureAudio(); if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }
+function resumeAudio() {
+  if (!ensureAudio()) return false;
+  if (audioCtx && audioCtx.state === "suspended") {
+    try { audioCtx.resume(); } catch (_) {}
+  }
+  return !!audioCtx;
+}
 
 function playTone(freq, time, dur, type, gain, target) {
-  if (!audioCtx) return;
+  const destination = target || sfxGain;
+  if (!audioCtx || !destination) return;
   const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
   osc.type = type || "sine"; osc.frequency.setValueAtTime(freq, time);
   g.gain.setValueAtTime(0.001, time);
   g.gain.exponentialRampToValueAtTime(gain || 0.1, time + 0.01);
   g.gain.exponentialRampToValueAtTime(0.001, time + dur);
-  osc.connect(g).connect(target || sfxGain);
+  osc.connect(g).connect(destination);
   osc.start(time); osc.stop(time + dur + 0.05);
 }
 
+function runSfx(name, scheduler) {
+  if (!audioPrefs.soundEnabled) return false;
+  if (!resumeAudio() || !audioCtx || !sfxGain) return false;
+  const t = audioCtx.currentTime;
+  scheduler(t);
+  audioStats.lastSound = name;
+  audioStats.soundCount += 1;
+  return true;
+}
+
 const SFX = {
-  coin() { ensureAudio(); if (!audioCtx) return; const t = audioCtx.currentTime; playTone(880, t, 0.08, "triangle", 0.1); playTone(1320, t + 0.06, 0.1, "triangle", 0.08); },
-  jump() { ensureAudio(); if (!audioCtx) return; const t = audioCtx.currentTime; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(600, t + 0.12); g.gain.setValueAtTime(0.001, t); g.gain.exponentialRampToValueAtTime(0.1, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15); o.connect(g).connect(sfxGain); o.start(t); o.stop(t + 0.2); },
-  slide() { ensureAudio(); if (!audioCtx) return; const t = audioCtx.currentTime; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(200, t); o.frequency.exponentialRampToValueAtTime(100, t + 0.1); g.gain.setValueAtTime(0.001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12); o.connect(g).connect(sfxGain); o.start(t); o.stop(t + 0.15); },
-  hit() { ensureAudio(); if (!audioCtx) return; const t = audioCtx.currentTime; playTone(200, t, 0.25, "sine", 0.18); playTone(80, t + 0.1, 0.35, "sine", 0.12); },
-  newHigh() { ensureAudio(); if (!audioCtx) return; const t = audioCtx.currentTime; playTone(523, t, 0.12, "triangle", 0.1); playTone(659, t + 0.1, 0.12, "triangle", 0.08); playTone(784, t + 0.2, 0.18, "triangle", 0.08); }
+  start() { runSfx("start", t => { playTone(392, t, 0.08, "triangle", 0.08); playTone(523, t + 0.08, 0.12, "triangle", 0.08); }); },
+  restart() { runSfx("restart", t => { playTone(330, t, 0.08, "triangle", 0.07); playTone(494, t + 0.07, 0.12, "triangle", 0.08); }); },
+  laneChange(delta) { runSfx("lane-change", t => { playTone(delta < 0 ? 392 : 440, t, 0.07, "square", 0.035); }); },
+  coin() { runSfx("coin", t => { playTone(880, t, 0.08, "triangle", 0.1); playTone(1320, t + 0.06, 0.1, "triangle", 0.08); }); },
+  jump() { runSfx("jump", t => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(600, t + 0.12); g.gain.setValueAtTime(0.001, t); g.gain.exponentialRampToValueAtTime(0.1, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15); o.connect(g).connect(sfxGain); o.start(t); o.stop(t + 0.2); }); },
+  dodge() { runSfx("dodge", t => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(200, t); o.frequency.exponentialRampToValueAtTime(100, t + 0.1); g.gain.setValueAtTime(0.001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12); o.connect(g).connect(sfxGain); o.start(t); o.stop(t + 0.15); }); },
+  nearMiss() { runSfx("near-miss", t => { playTone(740, t, 0.05, "triangle", 0.045); playTone(988, t + 0.05, 0.06, "triangle", 0.035); }); },
+  crash() { runSfx("crash", t => { playTone(200, t, 0.25, "sine", 0.18); playTone(80, t + 0.1, 0.35, "sine", 0.12); }); },
+  newHigh() { runSfx("new-best", t => { playTone(523, t, 0.12, "triangle", 0.1); playTone(659, t + 0.1, 0.12, "triangle", 0.08); playTone(784, t + 0.2, 0.18, "triangle", 0.08); }); },
+  pause() { runSfx("pause", t => { playTone(330, t, 0.07, "sine", 0.045); playTone(247, t + 0.06, 0.09, "sine", 0.04); }); },
+  resume() { runSfx("resume", t => { playTone(247, t, 0.07, "sine", 0.04); playTone(330, t + 0.06, 0.1, "sine", 0.045); }); }
 };
 
 /* ===== MUSIC ===== */
@@ -935,6 +1044,7 @@ const TEMPO = 130, STEP_DUR = 60 / TEMPO / 4;
 let mus = { on: false, timer: null, next: 0, step: 0 };
 
 function schedStep(time, step) {
+  if (!audioPrefs.musicEnabled || !audioCtx || !musicGain) return;
   const pos = step % 16;
   if (pos % 4 === 0) playTone(55, time, 0.15, "sine", 0.15, musicGain);
   if (pos % 2 === 0 && audioCtx) {
@@ -955,7 +1065,20 @@ function schedStep(time, step) {
     playTone(melody[Math.floor(step / 4) % melody.length], time, 0.18, "triangle", 0.04, musicGain);
   }
 }
-function startMusic() { ensureAudio(); if (!audioCtx || mus.on) return; mus.on = true; mus.next = audioCtx.currentTime + 0.05; mus.timer = setInterval(() => { if (!mus.on || !audioCtx) return; while (mus.next < audioCtx.currentTime + 0.15) { schedStep(mus.next, mus.step); mus.next += STEP_DUR; mus.step++; } }, 25); }
+function startMusic() {
+  if (!audioPrefs.musicEnabled) { stopMusic(); return; }
+  if (!resumeAudio() || !audioCtx || !musicGain || mus.on) return;
+  mus.on = true;
+  mus.next = audioCtx.currentTime + 0.05;
+  mus.timer = setInterval(() => {
+    if (!mus.on || !audioCtx || !audioPrefs.musicEnabled) return;
+    while (mus.next < audioCtx.currentTime + 0.15) {
+      schedStep(mus.next, mus.step);
+      mus.next += STEP_DUR;
+      mus.step++;
+    }
+  }, 25);
+}
 function stopMusic() { if (mus.timer) clearInterval(mus.timer); mus.timer = null; mus.on = false; }
 
 /* ===== GAME STATE ===== */
@@ -965,6 +1088,7 @@ let highScore = 0;
 try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
 
 function startGame() {
+  const previousState = state;
   state = "playing"; distance = 0; coins = 0; gameSpeed = 3;
   Object.assign(player, { lane:0, targetLane:0, laneX:0, y:0, vy:0, isJumping:false, isSliding:false, slideTimer:0, height:1, runPhase:0 });
   obstacles.length = 0; coinObjects.length = 0; particles.length = 0; scorePops.length = 0; pickupRings.length = 0;
@@ -977,6 +1101,9 @@ function startGame() {
     lastNearMissAge: 999,
     lastEvent: null,
     lastEventAge: null,
+    lastDiagnosticEvent: null,
+    lastDiagnosticEventAge: null,
+    eventCounters: createFeedbackCounters(),
     activeCueCount: 0,
     startCount: 0,
     laneChangeCount: 0,
@@ -987,12 +1114,19 @@ function startGame() {
   spawnTimer = 0; coinSpawnTimer = 0; newBest = false;
   pauseBtn.style.display = "block";
   recordActionFeedback("start");
-  resumeAudio(); startMusic();
+  if (previousState === "title") {
+    SFX.start();
+  } else {
+    recordDiagnosticEvent("restart");
+    SFX.restart();
+  }
+  startMusic();
 }
 
 function setGameOver() {
   if (state === "gameover") return;
   state = "gameover"; stopMusic(); pauseBtn.style.display = "none";
+  recordDiagnosticEvent("crash");
   feedback.crashFlash = 1;
   feedback.dangerCue = 0;
   triggerShake(16, 20);
@@ -1000,22 +1134,28 @@ function setGameOver() {
   const px = projX(player.laneX, PLAYER_Z), py = projY(PLAYER_Z) - 40 * projS(PLAYER_Z);
   emitParticles(px, py, "#ff5252", 20, 8, 40);
   emitParticles(px, py, "#ffd700", 10, 6, 30);
+  SFX.crash();
   if (Math.floor(distance) > highScore) {
     highScore = Math.floor(distance); newBest = true;
     try { localStorage.setItem(HS_KEY, String(highScore)); } catch(_) {}
+    recordDiagnosticEvent("new-best", "newBest");
     SFX.newHigh();
-  } else { SFX.hit(); }
+  }
 }
 
 function togglePause() {
   if (state === "playing") {
     state = "paused";
+    recordDiagnosticEvent("pause");
+    SFX.pause();
     stopMusic();
     pauseOverlay.classList.add("show");
     activateDialog(pauseOverlay, pauseBtn, resumeBtn, () => togglePause());
   }
   else if (state === "paused") {
     state = "playing";
+    recordDiagnosticEvent("resume");
+    SFX.resume();
     deactivateDialog(pauseOverlay);
     pauseOverlay.classList.remove("show");
     lastTime = null;
@@ -1028,11 +1168,13 @@ function moveLeft() {
   if (state !== "playing" || player.targetLane <= -1) return;
   player.targetLane--;
   recordActionFeedback("lane-change", { delta: -1 });
+  SFX.laneChange(-1);
 }
 function moveRight() {
   if (state !== "playing" || player.targetLane >= 1) return;
   player.targetLane++;
   recordActionFeedback("lane-change", { delta: 1 });
+  SFX.laneChange(1);
 }
 function doJump() {
   if (state !== "playing" || player.isJumping || player.isSliding) return;
@@ -1044,7 +1186,7 @@ function doSlide() {
   if (state !== "playing" || player.isJumping || player.isSliding) return;
   player.isSliding = true; player.slideTimer = SLIDE_DUR;
   recordActionFeedback("slide");
-  SFX.slide();
+  SFX.dodge();
 }
 
 document.addEventListener("keydown", e => {
@@ -1194,10 +1336,34 @@ const pauseBtn = document.getElementById("pauseBtn");
 const pauseOverlay = document.getElementById("pauseOverlay");
 const resumeBtn = document.getElementById("resumeBtn");
 const restartFromPause = document.getElementById("restartFromPause");
+const soundToggle = document.getElementById("soundToggle");
+const musicToggle = document.getElementById("musicToggle");
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let activeDialog = null;
 let activeDialogTrigger = null;
 let activeDialogClose = null;
+
+function updateAudioToggleButtons() {
+  soundToggle.setAttribute("aria-pressed", String(audioPrefs.soundEnabled));
+  soundToggle.textContent = audioPrefs.soundEnabled ? "SFX On" : "SFX Off";
+  soundToggle.title = audioPrefs.soundEnabled ? "Sound effects on" : "Sound effects off";
+  musicToggle.setAttribute("aria-pressed", String(audioPrefs.musicEnabled));
+  musicToggle.textContent = audioPrefs.musicEnabled ? "BGM On" : "BGM Off";
+  musicToggle.title = audioPrefs.musicEnabled ? "Music on" : "Music off";
+}
+function setSoundEnabled(enabled) {
+  audioPrefs.soundEnabled = !!enabled;
+  writeAudioPreference(SOUND_PREF_KEY, audioPrefs.soundEnabled);
+  updateAudioToggleButtons();
+}
+function setMusicEnabled(enabled) {
+  audioPrefs.musicEnabled = !!enabled;
+  writeAudioPreference(MUSIC_PREF_KEY, audioPrefs.musicEnabled);
+  updateAudioToggleButtons();
+  if (!audioPrefs.musicEnabled) stopMusic();
+  else if (state === "playing") startMusic();
+}
+updateAudioToggleButtons();
 
 let helpOpen = false;
 function dialogFocusables(dialog) {
@@ -1257,6 +1423,8 @@ function closeHelp() {
 helpBtn.onclick = e => { e.preventDefault(); openHelp(); };
 helpClose.onclick = e => { e.preventDefault(); closeHelp(); };
 helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) closeHelp(); });
+soundToggle.onclick = e => { e.preventDefault(); markAudioGesture(); setSoundEnabled(!audioPrefs.soundEnabled); };
+musicToggle.onclick = e => { e.preventDefault(); markAudioGesture(); setMusicEnabled(!audioPrefs.musicEnabled); };
 pauseBtn.onclick = e => { e.preventDefault(); togglePause(); };
 resumeBtn.onclick = e => { e.preventDefault(); togglePause(); };
 restartFromPause.onclick = e => { e.preventDefault(); deactivateDialog(pauseOverlay, false); pauseOverlay.classList.remove("show"); startGame(); };
@@ -1319,12 +1487,48 @@ function renderGameToText() {
       particles: particles.length,
       feedbackParticles: particles.length + scorePops.length + pickupRings.length
     },
+    audio: {
+      soundEnabled: !!audioPrefs.soundEnabled,
+      musicEnabled: !!audioPrefs.musicEnabled,
+      audioReady: !!(audioCtx && audioCtx.state !== "closed"),
+      musicReady: !!(audioPrefs.musicEnabled && mus.on && audioCtx && musicGain),
+      lastSound: audioStats.lastSound,
+      soundCount: audioStats.soundCount
+    },
+    feedbackCounters: {
+      start: feedback.eventCounters.start,
+      restart: feedback.eventCounters.restart,
+      laneChange: feedback.eventCounters.laneChange,
+      jump: feedback.eventCounters.jump,
+      dodge: feedback.eventCounters.dodge,
+      pickup: feedback.eventCounters.pickup,
+      nearMiss: feedback.eventCounters.nearMiss,
+      crash: feedback.eventCounters.crash,
+      newBest: feedback.eventCounters.newBest,
+      pause: feedback.eventCounters.pause,
+      resume: feedback.eventCounters.resume
+    },
     feedback: {
       nearMissCount: feedback.nearMissCount,
       lastPickupAge: Math.round(feedback.lastPickupAge * 100) / 100,
       lastNearMissAge: Math.round(feedback.lastNearMissAge * 100) / 100,
       lastEvent: feedback.lastEvent,
       lastEventAge: feedback.lastEventAge === null ? null : Math.round(feedback.lastEventAge * 100) / 100,
+      lastDiagnosticEvent: feedback.lastDiagnosticEvent,
+      lastDiagnosticEventAge: feedback.lastDiagnosticEventAge === null ? null : Math.round(feedback.lastDiagnosticEventAge * 100) / 100,
+      eventCounters: {
+        start: feedback.eventCounters.start,
+        restart: feedback.eventCounters.restart,
+        laneChange: feedback.eventCounters.laneChange,
+        jump: feedback.eventCounters.jump,
+        dodge: feedback.eventCounters.dodge,
+        pickup: feedback.eventCounters.pickup,
+        nearMiss: feedback.eventCounters.nearMiss,
+        crash: feedback.eventCounters.crash,
+        newBest: feedback.eventCounters.newBest,
+        pause: feedback.eventCounters.pause,
+        resume: feedback.eventCounters.resume
+      },
       activeCueCount: feedback.activeCueCount,
       startCount: feedback.startCount,
       laneChangeCount: feedback.laneChangeCount,
