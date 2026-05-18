@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Prism Relay</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Rotate mirrors and splitters to relay colored beams into matching receivers before the move budget runs out." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/prism-relay.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Prism Relay — Workshop Arcade" />
+<meta property="og:description" content="Rotate mirrors and splitters to relay colored beams into matching receivers before the move budget runs out." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/prism-relay.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/prism-relay.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Prism Relay — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Prism Relay — Workshop Arcade" />
+<meta name="twitter:description" content="Rotate mirrors and splitters to relay colored beams into matching receivers before the move budget runs out." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/prism-relay.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Prism Relay",
+  "description": "Rotate mirrors and splitters to relay colored beams into matching receivers before the move budget runs out.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/prism-relay.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/prism-relay.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Rotate mirrors and splitters to relay colored beams into matching receivers before the move budget runs out." />
+<meta name="theme-color" content="#08111d" />
+<link rel="icon" href="data:," />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:16px 10px 22px;
+    background:
+      radial-gradient(760px 520px at 6% -8%,rgba(34,211,238,.16),transparent 62%),
+      radial-gradient(720px 500px at 96% 2%,rgba(244,114,182,.13),transparent 64%),
+      linear-gradient(180deg,#0b0f14,#07101a 82%,#040812);
+  }
+  .shell{width:min(920px,100%);display:flex;flex-direction:column;gap:10px}
+  .brand{line-height:1;user-select:none}
+  .eyebrow{display:block;font-size:10px;text-transform:uppercase;color:#5eead4;font-weight:900}
+  .title{display:block;margin-top:4px;font-size:24px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.18)}
+  .hud{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .pill{
+    min-width:0;padding:8px 9px;border-radius:8px;text-align:center;line-height:1.05;
+    border:1px solid rgba(94,234,212,.23);background:linear-gradient(180deg,rgba(17,27,47,.94),rgba(8,16,30,.96));
+    box-shadow:0 8px 18px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .pill[data-hot=true]{border-color:rgba(94,234,212,.66);box-shadow:0 0 18px rgba(94,234,212,.14),0 8px 18px rgba(0,0,0,.26)}
+  .pill[data-warn=true]{border-color:rgba(251,113,133,.66);box-shadow:0 0 18px rgba(251,113,133,.14),0 8px 18px rgba(0,0,0,.26)}
+  .label{display:block;font-size:9px;text-transform:uppercase;color:#5eead4;font-weight:900;white-space:nowrap}
+  .value{display:block;margin-top:3px;font-size:18px;font-weight:950;color:#f8fbff;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stage-wrap{
+    width:100%;border:1px solid rgba(94,234,212,.28);border-radius:10px;overflow:hidden;background:#07101a;
+    box-shadow:0 20px 42px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:1.08;max-height:66vh;background:#06101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(94,234,212,.82);outline-offset:-4px}
+  .status{min-height:18px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{
+    min-height:38px;border-radius:8px;border:1px solid rgba(94,234,212,.24);
+    background:linear-gradient(180deg,rgba(20,30,50,.94),rgba(11,17,32,.96));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:850;text-transform:uppercase;padding:8px 12px;cursor:pointer;
+    box-shadow:0 7px 16px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  button:hover{border-color:rgba(94,234,212,.58)}
+  button.primary{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;box-shadow:0 10px 22px rgba(34,211,238,.24)}
+  button:disabled{cursor:not-allowed;opacity:.5}
+  button[aria-pressed=false]{color:rgba(230,237,243,.78);border-color:rgba(255,255,255,.17)}
+  .hint{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
+  @media (max-width:640px){
+    body{padding:12px 8px 18px}.shell{gap:8px}.title{font-size:19px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .pill{padding:7px 6px}.value{font-size:15px}canvas{max-height:45vh}button{flex:1 1 118px;font-size:11px;padding:8px}.hint{font-size:11px}
+  }
+  @media (max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Prism Relay</span></div>
+  <div class="hud" aria-label="Prism Relay status">
+    <div class="pill"><span class="label">Stage</span><span id="stageValue" class="value">1 / 4</span></div>
+    <div class="pill"><span class="label">Moves</span><span id="movesValue" class="value">0 / 4</span></div>
+    <div class="pill" id="litPill"><span class="label">Receivers</span><span id="litValue" class="value">0 / 1</span></div>
+    <div class="pill"><span class="label">Score</span><span id="scoreValue" class="value">0</span></div>
+    <div class="pill"><span class="label">Best</span><span id="bestValue" class="value">0</span></div>
+  </div>
+  <div class="stage-wrap"><canvas id="game" width="720" height="668" tabindex="0" aria-label="Prism Relay canvas. Click a mirror or splitter to rotate it. Use arrows or WASD to move the cursor, Space or Enter to rotate, R to restart, N for the next solved stage, M for sound, and F for fullscreen."></canvas></div>
+  <div id="statusLine" class="status" aria-live="polite">Rotate mirrors to feed matching receivers.</div>
+  <div class="controls" aria-label="Prism Relay controls">
+    <button id="restartBtn" type="button">Reset</button>
+    <button id="nextBtn" class="primary" type="button" disabled>Next Stage</button>
+    <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button id="fullscreenBtn" type="button">Fullscreen</button>
+  </div>
+  <div class="hint">Click or tap a mirror/splitter to rotate. Arrows/WASD move cursor. Space/Enter rotate. R resets stage. N next solved stage. F fullscreen. M sound.</div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const GRID = 7;
+  const PAD = 46;
+  const CELL = (W - PAD * 2) / GRID;
+  const BOARD_TOP = 24;
+  const BEST_KEY = "prism-relay.best.v1";
+  const SOUND_KEY = "prism-relay.sound.v1";
+  const DIRS = [
+    { r: -1, c: 0, name: "up" },
+    { r: 0, c: 1, name: "right" },
+    { r: 1, c: 0, name: "down" },
+    { r: 0, c: -1, name: "left" },
+  ];
+  const COLORS = {
+    red: { beam: "#fb7185", dim: "rgba(251,113,133,.18)" },
+    cyan: { beam: "#22d3ee", dim: "rgba(34,211,238,.18)" },
+    amber: { beam: "#fbbf24", dim: "rgba(251,191,36,.18)" },
+    violet: { beam: "#a78bfa", dim: "rgba(167,139,250,.18)" },
+  };
+
+  const els = {
+    stage: document.getElementById("stageValue"),
+    moves: document.getElementById("movesValue"),
+    lit: document.getElementById("litValue"),
+    litPill: document.getElementById("litPill"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    status: document.getElementById("statusLine"),
+    restart: document.getElementById("restartBtn"),
+    next: document.getElementById("nextBtn"),
+    sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn"),
+  };
+
+  const STAGES = [
+    {
+      name: "First Bend",
+      budget: 4,
+      note: "Two slashes route the red beam into the upper receiver.",
+      components: [
+        { type: "source", r: 3, c: 0, color: "red", dir: 1 },
+        { type: "receiver", r: 0, c: 6, color: "red" },
+        { type: "mirror", r: 3, c: 3, rot: 1 },
+        { type: "mirror", r: 0, c: 3, rot: 1 },
+        { type: "blocker", r: 4, c: 5 },
+      ],
+    },
+    {
+      name: "Split Prism",
+      budget: 5,
+      note: "A vertical splitter feeds both cyan receivers.",
+      components: [
+        { type: "source", r: 3, c: 0, color: "cyan", dir: 1 },
+        { type: "receiver", r: 0, c: 6, color: "cyan" },
+        { type: "receiver", r: 6, c: 6, color: "cyan" },
+        { type: "splitter", r: 3, c: 3, rot: 1 },
+        { type: "mirror", r: 0, c: 3, rot: 0 },
+        { type: "mirror", r: 6, c: 3, rot: 1 },
+        { type: "blocker", r: 2, c: 5 },
+        { type: "blocker", r: 4, c: 5 },
+      ],
+    },
+    {
+      name: "Crossed Colors",
+      budget: 8,
+      note: "Two colors can cross on empty glass without mixing.",
+      components: [
+        { type: "source", r: 6, c: 0, color: "cyan", dir: 1 },
+        { type: "receiver", r: 1, c: 6, color: "cyan" },
+        { type: "source", r: 0, c: 0, color: "amber", dir: 1 },
+        { type: "receiver", r: 5, c: 0, color: "amber" },
+        { type: "mirror", r: 6, c: 2, rot: 1 },
+        { type: "mirror", r: 1, c: 2, rot: 1 },
+        { type: "mirror", r: 0, c: 4, rot: 0 },
+        { type: "mirror", r: 5, c: 4, rot: 1 },
+        { type: "blocker", r: 3, c: 3 },
+      ],
+    },
+    {
+      name: "Relay Array",
+      budget: 9,
+      note: "Split red while cyan drops through the crossing lane.",
+      components: [
+        { type: "source", r: 3, c: 0, color: "red", dir: 1 },
+        { type: "receiver", r: 1, c: 6, color: "red" },
+        { type: "receiver", r: 5, c: 6, color: "red" },
+        { type: "source", r: 0, c: 6, color: "cyan", dir: 3 },
+        { type: "receiver", r: 6, c: 4, color: "cyan" },
+        { type: "splitter", r: 3, c: 2, rot: 1 },
+        { type: "mirror", r: 1, c: 2, rot: 1 },
+        { type: "mirror", r: 5, c: 2, rot: 0 },
+        { type: "mirror", r: 0, c: 4, rot: 1 },
+        { type: "blocker", r: 2, c: 5 },
+        { type: "blocker", r: 4, c: 5 },
+      ],
+    },
+  ];
+
+  function safeGet(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null || raw === undefined || raw === "") return fallback;
+      try { return JSON.parse(raw); } catch (_) { return raw; }
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value)); } catch (_) {}
+  }
+  function loadBest() {
+    const raw = safeGet(BEST_KEY, 0);
+    const num = Number(raw && typeof raw === "object" ? raw.bestScore : raw);
+    return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0;
+  }
+  function loadSound() {
+    const raw = safeGet(SOUND_KEY, true);
+    if (typeof raw === "boolean") return raw;
+    if (raw && typeof raw === "object") {
+      if (typeof raw.soundEnabled === "boolean") return raw.soundEnabled;
+      if (typeof raw.muted === "boolean") return !raw.muted;
+    }
+    const value = String(raw).toLowerCase();
+    if (["0", "false", "off", "muted", "disabled"].includes(value)) return false;
+    if (["1", "true", "on", "enabled"].includes(value)) return true;
+    return true;
+  }
+  function persistSound() {
+    safeSet(SOUND_KEY, { soundEnabled: state.soundEnabled, muted: !state.soundEnabled });
+  }
+
+  const state = {
+    mode: "playing",
+    stageIndex: 0,
+    moves: 0,
+    budget: STAGES[0].budget,
+    score: 0,
+    baseScore: 0,
+    bestScore: loadBest(),
+    components: [],
+    beams: [],
+    receivers: [],
+    cursor: { r: 3, c: 3 },
+    selectedTile: null,
+    feedback: "ready",
+    feedbackMs: 0,
+    solved: false,
+    complete: false,
+    gameOver: false,
+    soundEnabled: loadSound(),
+    lastSound: "none",
+    userGesture: false,
+    soundCount: 0,
+  };
+
+  let audioCtx = null;
+  let lastFrame = performance.now();
+
+  function cloneComponent(component, index) {
+    return {
+      id: `${component.type}-${index}`,
+      type: component.type,
+      r: component.r,
+      c: component.c,
+      color: component.color || null,
+      dir: Number.isInteger(component.dir) ? component.dir : null,
+      rot: Number.isInteger(component.rot) ? component.rot : 0,
+    };
+  }
+
+  function buildGrid() {
+    const grid = Array.from({ length: GRID }, () => Array(GRID).fill(null));
+    for (const component of state.components) grid[component.r][component.c] = component;
+    return grid;
+  }
+
+  function receiverKey(r, c) {
+    return `${r},${c}`;
+  }
+
+  function opposite(dir) {
+    return (dir + 2) % 4;
+  }
+
+  function mirrorOut(dir, rot) {
+    if (rot % 2 === 0) return [1, 0, 3, 2][dir];
+    return [3, 2, 1, 0][dir];
+  }
+
+  function splitterOut(dir, rot) {
+    const axis = rot % 2 === 0 ? 0 : 1;
+    const outputs = [axis, (axis + 2) % 4];
+    return outputs.filter((out) => out !== opposite(dir));
+  }
+
+  function simulateBeams() {
+    const grid = buildGrid();
+    const lit = new Map();
+    const received = new Map();
+    const receivers = state.components.filter((component) => component.type === "receiver");
+    for (const receiver of receivers) {
+      lit.set(receiverKey(receiver.r, receiver.c), false);
+      received.set(receiverKey(receiver.r, receiver.c), []);
+    }
+
+    const beams = [];
+    const queue = state.components
+      .filter((component) => component.type === "source")
+      .map((source) => ({
+        r: source.r,
+        c: source.c,
+        dir: source.dir,
+        color: source.color,
+        start: { r: source.r, c: source.c },
+      }));
+    const visited = new Set();
+    let guard = 0;
+
+    while (queue.length && guard < 220) {
+      guard += 1;
+      const beam = queue.shift();
+      let r = beam.r;
+      let c = beam.c;
+      let dir = beam.dir;
+      let start = { ...beam.start };
+
+      for (let travel = 0; travel < 48; travel += 1) {
+        const next = DIRS[dir];
+        const nr = r + next.r;
+        const nc = c + next.c;
+        if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID) {
+          beams.push({ color: beam.color, from: start, to: { r, c }, dir, end: "edge" });
+          break;
+        }
+
+        const key = `${beam.color}:${nr},${nc}:${dir}`;
+        if (visited.has(key)) {
+          beams.push({ color: beam.color, from: start, to: { r: nr, c: nc }, dir, end: "loop" });
+          break;
+        }
+        visited.add(key);
+
+        const component = grid[nr][nc];
+        if (!component) {
+          r = nr;
+          c = nc;
+          continue;
+        }
+
+        beams.push({ color: beam.color, from: start, to: { r: nr, c: nc }, dir, end: component.type });
+
+        if (component.type === "blocker" || component.type === "source") break;
+        if (component.type === "receiver") {
+          const key2 = receiverKey(component.r, component.c);
+          const seen = received.get(key2) || [];
+          seen.push(beam.color);
+          received.set(key2, seen);
+          if (component.color === beam.color) lit.set(key2, true);
+          break;
+        }
+        if (component.type === "mirror") {
+          dir = mirrorOut(dir, component.rot);
+          r = nr;
+          c = nc;
+          start = { r, c };
+          continue;
+        }
+        if (component.type === "splitter") {
+          for (const out of splitterOut(dir, component.rot)) {
+            queue.push({ r: nr, c: nc, dir: out, color: beam.color, start: { r: nr, c: nc } });
+          }
+          break;
+        }
+      }
+    }
+
+    state.beams = beams;
+    state.receivers = receivers.map((receiver) => {
+      const key = receiverKey(receiver.r, receiver.c);
+      return {
+        r: receiver.r,
+        c: receiver.c,
+        color: receiver.color,
+        lit: Boolean(lit.get(key)),
+        received: received.get(key) || [],
+      };
+    });
+  }
+
+  function countLit() {
+    return state.receivers.filter((receiver) => receiver.lit).length;
+  }
+
+  function stageAward() {
+    return 90 + state.stageIndex * 35 + state.receivers.length * 30 + Math.max(0, state.budget - state.moves) * 14;
+  }
+
+  function checkStageState() {
+    simulateBeams();
+    const allLit = state.receivers.length > 0 && state.receivers.every((receiver) => receiver.lit);
+    if (allLit && !state.solved) {
+      state.solved = true;
+      state.score = state.baseScore + stageAward();
+      if (state.score > state.bestScore) {
+        state.bestScore = state.score;
+        safeSet(BEST_KEY, state.bestScore);
+      }
+      if (state.stageIndex === STAGES.length - 1) {
+        state.mode = "complete";
+        state.complete = true;
+        state.gameOver = true;
+        setFeedback("Run complete. All receivers are locked.", 1200);
+        playSound("complete");
+      } else {
+        state.mode = "solved";
+        setFeedback("Stage solved. Press N for the next relay.", 1000);
+        playSound("solve");
+      }
+    } else if (!allLit && !state.solved && state.moves >= state.budget) {
+      state.mode = "game-over";
+      state.gameOver = true;
+      setFeedback("Move budget spent. Press R to restart.", 900);
+      playSound("fail");
+    }
+  }
+
+  function setFeedback(text, ms) {
+    state.feedback = text;
+    state.feedbackMs = Math.max(state.feedbackMs, ms);
+  }
+
+  function loadStage(index, baseScore) {
+    const stage = STAGES[index];
+    state.stageIndex = index;
+    state.budget = stage.budget;
+    state.moves = 0;
+    state.baseScore = baseScore;
+    state.score = baseScore;
+    state.components = stage.components.map(cloneComponent);
+    state.solved = false;
+    state.complete = false;
+    state.gameOver = false;
+    state.mode = "playing";
+    state.selectedTile = null;
+    const firstRotatable = state.components.find((component) => component.type === "mirror" || component.type === "splitter");
+    state.cursor = firstRotatable ? { r: firstRotatable.r, c: firstRotatable.c } : { r: 0, c: 0 };
+    setFeedback(stage.note, 520);
+    simulateBeams();
+    updateHud();
+    render();
+  }
+
+  function restartStage() {
+    if (state.mode === "complete") {
+      loadStage(0, 0);
+      setFeedback("New run started.", 620);
+    } else {
+      loadStage(state.stageIndex, state.baseScore);
+      setFeedback("Stage restarted.", 620);
+    }
+    playSound("restart");
+  }
+
+  function nextStage() {
+    if (state.mode === "complete") {
+      loadStage(0, 0);
+      playSound("restart");
+      return;
+    }
+    if (!state.solved || state.stageIndex >= STAGES.length - 1) return;
+    loadStage(state.stageIndex + 1, state.score);
+    setFeedback("Next stage armed.", 620);
+    playSound("next");
+  }
+
+  function componentAt(r, c) {
+    return state.components.find((component) => component.r === r && component.c === c) || null;
+  }
+
+  function isRotatable(component) {
+    return component && (component.type === "mirror" || component.type === "splitter");
+  }
+
+  function rotateTile(r, c) {
+    if (state.gameOver || state.solved) {
+      setFeedback(state.solved ? "Press N for the next stage." : "Press R to restart.", 520);
+      render();
+      return false;
+    }
+    const component = componentAt(r, c);
+    state.cursor = { r, c };
+    if (!isRotatable(component)) {
+      state.selectedTile = component ? { r, c, type: component.type } : { r, c, type: "empty" };
+      setFeedback("Select a mirror or splitter.", 420);
+      playSound("bad");
+      render();
+      return false;
+    }
+    component.rot = (component.rot + 1) % (component.type === "mirror" ? 2 : 2);
+    state.moves += 1;
+    state.selectedTile = {
+      r,
+      c,
+      type: component.type,
+      rotation: component.rot,
+      orientation: component.type === "mirror" ? (component.rot % 2 === 0 ? "/" : "\\") : (component.rot % 2 === 0 ? "vertical" : "horizontal"),
+    };
+    setFeedback(`${component.type === "mirror" ? "Mirror" : "Splitter"} rotated.`, 420);
+    playSound("rotate");
+    checkStageState();
+    updateHud();
+    render();
+    return true;
+  }
+
+  function tileFromPointer(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * W / rect.width;
+    const y = (event.clientY - rect.top) * H / rect.height;
+    const c = Math.floor((x - PAD) / CELL);
+    const r = Math.floor((y - BOARD_TOP - PAD) / CELL);
+    if (r < 0 || r >= GRID || c < 0 || c >= GRID) return null;
+    return { r, c };
+  }
+
+  function moveCursor(dr, dc) {
+    state.cursor = {
+      r: Math.max(0, Math.min(GRID - 1, state.cursor.r + dr)),
+      c: Math.max(0, Math.min(GRID - 1, state.cursor.c + dc)),
+    };
+    setFeedback("Cursor moved.", 170);
+    render();
+  }
+
+  function ensureAudio() {
+    if (!state.userGesture || !state.soundEnabled) return null;
+    if (audioCtx) return audioCtx;
+    try {
+      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextCtor) return null;
+      audioCtx = new AudioContextCtor();
+    } catch (_) {
+      audioCtx = null;
+    }
+    return audioCtx;
+  }
+
+  function playSound(name) {
+    if (!state.soundEnabled) {
+      state.lastSound = `muted-${name}`;
+      return;
+    }
+    if (!state.userGesture) {
+      state.lastSound = `queued-${name}`;
+      return;
+    }
+    const ac = ensureAudio();
+    if (!ac) {
+      state.lastSound = `no-audio-${name}`;
+      return;
+    }
+    if (ac.state === "suspended") {
+      try { ac.resume(); } catch (_) {}
+    }
+    const now = ac.currentTime;
+    const freq = {
+      rotate: 420,
+      solve: 720,
+      complete: 880,
+      fail: 150,
+      bad: 180,
+      next: 560,
+      restart: 320,
+      toggle: 660,
+    }[name] || 360;
+    const dur = name === "complete" ? 0.18 : 0.11;
+    const gain = name === "fail" || name === "bad" ? 0.045 : 0.04;
+    const osc = ac.createOscillator();
+    const amp = ac.createGain();
+    osc.type = name === "fail" || name === "bad" ? "sawtooth" : "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    if (name === "complete") osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + dur);
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.exponentialRampToValueAtTime(gain, now + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    osc.connect(amp).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.025);
+    state.lastSound = name;
+    state.soundCount += 1;
+  }
+
+  function markGesture() {
+    state.userGesture = true;
+  }
+
+  function toggleSound() {
+    markGesture();
+    state.soundEnabled = !state.soundEnabled;
+    persistSound();
+    if (state.soundEnabled) playSound("toggle");
+    else state.lastSound = "muted-toggle";
+    updateHud();
+    render();
+  }
+
+  function toggleFullscreen() {
+    markGesture();
+    const doc = document;
+    if (doc.fullscreenElement && doc.exitFullscreen) {
+      doc.exitFullscreen().catch(() => {});
+      return;
+    }
+    const target = doc.documentElement || document.body;
+    if (target.requestFullscreen) target.requestFullscreen().catch(() => {});
+  }
+
+  function boardXY(r, c) {
+    return {
+      x: PAD + c * CELL + CELL / 2,
+      y: BOARD_TOP + PAD + r * CELL + CELL / 2,
+    };
+  }
+
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "#0a1424");
+    grad.addColorStop(1, "#040812");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(94,234,212,.055)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 18; i += 1) {
+      ctx.beginPath();
+      ctx.moveTo((i * 53) % W, 0);
+      ctx.lineTo((i * 53 + 130) % W, H);
+      ctx.stroke();
+    }
+  }
+
+  function drawBoard() {
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.55)";
+    ctx.strokeStyle = "rgba(94,234,212,.22)";
+    ctx.lineWidth = 1;
+    roundRect(PAD - 12, BOARD_TOP + PAD - 12, CELL * GRID + 24, CELL * GRID + 24, 16, true, true);
+    for (let r = 0; r < GRID; r += 1) {
+      for (let c = 0; c < GRID; c += 1) {
+        const p = boardXY(r, c);
+        ctx.fillStyle = "rgba(15,23,42,.72)";
+        ctx.strokeStyle = "rgba(148,163,184,.13)";
+        roundRect(p.x - CELL * .42, p.y - CELL * .42, CELL * .84, CELL * .84, 10, true, true);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawBeams() {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (const beam of state.beams) {
+      const color = COLORS[beam.color]?.beam || "#f8fafc";
+      const a = boardXY(beam.from.r, beam.from.c);
+      const b = boardXY(beam.to.r, beam.to.c);
+      if (a.x === b.x && a.y === b.y) continue;
+      ctx.strokeStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 16;
+      ctx.globalAlpha = .34;
+      ctx.lineWidth = 17;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.globalAlpha = .98;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawComponents() {
+    for (const component of state.components) {
+      const p = boardXY(component.r, component.c);
+      if (component.type === "source") drawSource(component, p);
+      else if (component.type === "receiver") drawReceiver(component, p);
+      else if (component.type === "mirror") drawMirror(component, p);
+      else if (component.type === "splitter") drawSplitter(component, p);
+      else if (component.type === "blocker") drawBlocker(p);
+    }
+  }
+
+  function drawSource(component, p) {
+    const color = COLORS[component.color]?.beam || "#f8fafc";
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(component.dir * Math.PI / 2);
+    ctx.fillStyle = "rgba(2,6,23,.95)";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(CELL * .32, 0);
+    ctx.lineTo(-CELL * .2, -CELL * .25);
+    ctx.lineTo(-CELL * .2, CELL * .25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawReceiver(component, p) {
+    const receiver = state.receivers.find((item) => item.r === component.r && item.c === component.c);
+    const lit = receiver && receiver.lit;
+    const color = COLORS[component.color]?.beam || "#f8fafc";
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = lit ? 24 : 8;
+    ctx.fillStyle = lit ? COLORS[component.color].dim : "rgba(2,6,23,.95)";
+    ctx.strokeStyle = lit ? color : "rgba(148,163,184,.42)";
+    ctx.lineWidth = lit ? 4 : 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, CELL * .27, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = lit ? 1 : .45;
+    ctx.beginPath();
+    ctx.arc(0, 0, CELL * .12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMirror(component, p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.fillStyle = "rgba(2,6,23,.92)";
+    ctx.strokeStyle = "rgba(94,234,212,.55)";
+    ctx.lineWidth = 2;
+    roundRect(-CELL * .31, -CELL * .31, CELL * .62, CELL * .62, 9, true, true);
+    ctx.strokeStyle = "#e6edf3";
+    ctx.shadowColor = "#5eead4";
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    if (component.rot % 2 === 0) {
+      ctx.moveTo(-CELL * .22, CELL * .22);
+      ctx.lineTo(CELL * .22, -CELL * .22);
+    } else {
+      ctx.moveTo(-CELL * .22, -CELL * .22);
+      ctx.lineTo(CELL * .22, CELL * .22);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSplitter(component, p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(component.rot % 2 === 0 ? 0 : Math.PI / 2);
+    ctx.fillStyle = "rgba(2,6,23,.94)";
+    ctx.strokeStyle = "rgba(167,139,250,.72)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -CELL * .32);
+    ctx.lineTo(CELL * .28, 0);
+    ctx.lineTo(0, CELL * .32);
+    ctx.lineTo(-CELL * .28, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#a78bfa";
+    ctx.shadowColor = "#a78bfa";
+    ctx.shadowBlur = 13;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(0, -CELL * .27);
+    ctx.lineTo(0, CELL * .27);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBlocker(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.fillStyle = "rgba(15,23,42,.96)";
+    ctx.strokeStyle = "rgba(248,113,113,.55)";
+    ctx.lineWidth = 2;
+    roundRect(-CELL * .28, -CELL * .28, CELL * .56, CELL * .56, 8, true, true);
+    ctx.strokeStyle = "rgba(248,113,113,.82)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-CELL * .16, -CELL * .16);
+    ctx.lineTo(CELL * .16, CELL * .16);
+    ctx.moveTo(CELL * .16, -CELL * .16);
+    ctx.lineTo(-CELL * .16, CELL * .16);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCursor() {
+    const p = boardXY(state.cursor.r, state.cursor.c);
+    ctx.save();
+    ctx.strokeStyle = "rgba(248,250,252,.78)";
+    ctx.lineWidth = 4;
+    roundRect(p.x - CELL * .46, p.y - CELL * .46, CELL * .92, CELL * .92, 12, false, true);
+    if (state.selectedTile && state.selectedTile.r === state.cursor.r && state.selectedTile.c === state.cursor.c) {
+      ctx.strokeStyle = "rgba(251,191,36,.92)";
+      ctx.lineWidth = 2;
+      roundRect(p.x - CELL * .38, p.y - CELL * .38, CELL * .76, CELL * .76, 10, false, true);
+    }
+    ctx.restore();
+  }
+
+  function drawOverlay() {
+    if (state.mode !== "solved" && state.mode !== "complete" && state.mode !== "game-over") return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.70)";
+    roundRect(86, H / 2 - 58, W - 172, 116, 16, true, false);
+    ctx.textAlign = "center";
+    ctx.fillStyle = state.mode === "game-over" ? "#fb7185" : "#5eead4";
+    ctx.font = "900 28px system-ui";
+    const title = state.mode === "complete" ? "RUN COMPLETE" : state.mode === "solved" ? "STAGE SOLVED" : "BUDGET SPENT";
+    ctx.fillText(title, W / 2, H / 2 - 10);
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "800 14px system-ui";
+    const sub = state.mode === "solved" ? "Press N for the next relay." : state.mode === "complete" ? `Score ${state.score} / Best ${state.bestScore}` : "Press R to restart this stage.";
+    ctx.fillText(sub, W / 2, H / 2 + 22);
+    ctx.restore();
+  }
+
+  function drawFooter() {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(170,184,210,.88)";
+    ctx.font = "800 12px system-ui";
+    ctx.fillText(`${STAGES[state.stageIndex].name} · ${state.feedback}`, W / 2, H - 18);
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function render() {
+    drawBackground();
+    drawBoard();
+    drawBeams();
+    drawComponents();
+    drawCursor();
+    drawOverlay();
+    drawFooter();
+  }
+
+  function updateHud() {
+    const lit = countLit();
+    els.stage.textContent = `${state.stageIndex + 1} / ${STAGES.length}`;
+    els.moves.textContent = `${state.moves} / ${state.budget}`;
+    els.lit.textContent = `${lit} / ${state.receivers.length}`;
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.bestScore);
+    els.litPill.dataset.hot = String(lit === state.receivers.length && state.receivers.length > 0);
+    els.litPill.dataset.warn = String(state.moves >= state.budget && !state.solved);
+    els.status.textContent = state.feedback;
+    els.next.disabled = !(state.solved || state.mode === "complete");
+    els.next.textContent = state.mode === "complete" ? "New Run" : "Next Stage";
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
+  }
+
+  function tick(ms) {
+    state.feedbackMs = Math.max(0, state.feedbackMs - Math.max(0, ms));
+    if (state.feedbackMs === 0) {
+      if (state.mode === "playing") state.feedback = STAGES[state.stageIndex].note;
+      else if (state.mode === "solved") state.feedback = "Stage solved. Press N.";
+      else if (state.mode === "complete") state.feedback = "Run complete.";
+      else if (state.mode === "game-over") state.feedback = "Move budget spent. Press R.";
+    }
+    updateHud();
+  }
+
+  function frame(now) {
+    const dt = Math.min(50, now - lastFrame);
+    lastFrame = now;
+    tick(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  function renderGameToText() {
+    return JSON.stringify({
+      mode: state.mode,
+      stage: state.stageIndex + 1,
+      stageIndex: state.stageIndex,
+      stageName: STAGES[state.stageIndex].name,
+      moves: state.moves,
+      budget: state.budget,
+      score: state.score,
+      bestScore: state.bestScore,
+      cursor: { ...state.cursor },
+      selectedTile: state.selectedTile ? { ...state.selectedTile } : null,
+      components: state.components.map((component) => ({
+        id: component.id,
+        type: component.type,
+        r: component.r,
+        c: component.c,
+        color: component.color,
+        dir: component.dir === null ? null : DIRS[component.dir].name,
+        rotation: component.rot,
+        orientation: component.type === "mirror" ? (component.rot % 2 === 0 ? "/" : "\\")
+          : component.type === "splitter" ? (component.rot % 2 === 0 ? "vertical" : "horizontal") : null,
+        rotatable: isRotatable(component),
+      })),
+      beams: state.beams.map((beam) => ({
+        color: beam.color,
+        from: { ...beam.from },
+        to: { ...beam.to },
+        dir: DIRS[beam.dir].name,
+        end: beam.end,
+      })),
+      receiversLit: state.receivers.map((receiver) => ({ ...receiver })),
+      soundEnabled: state.soundEnabled,
+      lastSound: state.lastSound,
+      soundCount: state.soundCount,
+      feedback: state.feedback,
+      feedbackActive: state.feedbackMs > 0,
+      complete: state.complete,
+      gameOver: state.gameOver,
+    });
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    markGesture();
+    canvas.focus();
+    const tile = tileFromPointer(event);
+    if (tile) rotateTile(tile.r, tile.c);
+  });
+
+  els.restart.addEventListener("click", () => {
+    markGesture();
+    restartStage();
+  });
+  els.next.addEventListener("click", () => {
+    markGesture();
+    nextStage();
+  });
+  els.sound.addEventListener("click", toggleSound);
+  els.fullscreen.addEventListener("click", toggleFullscreen);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    const key = event.key.toLowerCase();
+    const movement = {
+      arrowup: [-1, 0],
+      w: [-1, 0],
+      arrowdown: [1, 0],
+      s: [1, 0],
+      arrowleft: [0, -1],
+      a: [0, -1],
+      arrowright: [0, 1],
+      d: [0, 1],
+    }[key];
+    if (movement) {
+      event.preventDefault();
+      moveCursor(movement[0], movement[1]);
+      return;
+    }
+    if (event.code === "Space" || event.code === "Enter") {
+      event.preventDefault();
+      markGesture();
+      rotateTile(state.cursor.r, state.cursor.c);
+    } else if (key === "r") {
+      event.preventDefault();
+      markGesture();
+      restartStage();
+    } else if (key === "n") {
+      event.preventDefault();
+      markGesture();
+      nextStage();
+    } else if (key === "f") {
+      event.preventDefault();
+      toggleFullscreen();
+    } else if (key === "m") {
+      event.preventDefault();
+      toggleSound();
+    }
+  });
+
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms = 0) {
+    let left = Math.max(0, Number(ms) || 0);
+    if (left === 0) {
+      tick(0);
+    } else {
+      while (left > 0) {
+        const step = Math.min(1000 / 60, left);
+        tick(step);
+        left -= step;
+      }
+    }
+    render();
+    return renderGameToText();
+  };
+
+  loadStage(0, 0);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

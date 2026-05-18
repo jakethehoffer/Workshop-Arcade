@@ -8,14 +8,38 @@
   }
 
   var storageKey = "fact-match:" + config.id + ":best";
+  var soundStorageKey = "fact-match:" + config.id + ":sound";
+  function safeGet(key, fallback) {
+    try {
+      var value = localStorage.getItem(key);
+      return value == null ? fallback : value;
+    } catch (error) {
+      return fallback;
+    }
+  }
+  function safeSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      // Storage can be unavailable in private contexts; gameplay should continue.
+    }
+  }
+
   var state = {
     answer: null,
     cluesShown: 3,
     streak: 0,
-    best: Number(localStorage.getItem(storageKey) || 0),
+    best: Number(safeGet(storageKey, "0") || 0),
     revealed: false,
     visibleBankCount: 0,
     lastBankPick: null
+  };
+  var audio = {
+    enabled: safeGet(soundStorageKey, "true") !== "false",
+    ctx: null,
+    lastSound: null,
+    soundCount: 0,
+    mutedEventCount: 0
   };
   var feedback = {
     lastEvent: null,
@@ -62,7 +86,7 @@
     button{border:1px solid var(--line);border-radius:12px;background:#102033;color:var(--ink);font-weight:900;padding:10px 12px;cursor:pointer}
     button.primary{background:linear-gradient(180deg,#5cf2cc,#26cbb6);color:#042524;border:0}
     button:hover{border-color:#335f82}
-    .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+      .actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
     .actions button{background:rgba(16,32,51,.72);color:#cfe3f3;padding:9px 10px;font-size:14px}
     .result{min-height:26px;margin-top:10px;color:var(--warn);font-weight:900}
     .result.feedback-pulse{animation:feedbackPulse .68s ease-out both}
@@ -105,7 +129,7 @@
       #guessBtn{min-height:44px;font-size:15px;box-shadow:0 8px 18px rgba(38,203,182,.16)}
       input{padding:10px;border-radius:11px}
       button{padding:9px 10px;border-radius:11px}
-      .actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+        .actions{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:7px}
       .actions button{font-size:12px;padding:7px 6px;background:rgba(9,19,33,.76);color:#9fb8cb;border-color:rgba(80,240,200,.14)}
       .result{min-height:22px;margin-top:7px;font-size:13px}
       .bank-panel{padding:9px 10px}
@@ -123,7 +147,7 @@
       .panel{padding:9px}
       .guess{grid-template-columns:minmax(0,1fr) 92px}
       #guess{font-size:14px}
-      .actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
       .actions button{font-size:11px;padding:7px 5px}
       .stats{gap:5px}
       .pill{padding:6px 7px;font-size:10px}
@@ -160,11 +184,12 @@
             <input id="guess" autocomplete="off" placeholder="Type or pick from bank" />
             <button class="primary" id="guessBtn" type="button">Guess</button>
           </div>
-          <div class="actions">
-            <button id="hintBtn" type="button">More Clues</button>
-            <button id="newBtn" type="button">New Round</button>
-            <button id="revealBtn" type="button">Reveal</button>
-          </div>
+      <div class="actions">
+        <button id="hintBtn" type="button">More Clues</button>
+        <button id="newBtn" type="button">New Round</button>
+        <button id="revealBtn" type="button">Reveal</button>
+        <button id="soundBtn" type="button">Sound On</button>
+      </div>
           <div class="result" id="result" aria-live="polite"></div>
         </div>
         <aside class="panel bank-panel">
@@ -187,6 +212,7 @@
     hintBtn: document.getElementById("hintBtn"),
     newBtn: document.getElementById("newBtn"),
     revealBtn: document.getElementById("revealBtn"),
+    soundBtn: document.getElementById("soundBtn"),
     result: document.getElementById("result"),
     streak: document.getElementById("streak"),
     best: document.getElementById("best"),
@@ -204,6 +230,60 @@
 
   function normalize(value) {
     return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  }
+
+  function updateSoundButton() {
+    if (!els.soundBtn) return;
+    els.soundBtn.textContent = audio.enabled ? "Sound On" : "Sound Off";
+    els.soundBtn.setAttribute("aria-pressed", audio.enabled ? "true" : "false");
+  }
+
+  function ensureAudioContext() {
+    if (!audio.enabled) return null;
+    if (!audio.ctx) {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      audio.ctx = new AudioContext();
+    }
+    if (audio.ctx.state === "suspended") {
+      audio.ctx.resume();
+    }
+    return audio.ctx;
+  }
+
+  function playSound(type) {
+    if (!audio.enabled) {
+      audio.lastSound = "muted:" + type;
+      audio.mutedEventCount += 1;
+      return;
+    }
+    var ctx = ensureAudioContext();
+    if (!ctx) return;
+
+    var palette = {
+      "clue-reveal": [523, 660],
+      correct: [660, 880],
+      wrong: [220, 165],
+      reveal: [330, 247],
+      "new-round": [392, 523],
+      "empty-guess": [196]
+    };
+    var tones = palette[type] || [440];
+    var now = ctx.currentTime;
+    tones.forEach(function (freq, index) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = index === 0 ? "sine" : "triangle";
+      osc.frequency.setValueAtTime(freq, now + index * 0.055);
+      gain.gain.setValueAtTime(0.0001, now + index * 0.055);
+      gain.gain.exponentialRampToValueAtTime(0.045, now + index * 0.055 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.055 + 0.13);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + index * 0.055);
+      osc.stop(now + index * 0.055 + 0.15);
+    });
+    audio.lastSound = type;
+    audio.soundCount += 1;
   }
 
   function pickAnswer(options) {
@@ -290,6 +370,7 @@
     feedback.lastEventAt = performance.now();
     feedback.eventCount += 1;
     feedback.resultState = details.resultState || type;
+    playSound(type);
     if (type === "clue-reveal") {
       feedback.clueRevealCount += 1;
       feedback.cluesAdded += Number(details.cluesAdded || 0);
@@ -322,7 +403,7 @@
       state.streak += 1;
       if (state.streak > state.best) {
         state.best = state.streak;
-        localStorage.setItem(storageKey, String(state.best));
+        safeSet(storageKey, String(state.best));
       }
       els.result.textContent = "Correct: " + state.answer.name;
       updateStats();
@@ -358,6 +439,13 @@
       visibleBankCount: state.visibleBankCount,
       filterText: els.filter.value,
       lastBankPick: state.lastBankPick,
+      audio: {
+        soundEnabled: audio.enabled,
+        lastSound: audio.lastSound,
+        soundCount: audio.soundCount,
+        mutedEventCount: audio.mutedEventCount,
+        contextState: audio.ctx ? audio.ctx.state : "none"
+      },
       feedback: {
         lastEvent: feedback.lastEvent,
         eventAge: feedbackAge() === null ? null : Number(feedbackAge().toFixed(2)),
@@ -402,8 +490,20 @@
     updateStats();
     recordFeedback("reveal", { resultState: "revealed" });
   });
+  els.soundBtn.addEventListener("click", function () {
+    audio.enabled = !audio.enabled;
+    safeSet(soundStorageKey, audio.enabled ? "true" : "false");
+    updateSoundButton();
+    if (audio.enabled) {
+      playSound("new-round");
+    } else {
+      audio.lastSound = "muted";
+      audio.mutedEventCount += 1;
+    }
+  });
   els.filter.addEventListener("input", renderBank);
 
+  updateSoundButton();
   updateStats();
   pickAnswer({ record: false });
 })();

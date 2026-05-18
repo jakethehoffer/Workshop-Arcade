@@ -251,6 +251,8 @@
     lastPlaybackAt: 0,
     lastCorrectAt: 0,
     lastWrongAt: 0,
+    lastCommand: 'none',
+    startCount: 0,
     playbackCount: 0,
     correctCount: 0,
     wrongCount: 0
@@ -307,6 +309,17 @@
   }
   function setPadsDisabled(disabled){
     els.pads.forEach(p => { if (disabled) p.setAttribute('disabled', ''); else p.removeAttribute('disabled'); });
+  }
+  function canStartFromPhase(){
+    return state.phase === 'idle' || state.phase === 'ready' || state.phase === 'over';
+  }
+  function startRun(command){
+    if (!canStartFromPhase()) return false;
+    newRun();
+    state.lastCommand = command;
+    state.startCount += 1;
+    startRound();
+    return true;
   }
 
   function newRun(){
@@ -427,6 +440,24 @@
   let returnFocus = null;
   function openOverlay(o, focus){ if(activeOverlay) closeOverlay(activeOverlay,false); o.classList.add('show'); activeOverlay = o; returnFocus = document.activeElement; setTimeout(()=>(focus||o.querySelector('button')).focus(),0); }
   function closeOverlay(o, restore){ o.classList.remove('show'); if(activeOverlay===o) activeOverlay=null; if(restore!==false && returnFocus && document.contains(returnFocus)) returnFocus.focus({preventScroll:true}); returnFocus=null; }
+  function isSpaceOrEnter(e){
+    return e.key === 'Enter' || e.key === ' ' || e.code === 'Space';
+  }
+  function isTextInputTarget(target){
+    return target instanceof Element && !!target.closest('input, textarea, select, [contenteditable="true"]');
+  }
+  function isNativeShortcutTarget(target){
+    return target instanceof Element && !!target.closest('button, a[href], input, textarea, select, [contenteditable="true"], [role="button"], [role="link"]');
+  }
+  function hasActiveDialogOrOverlay(){
+    return !!activeOverlay || !!document.querySelector('dialog[open], .overlay.show');
+  }
+  function canUseStartShortcut(e){
+    if (!isSpaceOrEnter(e) || e.repeat || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return false;
+    if (!canStartFromPhase() || hasActiveDialogOrOverlay()) return false;
+    if (isTextInputTarget(e.target) || isTextInputTarget(document.activeElement)) return false;
+    return !isNativeShortcutTarget(e.target);
+  }
   document.addEventListener('keydown',(e)=>{
     if(activeOverlay){
       if(e.key==='Escape'){ e.preventDefault(); closeOverlay(activeOverlay); return; }
@@ -438,6 +469,12 @@
       }
       return;
     }
+    if (canUseStartShortcut(e)){
+      const action = state.phase === 'over' ? 'restart' : 'start';
+      const key = e.key === 'Enter' ? 'enter' : 'space';
+      if (startRun(`keyboard-${key}-${action}`)) e.preventDefault();
+      return;
+    }
     // Number key shortcuts 1-4 for pads
     if (state.phase === 'mimic'){
       const n = parseInt(e.key, 10);
@@ -447,11 +484,11 @@
 
   // ----- Wire controls -----
   els.pads.forEach((pad, idx) => pad.addEventListener('click', () => onPadActivate(idx)));
-  els.start.addEventListener('click', () => { if (state.phase === 'idle' || state.phase === 'over') { newRun(); startRound(); } });
+  els.start.addEventListener('click', () => { startRun(state.phase === 'over' ? 'button-restart' : 'button-start'); });
   els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
   els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
   els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
-  els.goPlayAgain.addEventListener('click', () => { closeOverlay(els.goOverlay); newRun(); startRound(); });
+  els.goPlayAgain.addEventListener('click', () => { closeOverlay(els.goOverlay); startRun('button-play-again'); });
   els.sound.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
     saveSoundPref(soundEnabled);
@@ -485,6 +522,8 @@
       playerIndex: state.playerIndex,
       bestRound: state.bestRound,
       soundEnabled,
+      lastCommand: state.lastCommand,
+      startCount: state.startCount,
       feedback: {
         playbackAge: ageSeconds(state.lastPlaybackAt),
         correctAge: ageSeconds(state.lastCorrectAt),

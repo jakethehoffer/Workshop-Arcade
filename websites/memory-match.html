@@ -75,6 +75,12 @@
   .panel{
     width:100%;max-width:680px;display:flex;flex-direction:column;align-items:center;gap:14px;
   }
+  body:fullscreen,
+  body:-webkit-full-screen{width:100%;height:100%;overflow:auto}
+  body:fullscreen .panel,
+  body:-webkit-full-screen .panel{max-width:760px}
+  body:fullscreen .board,
+  body:-webkit-full-screen .board{max-width:min(100%,760px)}
 
   .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:stretch}
   .pill{
@@ -163,7 +169,7 @@
   }
 </style>
 </head>
-<body>
+<body id="gameShell">
 <script src="workshop-runtime.js"></script>
 <div class="brand">
   <span class="eyebrow">Workshop Arcade</span>
@@ -185,6 +191,7 @@
     </span>
     <button class="btn primary" type="button" id="newGameBtn">New Game</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">🔊 Sound</button>
+    <button class="btn" type="button" id="fullscreenBtn" aria-pressed="false" title="Enter fullscreen (F)" aria-label="Enter fullscreen">⛶ Full</button>
     <button class="btn" type="button" id="helpBtn">❓ Help</button>
   </div>
   <div class="board" id="board" role="grid" aria-label="Memory match board"></div>
@@ -199,6 +206,7 @@
       <li>Click or tap a face-down card to flip it.</li>
       <li>Two non-matching cards flip back after a moment.</li>
       <li>Use <kbd>Tab</kbd> and <kbd>Enter</kbd>/<kbd>Space</kbd> for keyboard play.</li>
+      <li>Press <kbd>F</kbd> for fullscreen.</li>
       <li>Press <kbd>Esc</kbd> to close this dialog.</li>
     </ul>
     <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
@@ -237,8 +245,10 @@
     streakPill:  document.getElementById('streakPill'),
     streakValue: document.getElementById('streakValue'),
     board:   document.getElementById('board'),
+    shell:   document.getElementById('gameShell'),
     newGame: document.getElementById('newGameBtn'),
     sound:   document.getElementById('soundBtn'),
+    fullscreen: document.getElementById('fullscreenBtn'),
     help:    document.getElementById('helpBtn'),
     helpOverlay: document.getElementById('helpOverlay'),
     helpClose:   document.getElementById('helpClose'),
@@ -509,6 +519,67 @@
   // ----- Modal management with focus trap + Escape close -----
   let activeOverlay = null;
   let returnFocusTo = null;
+  let fullscreenWasActive = false;
+  let lastFullscreenExitAt = 0;
+
+  // ----- Fullscreen shell controls -----
+  function getFullscreenElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function isFullscreenActive(){
+    return getFullscreenElement() === els.shell;
+  }
+  function fullscreenSupported(){
+    return !!((els.shell.requestFullscreen || els.shell.webkitRequestFullscreen) &&
+      (document.exitFullscreen || document.webkitExitFullscreen));
+  }
+  function updateFullscreenButton(){
+    const supported = fullscreenSupported();
+    const active = isFullscreenActive();
+    els.fullscreen.disabled = !supported;
+    els.fullscreen.setAttribute('aria-pressed', active ? 'true' : 'false');
+    els.fullscreen.textContent = active ? '⛶ Exit' : '⛶ Full';
+    const label = supported
+      ? (active ? 'Exit fullscreen' : 'Enter fullscreen')
+      : 'Fullscreen unavailable';
+    els.fullscreen.title = supported ? label + ' (F)' : label;
+    els.fullscreen.setAttribute('aria-label', label);
+  }
+  function toggleFullscreen(){
+    if (!fullscreenSupported()) return;
+    try {
+      if (getFullscreenElement()){
+        const result = document.exitFullscreen
+          ? document.exitFullscreen()
+          : document.webkitExitFullscreen();
+        if (result && typeof result.catch === 'function') result.catch(() => updateFullscreenButton());
+      } else {
+        const result = els.shell.requestFullscreen
+          ? els.shell.requestFullscreen()
+          : els.shell.webkitRequestFullscreen();
+        if (result && typeof result.catch === 'function') result.catch(() => updateFullscreenButton());
+      }
+    } catch {
+      updateFullscreenButton();
+    }
+  }
+  function isTextInputTarget(target){
+    if (!target || target === document || target === window) return false;
+    const tag = target.tagName;
+    return !!(target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT');
+  }
+  function fullscreenClock(){
+    return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  }
+  function handleFullscreenChange(){
+    const active = isFullscreenActive();
+    if (fullscreenWasActive && !active) lastFullscreenExitAt = fullscreenClock();
+    fullscreenWasActive = active;
+    updateFullscreenButton();
+  }
+  function shouldYieldEscapeToFullscreen(){
+    return isFullscreenActive() || (!!lastFullscreenExitAt && fullscreenClock() - lastFullscreenExitAt < 100);
+  }
 
   function openOverlay(overlay, autofocus){
     if (activeOverlay) closeOverlay(activeOverlay, false);
@@ -527,6 +598,7 @@
   }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && activeOverlay){
+      if (shouldYieldEscapeToFullscreen()) return;
       e.preventDefault();
       closeOverlay(activeOverlay);
     } else if (e.key === 'Tab' && activeOverlay){
@@ -535,8 +607,14 @@
       const first = focusables[0], last = focusables[focusables.length - 1];
       if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    } else if (!activeOverlay && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey &&
+      e.key && e.key.toLowerCase() === 'f' && !isTextInputTarget(e.target) && fullscreenSupported()){
+      e.preventDefault();
+      toggleFullscreen();
     }
   });
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
   // ----- Tick loop for time + pending flip-back resolution -----
   let lastFrame = 0;
@@ -557,6 +635,7 @@
 
   // ----- Wire controls -----
   els.newGame.addEventListener('click', newGame);
+  els.fullscreen.addEventListener('click', toggleFullscreen);
   els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
   els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
   els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
@@ -591,6 +670,8 @@
       streak: state.streak,
       bestStreak: state.bestStreak,
       soundEnabled: state.soundEnabled,
+      fullscreenActive: isFullscreenActive(),
+      fullscreenSupported: fullscreenSupported(),
       feedback: {
         flipAge: ageSeconds(state.lastFlipAt),
         matchAge: ageSeconds(state.lastMatchAt),
@@ -615,6 +696,7 @@
   state.now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   state.soundEnabled = loadSoundPref();
   updateSoundButton();
+  updateFullscreenButton();
   newGame();
 })();
 </script>

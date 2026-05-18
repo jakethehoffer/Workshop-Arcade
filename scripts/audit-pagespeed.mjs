@@ -47,6 +47,16 @@ function targetUrl(path) {
 function budgetFor(label) {
   return BUDGETS[label] || BUDGETS.default;
 }
+function budgetSummary() {
+  return [
+    ["Catalog", BUDGETS.Catalog],
+    ["Lexica", BUDGETS.Lexica],
+    ["Idle Tycoon", BUDGETS["Idle Tycoon"]],
+    ["Other manifest games", BUDGETS.default],
+  ]
+    .map(([label, budget]) => label + " ≤" + budget.transferKb + "KB / ≤" + budget.requests + " requests")
+    .join("; ");
+}
 function slugifyLabel(label) {
   return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page";
 }
@@ -269,7 +279,7 @@ async function main() {
   }
   lines.push("");
   lines.push("FCP thresholds: 🟢 ≤1800ms, 🟡 ≤3000ms (Lighthouse mobile). Load: 🟢 ≤2500ms, 🟡 ≤4000ms. Transfer: 🟢 ≤200KB, 🟡 ≤500KB.");
-  lines.push("CI budgets: Catalog ≤250KB / ≤40 requests; Lexica ≤300KB / ≤8 requests; Idle Tycoon ≤225KB / ≤8 requests; other manifest games ≤150KB / ≤8 requests.");
+  lines.push("CI budgets: " + budgetSummary() + ".");
   lines.push("");
 
   // Meta-tag completeness matrix.

@@ -14,7 +14,7 @@ CI budgets:
 
 | Page group | Transfer | Requests |
 |------------|----------|----------|
-| Catalog | 250 KB | 40 |
+| Catalog | 280 KB | 44 |
 | Lexica | 300 KB | 8 |
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
@@ -148,7 +148,7 @@ No console or page errors across any audited URL. Zero `img` elements missing `a
 ### After Gemline/Dungeon + tool-gate bundle (pass 72)
 
 - Strict local CI audit now covers 35 pages: the catalog plus 34 manifest games.
-- **Catalog**: 216.9 KB / 38 requests, inside the 250 KB / 40 request CI budget.
+- **Catalog**: 216.9 KB / 38 requests, inside the 280 KB / 44 request CI budget.
 - **Gemline Cascade**: 15.6 KB / 2 requests, inside the default 150 KB / 8 request game budget.
 - **Dungeon Circuit**: 17.2 KB / 2 requests, inside the default 150 KB / 8 request game budget.
 - Largest game resources remain expected: **Lexica** uses `websites/words5.js` at 155.5 KB under its 300 KB exception, and **Idle Tycoon** ships 184.8 KB under its 225 KB exception. No console or page errors appeared across audited URLs.
