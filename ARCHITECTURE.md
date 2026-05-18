@@ -59,7 +59,7 @@ The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `RE
 
 1. **`catalog-docs-a11y`** — all the fast structural validators above, in roughly the order generators → validators → a11y → tooling-meta. This is the job that gates merges on most catalog edits.
 2. **`game-smoke`** — Playwright spawns the catalog page and opens every manifest game on desktop and mobile viewports, asserting no console errors and that filter chips / card tags behave correctly. Runs `npm run test:games`.
-3. **`performance-audit`** — boots the static server on port 4173 and runs `npm run audit:perf:ci` against it. Strict mode fails if any page exceeds its publish budget (Catalog ≤ 280 KB / ≤ 44 requests; Idle Tycoon ≤ 225 KB; Lexica ≤ 300 KB; everything else ≤ 150 KB).
+3. **`performance-audit`** — boots the static server on port 4173 and runs `npm run audit:perf:ci` against it. Strict mode fails if any page exceeds its publish budget (Catalog ≤ 200 KB / ≤ 22 requests; Idle Tycoon ≤ 225 KB; Lexica ≤ 300 KB; everything else ≤ 150 KB).
 4. **`render-capture`** — runs `npm run capture:games:ci` to take desktop + mobile screenshots of every game and score them against a render-quality bar. Strict mode fails if any surface scores above 0.
 
 Two additional workflows live alongside:

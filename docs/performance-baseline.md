@@ -14,10 +14,22 @@ CI budgets:
 
 | Page group | Transfer | Requests |
 |------------|----------|----------|
-| Catalog | 280 KB | 44 |
+| Catalog | 200 KB | 22 |
 | Lexica | 300 KB | 8 |
 | Idle Tycoon | 225 KB | 8 |
 | Other manifest games | 150 KB | 8 |
+
+## IntersectionObserver lazy covers (pass 74)
+
+Captured 2026-05-18 against `http://127.0.0.1:4174` (chromium @ 1280x800, network idle) after adding `IntersectionObserver`-based lazy loading to the catalog cover-image pipeline (`index.html` `render()` and `getCoverLazyObserver()`). The strict audit covered the same 41 pages (catalog plus 40 manifest games).
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 104 ms | 132 ms | 🟢 137 ms | 🟢 156.6 KB | 14 | 0 |
+
+Before this pass (see pass 73): catalog at **267.1 KB / 44 requests** — exactly at the request cap. After: **156.6 KB / 14 requests**. The 30-request drop comes from only fetching the ~6 above-fold covers eagerly while the IntersectionObserver swaps the remaining 34 covers from a tiny placeholder data-URI to their real `covers/<slug>.svg` URL once the card scrolls within 300px of the viewport. Native `loading="lazy"` + `fetchpriority="low"` stay in place as hints so browsers without IntersectionObserver still get the native lazy-load behaviour.
+
+Catalog publish budget tightened in the same pass from 280 KB / 44 requests to **200 KB / 22 requests** to lock the win in: any regression that breaks the observer (or removes it) will fail the perf gate instead of silently regressing back toward the 267 KB / 44 baseline. Catalog request count is now effectively constant in the catalog size — adding game #41+ won't move the needle on first-paint requests.
 
 ## Codex next-max-parallel — 40-game catalog (pass 73)
 

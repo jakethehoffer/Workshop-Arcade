@@ -19,13 +19,16 @@ const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--ci");
 const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jakethehoffer.github.io/Workshop-Arcade");
 
-// Catalog grows by ~1 request + ~3-5 KB per new game cover. At the 40-game
-// footprint the catalog is at 267.1 KB / 44 requests — right at the request cap
-// with zero headroom, so the next new game must arrive with a refreshed budget
-// here (and the docs-drift check will require matching bumps in
-// docs/performance-baseline.md + ARCHITECTURE.md).
+// index.html ships an IntersectionObserver that defers below-the-fold cover
+// fetches until the card scrolls within ~300px of the viewport — so the catalog
+// load only pays for the eager above-fold covers (3-6 depending on viewport)
+// plus a handful of shell assets (catalog HTML + manifest.json + sw.js + app
+// icon). Adding new games does not add catalog requests on first paint. Keep
+// the budget tight so a regression that breaks the observer path (back to
+// native loading="lazy" hint-only behaviour, which Chromium ignores in
+// practice) trips this gate instead of slipping through.
 const BUDGETS = {
-  Catalog: { transferKb: 280, requests: 44 },
+  Catalog: { transferKb: 200, requests: 22 },
   "Idle Tycoon": { transferKb: 225, requests: 8 },
   Lexica: { transferKb: 300, requests: 8 },
   default: { transferKb: 150, requests: 8 },
