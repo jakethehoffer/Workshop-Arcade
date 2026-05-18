@@ -50,6 +50,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
 npm ci
 npm run test:docs
+npm run test:manifest-schema
 npm run test:meta-files
 npm run test:security-workflows
 npm run test:tools
@@ -74,6 +75,7 @@ npm run audit:perf:ci
 
 - `validate-catalog.ps1` checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, local subresources, no remote scripts/fonts, and a synchronized fallback catalog in `index.html`. The `-Fix` form regenerates `FALLBACK_GAMES` automatically.
 - `npm run test:docs` keeps contributor-facing validation docs aligned with the current publish-ready CI gates.
+- `npm run test:manifest-schema` validates `websites/manifest.json` against [`schemas/manifest.schema.json`](schemas/manifest.schema.json) — the single source-of-truth contract that every generator (sitemap, feed, OG images, inject-meta) and downstream validator depends on. The same schema is wired into `.vscode/settings.json` so editors give contributors live autocomplete + inline validation while editing the manifest, catching typos like `tagss: [...]` at source instead of cascading into a wall of generator failures.
 - `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `humans.txt` (humanstxt.org format with `/* TEAM */`), and `package.json` declares `"license": "MIT"` so npm + GitHub language detection match the LICENSE file.
 - `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
 - `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly `test:games` (slow) and `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
