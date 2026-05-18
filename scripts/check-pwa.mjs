@@ -132,6 +132,42 @@ async function checkServiceWorker() {
   if (!/caches\.match\(OFFLINE_URL\)/.test(src)) {
     fail(`${swPath}: navigation handler must fall back to caches.match(OFFLINE_URL) when network and other caches miss`);
   }
+
+  // Cover pre-cache contract: at install time the SW reads the manifest
+  // and pre-caches the newest COVER_PREFETCH_COUNT cover SVGs so the
+  // catalog's above-the-fold cards paint without any cover network
+  // fetches on return visits. The count must match index.html's
+  // aboveFoldCoverCount() desktop branch (currently 6) so the pre-cache
+  // and eager-load hint stay aligned.
+  if (!/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/.test(src)) {
+    fail(`${swPath}: missing COVER_PREFETCH_COUNT constant — needed to pre-cache the newest catalog covers on install`);
+  } else {
+    const match = src.match(/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/);
+    const count = match ? parseInt(match[1], 10) : 0;
+    if (count < 1 || count > 12) {
+      fail(`${swPath}: COVER_PREFETCH_COUNT = ${count} is outside the sane range (1..12). Match it to the desktop aboveFoldCoverCount() return value (currently 6).`);
+    }
+  }
+  if (!/function\s+newestCoverUrls\s*\(/.test(src)) {
+    fail(`${swPath}: missing newestCoverUrls() helper that picks the newest covers from the manifest`);
+  } else {
+    // The helper must fetch the manifest and sort by addedAt so the pre-cache
+    // matches what index.html's default 'newest first' sort surfaces.
+    const helperMatch = src.match(/function\s+newestCoverUrls\s*\([^)]*\)\s*\{[\s\S]*?\n\}/);
+    const helperSrc = helperMatch ? helperMatch[0] : '';
+    if (!/fetch\(MANIFEST_URL/.test(helperSrc) && !/fetch\(['"`]websites\/manifest\.json['"`]/.test(helperSrc)) {
+      fail(`${swPath}: newestCoverUrls() must fetch the manifest (via MANIFEST_URL or 'websites/manifest.json')`);
+    }
+    if (!/addedAt/.test(helperSrc)) {
+      fail(`${swPath}: newestCoverUrls() must sort by addedAt so the pre-cache mirrors index.html's default 'newest first' sort`);
+    }
+    if (!/\.cover/.test(helperSrc)) {
+      fail(`${swPath}: newestCoverUrls() must read the .cover field from each manifest entry`);
+    }
+  }
+  if (!/newestCoverUrls\(\)/.test(src)) {
+    fail(`${swPath}: install handler must invoke newestCoverUrls() and pre-cache the result`);
+  }
 }
 
 async function checkIndexWiring() {

@@ -13,9 +13,17 @@
 // Cache key includes a version stamp so a deploy that ships a changed
 // shell file invalidates the old cache via `activate` cleanup.
 
-const VERSION = 'wa-v2-2026-05-17';
+const VERSION = 'wa-v3-2026-05-18';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
+
+// Match the desktop branch of index.html's aboveFoldCoverCount(). The
+// SW doesn't know the visitor's viewport at install time, so we hedge
+// toward the desktop max — mobile visitors will see at most 6 covers
+// pre-cached instead of 3, which is wasted bandwidth ONCE on first
+// install but pays for itself the moment they scroll past the fold or
+// share the install with a desktop session.
+const COVER_PREFETCH_COUNT = 6;
 
 // Resolve scope-relative paths so the SW works at any deploy prefix
 // (GitHub Pages serves this site under /Workshop-Arcade/).
@@ -23,6 +31,7 @@ const scopeUrl = new URL(self.registration.scope);
 const scopePath = scopeUrl.pathname.endsWith('/') ? scopeUrl.pathname : `${scopeUrl.pathname}/`;
 const OFFLINE_URL = new URL('offline.html', scopeUrl).toString();
 const NOT_FOUND_URL = new URL('404.html', scopeUrl).toString();
+const MANIFEST_URL = new URL('websites/manifest.json', scopeUrl).toString();
 const shellAssets = [
   '',
   'websites/manifest.json',
@@ -32,20 +41,51 @@ const shellAssets = [
   '404.html',
 ].map((relative) => new URL(relative, scopeUrl).toString());
 
+async function cachePut(cache, url) {
+  try {
+    const response = await fetch(url, { cache: 'reload' });
+    if (response && response.ok) {
+      await cache.put(url, response.clone());
+    }
+  } catch {
+    // Network unavailable during install; runtime cache will fill in later.
+  }
+}
+
+// Read the manifest and pick the cover URLs for the newest
+// COVER_PREFETCH_COUNT games (which is what index.html shows
+// above the fold in its default "newest first" sort). The SW
+// fetches manifest.json itself rather than waiting for the page to
+// hand it over, because install runs in a worker context with no
+// access to the document.
+async function newestCoverUrls() {
+  try {
+    const response = await fetch(MANIFEST_URL, { cache: 'reload' });
+    if (!response || !response.ok) return [];
+    const manifest = await response.json();
+    if (!Array.isArray(manifest)) return [];
+    const sorted = [...manifest].sort((a, b) => String(b?.addedAt || '').localeCompare(String(a?.addedAt || '')));
+    return sorted
+      .slice(0, COVER_PREFETCH_COUNT)
+      .map((game) => game?.cover)
+      .filter((cover) => typeof cover === 'string' && cover.length > 0)
+      .map((cover) => new URL(cover, scopeUrl).toString());
+  } catch {
+    return [];
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
     // Use individual put() calls so one missing asset cannot fail the install.
-    await Promise.all(shellAssets.map(async (url) => {
-      try {
-        const response = await fetch(url, { cache: 'reload' });
-        if (response && response.ok) {
-          await cache.put(url, response.clone());
-        }
-      } catch {
-        // Network unavailable during install; runtime cache will fill in later.
-      }
-    }));
+    await Promise.all(shellAssets.map((url) => cachePut(cache, url)));
+    // Pre-cache the newest catalog covers so returning visitors get
+    // instant above-the-fold paint with zero cover network fetches.
+    // Failure is non-fatal — the runtime stale-while-revalidate cache
+    // picks them up on first paint as a fallback.
+    const coverUrls = await newestCoverUrls();
+    await Promise.all(coverUrls.map((url) => cachePut(cache, url)));
     await self.skipWaiting();
   })());
 });
