@@ -27,6 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
 npm ci
 npm run test:docs
+npm run test:meta-files
 npm run test:tools
 npm run test:capture-recipes
 npm run test:catalog-perf
@@ -44,6 +45,7 @@ npm run audit:perf:ci
 
 - `validate-catalog.ps1` checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, local subresources, no remote scripts/fonts, and a synchronized fallback catalog in `index.html`. The `-Fix` form regenerates `FALLBACK_GAMES` automatically.
 - `npm run test:docs` keeps contributor-facing validation docs aligned with the current publish-ready CI gates.
+- `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `humans.txt` (humanstxt.org format with `/* TEAM */`), and `package.json` declares `"license": "MIT"` so npm + GitHub language detection match the LICENSE file.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
@@ -61,6 +63,10 @@ npm run audit:perf:ci
 CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:a11y`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review.
 
 See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract.
+
+## License & Security Reports
+
+Workshop Arcade is distributed under the [MIT License](LICENSE) — fork, modify, and remix freely as long as the copyright notice travels along. Security disclosures follow [RFC 9116](.well-known/security.txt): please open a [private GitHub security advisory](https://github.com/jakethehoffer/Workshop-Arcade/security/advisories/new) for anything that could let a malicious game submission compromise visitors. Informal credits live in [humans.txt](humans.txt).
 
 ## Install / Offline Support
 
