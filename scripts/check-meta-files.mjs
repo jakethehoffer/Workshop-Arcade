@@ -121,10 +121,55 @@ async function checkPackageJsonLicense() {
   }
 }
 
+async function checkSecurityMd() {
+  const path = 'SECURITY.md';
+  if (!(await exists(path))) {
+    fail(`${path}: file missing — GitHub's "Report a vulnerability" button looks for SECURITY.md at the repo root`);
+    return;
+  }
+  const text = await readFile(join(repoRoot, path), 'utf8');
+  if (!/^#\s*Security Policy/im.test(text)) {
+    fail(`${path}: must start with a "# Security Policy" heading so GitHub's Security tab parses it correctly`);
+  }
+  if (!/security\/advisories\/new/.test(text)) {
+    fail(`${path}: must include a link to github.com/.../security/advisories/new so reporters can file a private advisory`);
+  }
+  if (!/\.well-known\/security\.txt/.test(text)) {
+    fail(`${path}: must reference .well-known/security.txt so RFC 9116 consumers find the same disclosure policy`);
+  }
+}
+
+async function checkReadmeBadges() {
+  const path = 'README.md';
+  if (!(await exists(path))) {
+    fail(`${path}: file missing`);
+    return;
+  }
+  const text = await readFile(join(repoRoot, path), 'utf8');
+  // Look only at the README's intro slab (before the first "## " section
+  // heading) so a future contributor can't pass the check by hiding the
+  // badges deep in the doc — they have to be near the top where they're
+  // actually visible.
+  const intro = text.split(/^## /m)[0];
+
+  const requiredBadges = [
+    { label: 'Validate Catalog CI', pattern: /workflows\/validate-catalog\.yml\/badge\.svg/ },
+    { label: 'CodeQL CI', pattern: /workflows\/codeql\.yml\/badge\.svg/ },
+    { label: 'License: MIT', pattern: /License-MIT-/i },
+  ];
+  for (const { label, pattern } of requiredBadges) {
+    if (!pattern.test(intro)) {
+      fail(`${path}: missing ${label} badge in the README intro (before the first "## " section)`);
+    }
+  }
+}
+
 await checkLicense();
 await checkSecurityTxt();
+await checkSecurityMd();
 await checkHumansTxt();
 await checkPackageJsonLicense();
+await checkReadmeBadges();
 
 if (issues.length > 0) {
   console.error(`Meta-files check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -134,4 +179,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Meta-files check passed: LICENSE, .well-known/security.txt, humans.txt, and package.json license field all valid.');
+console.log('Meta-files check passed: LICENSE, .well-known/security.txt, SECURITY.md, humans.txt, package.json license, and README badge row all valid.');
