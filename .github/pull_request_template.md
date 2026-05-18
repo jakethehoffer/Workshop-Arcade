@@ -6,10 +6,7 @@
 
 - [ ] `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix`
 - [ ] `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1`
-- [ ] `npm run test:docs`
-- [ ] `npm run test:tools`
-- [ ] `npm run test:capture-recipes`
-- [ ] `npm run test:a11y`
+- [ ] `npm test`
 - [ ] `npm run test:games`
 - [ ] `npm run capture:games:ci`
 - [ ] `npm run audit:perf:ci`

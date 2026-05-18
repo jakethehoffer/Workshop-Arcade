@@ -49,13 +49,14 @@ Run these before opening a PR:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1 -Fix
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
-npm run test:docs
-npm run test:tools
-npm run test:capture-recipes
-npm run test:a11y
+npm run inject:meta
+npm run build:sitemap
+npm run build:feed
+npm run build:og-images
+npm test
 npm run test:games
 npm run capture:games:ci
 npm run audit:perf:ci
 ```
 
-Every captured surface in `npm run capture:games:ci` must score 0, and the CI render capture job uploads the compact render-ranking report. Use `npm run capture:games` for optional local contact-sheet review when you want to inspect desktop/mobile surfaces without strict CI failure handling. Use `npm ci` first when Node dependencies are not installed.
+Every captured surface in `npm run capture:games:ci` must score 0, and the CI render capture job uploads the compact render-ranking report. `npm test` runs every fast `test:*` gate, including docs drift, manifest schema, catalog perf, PWA, fallback pages, OG images, JSON-LD, SEO, feed, and a11y polish. Use `npm run capture:games` for optional local contact-sheet review when you want to inspect desktop/mobile surfaces without strict CI failure handling. Use `npm ci` first when Node dependencies are not installed.
