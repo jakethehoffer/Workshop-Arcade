@@ -38,6 +38,7 @@ npm run test:game-jsonld
 npm run test:seo
 npm run test:feed
 npm run test:a11y
+npm run test:a11y-polish
 npm run test:games
 npm run capture:games:ci
 npm run audit:perf:ci
@@ -56,6 +57,7 @@ npm run audit:perf:ci
 - `npm run test:seo` verifies `sitemap.xml`, `robots.txt`, and the JSON-LD `ItemList` block in `index.html` all mirror the current `websites/manifest.json`. Run `npm run build:sitemap` after editing the manifest to regenerate them.
 - `npm run test:feed` verifies `feed.json` is a valid JSON Feed 1.1 mirror of the current manifest (newest-first, schema.org-aligned), and that `index.html` exposes the matching `<link rel="alternate" type="application/feed+json">` for auto-discovery. Run `npm run build:feed` after editing the manifest to regenerate it.
 - `npm run test:a11y` enforces the static accessibility regression rules: every `<canvas>` declares `aria-label` or `aria-hidden="true"`, every `<iframe>` declares a non-empty `title`, and every `role="dialog"`/`role="alertdialog"` declares `aria-modal="true"` plus an accessible name.
+- `npm run test:a11y-polish` locks in the catalog page's secondary a11y guarantees: a visually-hidden-until-focused skip-to-content link, a `<noscript>` fallback explaining the JS dependency, and a `@media (prefers-reduced-motion: reduce)` block that collapses transitions and the card hover transform for users with vestibular sensitivities.
 - `npm run test:games` starts a local static server, verifies the catalog player modal and Workshop issue-URL flow, and opens every manifest game on desktop and mobile viewports.
 - `npm run capture:games:ci` runs the rendered-quality harness in strict mode and fails if any captured surface scores above 0. For optional local review, `npm run capture:games` writes the same ranked contact sheet under `test-results/render-ranking/<timestamp>/` without CI strictness.
 - `npm run audit:perf:ci` starts from the Pagespeed-style performance audit in strict mode and fails on publish-budget regressions.
