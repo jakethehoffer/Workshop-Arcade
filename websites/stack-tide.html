@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Stack Tide</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Stack neon platforms to build a tower before the tide trims your last block to nothing." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/stack-tide.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Stack Tide — Workshop Arcade" />
+<meta property="og:description" content="Stack neon platforms to build a tower before the tide trims your last block to nothing." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/stack-tide.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/stack-tide.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Stack Tide — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Stack Tide — Workshop Arcade" />
+<meta name="twitter:description" content="Stack neon platforms to build a tower before the tide trims your last block to nothing." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/stack-tide.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Stack Tide",
+  "description": "Stack neon platforms to build a tower before the tide trims your last block to nothing.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/stack-tide.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/stack-tide.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Arcade",
+    "Endless"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Stack neon platforms to build a tower before the rising tide trims your last block to nothing." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="icon" href="data:," />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(820px 540px at 8% -4%, rgba(94,234,212,0.16), transparent 60%),
+      radial-gradient(740px 480px at 96% 6%, rgba(244,114,182,0.13), transparent 62%),
+      linear-gradient(180deg, #0b0f14, #060a13 84%);
+    display:flex;justify-content:center;padding:18px 12px 24px;overflow-x:hidden;
+  }
+  .shell{width:min(960px,100%);display:flex;flex-direction:column;gap:10px}
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.86);font-weight:800}
+  .brand .title{font-size:24px;letter-spacing:0;text-transform:uppercase;font-weight:900;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.22)}
+  .hud{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .pill{
+    min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 9px;border-radius:8px;
+    background:linear-gradient(180deg,rgba(20,30,50,0.93),rgba(11,17,32,0.93));
+    border:1px solid rgba(94,234,212,0.22);
+    box-shadow:0 7px 16px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.04);
+    line-height:1.05;
+  }
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,0.72);box-shadow:0 0 18px rgba(94,234,212,0.16),0 7px 16px rgba(0,0,0,0.25)}
+  .pill[data-warn="true"]{border-color:rgba(251,113,133,0.62);box-shadow:0 0 18px rgba(251,113,133,0.14),0 7px 16px rgba(0,0,0,0.25)}
+  .label{font-size:9px;text-transform:uppercase;color:rgba(94,234,212,0.82);font-weight:800;white-space:nowrap}
+  .value{font-size:18px;font-weight:900;color:#e6edf3;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stage-wrap{
+    width:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(94,234,212,0.28);
+    background:linear-gradient(180deg,rgba(12,20,35,0.96),rgba(6,11,20,0.98));
+    box-shadow:0 20px 44px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:5/6;max-height:62vh;background:#06101a;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(94,234,212,0.78);outline-offset:-4px}
+  .status{
+    min-height:18px;text-align:center;color:#5eead4;font-size:12px;font-weight:800;text-transform:uppercase;
+  }
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{
+    min-height:40px;border-radius:8px;border:1px solid rgba(94,234,212,0.24);
+    background:linear-gradient(180deg,rgba(20,30,50,0.94),rgba(11,17,32,0.94));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0;padding:8px 12px;cursor:pointer;
+    box-shadow:0 7px 16px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  button.primary{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;box-shadow:0 10px 22px rgba(34,211,238,0.25)}
+  button:hover{border-color:rgba(94,234,212,0.58)}
+  button[aria-pressed="false"]{color:rgba(230,237,243,0.78);border-color:rgba(255,255,255,0.18)}
+  .hint{color:#9fb0c8;font-size:12px;line-height:1.35;text-align:center}
+  @media (max-width:640px){
+    body{padding:12px 8px 18px}
+    .shell{gap:8px}
+    .brand .title{font-size:19px}
+    .hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .pill{padding:7px 7px}
+    .value{font-size:16px}
+    canvas{max-height:38vh}
+    .controls button{flex:1 1 110px;min-height:38px}
+    .hint{font-size:11px}
+  }
+  @media (max-width:420px){
+    .hud{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Stack Tide</span></div>
+  <div class="hud" aria-label="Stack Tide status">
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill" id="comboPill"><span class="label">Combo</span><span class="value" id="comboValue">0</span></div>
+    <div class="pill" id="widthPill"><span class="label">Width</span><span class="value" id="widthValue">120</span></div>
+    <div class="pill" id="speedPill"><span class="label">Speed</span><span class="value" id="speedValue">1.00x</span></div>
+  </div>
+  <div class="stage-wrap"><canvas id="game" width="640" height="800" tabindex="0" aria-label="Stack Tide canvas. Press Space, click, or tap to drop the sliding platform onto the tower. Stack as high as you can."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Press Space, click, or tap to drop the first platform.</div>
+  <div class="controls" aria-label="Stack Tide controls">
+    <button class="primary" id="dropBtn" type="button">Tap to Drop</button>
+    <button id="restartBtn" type="button">Restart</button>
+    <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button id="fullscreenBtn" type="button">Fullscreen</button>
+  </div>
+  <div class="hint">Space / click / tap drops. R restarts. M toggles sound. F fullscreen. A perfect overlap (within 4px) keeps your width and bumps the combo; missing entirely ends the run.</div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const BEST_KEY = "stack-tide.best.v1";
+  const SOUND_KEY = "stack-tide.sound.v1";
+  const els = {
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    combo: document.getElementById("comboValue"),
+    width: document.getElementById("widthValue"),
+    speed: document.getElementById("speedValue"),
+    comboPill: document.getElementById("comboPill"),
+    widthPill: document.getElementById("widthPill"),
+    speedPill: document.getElementById("speedPill"),
+    status: document.getElementById("statusLine"),
+    drop: document.getElementById("dropBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn"),
+  };
+
+  const PALETTE = ["#22d3ee", "#5eead4", "#a855f7", "#f472b6", "#fbbf24", "#34d399", "#60a5fa"];
+  const BASE_WIDTH = 180;
+  const BLOCK_HEIGHT = 28;
+  const PERFECT_TOLERANCE = 4;
+  const PERFECT_REWARD = 18;
+  const BASE_SPEED_PX_PER_SEC = 200;
+  const SPEED_GROWTH = 0.04;
+  const SPEED_CAP = 2.4;
+  const VIEW_MARGIN_TOP = 200;
+  const SCROLL_SPEED = 420;
+  const SHAVING_GRAVITY = 1400;
+  const FLASH_MS = 380;
+
+  function safeGet(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return fallback;
+      try { return JSON.parse(raw); } catch (_) { return raw; }
+    } catch (_) { return fallback; }
+  }
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value)); } catch (_) {}
+  }
+  function loadSound() {
+    const raw = safeGet(SOUND_KEY, null);
+    if (raw === null || raw === undefined || raw === "") return true;
+    if (typeof raw === "boolean") return raw;
+    if (raw && typeof raw === "object") {
+      if (typeof raw.soundEnabled === "boolean") return raw.soundEnabled;
+      if (typeof raw.muted === "boolean") return !raw.muted;
+    }
+    const normalized = String(raw).toLowerCase();
+    if (["0","false","off","muted","disabled"].includes(normalized)) return false;
+    if (["1","true","on","unmuted","enabled"].includes(normalized)) return true;
+    return true;
+  }
+  function persistSound(enabled) {
+    safeSet(SOUND_KEY, { soundEnabled: enabled, muted: !enabled });
+  }
+
+  const state = {
+    mode: "ready",
+    score: 0,
+    best: Number(safeGet(BEST_KEY, 0)) || 0,
+    combo: 0,
+    bestCombo: 0,
+    stack: [],
+    platform: null,
+    shavings: [],
+    cameraY: 0,
+    cameraTarget: 0,
+    time: 0,
+    flashUntil: 0,
+    flashKind: "idle",
+    lastDrop: null,
+    soundEnabled: loadSound(),
+    soundCount: 0,
+    lastSound: "none",
+    userGesture: false,
+    feedbackEventCounters: {
+      start: 0,
+      drop: 0,
+      perfect: 0,
+      miss: 0,
+      restart: 0,
+      soundToggle: 0,
+    },
+    gameOver: false,
+  };
+
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!state.userGesture || !state.soundEnabled) return null;
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch (_) { audioCtx = null; }
+    return audioCtx;
+  }
+  function tone(name, freq, durMs, gain, type, delayMs) {
+    if (!state.soundEnabled) {
+      state.lastSound = "muted:" + name;
+      return;
+    }
+    const ac = ensureAudio();
+    if (!ac) { state.lastSound = "no-audio:" + name; return; }
+    if (ac.state === "suspended") { try { ac.resume(); } catch (_) {} }
+    const start = ac.currentTime + (delayMs || 0) / 1000;
+    const osc = ac.createOscillator();
+    const amp = ac.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, start);
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(gain || 0.05, start + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + durMs / 1000);
+    osc.connect(amp).connect(ac.destination);
+    osc.start(start);
+    osc.stop(start + durMs / 1000 + 0.03);
+    state.lastSound = name;
+    state.soundCount += 1;
+  }
+  function play(name) {
+    if (name === "drop") tone(name, 360 + Math.min(220, state.score * 6), 80, 0.045, "square", 0);
+    else if (name === "perfect") {
+      tone(name, 660 + Math.min(220, state.combo * 16), 90, 0.05, "sine", 0);
+      tone(name, 880 + Math.min(240, state.combo * 18), 90, 0.03, "triangle", 50);
+    }
+    else if (name === "miss") {
+      tone(name, 180, 140, 0.06, "sawtooth", 0);
+      tone(name, 120, 180, 0.04, "triangle", 80);
+    }
+    else if (name === "start") tone(name, 520, 70, 0.04, "triangle", 0);
+    else if (name === "restart") tone(name, 440, 70, 0.04, "triangle", 0);
+    else if (name === "toggle") tone(name, 880, 50, 0.04, "sine", 0);
+  }
+
+  function markGesture() { state.userGesture = true; }
+  function bumpFeedbackEvent(kind) {
+    if (state.feedbackEventCounters[kind] !== undefined) state.feedbackEventCounters[kind] += 1;
+  }
+  function setStatus(text) { els.status.textContent = text; }
+  function setFlash(kind) {
+    state.flashKind = kind;
+    state.flashUntil = state.time + FLASH_MS;
+  }
+  function feedbackActive() {
+    return state.flashUntil > state.time || state.mode === "playing" || state.shavings.length > 0;
+  }
+
+  function platformY() {
+    const topBlock = state.stack[state.stack.length - 1];
+    return topBlock.y - BLOCK_HEIGHT;
+  }
+  function platformSpeed() {
+    return BASE_SPEED_PX_PER_SEC * Math.min(SPEED_CAP, 1 + state.score * SPEED_GROWTH);
+  }
+  function spawnPlatform(width) {
+    const w = Math.max(8, Math.round(width));
+    const dir = (state.stack.length & 1) ? -1 : 1;
+    const startX = dir === 1 ? -w + 2 : W - 2;
+    state.platform = { x: startX, y: platformY(), w, h: BLOCK_HEIGHT, dir };
+  }
+  function newRun() {
+    state.mode = "playing";
+    state.score = 0;
+    state.combo = 0;
+    state.stack = [];
+    state.shavings = [];
+    state.cameraY = 0;
+    state.cameraTarget = 0;
+    state.gameOver = false;
+    state.flashUntil = state.time + 180;
+    state.flashKind = "start";
+    const groundY = H - 80;
+    const groundX = (W - BASE_WIDTH) / 2;
+    state.stack.push({ x: groundX, y: groundY, w: BASE_WIDTH, h: BLOCK_HEIGHT, color: PALETTE[0] });
+    spawnPlatform(BASE_WIDTH);
+    bumpFeedbackEvent("start");
+    play("start");
+    setStatus("Drop the platform onto the tower!");
+  }
+  function restart() {
+    bumpFeedbackEvent("restart");
+    play("restart");
+    newRun();
+  }
+  function dropPlatform() {
+    if (state.mode === "ready") {
+      newRun();
+      return;
+    }
+    if (state.mode !== "playing" || !state.platform) return;
+    const top = state.stack[state.stack.length - 1];
+    const platform = state.platform;
+    const leftA = platform.x;
+    const rightA = platform.x + platform.w;
+    const leftB = top.x;
+    const rightB = top.x + top.w;
+    const overlapLeft = Math.max(leftA, leftB);
+    const overlapRight = Math.min(rightA, rightB);
+    const overlap = overlapRight - overlapLeft;
+    const delta = Math.abs(platform.x - top.x);
+    if (overlap <= 0) {
+      state.shavings.push({
+        x: platform.x, y: platform.y, w: platform.w, h: platform.h,
+        vy: -120, vx: platform.dir * 80, color: pickColor(state.stack.length),
+      });
+      state.platform = null;
+      state.combo = 0;
+      setFlash("miss");
+      bumpFeedbackEvent("miss");
+      play("miss");
+      endRun();
+      return;
+    }
+    const perfect = delta <= PERFECT_TOLERANCE;
+    let finalLeft = overlapLeft;
+    let finalWidth = overlap;
+    if (perfect) {
+      finalLeft = top.x;
+      finalWidth = top.w + Math.min(PERFECT_REWARD, (BASE_WIDTH - top.w));
+      finalLeft = Math.max(0, Math.min(W - finalWidth, finalLeft - (finalWidth - top.w) / 2));
+      state.combo += 1;
+      if (state.combo > state.bestCombo) state.bestCombo = state.combo;
+      setFlash("perfect");
+      bumpFeedbackEvent("perfect");
+      play("perfect");
+      setStatus("Perfect stack! Combo " + state.combo + ".");
+    } else {
+      // Shave the non-overlapping portion of the dropped platform
+      if (platform.x < top.x) {
+        state.shavings.push({
+          x: platform.x, y: platform.y, w: top.x - platform.x, h: platform.h,
+          vy: -80, vx: -90, color: pickColor(state.stack.length),
+        });
+      } else if (platform.x + platform.w > top.x + top.w) {
+        const sx = top.x + top.w;
+        state.shavings.push({
+          x: sx, y: platform.y, w: (platform.x + platform.w) - sx, h: platform.h,
+          vy: -80, vx: 90, color: pickColor(state.stack.length),
+        });
+      }
+      state.combo = 0;
+      setFlash("good");
+      bumpFeedbackEvent("drop");
+      play("drop");
+      setStatus("Stacked +1. Width " + Math.round(finalWidth) + "px.");
+    }
+    const color = pickColor(state.stack.length);
+    state.stack.push({ x: finalLeft, y: platform.y, w: finalWidth, h: platform.h, color });
+    state.score += 1;
+    state.lastDrop = { delta: Math.round(delta * 10) / 10, perfect, width: Math.round(finalWidth) };
+    if (state.score > state.best) {
+      state.best = state.score;
+      safeSet(BEST_KEY, state.best);
+    }
+    // Scroll camera up
+    const top2 = state.stack[state.stack.length - 1];
+    const desiredCamera = Math.max(0, VIEW_MARGIN_TOP - top2.y);
+    state.cameraTarget = desiredCamera;
+    spawnPlatform(finalWidth);
+  }
+  function endRun() {
+    state.mode = "gameOver";
+    state.platform = null;
+    state.gameOver = true;
+    setStatus("Tower fell at " + state.score + " stacks. Press R or Restart to try again.");
+  }
+  function pickColor(level) {
+    return PALETTE[level % PALETTE.length];
+  }
+
+  function update(dt) {
+    state.time += dt * 1000;
+    if (state.platform && state.mode === "playing") {
+      state.platform.x += state.platform.dir * platformSpeed() * dt;
+      if (state.platform.x <= -state.platform.w + 2) {
+        state.platform.x = -state.platform.w + 2;
+        state.platform.dir = 1;
+      } else if (state.platform.x >= W - 2) {
+        state.platform.x = W - 2;
+        state.platform.dir = -1;
+      }
+    }
+    // Shavings physics
+    for (const sh of state.shavings) {
+      sh.vy += SHAVING_GRAVITY * dt;
+      sh.x += sh.vx * dt;
+      sh.y += sh.vy * dt;
+    }
+    state.shavings = state.shavings.filter((sh) => sh.y - state.cameraY < H + 60);
+    // Camera lerp
+    const dy = state.cameraTarget - state.cameraY;
+    if (Math.abs(dy) > 0.5) state.cameraY += dy * Math.min(1, dt * 6);
+    else state.cameraY = state.cameraTarget;
+  }
+
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "#0a1424");
+    grad.addColorStop(1, "#040912");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    // Subtle horizontal lines
+    ctx.strokeStyle = "rgba(94,234,212,0.05)";
+    ctx.lineWidth = 1;
+    for (let y = (state.cameraY % 40); y < H; y += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+  function drawBlock(block, screenY) {
+    const grad = ctx.createLinearGradient(0, screenY, 0, screenY + block.h);
+    grad.addColorStop(0, block.color);
+    grad.addColorStop(1, shade(block.color, -0.32));
+    ctx.fillStyle = grad;
+    ctx.fillRect(block.x, screenY, block.w, block.h);
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(block.x + 0.5, screenY + 0.5, block.w - 1, block.h - 1);
+  }
+  function shade(hex, amount) {
+    const m = /^#([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return hex;
+    const n = parseInt(m[1], 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const t = amount < 0 ? 0 : 255;
+    const a = Math.abs(amount);
+    r = Math.round((1 - a) * r + a * t);
+    g = Math.round((1 - a) * g + a * t);
+    b = Math.round((1 - a) * b + a * t);
+    return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+  }
+  function render() {
+    drawBackground();
+    ctx.save();
+    ctx.translate(0, state.cameraY);
+    // Stack
+    for (const block of state.stack) {
+      drawBlock(block, block.y);
+    }
+    // Platform glow
+    if (state.platform) {
+      ctx.shadowColor = "rgba(94,234,212,0.8)";
+      ctx.shadowBlur = 18;
+      drawBlock({ ...state.platform, color: "#22d3ee" }, state.platform.y);
+      ctx.shadowBlur = 0;
+    }
+    // Shavings
+    for (const sh of state.shavings) drawBlock(sh, sh.y);
+    ctx.restore();
+    // Flash overlay
+    const remaining = Math.max(0, state.flashUntil - state.time);
+    if (remaining > 0) {
+      const alpha = (remaining / FLASH_MS) * 0.22;
+      ctx.fillStyle = state.flashKind === "perfect" ? `rgba(94,234,212,${alpha})`
+                    : state.flashKind === "miss" ? `rgba(251,113,133,${alpha})`
+                    : state.flashKind === "good" ? `rgba(124,158,255,${alpha * 0.6})`
+                    : `rgba(255,255,255,${alpha * 0.4})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (state.mode === "ready") {
+      drawCenterMessage("TAP / SPACE TO START", "Drop the sliding platform onto the tower.", "#5eead4");
+    } else if (state.mode === "gameOver") {
+      drawCenterMessage("TOWER FELL", "Score " + state.score + " · Best " + state.best + " · Press R", "#fb7185");
+    }
+  }
+  function drawCenterMessage(title, sub, color) {
+    ctx.save();
+    ctx.fillStyle = "rgba(4,10,24,0.6)";
+    ctx.fillRect(0, H / 2 - 70, W, 140);
+    ctx.fillStyle = color;
+    ctx.font = "900 28px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(title, W / 2, H / 2 - 8);
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "800 14px system-ui";
+    ctx.fillText(sub, W / 2, H / 2 + 22);
+    ctx.restore();
+  }
+
+  function updateHud() {
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.best);
+    els.combo.textContent = String(state.combo);
+    const topBlock = state.stack[state.stack.length - 1];
+    els.width.textContent = topBlock ? String(Math.round(topBlock.w)) : String(BASE_WIDTH);
+    els.speed.textContent = (Math.min(SPEED_CAP, 1 + state.score * SPEED_GROWTH)).toFixed(2) + "x";
+    els.comboPill.dataset.hot = String(state.combo >= 3);
+    els.widthPill.dataset.warn = String(topBlock ? topBlock.w < 36 : false);
+    els.speedPill.dataset.hot = String(state.score >= 12);
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    updateHud();
+    requestAnimationFrame(frame);
+  }
+
+  // Controls
+  canvas.addEventListener("pointerdown", () => { canvas.focus(); markGesture(); dropPlatform(); });
+  els.drop.addEventListener("click", () => { markGesture(); dropPlatform(); });
+  els.restart.addEventListener("click", () => { markGesture(); restart(); });
+  els.sound.addEventListener("click", () => {
+    markGesture();
+    state.soundEnabled = !state.soundEnabled;
+    persistSound(state.soundEnabled);
+    bumpFeedbackEvent("soundToggle");
+    play("toggle");
+  });
+  els.fullscreen.addEventListener("click", () => {
+    markGesture();
+    const doc = document;
+    const el = doc.fullscreenElement ? null : (doc.documentElement || doc.body);
+    if (el && el.requestFullscreen) { el.requestFullscreen().catch(() => {}); }
+    else if (doc.exitFullscreen) { doc.exitFullscreen().catch(() => {}); }
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (event.repeat) return;
+    if (event.code === "Space" || event.code === "Enter") {
+      event.preventDefault();
+      markGesture();
+      dropPlatform();
+    } else if (event.code === "KeyR") {
+      event.preventDefault();
+      markGesture();
+      restart();
+    } else if (event.code === "KeyM") {
+      event.preventDefault();
+      markGesture();
+      els.sound.click();
+    } else if (event.code === "KeyF") {
+      event.preventDefault();
+      markGesture();
+      els.fullscreen.click();
+    }
+  });
+
+  function renderGameToText() {
+    return JSON.stringify({
+      mode: state.mode,
+      score: state.score,
+      best: state.best,
+      combo: state.combo,
+      bestCombo: state.bestCombo,
+      stack: state.stack.slice(-8).map((b) => ({
+        x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: b.h,
+      })),
+      topBlock: state.stack.length ? {
+        x: Math.round(state.stack[state.stack.length - 1].x),
+        y: Math.round(state.stack[state.stack.length - 1].y),
+        w: Math.round(state.stack[state.stack.length - 1].w),
+      } : null,
+      platform: state.platform ? {
+        x: Math.round(state.platform.x),
+        y: Math.round(state.platform.y),
+        w: Math.round(state.platform.w),
+        dir: state.platform.dir,
+        speed: Math.round(platformSpeed()),
+      } : null,
+      shavingCount: state.shavings.length,
+      cameraY: Math.round(state.cameraY),
+      time: Math.round(state.time),
+      flashKind: state.flashKind,
+      flashRemaining: Math.round(Math.max(0, state.flashUntil - state.time)),
+      feedbackActive: feedbackActive(),
+      lastDrop: state.lastDrop,
+      eventCounters: { ...state.feedbackEventCounters },
+      soundEnabled: state.soundEnabled,
+      lastSound: state.lastSound,
+      soundCount: state.soundCount,
+      userGesture: state.userGesture,
+      gameOver: state.gameOver,
+    });
+  }
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = function advanceTime(ms) {
+    const total = Math.max(0, Number(ms) || 0);
+    const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
+    const dt = total / steps / 1000 || 1 / 60;
+    for (let i = 0; i < steps; i += 1) update(dt);
+    render();
+    return renderGameToText();
+  };
+
+  updateHud();
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
