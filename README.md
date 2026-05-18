@@ -8,6 +8,20 @@ The catalog includes a sandboxed player modal and a Workshop flow for players or
 
 The site is hosted via GitHub Pages from the `main` branch root. Pushes to `main` redeploy automatically.
 
+## First-time Setup
+
+Open the repo in [GitHub Codespaces](https://github.com/jakethehoffer/Workshop-Arcade/codespaces) for a one-click environment — the `.devcontainer/devcontainer.json` pulls Microsoft's Playwright image so chromium + system deps are baked in, and the post-create hook runs `npm ci && npm run setup` automatically.
+
+Local clone (Windows / macOS / Linux):
+
+```powershell
+npm ci
+npm run setup
+npm test
+```
+
+`npm run setup` downloads the Playwright chromium binary needed by `npm run test:games`. Without it the Playwright suite fails on a fresh clone with a "browser not installed" error.
+
 ## Local Development
 
 Run a static server from the repo root:
@@ -63,6 +77,7 @@ npm run audit:perf:ci
 - `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `humans.txt` (humanstxt.org format with `/* TEAM */`), and `package.json` declares `"license": "MIT"` so npm + GitHub language detection match the LICENSE file.
 - `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
 - `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly `test:games` (slow) and `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
+- `npm run test:contributor-onboarding` keeps the first-time-setup story aligned: `npm run setup` exists and pins Playwright chromium, `.devcontainer/devcontainer.json` uses a Playwright image + runs `npm ci && npm run setup` on create + forwards at least one static-server port, and `README.md` mentions both `npm run setup` and Codespaces.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
