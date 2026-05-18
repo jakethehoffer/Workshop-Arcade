@@ -98,6 +98,26 @@ async function checkCatalog() {
   if (!/setAttribute\(['"]fetchpriority['"]\s*,\s*['"]low['"]\)/.test(src)) {
     fail(`${indexPath}: render() must set fetchpriority="low" on below-the-fold cards`);
   }
+
+  // Native loading="lazy" is a Chromium hint that pre-fetches anyway, so
+  // below-the-fold covers must additionally route through an
+  // IntersectionObserver that swaps a placeholder src to the real cover URL
+  // only when the card scrolls into view. Without this, the catalog quietly
+  // regresses back toward the pre-observer baseline (40 cover requests on
+  // first paint) — the perf audit's request budget would catch it eventually,
+  // but a fast-gate assertion catches it earlier and with a clearer message.
+  if (!/new\s+IntersectionObserver\s*\(/.test(src)) {
+    fail(`${indexPath}: render() must wire below-the-fold covers through an IntersectionObserver so native loading="lazy" hint pre-fetching does not bypass deferral`);
+  }
+  if (!/\.observe\s*\(\s*img\s*\)/.test(src)) {
+    fail(`${indexPath}: render() must call observer.observe(img) on each below-the-fold cover so the observer actually wakes up when the card scrolls into view`);
+  }
+  if (!/dataset\.lazySrc\s*=/.test(src)) {
+    fail(`${indexPath}: render() must stash the real cover URL on img.dataset.lazySrc so the IntersectionObserver can swap it in on intersection`);
+  }
+  if (!/COVER_LAZY_PLACEHOLDER|data:image\/svg\+xml[^"']*width=['"]?640/.test(src)) {
+    fail(`${indexPath}: render() must set a placeholder src (e.g. COVER_LAZY_PLACEHOLDER) on below-the-fold cards so the layout box is reserved without a broken-image flash before the observer swaps the real cover in`);
+  }
 }
 
 await checkCatalog();
