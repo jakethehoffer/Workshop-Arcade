@@ -1,0 +1,57 @@
+name: CodeQL
+
+# Static analysis for the catalog's inline JavaScript + the Node tooling
+# under scripts/. Runs on every push and PR to main, plus a weekly safety
+# net so newly-published rule packs catch issues even when no code changed.
+#
+# Permissions are tightened to the minimum CodeQL needs:
+#   - security-events: write  → upload SARIF results
+#   - actions: read           → CodeQL uses workflow logs for context
+#   - contents: read          → checkout
+# Everything else stays at the default "none" so a compromised step
+# can't push code or change settings.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Mondays at 12:00 UTC.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended catches XSS / SSRF / prototype-pollution
+          # patterns that the default suite skips.
+          queries: security-extended
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

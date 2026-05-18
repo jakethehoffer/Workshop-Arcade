@@ -28,6 +28,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 npm ci
 npm run test:docs
 npm run test:meta-files
+npm run test:security-workflows
 npm run test:tools
 npm run test:capture-recipes
 npm run test:catalog-perf
@@ -51,6 +52,7 @@ npm run audit:perf:ci
 - `validate-catalog.ps1` checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, local subresources, no remote scripts/fonts, and a synchronized fallback catalog in `index.html`. The `-Fix` form regenerates `FALLBACK_GAMES` automatically.
 - `npm run test:docs` keeps contributor-facing validation docs aligned with the current publish-ready CI gates.
 - `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `humans.txt` (humanstxt.org format with `/* TEAM */`), and `package.json` declares `"license": "MIT"` so npm + GitHub language detection match the LICENSE file.
+- `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
@@ -76,7 +78,7 @@ See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove
 
 ## License & Security Reports
 
-Workshop Arcade is distributed under the [MIT License](LICENSE) — fork, modify, and remix freely as long as the copyright notice travels along. Security disclosures follow [RFC 9116](.well-known/security.txt): please open a [private GitHub security advisory](https://github.com/jakethehoffer/Workshop-Arcade/security/advisories/new) for anything that could let a malicious game submission compromise visitors. Informal credits live in [humans.txt](humans.txt).
+Workshop Arcade is distributed under the [MIT License](LICENSE) — fork, modify, and remix freely as long as the copyright notice travels along. Security disclosures follow [RFC 9116](.well-known/security.txt): please open a [private GitHub security advisory](https://github.com/jakethehoffer/Workshop-Arcade/security/advisories/new) for anything that could let a malicious game submission compromise visitors. [CodeQL](.github/workflows/codeql.yml) scans the inline catalog JavaScript + the Node tooling on every push and weekly, and [Dependabot](.github/dependabot.yml) auto-PRs Playwright + GitHub Actions updates. Informal credits live in [humans.txt](humans.txt).
 
 ## Install / Offline Support
 
