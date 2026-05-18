@@ -20,8 +20,11 @@ import {
   buildSitemap,
   loadManifest,
   renderItemListBlock,
+  renderWebSiteBlock,
   JSONLD_MARK_START,
   JSONLD_MARK_END,
+  WEBSITE_MARK_START,
+  WEBSITE_MARK_END,
 } from './build-sitemap.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -132,10 +135,66 @@ async function checkIndexJsonLd(manifest) {
   }
 }
 
+async function checkIndexWebSiteJsonLd() {
+  if (!(await exists('index.html'))) return;
+  const html = await readFile(join(repoRoot, 'index.html'), 'utf8');
+
+  const startIndex = html.indexOf(WEBSITE_MARK_START);
+  const endIndex = html.indexOf(WEBSITE_MARK_END);
+  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+    fail(`index.html: missing WebSite JSON-LD marker block (${WEBSITE_MARK_START} ... ${WEBSITE_MARK_END}) — run \`npm run build:sitemap\``);
+    return;
+  }
+  const committed = html.slice(startIndex, endIndex + WEBSITE_MARK_END.length);
+  const expected = renderWebSiteBlock();
+  if (committed !== expected) {
+    fail('index.html: WebSite JSON-LD drifted — run `npm run build:sitemap` to refresh');
+  }
+
+  const scriptMatch = committed.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (!scriptMatch) {
+    fail('index.html: WebSite marker block missing <script type="application/ld+json">');
+    return;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(scriptMatch[1].trim());
+  } catch (error) {
+    fail(`index.html: WebSite JSON-LD block does not parse: ${error.message}`);
+    return;
+  }
+  if (parsed['@context'] !== 'https://schema.org') {
+    fail('index.html: WebSite JSON-LD @context must be "https://schema.org"');
+  }
+  if (parsed['@type'] !== 'WebSite') {
+    fail(`index.html: WebSite JSON-LD @type must be "WebSite", got "${parsed['@type']}"`);
+  }
+  if (parsed.url !== SITE) {
+    fail(`index.html: WebSite JSON-LD url must be "${SITE}", got "${parsed.url}"`);
+  }
+  const action = parsed.potentialAction;
+  if (!action || action['@type'] !== 'SearchAction') {
+    fail('index.html: WebSite JSON-LD must include potentialAction with @type "SearchAction" so Google can render the Sitelinks Search Box');
+    return;
+  }
+  if (action['query-input'] !== 'required name=search_term_string') {
+    fail(`index.html: SearchAction "query-input" must be "required name=search_term_string", got ${JSON.stringify(action['query-input'])}`);
+  }
+  const target = action.target;
+  const urlTemplate = typeof target === 'string' ? target : target?.urlTemplate;
+  if (!urlTemplate || !urlTemplate.includes('{search_term_string}')) {
+    fail('index.html: SearchAction target.urlTemplate must include {search_term_string} so Google can substitute the visitor query');
+  }
+  if (urlTemplate && !urlTemplate.includes('?q=')) {
+    fail(`index.html: SearchAction urlTemplate must use the catalog's ?q= URL state contract (test:url-filters reads the same param), got "${urlTemplate}"`);
+  }
+}
+
 const manifest = await loadManifest();
 await checkSitemap(manifest);
 await checkRobots();
 await checkIndexJsonLd(manifest);
+await checkIndexWebSiteJsonLd();
 
 if (issues.length > 0) {
   console.error(`SEO check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -145,4 +204,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log(`SEO check passed: sitemap.xml (${manifest.length + 1} URLs), robots.txt, and index.html ItemList (${manifest.length} items) all in sync.`);
+console.log(`SEO check passed: sitemap.xml (${manifest.length + 1} URLs), robots.txt, index.html ItemList (${manifest.length} items), and WebSite + SearchAction JSON-LD all in sync.`);
