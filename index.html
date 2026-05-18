@@ -632,6 +632,10 @@
         <span>Random</span>
       </button>
       <button class="icon-btn help-btn" type="button" id="helpBtn" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)">?</button>
+      <button class="btn subtle install-btn" type="button" id="installAppBtn" aria-label="Install Workshop Arcade as an app" title="Install Workshop Arcade as an app" hidden>
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Install</span>
+      </button>
       <a class="btn primary" href="#" id="submitGameBtn">Workshop</a>
     </div>
     <div class="filters" id="filters" aria-label="Filters">
@@ -933,6 +937,7 @@ const els = {
   submitGameBtn: document.getElementById('submitGameBtn'),
   randomGameBtn: document.getElementById('randomGameBtn'),
   helpBtn: document.getElementById('helpBtn'),
+  installAppBtn: document.getElementById('installAppBtn'),
   helpDialog: document.getElementById('helpDialog'),
   playerModal: document.getElementById('playerModal'),
   playerShare: document.getElementById('playerShare'),
@@ -1984,6 +1989,53 @@ if ('serviceWorker' in navigator) {
         }
       });
     });
+  });
+}
+
+// PWA install affordance: capture the browser's beforeinstallprompt
+// event (fired only when the PWA install criteria are met and the user
+// hasn't already installed), stash it, and reveal a header "Install"
+// button that triggers prompt.prompt() on click. The button stays
+// hidden on Safari/iOS and on any browser that has already installed
+// the app, so it never advertises a flow that won't work. After the
+// user accepts OR dismisses, the cached event is single-use; if the
+// browser decides to fire it again later, the listener catches the new
+// one.
+let deferredInstallPrompt = null;
+
+function showInstallButton(){
+  if (els.installAppBtn) els.installAppBtn.hidden = false;
+}
+
+function hideInstallButton(){
+  if (els.installAppBtn) els.installAppBtn.hidden = true;
+  deferredInstallPrompt = null;
+}
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  // Prevent the legacy mini-infobar that older Chrome versions still show.
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  showInstallButton();
+});
+
+window.addEventListener('appinstalled', () => {
+  hideInstallButton();
+});
+
+if (els.installAppBtn) {
+  els.installAppBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    const prompt = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try {
+      await prompt.prompt();
+      await prompt.userChoice;
+    } catch {
+      // Calling prompt() twice or after the event went stale throws.
+      // Either way the button has done its job — hide it.
+    }
+    hideInstallButton();
   });
 }
 </script>
