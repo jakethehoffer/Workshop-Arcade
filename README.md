@@ -1,5 +1,10 @@
 # Workshop Arcade
 
+[![Validate Catalog](https://github.com/jakethehoffer/Workshop-Arcade/actions/workflows/validate-catalog.yml/badge.svg)](https://github.com/jakethehoffer/Workshop-Arcade/actions/workflows/validate-catalog.yml)
+[![CodeQL](https://github.com/jakethehoffer/Workshop-Arcade/actions/workflows/codeql.yml/badge.svg)](https://github.com/jakethehoffer/Workshop-Arcade/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Live: GitHub Pages](https://img.shields.io/badge/live-jakethehoffer.github.io%2FWorkshop--Arcade-5eead4)](https://jakethehoffer.github.io/Workshop-Arcade/)
+
 **Live:** [https://jakethehoffer.github.io/Workshop-Arcade/](https://jakethehoffer.github.io/Workshop-Arcade/)
 
 Workshop Arcade is a static catalog of browser games. Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`.
@@ -76,7 +81,7 @@ npm run audit:perf:ci
 - `validate-catalog.ps1` checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, local subresources, no remote scripts/fonts, and a synchronized fallback catalog in `index.html`. The `-Fix` form regenerates `FALLBACK_GAMES` automatically.
 - `npm run test:docs` keeps contributor-facing validation docs aligned with the current publish-ready CI gates.
 - `npm run test:manifest-schema` validates `websites/manifest.json` against [`schemas/manifest.schema.json`](schemas/manifest.schema.json) — the single source-of-truth contract that every generator (sitemap, feed, OG images, inject-meta) and downstream validator depends on. The same schema is wired into `.vscode/settings.json` so editors give contributors live autocomplete + inline validation while editing the manifest, catching typos like `tagss: [...]` at source instead of cascading into a wall of generator failures.
-- `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `humans.txt` (humanstxt.org format with `/* TEAM */`), and `package.json` declares `"license": "MIT"` so npm + GitHub language detection match the LICENSE file.
+- `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `SECURITY.md` (GitHub-native disclosure policy linking to private advisories + the RFC 9116 surface), `humans.txt` (humanstxt.org format with `/* TEAM */`), `package.json` declares `"license": "MIT"`, and the README's intro slab carries the Validate Catalog + CodeQL + License: MIT badges so visitors see repo health at a glance.
 - `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
 - `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly `test:games` (slow) and `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
 - `npm run test:contributor-onboarding` keeps the first-time-setup story aligned: `npm run setup` exists and pins Playwright chromium, `.devcontainer/devcontainer.json` uses a Playwright image + runs `npm ci && npm run setup` on create + forwards at least one static-server port, and `README.md` mentions both `npm run setup` and Codespaces.
@@ -108,7 +113,7 @@ See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove
 
 ## License & Security Reports
 
-Workshop Arcade is distributed under the [MIT License](LICENSE) — fork, modify, and remix freely as long as the copyright notice travels along. Security disclosures follow [RFC 9116](.well-known/security.txt): please open a [private GitHub security advisory](https://github.com/jakethehoffer/Workshop-Arcade/security/advisories/new) for anything that could let a malicious game submission compromise visitors. [CodeQL](.github/workflows/codeql.yml) scans the inline catalog JavaScript + the Node tooling on every push and weekly, and [Dependabot](.github/dependabot.yml) auto-PRs Playwright + GitHub Actions updates. Informal credits live in [humans.txt](humans.txt).
+Workshop Arcade is distributed under the [MIT License](LICENSE) — fork, modify, and remix freely as long as the copyright notice travels along. Security disclosures follow [RFC 9116](.well-known/security.txt) and the [SECURITY.md disclosure policy](SECURITY.md): please open a [private GitHub security advisory](https://github.com/jakethehoffer/Workshop-Arcade/security/advisories/new) for anything that could let a malicious game submission compromise visitors. [CodeQL](.github/workflows/codeql.yml) scans the inline catalog JavaScript + the Node tooling on every push and weekly, and [Dependabot](.github/dependabot.yml) auto-PRs Playwright + GitHub Actions updates. Informal credits live in [humans.txt](humans.txt).
 
 ## Install / Offline Support
 
