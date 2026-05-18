@@ -1055,6 +1055,28 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "stack-tide": {
+      name: "start a run and drop the sliding platform onto the tower",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = () => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
+          };
+          press(); // start the run
+          // Advance until the sliding platform is centered over the tower, then drop.
+          // Platform base speed is 200 px/s sliding from x=W-2=638 leftward; ground block
+          // spans 230..410. After ~1.55s the platform is at x~328, deep inside the
+          // overlap window, so dropping here lands a solid stack rather than missing.
+          window.advanceTime(1550);
+          press();
+          window.advanceTime(260);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

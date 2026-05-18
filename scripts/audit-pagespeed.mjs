@@ -19,8 +19,11 @@ const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--ci");
 const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jakethehoffer.github.io/Workshop-Arcade");
 
+// Catalog grows by ~1 request + ~3-5 KB per new game cover. Keep some headroom
+// over the current 37-game footprint so adding one or two more games doesn't
+// instantly bust the budget — refresh both numbers when the cushion runs out.
 const BUDGETS = {
-  Catalog: { transferKb: 250, requests: 40 },
+  Catalog: { transferKb: 280, requests: 44 },
   "Idle Tycoon": { transferKb: 225, requests: 8 },
   Lexica: { transferKb: 300, requests: 8 },
   default: { transferKb: 150, requests: 8 },
