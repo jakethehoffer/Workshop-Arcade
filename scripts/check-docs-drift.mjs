@@ -71,11 +71,43 @@ const scripts = packageJson.scripts || {};
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !['test:games', 'test:all'].includes(name))
   .sort();
+const fastGateCount = fastGateScripts.length;
+const readmeText = readText('README.md');
 
 for (const script of fastGateScripts) {
   const command = `npm run ${script}`;
-  if (!readText('README.md').includes(command)) {
+  if (!readmeText.includes(command)) {
     issues.push(`README.md: missing fast-gate command "${command}"`);
+  }
+}
+
+if (!readmeText.includes(`${fastGateCount} fast validators`)) {
+  issues.push(`README.md: script-network summary must say "${fastGateCount} fast validators" so the count stays aligned with package.json`);
+}
+
+function readNamedBudget(source, name) {
+  const pattern = new RegExp(`${name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}:\\s*\\{\\s*transferKb:\\s*(\\d+),\\s*requests:\\s*(\\d+)\\s*\\}`);
+  const match = source.match(pattern);
+  if (!match) {
+    issues.push(`scripts/audit-pagespeed.mjs: unable to parse ${name} budget`);
+    return null;
+  }
+  return { transferKb: Number(match[1]), requests: Number(match[2]) };
+}
+
+const auditSource = readText('scripts/audit-pagespeed.mjs');
+const catalogBudget = readNamedBudget(auditSource, 'Catalog');
+if (catalogBudget) {
+  const perfDoc = readText('docs/performance-baseline.md');
+  const architectureDoc = readText('ARCHITECTURE.md');
+  const perfTableRow = `| Catalog | ${catalogBudget.transferKb} KB | ${catalogBudget.requests} |`;
+  const architecturePattern = new RegExp(`Catalog\\s*(?:<=|≤)\\s*${catalogBudget.transferKb}\\s*KB\\s*/\\s*(?:<=|≤)\\s*${catalogBudget.requests}\\s*requests`);
+
+  if (!perfDoc.includes(perfTableRow)) {
+    issues.push(`docs/performance-baseline.md: CI budget table must include "${perfTableRow}" from scripts/audit-pagespeed.mjs`);
+  }
+  if (!architecturePattern.test(architectureDoc)) {
+    issues.push(`ARCHITECTURE.md: CI workflow summary must cite the current Catalog budget (${catalogBudget.transferKb} KB / ${catalogBudget.requests} requests)`);
   }
 }
 

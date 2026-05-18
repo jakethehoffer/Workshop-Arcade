@@ -1077,6 +1077,48 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "crate-circuit": {
+      name: "push a crate one step in the starter room",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+          };
+          window.advanceTime(60);
+          press("ArrowRight");
+          window.advanceTime(120);
+          press("ArrowRight");
+          window.advanceTime(220);
+        });
+      },
+    },
+    "prism-relay": {
+      name: "rotate the cursor tile to redirect the beam",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          window.advanceTime(60);
+          press(" ", "Space");
+          window.advanceTime(220);
+        });
+      },
+    },
+    "vector-pool": {
+      name: "fire a shot from the cue ball",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await clickSelectorIfVisible(page, "#shootBtn");
+        await settlePage(page, 600);
+      },
+    },
   };
 
   return recipes[slug] || null;

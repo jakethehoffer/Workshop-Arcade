@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vector Pool - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Play compact neon pool layouts with deterministic billiards physics, bank-shot scoring, and stroke limits." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/vector-pool.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Vector Pool — Workshop Arcade" />
+<meta property="og:description" content="Play compact neon pool layouts with deterministic billiards physics, bank-shot scoring, and stroke limits." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/vector-pool.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/vector-pool.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Vector Pool — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Vector Pool — Workshop Arcade" />
+<meta name="twitter:description" content="Play compact neon pool layouts with deterministic billiards physics, bank-shot scoring, and stroke limits." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/vector-pool.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Vector Pool",
+  "description": "Play compact neon pool layouts with deterministic billiards physics, bank-shot scoring, and stroke limits.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/vector-pool.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/vector-pool.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Physics",
+    "Sports"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Play compact neon pool layouts with deterministic billiards physics, bank-shot scoring, and stroke limits." />
+<meta name="theme-color" content="#071017" />
+<link rel="icon" href="data:," />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{
+    min-height:100vh;display:flex;justify-content:center;padding:16px 10px 22px;overflow-x:hidden;
+    background:
+      radial-gradient(760px 460px at 10% -4%,rgba(34,211,238,.16),transparent 62%),
+      radial-gradient(720px 460px at 96% 8%,rgba(244,114,182,.12),transparent 64%),
+      linear-gradient(180deg,#081018,#050812 88%);
+  }
+  .shell{width:min(1040px,100%);display:flex;flex-direction:column;gap:10px}
+  .topbar{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;user-select:none}
+  .brand .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:#5eead4;font-weight:900}
+  .brand .title{font-size:25px;letter-spacing:0;text-transform:uppercase;font-weight:950;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,.24)}
+  .hint{max-width:620px;color:#9fb0c8;font-size:12px;line-height:1.35;text-align:right}
+  .hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  .pill{
+    min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 8px;border-radius:8px;
+    background:linear-gradient(180deg,rgba(18,30,48,.94),rgba(8,15,27,.96));
+    border:1px solid rgba(94,234,212,.24);
+    box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);
+    line-height:1.05;
+  }
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,.72);box-shadow:0 0 18px rgba(94,234,212,.16),0 8px 18px rgba(0,0,0,.24)}
+  .pill[data-warn="true"]{border-color:rgba(251,113,133,.66);box-shadow:0 0 18px rgba(251,113,133,.14),0 8px 18px rgba(0,0,0,.24)}
+  .label{font-size:9px;text-transform:uppercase;color:rgba(94,234,212,.82);font-weight:900;white-space:nowrap}
+  .value{font-size:18px;font-weight:950;color:#e6edf3;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stage-wrap{
+    width:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(94,234,212,.28);
+    background:linear-gradient(180deg,rgba(12,24,38,.96),rgba(5,10,18,.98));
+    box-shadow:0 20px 46px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  canvas{display:block;width:100%;aspect-ratio:45/28;background:#061019;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(94,234,212,.78);outline-offset:-4px}
+  .status{min-height:18px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{
+    min-height:40px;border-radius:8px;border:1px solid rgba(94,234,212,.24);
+    background:linear-gradient(180deg,rgba(18,30,48,.94),rgba(8,15,27,.96));
+    color:#e6edf3;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0;padding:8px 12px;cursor:pointer;
+    box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  button.primary{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#05272d;box-shadow:0 10px 24px rgba(34,211,238,.24)}
+  button:hover{border-color:rgba(94,234,212,.6)}
+  button[aria-pressed="false"]{color:rgba(230,237,243,.72);border-color:rgba(255,255,255,.18)}
+  @media (max-width:720px){
+    body{padding:10px 8px 18px}
+    .shell{gap:8px}
+    .brand .title{font-size:20px}
+    .hint{text-align:left;font-size:11px}
+    .hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .pill{padding:7px 7px}
+    .value{font-size:16px}
+    canvas{aspect-ratio:45/31}
+    .controls button{flex:1 1 112px;min-height:38px}
+  }
+  @media (max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Vector Pool</span></div>
+    <div class="hint">Drag from the cue ball to set a vector. Arrows adjust aim, +/- or W/S adjust power, Space shoots, R restarts, F fullscreen, M sound.</div>
+  </div>
+  <div class="hud" aria-label="Vector Pool status">
+    <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/4</span></div>
+    <div class="pill" id="strokePill"><span class="label">Strokes</span><span class="value" id="strokeValue">0/4</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill" id="bankPill"><span class="label">Bank</span><span class="value" id="bankValue">0</span></div>
+    <div class="pill" id="powerPill"><span class="label">Power</span><span class="value" id="powerValue">45%</span></div>
+  </div>
+  <div class="stage-wrap"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Vector Pool canvas. Drag from the cue ball to aim and set power, then release or press Space to shoot."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Drag from the cue ball or press Space to shoot.</div>
+  <div class="controls" aria-label="Vector Pool controls">
+    <button class="primary" id="shootBtn" type="button">Shoot</button>
+    <button id="restartBtn" type="button">Restart</button>
+    <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button id="fullscreenBtn" type="button">Fullscreen</button>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const BEST_KEY = "vector-pool.best.v1";
+  const SOUND_KEY = "vector-pool.sound.v1";
+  const TABLE = { x: 46, y: 58, w: 808, h: 430 };
+  const PLAY = { left: 82, top: 94, right: 818, bottom: 452 };
+  const BALL_R = 11;
+  const POCKET_R = 25;
+  const STOP_SPEED = 7;
+  const FRICTION = 360;
+  const REST_EPS = 0.08;
+  const POWER_MIN = 0.12;
+  const POWER_STEP = 0.04;
+  const MAX_SHOT_SPEED = 1080;
+  const MIN_SHOT_SPEED = 220;
+
+  const els = {
+    stage: document.getElementById("stageValue"),
+    strokes: document.getElementById("strokeValue"),
+    strokePill: document.getElementById("strokePill"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    bank: document.getElementById("bankValue"),
+    bankPill: document.getElementById("bankPill"),
+    power: document.getElementById("powerValue"),
+    powerPill: document.getElementById("powerPill"),
+    status: document.getElementById("statusLine"),
+    shoot: document.getElementById("shootBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn")
+  };
+
+  const pockets = [
+    { name: "top-left", x: PLAY.left, y: PLAY.top, r: POCKET_R },
+    { name: "top-center", x: (PLAY.left + PLAY.right) / 2, y: PLAY.top - 4, r: POCKET_R - 2 },
+    { name: "top-right", x: PLAY.right, y: PLAY.top, r: POCKET_R },
+    { name: "bottom-left", x: PLAY.left, y: PLAY.bottom, r: POCKET_R },
+    { name: "bottom-center", x: (PLAY.left + PLAY.right) / 2, y: PLAY.bottom + 4, r: POCKET_R - 2 },
+    { name: "bottom-right", x: PLAY.right, y: PLAY.bottom, r: POCKET_R }
+  ];
+
+  const layouts = [
+    {
+      name: "Open Rack",
+      strokeLimit: 4,
+      cue: { x: 276, y: 354 },
+      balls: [
+        { x: 610, y: 194, color: "#fbbf24", value: 100, label: "1" },
+        { x: 648, y: 306, color: "#60a5fa", value: 120, label: "2" },
+        { x: 582, y: 388, color: "#f472b6", value: 140, label: "3" }
+      ]
+    },
+    {
+      name: "Rail Ladder",
+      strokeLimit: 5,
+      cue: { x: 250, y: 198 },
+      balls: [
+        { x: 608, y: 126, color: "#34d399", value: 130, label: "4" },
+        { x: 660, y: 208, color: "#fb7185", value: 150, label: "5" },
+        { x: 610, y: 378, color: "#a78bfa", value: 170, label: "6" }
+      ]
+    },
+    {
+      name: "Split Angles",
+      strokeLimit: 5,
+      cue: { x: 290, y: 370 },
+      balls: [
+        { x: 470, y: 172, color: "#22d3ee", value: 150, label: "7" },
+        { x: 572, y: 324, color: "#f97316", value: 180, label: "8" },
+        { x: 698, y: 188, color: "#c084fc", value: 190, label: "9" },
+        { x: 710, y: 368, color: "#eab308", value: 210, label: "10" }
+      ]
+    },
+    {
+      name: "Neon Finish",
+      strokeLimit: 6,
+      cue: { x: 212, y: 280 },
+      balls: [
+        { x: 422, y: 142, color: "#2dd4bf", value: 180, label: "11" },
+        { x: 536, y: 280, color: "#f43f5e", value: 220, label: "12" },
+        { x: 702, y: 146, color: "#8b5cf6", value: 240, label: "13" },
+        { x: 708, y: 414, color: "#38bdf8", value: 260, label: "14" }
+      ]
+    }
+  ];
+
+  function safeGet(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return fallback;
+      try { return JSON.parse(raw); } catch (_) { return raw; }
+    } catch (_) { return fallback; }
+  }
+
+  function safeSet(key, value) {
+    try {
+      localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+    } catch (_) {}
+  }
+
+  function loadBest() {
+    const raw = safeGet(BEST_KEY, 0);
+    const value = typeof raw === "number" ? raw : Number(raw && raw.bestScore !== undefined ? raw.bestScore : raw);
+    return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  }
+
+  function loadSound() {
+    const raw = safeGet(SOUND_KEY, null);
+    if (raw === null || raw === undefined || raw === "") return true;
+    if (typeof raw === "boolean") return raw;
+    if (raw && typeof raw === "object") {
+      if (typeof raw.soundEnabled === "boolean") return raw.soundEnabled;
+      if (typeof raw.muted === "boolean") return !raw.muted;
+    }
+    const normalized = String(raw).toLowerCase();
+    if (["0", "false", "off", "muted", "disabled"].includes(normalized)) return false;
+    if (["1", "true", "on", "unmuted", "enabled"].includes(normalized)) return true;
+    return true;
+  }
+
+  function persistSound(enabled) {
+    safeSet(SOUND_KEY, { soundEnabled: enabled, muted: !enabled });
+  }
+
+  const state = {
+    mode: "ready",
+    stageIndex: 0,
+    stageName: "",
+    strokes: 0,
+    totalStrokes: 0,
+    strokeLimit: 0,
+    score: 0,
+    bestScore: loadBest(),
+    cueBall: null,
+    balls: [],
+    aimAngle: 0,
+    power: 0.45,
+    moving: false,
+    bankCount: 0,
+    lastBankCount: 0,
+    lastShotScore: 0,
+    nextStageTimer: 0,
+    feedbackText: "Drag from the cue ball or press Space to shoot.",
+    feedbackTimer: 1.5,
+    complete: false,
+    gameOver: false,
+    scratchPending: false,
+    soundEnabled: loadSound(),
+    userGesture: false,
+    lastSound: "none",
+    soundCount: 0,
+    drag: null,
+    time: 0
+  };
+
+  let audioCtx = null;
+
+  function ensureAudio() {
+    if (!state.userGesture || !state.soundEnabled) return null;
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return null;
+      audioCtx = new Ctor();
+    } catch (_) {
+      audioCtx = null;
+    }
+    return audioCtx;
+  }
+
+  function playSound(name) {
+    if (!state.soundEnabled) {
+      state.lastSound = "muted:" + name;
+      return;
+    }
+    const ac = ensureAudio();
+    if (!ac) {
+      state.lastSound = "silent:" + name;
+      return;
+    }
+    const base = {
+      shoot: [176, 0.055, 0.038],
+      rail: [320, 0.035, 0.018],
+      pocket: [540, 0.11, 0.035],
+      clear: [680, 0.14, 0.036],
+      foul: [120, 0.16, 0.034],
+      toggle: [440, 0.07, 0.025]
+    }[name] || [260, 0.05, 0.02];
+    try {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      const t = ac.currentTime;
+      osc.type = name === "foul" ? "sawtooth" : "triangle";
+      osc.frequency.setValueAtTime(base[0], t);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(60, base[0] * 0.72), t + base[1]);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(base[2], t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + base[1]);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(t);
+      osc.stop(t + base[1] + 0.015);
+      state.soundCount += 1;
+      state.lastSound = name;
+    } catch (_) {
+      state.lastSound = "error:" + name;
+    }
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function dist(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function round(value) {
+    return Math.round(value * 100) / 100;
+  }
+
+  function normalizeAngle(angle) {
+    while (angle <= -Math.PI) angle += Math.PI * 2;
+    while (angle > Math.PI) angle -= Math.PI * 2;
+    return angle;
+  }
+
+  function allBalls() {
+    return [state.cueBall].concat(state.balls).filter(Boolean);
+  }
+
+  function updateBest() {
+    if (state.score > state.bestScore) {
+      state.bestScore = state.score;
+      safeSet(BEST_KEY, state.bestScore);
+    }
+  }
+
+  function setFeedback(text, seconds) {
+    state.feedbackText = text;
+    state.feedbackTimer = seconds === undefined ? 1.2 : seconds;
+  }
+
+  function makeBall(data, index, isCue) {
+    return {
+      id: isCue ? "cue" : "ball-" + index,
+      label: isCue ? "" : data.label,
+      value: isCue ? 0 : data.value,
+      color: isCue ? "#f8fafc" : data.color,
+      x: data.x,
+      y: data.y,
+      vx: 0,
+      vy: 0,
+      r: BALL_R,
+      potted: false,
+      isCue: !!isCue,
+      banked: 0
+    };
+  }
+
+  function aimAtFirstBall() {
+    const target = state.balls.find((ball) => !ball.potted);
+    if (!target || !state.cueBall) return;
+    state.aimAngle = Math.atan2(target.y - state.cueBall.y, target.x - state.cueBall.x);
+  }
+
+  function loadStage(index) {
+    const layout = layouts[index];
+    state.stageIndex = index;
+    state.stageName = layout.name;
+    state.strokes = 0;
+    state.strokeLimit = layout.strokeLimit;
+    state.cueBall = makeBall(layout.cue, 0, true);
+    state.balls = layout.balls.map((ball, ballIndex) => makeBall(ball, ballIndex + 1, false));
+    state.mode = "ready";
+    state.moving = false;
+    state.bankCount = 0;
+    state.lastBankCount = 0;
+    state.lastShotScore = 0;
+    state.nextStageTimer = 0;
+    state.scratchPending = false;
+    state.complete = false;
+    state.gameOver = false;
+    state.drag = null;
+    aimAtFirstBall();
+    setFeedback(layout.name + ": clear the table in " + layout.strokeLimit + " strokes.", 1.8);
+    syncHud();
+    render();
+  }
+
+  function restartRun() {
+    state.score = 0;
+    state.totalStrokes = 0;
+    state.complete = false;
+    state.gameOver = false;
+    state.mode = "ready";
+    loadStage(0);
+    playSound("toggle");
+  }
+
+  function isMoving() {
+    return allBalls().some((ball) => !ball.potted && Math.hypot(ball.vx, ball.vy) > STOP_SPEED);
+  }
+
+  function canAim() {
+    return !state.moving && !state.complete && !state.gameOver && state.mode !== "stage-clear" && state.cueBall && !state.cueBall.potted;
+  }
+
+  function startShot() {
+    if (state.complete || state.gameOver) {
+      restartRun();
+      return;
+    }
+    if (!canAim()) return;
+    state.power = clamp(state.power, POWER_MIN, 1);
+    state.cueBall.vx = Math.cos(state.aimAngle) * (MIN_SHOT_SPEED + MAX_SHOT_SPEED * state.power);
+    state.cueBall.vy = Math.sin(state.aimAngle) * (MIN_SHOT_SPEED + MAX_SHOT_SPEED * state.power);
+    state.strokes += 1;
+    state.totalStrokes += 1;
+    state.bankCount = 0;
+    state.lastBankCount = 0;
+    state.lastShotScore = 0;
+    state.mode = "rolling";
+    state.moving = true;
+    state.drag = null;
+    setFeedback("Stroke " + state.strokes + " is rolling.", 0.9);
+    playSound("shoot");
+    syncHud();
+  }
+
+  function pointerToCanvas(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * W,
+      y: ((event.clientY - rect.top) / rect.height) * H
+    };
+  }
+
+  function updateAimFromPoint(point) {
+    if (!state.cueBall) return;
+    const dx = point.x - state.cueBall.x;
+    const dy = point.y - state.cueBall.y;
+    const len = Math.hypot(dx, dy);
+    if (len > 4) state.aimAngle = Math.atan2(dy, dx);
+    state.power = clamp(len / 210, POWER_MIN, 1);
+    state.mode = "aiming";
+    setFeedback("Aim locked. Release or press Space to shoot.", 0.35);
+    syncHud();
+  }
+
+  function markUserGesture() {
+    state.userGesture = true;
+  }
+
+  function handlePointerDown(event) {
+    markUserGesture();
+    canvas.focus({ preventScroll: true });
+    if (state.mode === "stage-clear" && state.nextStageTimer <= 0) {
+      loadStage(Math.min(layouts.length - 1, state.stageIndex + 1));
+      return;
+    }
+    if (!canAim()) return;
+    const point = pointerToCanvas(event);
+    if (dist(point, state.cueBall) <= 58) {
+      state.drag = { active: true, pointerId: event.pointerId, moved: false };
+      canvas.setPointerCapture(event.pointerId);
+      updateAimFromPoint(point);
+      event.preventDefault();
+    }
+  }
+
+  function handlePointerMove(event) {
+    if (!state.drag || !state.drag.active || event.pointerId !== state.drag.pointerId || !canAim()) return;
+    const point = pointerToCanvas(event);
+    state.drag.moved = true;
+    updateAimFromPoint(point);
+    render();
+    event.preventDefault();
+  }
+
+  function handlePointerUp(event) {
+    if (!state.drag || event.pointerId !== state.drag.pointerId) return;
+    const shouldShoot = state.drag.moved && canAim() && state.power >= POWER_MIN;
+    try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+    state.drag = null;
+    if (shouldShoot) startShot();
+    else render();
+    event.preventDefault();
+  }
+
+  function adjustAimVector(dx, dy) {
+    if (!canAim()) return;
+    const vx = Math.cos(state.aimAngle) + dx;
+    const vy = Math.sin(state.aimAngle) + dy;
+    if (Math.hypot(vx, vy) > 0.01) state.aimAngle = Math.atan2(vy, vx);
+    state.mode = "aiming";
+    setFeedback("Aim adjusted.", 0.45);
+    render();
+  }
+
+  function adjustPower(delta) {
+    if (!canAim()) return;
+    state.power = clamp(state.power + delta, POWER_MIN, 1);
+    state.mode = "aiming";
+    setFeedback("Power " + Math.round(state.power * 100) + "%.", 0.45);
+    syncHud();
+    render();
+  }
+
+  function toggleSound() {
+    markUserGesture();
+    state.soundEnabled = !state.soundEnabled;
+    persistSound(state.soundEnabled);
+    if (state.soundEnabled) playSound("toggle");
+    else state.lastSound = "muted:toggle";
+    syncHud();
+  }
+
+  function toggleFullscreen() {
+    markUserGesture();
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else canvas.closest(".stage-wrap").requestFullscreen();
+    } catch (_) {}
+  }
+
+  function handleKey(event) {
+    const key = event.key;
+    const lower = key.toLowerCase();
+    const handled = ["arrowleft", "arrowright", "arrowup", "arrowdown", " ", "spacebar", "r", "f", "m", "+", "=", "-", "_", "w", "s"].includes(lower) || key === " ";
+    if (!handled) return;
+    markUserGesture();
+    event.preventDefault();
+    if (lower === "arrowleft") adjustAimVector(-0.18, 0);
+    else if (lower === "arrowright") adjustAimVector(0.18, 0);
+    else if (lower === "arrowup") adjustAimVector(0, -0.18);
+    else if (lower === "arrowdown") adjustAimVector(0, 0.18);
+    else if (lower === "+" || lower === "=" || lower === "w") adjustPower(POWER_STEP);
+    else if (lower === "-" || lower === "_" || lower === "s") adjustPower(-POWER_STEP);
+    else if (key === " " || lower === "spacebar") startShot();
+    else if (lower === "r") restartRun();
+    else if (lower === "f") toggleFullscreen();
+    else if (lower === "m") toggleSound();
+  }
+
+  function registerRailHit(ball) {
+    if (Math.hypot(ball.vx, ball.vy) > 48) {
+      state.bankCount += 1;
+      ball.banked += 1;
+      setFeedback("Rail touch x" + state.bankCount + ". Bank bonuses are live.", 0.8);
+      playSound("rail");
+    }
+  }
+
+  function checkPocket(ball) {
+    if (ball.potted) return false;
+    for (const pocket of pockets) {
+      if (Math.hypot(ball.x - pocket.x, ball.y - pocket.y) <= pocket.r - 3) {
+        ball.potted = true;
+        ball.vx = 0;
+        ball.vy = 0;
+        if (ball.isCue) {
+          state.scratchPending = true;
+          state.score = Math.max(0, state.score - 40);
+          setFeedback("Scratch. Cue ball will respot after the table settles.", 1.3);
+          playSound("foul");
+        } else {
+          const bankBonus = state.bankCount > 0 ? 60 + Math.min(5, state.bankCount) * 25 : 0;
+          const strokeBonus = Math.max(0, state.strokeLimit - state.strokes) * 8;
+          const gained = ball.value + bankBonus + strokeBonus;
+          state.score += gained;
+          state.lastShotScore += gained;
+          updateBest();
+          setFeedback((state.bankCount > 0 ? "Bank shot +" : "Pocket +") + gained + ".", 1.1);
+          playSound("pocket");
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function resolveRail(ball) {
+    if (ball.potted) return;
+    let hit = false;
+    if (ball.x - ball.r < PLAY.left) {
+      ball.x = PLAY.left + ball.r;
+      ball.vx = Math.abs(ball.vx) * 0.9;
+      hit = true;
+    } else if (ball.x + ball.r > PLAY.right) {
+      ball.x = PLAY.right - ball.r;
+      ball.vx = -Math.abs(ball.vx) * 0.9;
+      hit = true;
+    }
+    if (ball.y - ball.r < PLAY.top) {
+      ball.y = PLAY.top + ball.r;
+      ball.vy = Math.abs(ball.vy) * 0.9;
+      hit = true;
+    } else if (ball.y + ball.r > PLAY.bottom) {
+      ball.y = PLAY.bottom - ball.r;
+      ball.vy = -Math.abs(ball.vy) * 0.9;
+      hit = true;
+    }
+    if (hit) registerRailHit(ball);
+  }
+
+  function resolveBallCollision(a, b) {
+    if (a.potted || b.potted) return;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.hypot(dx, dy);
+    const minDist = a.r + b.r;
+    if (d <= 0 || d >= minDist) return;
+    const nx = dx / d;
+    const ny = dy / d;
+    const overlap = minDist - d;
+    a.x -= nx * overlap * 0.5;
+    a.y -= ny * overlap * 0.5;
+    b.x += nx * overlap * 0.5;
+    b.y += ny * overlap * 0.5;
+    const tx = -ny;
+    const ty = nx;
+    const vaN = a.vx * nx + a.vy * ny;
+    const vbN = b.vx * nx + b.vy * ny;
+    const vaT = a.vx * tx + a.vy * ty;
+    const vbT = b.vx * tx + b.vy * ty;
+    a.vx = vbN * nx + vaT * tx;
+    a.vy = vbN * ny + vaT * ty;
+    b.vx = vaN * nx + vbT * tx;
+    b.vy = vaN * ny + vbT * ty;
+  }
+
+  function applyFriction(ball, dt) {
+    if (ball.potted) return;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    if (speed <= REST_EPS) {
+      ball.vx = 0;
+      ball.vy = 0;
+      return;
+    }
+    const next = Math.max(0, speed - FRICTION * dt);
+    if (next <= STOP_SPEED) {
+      ball.vx = 0;
+      ball.vy = 0;
+    } else {
+      ball.vx *= next / speed;
+      ball.vy *= next / speed;
+    }
+  }
+
+  function stepPhysics(dt) {
+    const substeps = 3;
+    const subDt = dt / substeps;
+    for (let i = 0; i < substeps; i += 1) {
+      const movingBalls = allBalls().filter((ball) => !ball.potted);
+      for (const ball of movingBalls) {
+        ball.x += ball.vx * subDt;
+        ball.y += ball.vy * subDt;
+        checkPocket(ball);
+      }
+      for (const ball of movingBalls) resolveRail(ball);
+      const balls = allBalls();
+      for (let a = 0; a < balls.length; a += 1) {
+        for (let b = a + 1; b < balls.length; b += 1) resolveBallCollision(balls[a], balls[b]);
+      }
+      for (const ball of movingBalls) applyFriction(ball, subDt);
+    }
+  }
+
+  function findCueRespawn() {
+    const layout = layouts[state.stageIndex];
+    const candidates = [
+      layout.cue,
+      { x: PLAY.left + 125, y: (PLAY.top + PLAY.bottom) / 2 },
+      { x: PLAY.left + 125, y: PLAY.top + 82 },
+      { x: PLAY.left + 125, y: PLAY.bottom - 82 }
+    ];
+    for (const candidate of candidates) {
+      const open = state.balls.every((ball) => ball.potted || Math.hypot(ball.x - candidate.x, ball.y - candidate.y) > BALL_R * 3.2);
+      if (open) return candidate;
+    }
+    return candidates[0];
+  }
+
+  function respotCue() {
+    if (!state.scratchPending || !state.cueBall) return;
+    const spot = findCueRespawn();
+    state.cueBall.x = spot.x;
+    state.cueBall.y = spot.y;
+    state.cueBall.vx = 0;
+    state.cueBall.vy = 0;
+    state.cueBall.potted = false;
+    state.cueBall.banked = 0;
+    state.scratchPending = false;
+    aimAtFirstBall();
+  }
+
+  function remainingBalls() {
+    return state.balls.filter((ball) => !ball.potted).length;
+  }
+
+  function finishShotIfResting() {
+    if (state.mode !== "rolling" || isMoving()) return;
+    state.moving = false;
+    state.lastBankCount = state.bankCount;
+    respotCue();
+    if (remainingBalls() === 0) {
+      const clearBonus = Math.max(0, state.strokeLimit - state.strokes) * 75 + (state.bankCount > 0 ? state.bankCount * 20 : 0);
+      state.score += clearBonus;
+      updateBest();
+      if (state.stageIndex >= layouts.length - 1) {
+        state.complete = true;
+        state.mode = "complete";
+        setFeedback("Run complete. Final score " + state.score + ".", 4);
+        playSound("clear");
+      } else {
+        state.mode = "stage-clear";
+        state.nextStageTimer = 1.05;
+        setFeedback("Stage clear +" + clearBonus + ". Loading next table.", 1.5);
+        playSound("clear");
+      }
+    } else if (state.strokes >= state.strokeLimit) {
+      state.gameOver = true;
+      state.mode = "game-over";
+      setFeedback("Stroke limit reached. Press R or Space to restart.", 4);
+      playSound("foul");
+    } else {
+      state.mode = "ready";
+      aimAtFirstBall();
+      const scored = state.lastShotScore > 0 ? " Scored +" + state.lastShotScore + "." : "";
+      const banked = state.bankCount > 0 ? " Bank x" + state.bankCount + "." : "";
+      setFeedback("Table settled." + scored + banked, 1.1);
+    }
+    syncHud();
+  }
+
+  function update(dt) {
+    state.time += dt;
+    if (state.feedbackTimer > 0) state.feedbackTimer = Math.max(0, state.feedbackTimer - dt);
+    if (state.mode === "rolling") {
+      stepPhysics(dt);
+      state.moving = isMoving();
+      finishShotIfResting();
+    } else if (state.mode === "stage-clear") {
+      state.nextStageTimer = Math.max(0, state.nextStageTimer - dt);
+      if (state.nextStageTimer <= 0) loadStage(state.stageIndex + 1);
+    }
+    syncHud();
+  }
+
+  function syncHud() {
+    els.stage.textContent = (state.stageIndex + 1) + "/" + layouts.length;
+    els.strokes.textContent = state.strokes + "/" + state.strokeLimit;
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.bestScore);
+    els.bank.textContent = String(state.bankCount);
+    els.power.textContent = Math.round(state.power * 100) + "%";
+    els.strokePill.dataset.warn = String(state.strokes >= state.strokeLimit - 1 && !state.complete && !state.gameOver);
+    els.bankPill.dataset.hot = String(state.bankCount > 0);
+    els.powerPill.dataset.hot = String(state.mode === "aiming");
+    els.status.textContent = state.feedbackText;
+    els.shoot.textContent = state.complete || state.gameOver ? "Restart" : "Shoot";
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
+  }
+
+  function drawRoundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function drawTable() {
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#07131f");
+    bg.addColorStop(1, "#040814");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = "#5eead4";
+    ctx.lineWidth = 1;
+    for (let x = 20; x < W; x += 44) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x - 90, H);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    drawRoundRect(TABLE.x, TABLE.y, TABLE.w, TABLE.h, 22);
+    const rail = ctx.createLinearGradient(TABLE.x, TABLE.y, TABLE.x, TABLE.y + TABLE.h);
+    rail.addColorStop(0, "#103227");
+    rail.addColorStop(1, "#071b1c");
+    ctx.fillStyle = rail;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(94,234,212,.45)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    drawRoundRect(PLAY.left - 8, PLAY.top - 8, PLAY.right - PLAY.left + 16, PLAY.bottom - PLAY.top + 16, 16);
+    const felt = ctx.createLinearGradient(PLAY.left, PLAY.top, PLAY.right, PLAY.bottom);
+    felt.addColorStop(0, "#0f6d58");
+    felt.addColorStop(0.55, "#0a4f4f");
+    felt.addColorStop(1, "#0a3744");
+    ctx.fillStyle = felt;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(230,237,243,.16)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(230,237,243,.12)";
+    ctx.setLineDash([8, 12]);
+    ctx.beginPath();
+    ctx.moveTo((PLAY.left + PLAY.right) / 2, PLAY.top + 16);
+    ctx.lineTo((PLAY.left + PLAY.right) / 2, PLAY.bottom - 16);
+    ctx.stroke();
+    ctx.restore();
+
+    for (const pocket of pockets) {
+      const glow = ctx.createRadialGradient(pocket.x, pocket.y, 4, pocket.x, pocket.y, pocket.r + 15);
+      glow.addColorStop(0, "rgba(0,0,0,.96)");
+      glow.addColorStop(0.62, "rgba(0,0,0,.9)");
+      glow.addColorStop(1, "rgba(94,234,212,.05)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(pocket.x, pocket.y, pocket.r + 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(94,234,212,.32)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(230,237,243,.3)";
+    const diamonds = [0.18, 0.33, 0.5, 0.67, 0.82];
+    for (const d of diamonds) {
+      const x = PLAY.left + (PLAY.right - PLAY.left) * d;
+      ctx.beginPath();
+      ctx.arc(x, TABLE.y + 18, 3, 0, Math.PI * 2);
+      ctx.arc(x, TABLE.y + TABLE.h - 18, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawBall(ball) {
+    if (!ball || ball.potted) return;
+    const gradient = ctx.createRadialGradient(ball.x - 4, ball.y - 5, 3, ball.x, ball.y, ball.r + 2);
+    gradient.addColorStop(0, "#ffffff");
+    gradient.addColorStop(ball.isCue ? 0.35 : 0.22, ball.isCue ? "#f8fafc" : ball.color);
+    gradient.addColorStop(1, ball.isCue ? "#cbd5e1" : "#111827");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = ball.isCue ? "rgba(8,15,27,.62)" : "rgba(255,255,255,.38)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    if (!ball.isCue) {
+      ctx.fillStyle = "rgba(248,250,252,.92)";
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, 5.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#0b1020";
+      ctx.font = "700 6px ui-sans-serif,system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(ball.label).slice(-2), ball.x, ball.y + 0.2);
+    }
+  }
+
+  function drawAim() {
+    if (!canAim()) return;
+    const cue = state.cueBall;
+    const dx = Math.cos(state.aimAngle);
+    const dy = Math.sin(state.aimAngle);
+    const len = 118 + state.power * 270;
+    ctx.save();
+    ctx.strokeStyle = "rgba(230,237,243,.28)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 9]);
+    ctx.beginPath();
+    ctx.moveTo(cue.x + dx * 18, cue.y + dy * 18);
+    ctx.lineTo(cue.x + dx * len, cue.y + dy * len);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(94,234,212,.86)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cue.x - dx * (46 + state.power * 54), cue.y - dy * (46 + state.power * 54));
+    ctx.lineTo(cue.x - dx * 18, cue.y - dy * 18);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(94,234,212,.9)";
+    ctx.beginPath();
+    ctx.arc(cue.x + dx * len, cue.y + dy * len, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawOverlayText() {
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 14px ui-sans-serif,system-ui";
+    ctx.fillStyle = "#5eead4";
+    ctx.fillText(state.stageName.toUpperCase(), 62, 30);
+    ctx.fillStyle = "rgba(230,237,243,.84)";
+    ctx.font = "800 12px ui-sans-serif,system-ui";
+    ctx.fillText("Balls " + remainingBalls() + "  Bank x" + state.bankCount + "  Power " + Math.round(state.power * 100) + "%", 62, 50);
+    if (state.feedbackTimer > 0 || state.complete || state.gameOver || state.mode === "stage-clear") {
+      const text = state.feedbackText;
+      ctx.textAlign = "center";
+      ctx.font = "900 18px ui-sans-serif,system-ui";
+      ctx.fillStyle = state.gameOver ? "#fb7185" : "#e6edf3";
+      ctx.shadowColor = state.gameOver ? "rgba(251,113,133,.35)" : "rgba(94,234,212,.35)";
+      ctx.shadowBlur = 18;
+      ctx.fillText(text, W / 2, H - 34);
+    }
+    if (state.complete || state.gameOver) {
+      ctx.fillStyle = "rgba(5,8,18,.58)";
+      drawRoundRect(W / 2 - 178, H / 2 - 64, 356, 118, 12);
+      ctx.fill();
+      ctx.strokeStyle = state.complete ? "rgba(94,234,212,.5)" : "rgba(251,113,133,.52)";
+      ctx.stroke();
+      ctx.textAlign = "center";
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = state.complete ? "#5eead4" : "#fb7185";
+      ctx.font = "950 24px ui-sans-serif,system-ui";
+      ctx.fillText(state.complete ? "RUN COMPLETE" : "STROKE LIMIT", W / 2, H / 2 - 24);
+      ctx.fillStyle = "#e6edf3";
+      ctx.font = "850 15px ui-sans-serif,system-ui";
+      ctx.fillText("Score " + state.score + "  Best " + state.bestScore, W / 2, H / 2 + 6);
+      ctx.fillStyle = "#9fb0c8";
+      ctx.font = "800 12px ui-sans-serif,system-ui";
+      ctx.fillText("Press R or Space to restart.", W / 2, H / 2 + 31);
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    drawTable();
+    drawAim();
+    for (const ball of state.balls) drawBall(ball);
+    drawBall(state.cueBall);
+    drawOverlayText();
+  }
+
+  function advanceFixed(ms) {
+    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < steps; i += 1) update(1 / 60);
+    render();
+  }
+
+  function loop(now) {
+    if (!loop.last) loop.last = now;
+    const dt = Math.min(0.034, Math.max(0, (now - loop.last) / 1000));
+    loop.last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function ballPayload(ball) {
+    return {
+      id: ball.id,
+      label: ball.label,
+      x: round(ball.x),
+      y: round(ball.y),
+      vx: round(ball.vx),
+      vy: round(ball.vy),
+      r: ball.r,
+      potted: !!ball.potted,
+      banked: ball.banked
+    };
+  }
+
+  window.render_game_to_text = function renderGameToText() {
+    return JSON.stringify({
+      mode: state.mode,
+      stage: state.stageIndex + 1,
+      stageName: state.stageName,
+      strokes: state.strokes,
+      totalStrokes: state.totalStrokes,
+      strokeLimit: state.strokeLimit,
+      score: state.score,
+      bestScore: state.bestScore,
+      cueBall: ballPayload(state.cueBall),
+      balls: state.balls.map(ballPayload),
+      pockets: pockets.map((pocket) => ({ name: pocket.name, x: pocket.x, y: pocket.y, r: pocket.r })),
+      aim: {
+        angle: round(normalizeAngle(state.aimAngle)),
+        degrees: round(normalizeAngle(state.aimAngle) * 180 / Math.PI),
+        dx: round(Math.cos(state.aimAngle)),
+        dy: round(Math.sin(state.aimAngle))
+      },
+      power: round(state.power),
+      moving: state.moving,
+      bankCount: state.bankCount,
+      soundEnabled: state.soundEnabled,
+      lastSound: state.lastSound,
+      feedbackActive: state.feedbackTimer > 0 || state.mode === "stage-clear" || state.complete || state.gameOver,
+      complete: state.complete,
+      gameOver: state.gameOver
+    });
+  };
+
+  window.advanceTime = function advanceTime(ms) {
+    advanceFixed(Number(ms) || 0);
+  };
+
+  canvas.addEventListener("pointerdown", handlePointerDown);
+  canvas.addEventListener("pointermove", handlePointerMove);
+  canvas.addEventListener("pointerup", handlePointerUp);
+  canvas.addEventListener("pointercancel", handlePointerUp);
+  document.addEventListener("keydown", handleKey);
+  els.shoot.addEventListener("click", () => { markUserGesture(); canvas.focus({ preventScroll: true }); startShot(); });
+  els.restart.addEventListener("click", () => { markUserGesture(); restartRun(); canvas.focus({ preventScroll: true }); });
+  els.sound.addEventListener("click", () => { toggleSound(); canvas.focus({ preventScroll: true }); });
+  els.fullscreen.addEventListener("click", () => { toggleFullscreen(); canvas.focus({ preventScroll: true }); });
+
+  persistSound(state.soundEnabled);
+  loadStage(0);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
