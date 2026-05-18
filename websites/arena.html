@@ -132,7 +132,7 @@
       <span class="stat">Level<strong id="level">1</strong></span>
       <span class="stat">High<strong id="high">0</strong></span>
       <div class="hud-actions">
-        <button id="muteBtn" class="icon-btn" type="button" aria-label="Toggle sound" title="M to mute/unmute">🔊</button>
+        <button id="muteBtn" class="icon-btn" type="button" aria-label="Sound on" aria-pressed="false" title="M to mute">🔊</button>
         <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
         <button id="helpBtn" class="icon-btn" type="button" aria-label="Help" title="Help (H)">❓</button>
       </div>
@@ -209,6 +209,7 @@
     const highEl = document.getElementById('high');
     const bestEl = document.getElementById('bestScore');
     const HS_KEY = 'canvasArena:highscore:v1';
+    const SOUND_KEY = 'arena.sound.v1';
 
     /* NEW: pause controls */
     const pauseBtn = document.getElementById('pauseBtn');
@@ -273,22 +274,70 @@
     // Minimal WebAudio manager (no external files)
     const Sound = (() => {
       let ctx, master, sfx, music, started = false;
-      let muted = false;
       let musicTimer = null;
+      let audioUnavailable = false;
+      let lastSound = null;
+      let soundCount = 0;
+      let lastEnemyHitSoundAt = -Infinity;
+      let lastUnavailableSoundAt = -Infinity;
+      const soundEvents = Object.create(null);
       const BPM = 112;
       const beatMs = 60000 / BPM;
 
+      function readMutedPreference() {
+        try {
+          const raw = localStorage.getItem(SOUND_KEY);
+          if (!raw) return false;
+          if (raw === 'true' || raw === 'muted') return true;
+          if (raw === 'false' || raw === 'unmuted') return false;
+          const parsed = JSON.parse(raw);
+          if (typeof parsed === 'boolean') return parsed;
+          if (parsed && typeof parsed === 'object') {
+            if (typeof parsed.muted === 'boolean') return parsed.muted;
+            if (typeof parsed.soundEnabled === 'boolean') return !parsed.soundEnabled;
+          }
+        } catch {}
+        return false;
+      }
+
+      let muted = readMutedPreference();
+
+      function persistSoundState() {
+        try {
+          localStorage.setItem(SOUND_KEY, JSON.stringify({
+            muted,
+            soundEnabled: !muted
+          }));
+        } catch {}
+      }
+
+      function recordSoundEvent(name) {
+        lastSound = name;
+        soundCount += 1;
+        soundEvents[name] = (soundEvents[name] || 0) + 1;
+      }
+
       function ensure() {
+        if (muted || audioUnavailable) return false;
         if (started) return true;
         try {
-          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const AudioCtor = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtor) throw new Error('Web Audio unavailable');
+          ctx = new AudioCtor();
           master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
           sfx = ctx.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
           music = ctx.createGain(); music.gain.value = 0.35; music.connect(master);
           started = true;
-          if (muted) master.gain.value = 0.0;
           return true;
-        } catch (e) { return false; }
+        } catch (e) {
+          audioUnavailable = true;
+          recordSoundEvent('audio-unavailable');
+          return false;
+        }
+      }
+      function canPlaySound() {
+        if (muted) return false;
+        return ensure();
       }
       function now() { return ctx ? ctx.currentTime : 0; }
       function env(g, t0, a=0.005, d=0.12, s=0.0001) {
@@ -298,7 +347,7 @@
         g.gain.exponentialRampToValueAtTime(Math.max(0.0001, s), t0 + a + d);
       }
       function tone({freq=440, type='sine', dur=0.15, gain=0.2, out=sfx, startAt}) {
-        if (!ensure()) return;
+        if (!canPlaySound()) return;
         const t = startAt ?? now();
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
@@ -310,7 +359,7 @@
         osc.stop(t + dur + 0.1);
       }
       function sweep({from=200, to=80, dur=0.25, type='sawtooth', gain=0.25}) {
-        if (!ensure()) return;
+        if (!canPlaySound()) return;
         const t = now();
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
@@ -324,7 +373,7 @@
         osc.stop(t + dur + 0.1);
       }
       function noise({dur=0.15, band=[500, 3000], gain=0.25}) {
-        if (!ensure()) return;
+        if (!canPlaySound()) return;
         const t = now();
         const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -340,20 +389,60 @@
         src.stop(t + dur + 0.05);
       }
       function click() { tone({freq: 660, type:'square', dur:0.08, gain:0.15}); }
-      function pickup() { tone({freq: 880, type:'triangle', dur:0.08}); tone({freq: 1320, type:'triangle', dur:0.08, startAt: now()+0.05}); }
+      function gameStart(kind='start') {
+        recordSoundEvent(kind === 'restart' ? 'restart' : 'start');
+        if (!canPlaySound()) return;
+        resumeIfSuspended();
+        click();
+        startMusic();
+      }
+      function pickup() {
+        recordSoundEvent('pickup-score');
+        tone({freq: 880, type:'triangle', dur:0.08});
+        tone({freq: 1320, type:'triangle', dur:0.08, startAt: now()+0.05});
+      }
+      function enemyHit(count=1) {
+        for (let i = 0; i < count; i += 1) {
+          recordSoundEvent('player-attack');
+          recordSoundEvent('enemy-hit');
+        }
+        if (!canPlaySound()) return;
+        const t = now();
+        if (t - lastEnemyHitSoundAt < 0.08) return;
+        lastEnemyHitSoundAt = t;
+        tone({freq: 520, type:'square', dur:0.045, gain:0.07});
+      }
       function levelUp() {
+        recordSoundEvent('wave-clear');
         const t = now();
         [880, 1175, 1567].forEach((f,i)=>tone({freq:f, type:'sine', dur:0.12, startAt: t + i*0.06}));
       }
-      function damage() { sweep({from: 340, to: 120, dur:0.2, type:'square'}); noise({dur:0.07, band:[400, 2000], gain:0.2}); }
-      function gameOver() { tone({freq: 220, type:'sawtooth', dur:0.25}); tone({freq: 174.6, type:'sawtooth', dur:0.35, startAt: now()+0.12}); }
+      function damage() {
+        recordSoundEvent('player-damage');
+        sweep({from: 340, to: 120, dur:0.2, type:'square'});
+        noise({dur:0.07, band:[400, 2000], gain:0.2});
+      }
+      function gameOver() {
+        recordSoundEvent('game-over');
+        tone({freq: 220, type:'sawtooth', dur:0.25});
+        tone({freq: 174.6, type:'sawtooth', dur:0.35, startAt: now()+0.12});
+      }
+      function unavailableAction() {
+        recordSoundEvent('unavailable-action');
+        if (!canPlaySound()) return;
+        const t = now();
+        if (t - lastUnavailableSoundAt < 0.12) return;
+        lastUnavailableSoundAt = t;
+        tone({freq: 150, type:'triangle', dur:0.08, gain:0.09});
+      }
       function startMusic() {
-        if (!ensure() || musicTimer) return;
+        if (musicTimer || !canPlaySound()) return;
+        resumeIfSuspended();
         let step = 0;
         const scale = [0, 3, 5, 7, 10];
         const root = 220;
         musicTimer = setInterval(() => {
-          if (!ctx) return;
+          if (!ctx || muted) return;
           const t = now();
           tone({freq: root, type:'sine', dur:0.18, gain:0.08, out: music});
           const idx = scale[(step % scale.length)];
@@ -363,18 +452,53 @@
         }, beatMs);
       }
       function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+      function setMuted(nextMuted) {
+        muted = Boolean(nextMuted);
+        persistSoundState();
+        if (master) master.gain.value = muted ? 0.0 : 0.9;
+        if (muted) stopMusic();
+      }
       function toggleMute() {
-        if (!ensure()) return muted;
-        muted = !muted;
-        master.gain.value = muted ? 0.0 : 0.9;
+        setMuted(!muted);
         return muted;
       }
       function resumeIfSuspended() {
-        if (ctx && ctx.state === 'suspended') ctx.resume();
+        if (!muted && ctx && ctx.state === 'suspended') ctx.resume();
       }
-      return { ensure, pickup, levelUp, damage, gameOver, startMusic, stopMusic, toggleMute, resumeIfSuspended, get muted(){return muted;} };
+      function diagnostics() {
+        return {
+          soundEnabled: !muted && !audioUnavailable,
+          muted,
+          audioReady: started,
+          audioUnavailable,
+          musicPlaying: Boolean(musicTimer),
+          lastSound,
+          soundCount,
+          events: { ...soundEvents }
+        };
+      }
+      return { ensure, gameStart, pickup, enemyHit, levelUp, damage, gameOver, unavailableAction, startMusic, stopMusic, toggleMute, resumeIfSuspended, diagnostics, get muted(){return muted;} };
     })();
     // END Sound
+
+    function syncMuteButton() {
+      muteBtn.textContent = Sound.muted ? '🔇' : '🔊';
+      muteBtn.setAttribute('aria-pressed', Sound.muted ? 'true' : 'false');
+      muteBtn.setAttribute('aria-label', Sound.muted ? 'Sound muted' : 'Sound on');
+      muteBtn.title = Sound.muted ? 'M to unmute' : 'M to mute';
+    }
+
+    function toggleSoundFromUser() {
+      const isMuted = Sound.toggleMute();
+      syncMuteButton();
+      if (!isMuted && state.mode === 'playing') {
+        Sound.resumeIfSuspended();
+        Sound.startMusic();
+      }
+      return isMuted;
+    }
+
+    syncMuteButton();
 
     const state = {
       mode: 'menu',
@@ -410,6 +534,11 @@
         lastHitAge: null,
         hitFlash: 0,
         pickupFlash: 0,
+        pickupCount: 0,
+        hitCount: 0,
+        particleBursts: 0,
+        particlesEmitted: 0,
+        ringsEmitted: 0,
         particles: [],
         rings: []
       }
@@ -462,11 +591,18 @@
       state.feedback.lastHitAge = null;
       state.feedback.hitFlash = 0;
       state.feedback.pickupFlash = 0;
+      state.feedback.pickupCount = 0;
+      state.feedback.hitCount = 0;
+      state.feedback.particleBursts = 0;
+      state.feedback.particlesEmitted = 0;
+      state.feedback.ringsEmitted = 0;
       state.feedback.particles.length = 0;
       state.feedback.rings.length = 0;
     }
 
     function emitParticles(x, y, color, count, speed = 90) {
+      state.feedback.particleBursts += 1;
+      state.feedback.particlesEmitted += count;
       for (let i = 0; i < count; i += 1) {
         const jitter = Math.sin((i + 1) * 12.9898 + count * 78.233) * 0.5 + 0.5;
         const wobble = Math.sin((i + 3) * 19.191) * 0.5 + 0.5;
@@ -485,12 +621,14 @@
     }
 
     function emitRing(x, y, color, ttl = 0.45, radius = 36) {
+      state.feedback.ringsEmitted += 1;
       state.feedback.rings.push({ x, y, color, age: 0, ttl, radius });
     }
 
     function emitPickupFeedback(gem) {
       state.feedback.lastPickupAge = 0;
       state.feedback.pickupFlash = 0.4;
+      state.feedback.pickupCount += 1;
       state.popups.push({ x: gem.x, y: gem.y, t: 0, text: '+1 XP', color: '#b6ff90', big: true });
       emitParticles(gem.x, gem.y, '#8be36b', 18, 110);
       emitRing(gem.x, gem.y, 'rgba(139, 227, 107, 0.9)', 0.52, 42);
@@ -499,6 +637,7 @@
     function emitHitFeedback(enemy) {
       state.feedback.lastHitAge = 0;
       state.feedback.hitFlash = 0.75;
+      state.feedback.hitCount += 1;
       emitParticles(state.player.x, state.player.y, '#fb7185', 26, 140);
       emitRing(state.player.x, state.player.y, 'rgba(251, 113, 133, 0.92)', 0.6, 60);
       if (enemy) emitRing(enemy.x, enemy.y, 'rgba(255, 77, 109, 0.65)', 0.5, enemy.r * 3.2);
@@ -599,7 +738,7 @@
     }
 
     function resetGame() {
-      Sound.ensure(); Sound.resumeIfSuspended(); Sound.startMusic();
+      Sound.gameStart('restart');
       state.mode = 'playing';
       state.time = 0;
       state.score = 0;
@@ -632,9 +771,8 @@
 
     function startGameImmediate() {
       if (state.mode === 'playing') return;
-      Sound.ensure();
-      Sound.resumeIfSuspended();
-      Sound.startMusic();
+      const startKind = state.mode === 'gameover' ? 'restart' : 'start';
+      Sound.gameStart(startKind);
 
       state.mode = 'playing';
       state.time = 0;
@@ -732,7 +870,9 @@
       for (let i = state.enemies.length - 1; i >= 0; i--) {
         const e = state.enemies[i];
         e.lifeTick += dt;
-        while (e.lifeTick >= 1 && e.lifeHits > 0) { e.lifeHits -= 1; e.lifeTick -= 1; }
+        let hitTicks = 0;
+        while (e.lifeTick >= 1 && e.lifeHits > 0) { e.lifeHits -= 1; e.lifeTick -= 1; hitTicks += 1; }
+        if (hitTicks > 0) Sound.enemyHit(hitTicks);
         if (e.lifeHits <= 0) { spawnGem(e.x, e.y); state.enemies.splice(i,1); continue; }
         const vx = p.x - e.x;
         const vy = p.y - e.y;
@@ -1171,7 +1311,7 @@
     }
 
     window.addEventListener('keydown', (e) => {
-      if (isInteractiveTarget(e.target) && e.key !== 'Escape') return;
+      if (isInteractiveTarget(e.target) && e.key !== 'Escape' && e.code !== 'KeyM') return;
       const navKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
       if (navKeys.includes(e.key)) e.preventDefault();
 
@@ -1180,14 +1320,15 @@
       if (e.code === 'Enter' || e.code === 'Space') {
         e.preventDefault();
         if (state.mode === 'menu' || state.mode === 'gameover') startGameImmediate();
+        else if (!e.repeat) Sound.unavailableAction();
       } else if (e.code === 'KeyR' && state.mode === 'gameover') {
         e.preventDefault();
         startGameImmediate();
       }
 
       if (e.code === 'KeyM') {
-        const isMuted = Sound.toggleMute();
-        muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        e.preventDefault();
+        toggleSoundFromUser();
       }
 
       if (e.code === 'KeyH' && !e.repeat) {
@@ -1235,8 +1376,7 @@
     startBtn.addEventListener('click', () => startGameImmediate());
     restartBtn.addEventListener('click', () => startGameImmediate());
     muteBtn.addEventListener('click', () => {
-      const isMuted = Sound.toggleMute();
-      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+      toggleSoundFromUser();
     });
 
     // NEW: pause/resume button handlers
@@ -1373,6 +1513,7 @@
         if (state.pendingOver <= 0) {
           state.mode = 'gameover';
           Sound.stopMusic();
+          Sound.gameOver();
           showGameOver();
         }
         draw();
@@ -1408,7 +1549,9 @@
       drawPopups(dt);
       drawLevelText(dt);
     }
-    window.render_game_to_text = () => JSON.stringify({
+    window.render_game_to_text = () => {
+      const audio = Sound.diagnostics();
+      return JSON.stringify({
       mode: state.mode,
       score: Math.floor(state.score),
       level: state.level,
@@ -1418,6 +1561,16 @@
       pendingOver: Math.round(state.pendingOver * 100) / 100,
       pendingGameOver: state.pendingOver > 0,
       highScore: state.high,
+      audio: {
+        soundEnabled: audio.soundEnabled,
+        muted: audio.muted,
+        audioReady: audio.audioReady,
+        audioUnavailable: audio.audioUnavailable,
+        musicPlaying: audio.musicPlaying,
+        lastSound: audio.lastSound,
+        soundCount: audio.soundCount,
+        events: audio.events
+      },
       coordinateSystem: 'canvas pixels, origin top-left, x right, y down',
       player: {
         x: Math.round(state.player.x),
@@ -1456,14 +1609,30 @@
         lastHitAge: state.feedback.lastHitAge === null ? null : Math.round(state.feedback.lastHitAge * 100) / 100,
         pickupFlash: Math.round(state.feedback.pickupFlash * 100) / 100,
         hitFlash: Math.round(state.feedback.hitFlash * 100) / 100,
+        pickupCount: state.feedback.pickupCount,
+        hitCount: state.feedback.hitCount,
+        particleBursts: state.feedback.particleBursts,
+        particlesEmitted: state.feedback.particlesEmitted,
+        ringsEmitted: state.feedback.ringsEmitted,
         invulnerabilityTime: Math.round(state.invuln * 100) / 100,
         pendingGameOver: state.pendingOver > 0,
         feedbackParticles: state.feedback.particles.length + state.feedback.rings.length,
         particleCount: state.feedback.particles.length,
         ringCount: state.feedback.rings.length,
         popupCount: state.popups.length
+      },
+      tactile: {
+        pickupCount: state.feedback.pickupCount,
+        hitCount: state.feedback.hitCount,
+        particleBursts: state.feedback.particleBursts,
+        particlesEmitted: state.feedback.particlesEmitted,
+        ringsEmitted: state.feedback.ringsEmitted,
+        activeParticles: state.feedback.particles.length,
+        activeRings: state.feedback.rings.length,
+        activePopups: state.popups.length
       }
-    });
+      });
+    };
     window.advanceTime = (ms = 0) => {
       const total = Math.max(0, Number(ms) || 0);
       const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
