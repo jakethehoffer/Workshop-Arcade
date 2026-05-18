@@ -784,6 +784,10 @@
       <div class="player-actions">
         <span class="player-status" id="playerStatus" aria-live="polite"></span>
         <button class="btn subtle" type="button" id="playerShare" aria-label="Share this game">Share</button>
+        <button class="icon-btn" type="button" id="playerFullscreenBtn" aria-label="Enter fullscreen" aria-pressed="false" title="Enter fullscreen (F)">
+          <svg class="player-fullscreen-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="player-fullscreen-exit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <a class="btn subtle" id="playerExternalLink" href="#" target="_blank" rel="noopener">Open in new tab</a>
         <button class="icon-btn" type="button" id="playerClose" aria-label="Close">×</button>
       </div>
@@ -795,7 +799,9 @@
       tabindex="-1"
       sandbox="allow-scripts allow-forms allow-pointer-lock"
       referrerpolicy="no-referrer"
-      loading="eager"></iframe>
+      loading="eager"
+      allow="fullscreen"
+      allowfullscreen></iframe>
   </section>
 
   <aside id="swUpdateToast" class="sw-update-toast" role="status" aria-live="polite" hidden>
@@ -941,6 +947,7 @@ const els = {
   helpDialog: document.getElementById('helpDialog'),
   playerModal: document.getElementById('playerModal'),
   playerShare: document.getElementById('playerShare'),
+  playerFullscreenBtn: document.getElementById('playerFullscreenBtn'),
   playerStatus: document.getElementById('playerStatus'),
   playerTitle: document.getElementById('playerTitle'),
   playerFrame: document.getElementById('playerFrame'),
@@ -1601,6 +1608,13 @@ function openPlayer(g, trigger = document.activeElement){
 }
 
 function closePlayer(options = {}){
+  // Exit native fullscreen first so the document state is sane before
+  // the modal hides. Browsers throw if we hide a fullscreen element
+  // without calling exitFullscreen, leaving the page wedged at the
+  // browser-chrome level until the user manually presses Esc.
+  if (document.fullscreenElement === els.playerModal) {
+    try { document.exitFullscreen(); } catch {}
+  }
   hideManagedModal(els.playerModal, options);
   els.playerFrame.removeAttribute('src');
   els.playerFrame.title = 'Game player';
@@ -1679,6 +1693,78 @@ async function shareCurrentGame(){
 if (els.playerShare) {
   els.playerShare.addEventListener('click', shareCurrentGame);
 }
+
+// Player fullscreen toggle — uses the Fullscreen API on the whole
+// player-modal section so canvas games (Snake, Tetris, Brick Breaker,
+// Pinball, etc.) get edge-to-edge play. We fullscreen the modal
+// (not just the iframe) so the player-bar with Share/Close stays
+// reachable — Esc exits fullscreen back to the windowed modal, then
+// a second Esc closes the modal entirely.
+function isPlayerFullscreen(){
+  return document.fullscreenElement === els.playerModal;
+}
+
+function syncFullscreenButton(){
+  const btn = els.playerFullscreenBtn;
+  if (!btn) return;
+  const fs = isPlayerFullscreen();
+  btn.setAttribute('aria-pressed', fs ? 'true' : 'false');
+  btn.setAttribute('aria-label', fs ? 'Exit fullscreen' : 'Enter fullscreen');
+  btn.setAttribute('title', fs ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)');
+  // SVGElement's `hidden` property is spec'd but unevenly supported in
+  // older browsers — use setAttribute/removeAttribute for guaranteed
+  // cross-platform behavior so the icon swap always lands.
+  const enter = btn.querySelector('.player-fullscreen-icon');
+  const exit = btn.querySelector('.player-fullscreen-exit-icon');
+  if (enter) {
+    if (fs) enter.setAttribute('hidden', ''); else enter.removeAttribute('hidden');
+  }
+  if (exit) {
+    if (fs) exit.removeAttribute('hidden'); else exit.setAttribute('hidden', '');
+  }
+}
+
+async function togglePlayerFullscreen(){
+  if (!els.playerModal) return;
+  // Skip when the modal is hidden — clicking the button while it isn't
+  // visible would crash on browsers that reject requestFullscreen on
+  // detached elements.
+  if (els.playerModal.hidden) return;
+  try {
+    if (isPlayerFullscreen()) {
+      await document.exitFullscreen();
+    } else if (typeof els.playerModal.requestFullscreen === 'function') {
+      await els.playerModal.requestFullscreen();
+    }
+  } catch {
+    // Permissions/iframe sandbox/already-in-fullscreen failures all
+    // surface here — non-fatal; we just want the button to no-op.
+  }
+}
+
+if (els.playerFullscreenBtn) {
+  els.playerFullscreenBtn.addEventListener('click', togglePlayerFullscreen);
+}
+
+document.addEventListener('fullscreenchange', () => {
+  syncFullscreenButton();
+  // If the user pressed Esc while in fullscreen, we drop back to the
+  // windowed modal — leave it open. If they closed the modal entirely,
+  // the existing closePlayer flow already exited fullscreen via the
+  // hidden state check above.
+});
+
+// "F" / "f" keyboard shortcut to toggle fullscreen — only while the
+// player modal is the active modal. Skips when the user is typing in
+// an editable surface (same rule as the R / ? shortcuts).
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key !== 'f' && e.key !== 'F') return;
+  if (!els.playerModal || els.playerModal.hidden) return;
+  if (isTypingInEditableSurface(e.target)) return;
+  e.preventDefault();
+  togglePlayerFullscreen();
+});
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
