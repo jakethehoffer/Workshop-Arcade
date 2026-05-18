@@ -27,11 +27,21 @@ const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jaketh
 // the budget tight so a regression that breaks the observer path (back to
 // native loading="lazy" hint-only behaviour, which Chromium ignores in
 // practice) trips this gate instead of slipping through.
+// Per-game default tightened against observed actuals: 32 of the 40 manifest
+// games fit comfortably under 70 KB / 2 requests. The previous 150 KB / 8 req
+// default let a game silently grow 4x or sprout extra remote scripts before
+// tripping. Named exceptions cover the two large legacy single-file games
+// whose size is intrinsic to the gameplay (Brick Breaker = 113 KB of level
+// designs and power-up sprites; Arcade Jump = 135 KB of platformer engine
+// + procedural-level data), plus the two pre-existing wide-cap games
+// (Idle Tycoon = save-file complexity; Lexica = 156 KB 5-letter wordlist).
 const BUDGETS = {
   Catalog: { transferKb: 200, requests: 22 },
+  "Brick Breaker": { transferKb: 130, requests: 4 },
+  "Arcade Jump": { transferKb: 160, requests: 4 },
   "Idle Tycoon": { transferKb: 225, requests: 8 },
   Lexica: { transferKb: 300, requests: 8 },
-  default: { transferKb: 150, requests: 8 },
+  default: { transferKb: 100, requests: 4 },
 };
 
 function fmtKb(n) { return (n / 1024).toFixed(1) + " KB"; }
@@ -57,6 +67,8 @@ function budgetSummary() {
     ["Catalog", BUDGETS.Catalog],
     ["Lexica", BUDGETS.Lexica],
     ["Idle Tycoon", BUDGETS["Idle Tycoon"]],
+    ["Arcade Jump", BUDGETS["Arcade Jump"]],
+    ["Brick Breaker", BUDGETS["Brick Breaker"]],
     ["Other manifest games", BUDGETS.default],
   ]
     .map(([label, budget]) => label + " ≤" + budget.transferKb + "KB / ≤" + budget.requests + " requests")

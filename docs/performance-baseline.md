@@ -17,7 +17,26 @@ CI budgets:
 | Catalog | 200 KB | 22 |
 | Lexica | 300 KB | 8 |
 | Idle Tycoon | 225 KB | 8 |
-| Other manifest games | 150 KB | 8 |
+| Arcade Jump | 160 KB | 4 |
+| Brick Breaker | 130 KB | 4 |
+| Other manifest games | 100 KB | 4 |
+
+## Per-game budget tightening (pass 75)
+
+Captured 2026-05-18 against `http://127.0.0.1:4174` after tightening the per-game default publish budget from **150 KB / 8 requests** to **100 KB / 4 requests** to match the observed actuals (32 of 40 games fit under 70 KB / 2 requests; the typical new game lands ~30-45 KB / 2 requests).
+
+Named exceptions cover the four games whose size is intrinsic to the gameplay:
+
+| Game | Observed | New budget | Headroom |
+|------|----------|------------|----------|
+| Lexica | 215.9 KB / 4 req | 300 KB / 8 req | 84 KB |
+| Idle Tycoon | 186.0 KB / 2 req | 225 KB / 8 req | 39 KB |
+| Arcade Jump | 135.3 KB / 2 req | 160 KB / 4 req | 25 KB |
+| Brick Breaker | 113.7 KB / 2 req | 130 KB / 4 req | 16 KB |
+
+The other 36 manifest games all clear the new 100 KB / 4 request default with comfortable headroom. The closest-to-the-cap games on the default budget are Maze Chase 93.4 KB, Slope Runner 68.1 KB, Minesweeper 64.4 KB, Chess 63.1 KB — all ≥ 7 KB clear of the 100 KB cap. Request counts: 36 games at 2 requests, 4 fact-match games at 3 requests (HTML + workshop-runtime.js + fact-match-engine.js), all clear of the new 4-request cap.
+
+Why tighten now: with the IntersectionObserver pass (pass 74) the catalog itself is no longer the limiting factor on perf-budget headroom, so the per-game default could afford to be the tighter gate. The previous 150 KB / 8 req default let any of the 36 smaller games silently grow 4-5x or sprout extra remote scripts before the perf-audit gate noticed. Tightening to 100 KB / 4 req means a regression that bloats a 30 KB game past triple-its-current-size or adds a 5th request trips immediately.
 
 ## IntersectionObserver lazy covers (pass 74)
 
