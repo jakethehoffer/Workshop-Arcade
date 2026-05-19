@@ -81,9 +81,9 @@
       radial-gradient(1200px 800px at 80% 0%, #0a1829 0%, transparent 60%),
       linear-gradient(180deg, #0b0f14, #0a1220 60%, #0b0f14); }
   canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
-  /* background (cached) canvas lives underneath the game canvas */
+
 #bg { position:absolute; z-index: 0; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
-/* optional but safe: ensure game canvas is above */
+
 #game { position:absolute; inset:0; z-index:1; }
 #game:focus-visible { outline:3px solid var(--accent); outline-offset:-6px; }
 button.action, button.pill.btn {
@@ -100,7 +100,7 @@ button.action, button.pill.btn {
   .btn { cursor:pointer; transition:.15s transform ease, .2s opacity; }
   .btn:active { transform:scale(.96); }
   .overlay {
-    position:fixed; z-index: 4; inset:0; display:flex; align-items:center; justify-content:center; 
+    position:fixed; z-index: 4; inset:0; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(180deg, rgba(10,16,26,.60), rgba(10,16,26,.75));
     backdrop-filter: blur(4px);
   }
@@ -162,18 +162,6 @@ button.action, button.pill.btn {
     flex-direction: column;
     gap: 12px;
     animation: menuRise 0.6s ease both;
-  }
-  .menu-badge {
-    align-self: flex-start;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #0f172a;
-    border: 1px solid #26334a;
-    font-size: 12px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: #cbd5e1;
   }
   .menu-title {
     margin: 0;
@@ -447,14 +435,14 @@ button.action, button.pill.btn {
   .fade { animation: fade .35s ease both; }
   @keyframes fade { from { opacity:0; transform:translateY(8px) scale(.98) } to { opacity:1; transform:none } }
 
-  /* Touch zones for mobile steering */
+
   .touch-zone { position:fixed; inset:0; pointer-events:none; }
   .zone { position:absolute; top:0; bottom:0; width:50%; opacity:.06; pointer-events:auto; }
   .zone.left { left:0; background:linear-gradient(90deg,#ffffff 0%, transparent 60%); }
   .zone.right { right:0; background:linear-gradient(270deg,#ffffff 0%, transparent 60%); }
 
   @media (hover:hover) and (pointer:fine) {
-    .zone { display:none; } /* hide zones on desktops (mouse/keyboard) */
+    .zone { display:none; }
     .legend { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 2px }
 .tag { font-weight:700; padding:6px 10px; border-radius:10px; border:1px solid transparent; }
 .help-list { margin:8px 0 0; padding-left:0; list-style:none; }
@@ -466,7 +454,6 @@ button.action, button.pill.btn {
 .tag-red    { background:#2a0d0d; border-color:#7f1d1d; color:#fca5a5; }
 .tag-cloud  { background:#0e1b2e; border-color:#3a5f8f; color:#cfe9ff; }
 .tag-rain   { background:#0d1630; border-color:#516bcc; color:#9db8f5; }
-.tag-vanish { background:#0e1b2e; border-color:#6aa1f0; color:#a7d8ff; }
 .tag-static { background:#0f172a; border-color:#26334a; color:#cbd5e1; }
 
 .dot-blue   { background:#3556a8; }
@@ -474,7 +461,6 @@ button.action, button.pill.btn {
 .dot-red    { background:#dc2626; }
 .dot-cloud  { background:#9ccffb; }
 .dot-rain   { background:#6b88f0; }
-.dot-vanish { background:#93c5fd; }
 .dot-static { background:#64748b; }
 
 .tag-jetpack { background:#08262b; border-color:#1f766b; color:#5eead4; }
@@ -639,45 +625,45 @@ button.action, button.pill.btn {
 
 <script>
 (() => {
-  // ===== Canvas & scaling =====
-  
+
+
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const bg = document.getElementById('bg');
 const bgCtx = bg.getContext('2d', { alpha: true });
 
-// --- offscreen hills texture (draw hills once, reuse every frame)
+
 let hillsTex = null, hillsCtx = null;
 let moonCraters = [];
 function buildMoonCraters(n = 14){
-  // random polar coords on the disk (angle + radius), plus a size factor
+
   moonCraters = Array.from({length:n}, () => {
     const a = Math.random() * Math.PI * 2;
-    const r = 0.18 + Math.random() * 0.70;   // how far from center
-    const s = 0.035 + Math.random() * 0.085; // relative crater size
-    const al= 0.28 + Math.random() * 0.25;   // darkness variance
+    const r = 0.18 + Math.random() * 0.70;
+    const s = 0.035 + Math.random() * 0.085;
+    const al= 0.28 + Math.random() * 0.25;
     return { a, r, s, al };
   });
 }
 
-// --- day→night sky helpers
-let stars = [];                       // precomputed star field
-const STAR_COUNT = 140;               // small + fast
-// --- Day-sky decor (birds, planes only)
+
+let stars = [];
+const STAR_COUNT = 140;
+
 let skyDecor = { flocks: [], planes: [] };
 let skySpawn = { flockT: 0, planeT: 0 };
 const irand = (a,b) => Math.floor(rand(a, b+1));
 
 
 
-// timings (in score units)
-const HILLS_REVEAL_SPAN = 3000;          // hills slide off during this
-const SUN_PATH_SPAN    = 18000;           // full L→apex→R travel
+
+const HILLS_REVEAL_SPAN = 3000;
+const SUN_PATH_SPAN    = 18000;
 
 
 
 
-let BG_DPR = 1; // render hills at lower res for speed; tweak 0.75–1.0 if needed
+let BG_DPR = 1;
 const USE_BG_CACHE = true;
   let W = 0, H = 0, DPR = 1;
 
@@ -689,12 +675,12 @@ function resize() {
   canvas.height = Math.round(H * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  // background canvas at cheaper DPR
+
   bg.width  = Math.round(W * BG_DPR);
   bg.height = Math.round(H * BG_DPR);
   bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
 
-  // rebuild static hills only when size changes
+
   rebuildHillsOnce();
   buildStars();
   buildMoonCraters();
@@ -705,7 +691,7 @@ function resize() {
   window.addEventListener('resize', resize, { passive:true });
   resize();
 
-  // ===== HUD & UI =====
+
   const buffEl = document.getElementById('buff');
 function updateBuffHUD(){
   const P = state?.player;
@@ -795,7 +781,7 @@ if (helpBtn) helpBtn.onclick = openHelp;
 if (helpBtnOver) helpBtnOver.onclick = openHelp;
 if (helpClose) helpClose.onclick = closeHelp;
 
-// Close help menu when clicking outside the panel
+
 if (helpPanel) {
   helpPanel.addEventListener('click', (e) => {
     if (e.target === helpPanel) {
@@ -804,14 +790,14 @@ if (helpPanel) {
   });
 }
 
-// Prevent panel clicks from closing the menu
+
 if (helpPanelCard) {
   helpPanelCard.addEventListener('click', (e) => {
     e.stopPropagation();
   });
 }
 
-// Optional: Esc closes Help
+
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && helpPanel.style.display !== 'none') closeHelp();
 });
@@ -843,7 +829,7 @@ window.addEventListener('keydown', (e) => {
 function closeHelp(){ deactivateDialog(helpPanel); helpPanel.style.display = 'none'; }
 
 
-  // ===== Input =====
+
   const keys = new Set();
   window.addEventListener('keydown', (e) => {
     if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && !['Tab','Escape','KeyM'].includes(e.code)) return;
@@ -860,7 +846,7 @@ function closeHelp(){ deactivateDialog(helpPanel); helpPanel.style.display = 'no
       return;
     }
 
-    // Start with Space from menu
+
     if (e.code === 'Space' && !running) { start(); return; }
 
     if (e.code === 'KeyP') togglePause();
@@ -873,19 +859,19 @@ function closeHelp(){ deactivateDialog(helpPanel); helpPanel.style.display = 'no
       recordFeedback('steer', { direction: 1 });
     }
 
-// Double-jump trigger (Space in mid-air)
+
 if (e.code === 'Space' && running && !paused) {
   if(!state || !state.player) return;
   const P = state.player;
 
-  // NEW: don't allow double-jump while jetpack is active
+
   if (P.jetpackT > 0) {
-    // Ignore Space so we don't consume canDouble during jetpack
+
     return;
   }
 
   if (P.canDouble) {
-    // Apply shorter upward boost
+
     P.vy = DOUBLE_JUMP_VY;
     P.canDouble = false;
     sound.beep(780, .07, 'triangle', .07, 'double-jump');
@@ -896,13 +882,13 @@ if (e.code === 'Space' && running && !paused) {
 
   });
 window.addEventListener('keyup', (e) => {
-  // keep existing behavior
+
   keys.delete(e.code);
 
-  // DEV: release jetpack on key up
+
 });
 
-  // Touch zones (mobile left/right)
+
   let touchLeft = false, touchRight = false;
   const zoneLeft = document.getElementById('zoneLeft');
   const zoneRight = document.getElementById('zoneRight');
@@ -917,7 +903,7 @@ window.addEventListener('keyup', (e) => {
   zoneLeft.addEventListener('pointerleave', endTouchLeft);
   zoneRight.addEventListener('pointerleave', endTouchRight);
 
-  // ===== Sound & Music (WebAudio, no external assets) =====
+
   const SOUND_PREF_KEY = 'arcade-jump.sound.v1';
   const sound = {
     ctx: null,
@@ -951,13 +937,13 @@ window.addEventListener('keyup', (e) => {
         if (parsed && typeof parsed.soundEnabled === 'boolean') return parsed.soundEnabled;
         if (parsed && typeof parsed.enabled === 'boolean') return parsed.enabled;
         if (parsed && typeof parsed.muted === 'boolean') return !parsed.muted;
-      } catch (e) { /* storage unavailable or malformed */ }
+      } catch (e) {   }
       return null;
     },
     persistPreference() {
       try {
         localStorage.setItem(SOUND_PREF_KEY, JSON.stringify({ soundEnabled: this.soundEnabled, muted: this.muted }));
-      } catch (e) { /* storage unavailable */ }
+      } catch (e) {   }
     },
     ensure() {
       if (this.ctx) return true;
@@ -966,7 +952,7 @@ window.addEventListener('keyup', (e) => {
         const AudioCtor = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtor) return false;
         this.ctx = new AudioCtor();
-        // Routing graph
+
         this.master = this.ctx.createGain();
         this.master.gain.value = this.muted ? 0 : 1.0;
         this.master.connect(this.ctx.destination);
@@ -976,10 +962,10 @@ window.addEventListener('keyup', (e) => {
         this.sfxGain.connect(this.master);
 
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = 0.22; // subtle music by default
+        this.musicGain.gain.value = 0.22;
         this.musicGain.connect(this.master);
         return true;
-      } catch (e) { /* audio unavailable */ }
+      } catch (e) {   }
       return false;
     },
     setMuted(v, options = {}){
@@ -1018,7 +1004,7 @@ window.addEventListener('keyup', (e) => {
       this.record(name);
       const t0 = this.ctx.currentTime;
 
-      // sharp crack (bandpassed noise)
+
       const noiseDur = 0.18;
       const bufferSize = Math.floor(this.ctx.sampleRate * noiseDur);
       const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -1032,7 +1018,7 @@ window.addEventListener('keyup', (e) => {
       noise.connect(bp).connect(g1).connect(this.sfxGain);
       noise.start(t0);
 
-      // low rumble
+
       const o1 = this.ctx.createOscillator(), o2 = this.ctx.createOscillator();
       o1.type='sine'; o2.type='sine';
       o1.frequency.setValueAtTime(60, t0 + 0.05);
@@ -1050,13 +1036,13 @@ window.addEventListener('keyup', (e) => {
   sound.loadPreference();
   updateMute();
 
-  // Tiny step-sequenced background loop
+
   const music = {
     running: false,
     timer: null,
     step: 0,
     bpm: 108,
-    // simple chord progression in A minor: Am–F–C–G
+
     chords: [
       [220, 440, 550],
       [174.61, 349.23, 440],
@@ -1068,10 +1054,10 @@ window.addEventListener('keyup', (e) => {
       this.running = true;
       this.step = 0;
       sound.record('ambient');
-      const lookAhead = 0.12; // seconds
+      const lookAhead = 0.12;
       const scheduleHorizon = 0.25;
       const quarter = 60 / this.bpm;
-      const stepDur = quarter / 2; // 8th notes
+      const stepDur = quarter / 2;
       let nextTime = sound.ctx.currentTime + 0.05;
 
       const schedule = () => {
@@ -1149,25 +1135,25 @@ window.addEventListener('keyup', (e) => {
     updateMute();
   }
 
-  // ===== Game constants =====
-    // === Dev / testing ===
-  const JETPACK_ACCEL = -2600;     // upward accel while jetpack held
 
-  // === POWERUPS: constants & helpers ===
-const POWERUP_SPAWN_CHANCE = 0.2;         // 20% chance to spawn on a new platform row
+
+  const JETPACK_ACCEL = -2600;
+
+
+const POWERUP_SPAWN_CHANCE = 0.2;
 const MAX_POWERUPS_ON_SCREEN = 4;
-// === POWERUPS: tuning ===
-const FORCE_POWERUP_AFTER_ROWS = 6;  // if no pickup in 6 new rows, force one
-const POWERUP_TYPES = ['jetpack','boots','shield','slow']; // simple, weighted in picker
-const DURATION = { jetpack: 2.8, boots: 8.0, slow: 5.5 };  // shield is one-shot
+
+const FORCE_POWERUP_AFTER_ROWS = 6;
+const POWERUP_TYPES = ['jetpack','boots','shield','slow'];
+const DURATION = { jetpack: 2.8, boots: 8.0, slow: 5.5 };
 const JUMP_BOOST_MULT = 1.35;
 
-// Visual sizes
+
 const PU_W = 24, PU_H = 22;
 
-// Pick a type with gentle bias toward fun stuff mid/late game
+
 function pickPowerupType(score=0){
-  // Start with base weights
+
   let w = { jetpack: 1, boots: 1, shield: 1, slow: 1 };
   if (score > 6000) w.slow += 0.6;
   if (score > 9000) w.jetpack += 0.5;
@@ -1180,88 +1166,88 @@ function pickPowerupType(score=0){
   return 'boots';
 }
 
-// Bounce helper so we don’t touch every collision site twice
+
 function bounceVy(baseVy){
   const P = state.player;
   const mult = (P.jumpBoostT>0) ? JUMP_BOOST_MULT : 1;
-  // NEW: flag a bounce and trigger a brief squash
+
   P.justBounced = true;
-  P.squashT = 0.14; // ~140 ms
+  P.squashT = 0.14;
   return Math.round(baseVy * mult);
 }
 
 
 
-  // === Storm phase (after the moon exits) ===
-  const STORM_DARK_A = 0.925;          // full blackout (no light)
-  const STORM_BRIGHT_A = 0.2;         // blackout alpha during afterglow (dim but visible)
-  const STORM_FADE_IN = 6;            // seconds to ramp from night into storm darkness
 
-  // FEWER STRIKES: wider gaps between flashes
-  const STORM_FLASH_DUR = 0.16;        // bright flash length (keeps)
-  const STORM_FLASH_GAP_MIN = 3;     // fewer strikes -> larger gaps
+  const STORM_DARK_A = 0.925;
+  const STORM_BRIGHT_A = 0.2;
+  const STORM_FADE_IN = 6;
+
+
+  const STORM_FLASH_DUR = 0.16;
+  const STORM_FLASH_GAP_MIN = 3;
   const STORM_FLASH_GAP_MAX = 3.5;
 
-  // Darkness window target (time with no afterglow/flash at all)
-  const STORM_DARK_WINDOW_MIN = 0.15;   // 1–2s of true darkness
+
+  const STORM_DARK_WINDOW_MIN = 0.15;
   const STORM_DARK_WINDOW_MAX = 0.3;
 
-  const STORM_CLOUD_WEIGHT_MULT = 1.5; // (unchanged)
-  const STORM_RAIN_RATE_MULT = 1.5;    // (unchanged)
+  const STORM_CLOUD_WEIGHT_MULT = 1.5;
+  const STORM_RAIN_RATE_MULT = 1.5;
 
-  // === Space phase (after storm) ===
-const STORM_TOTAL_DURATION = 24; // seconds of storm before entering space
+
+const STORM_TOTAL_DURATION = 24;
 
 let space = {
   active: false,
   planets: [],
-shooters: [],   // shooting stars
-  ufos: [],       // saucers
-  shooterT: 0,    // spawn timers
+shooters: [],
+  ufos: [],
+  shooterT: 0,
   ufoT: 0};
 
 function beginSpace(){
   space.active = true;
   storm.active = false;
-  state.drops = []; // no more rain
-  // remove cloud platforms immediately
+  state.drops = [];
+
   buildSpaceBackdrop();
   toast('🪐 You reached space!');
 }
 
 function buildSpaceBackdrop(){
-  // generate planets once (start above screen and drop in)
+
   const pal = [
-    ['#f4b27a','#e58d5b','#c96f3e'], // orange
-    ['#a7b2ff','#7a86f2','#5b66c9'], // blue
-    ['#f1f1f1','#cdd3d7','#9aa3a7'], // gray
-    ['#f7e07a','#e7c64f','#cbab2f']  // yellow
+    ['#f4b27a','#e58d5b','#c96f3e'],
+    ['#a7b2ff','#7a86f2','#5b66c9'],
+    ['#f1f1f1','#cdd3d7','#9aa3a7'],
+    ['#f7e07a','#e7c64f','#cbab2f']
   ];
 
   space.planets = Array.from({length: 6}, () => {
     const r = rand(40, 120);
-    const targetY = rand(60, H - 140);                 // final resting Y
-    const y0 = -r - rand(40, 160);                     // start above view
+    const targetY = rand(60, H - 140);
+    const y0 = -r - rand(40, 160);
     return {
       x: rand(r, W - r),
       r,
       pal: pal[Math.floor(rand(0, pal.length))],
       ring: Math.random() < 0.30,
 
-      // drop-in animation
-      y: y0,                 // current y (animated)
-      y0,                    // start y (above screen)
-      targetY,               // final y
-      t: 0,                  // elapsed time
-      delay: rand(0.0, 2.4), // stagger before each begins
-      dur: rand(4.5, 8.0),   // drop duration
-      a: 0                   // alpha fade-in (0→1)
+
+      y: y0,
+      y0,
+      targetY,
+      t: 0,
+      delay: rand(0.0, 2.4),
+      dur: rand(4.5, 8.0),
+      a: 0
     };
   });
 
-  // (optional) little comet reset
+
 }
-// ADD — Shooting star & UFO spawners
+
 function spawnShootingStar(){
   const dirRight = Math.random() < 0.5;
   const x = dirRight ? rand(-80, -20) : rand(W + 20, W + 80);
@@ -1273,8 +1259,8 @@ function spawnShootingStar(){
     x, y, vx, vy,
     life: rand(1.2, 2.2),
     age: 0,
-    len: rand(60, 110),            // tail length
-    a0: rand(0.65, 0.95)           // base brightness
+    len: rand(60, 110),
+    a0: rand(0.65, 0.95)
   });
 }
 
@@ -1298,22 +1284,22 @@ function updateSpace(dt){
 
   for (const p of space.planets){
     p.t += dt;
-    // progress after per-planet delay
+
     const k = clamp((p.t - p.delay) / p.dur, 0, 1);
-    // smooth ease-out (cubic): 0→1
+
     const e = 1 - Math.pow(1 - k, 3);
 
-    // animate Y and alpha
+
     p.y = p.y0 + (p.targetY - p.y0) * e;
-    p.a = 0.15 + 0.85 * e; // faint at start, fully visible at end
+    p.a = 0.15 + 0.85 * e;
   }
-    // ADD — spawn rates (feel free to tweak)
+
   space.shooterT += dt;
   space.ufoT += dt;
   if (space.shooterT > rand(1.8, 3.6)) { spawnShootingStar(); space.shooterT = 0; }
   if (space.ufoT > rand(6.0, 12.0))    { spawnUFO();         space.ufoT = 0; }
 
-  // ADD — update shooting stars
+
   space.shooters = space.shooters.filter(s => {
     s.age += dt;
     s.x += s.vx * dt;
@@ -1322,11 +1308,11 @@ function updateSpace(dt){
     return s.age < s.life && !off;
   });
 
-  // ADD — update UFOs (gentle bob + cull)
+
   space.ufos = space.ufos.filter(u => {
     u.t += dt;
     u.x += u.vx * dt;
-    u.y += Math.sin(u.t * 2 + u.phase) * 0.6; // bob
+    u.y += Math.sin(u.t * 2 + u.phase) * 0.6;
     return (u.vx > 0 ? u.x < W + 80 : u.x > -80);
   });
 
@@ -1336,7 +1322,7 @@ function updateSpace(dt){
 
 
 
-  // --- Moving platform difficulty tuning ---
+
   const MOVE_X_START_MIN = 100;
   const MOVE_X_START_MAX = 150;
   const SPEED_RAMP_SCORE = 5000;
@@ -1347,48 +1333,48 @@ function updateSpace(dt){
     return 1 + Math.min(SPEED_MULT_MAX - 1, s / SPEED_RAMP_SCORE);
   }
 
-  const GRAVITY = 2200;         
-  const MOVE_ACC = 1800;        
-  const MOVE_MAX = 360;         
-  const FRICTION = 0.04;        
-  const JUMP_VY = -1120;        
-  const SPRING_VY = -1500;      
-  const DOUBLE_JUMP_VY = -1000; 
+  const GRAVITY = 2200;
+  const MOVE_ACC = 1800;
+  const MOVE_MAX = 360;
+  const FRICTION = 0.04;
+  const JUMP_VY = -1120;
+  const SPRING_VY = -1500;
+  const DOUBLE_JUMP_VY = -1000;
   const PLAYER_W = 46, PLAYER_H = 54;
   const PLATFORM_W = 100, PLATFORM_H = 16;
 
   const GAP_MIN = 110, GAP_MAX = 160;
 
-  const WORLD_MARGIN = 24;      
+  const WORLD_MARGIN = 24;
   const CAM_ANCHOR_Y = Math.min(420, Math.max(260, H*0.45));
 
-  // CHANGED: added cloudX (moving rain cloud) and moving red/green types
+
   const PLATFORM_TYPES = [
     { k:'static',      weight: 50 },
     { k:'moveX',       weight: 20 },
     { k:'cloudX',      weight: 8 },
     { k:'break',       weight: 15 },
-    { k:'moveBreakX',  weight: 5  },  // NEW: moving red
+    { k:'moveBreakX',  weight: 5  },
     { k:'spring',      weight: 10  },
-    { k:'moveSpringX', weight: 5  },  // NEW: moving green
+    { k:'moveSpringX', weight: 5  },
     { k:'vanish',      weight: 15 }
   ];
 
-  // === Guaranteed path math ===
+
   const MAX_JUMP_HEIGHT = Math.floor((Math.abs(JUMP_VY) * Math.abs(JUMP_VY)) / (2 * GRAVITY));
   const SAFE_GAP_MIN = Math.max(120, Math.floor(MAX_JUMP_HEIGHT * 0.55));
   const SAFE_GAP_MAX = Math.min(260, Math.floor(MAX_JUMP_HEIGHT * 0.85));
   const LOOKAHEAD    = 0.55;
   const SAFETY_CHANCE = 0.55;
 
-  // === Progressive unlock thresholds ===
-  // Types unlock one-at-a-time as the player climbs (score ≈ height gained)
+
+
   const UNLOCK = { moveX: 1200, spring: 3000, break: 5500, vanish: 8500, cloudX: 12000 };
-  // Night gating util: 0..1 where >0 means night has begun visually
+
 function nightFactorAtScore(score){
   const tS = clamp((score - SUN_START_OFFSET) / SUN_PATH_SPAN, 0, 1);
   const u  = easeInOut(tS);
-  return skyNightFactor(u); // uses your existing smoothstep(0.90, 0.98, u)
+  return skyNightFactor(u);
 }
 function isTypeUnlocked(type, score){
   if (type === 'static') return true;
@@ -1397,30 +1383,30 @@ function isTypeUnlocked(type, score){
   if (type === 'break'  || type === 'moveBreakX')  return score >= UNLOCK.break;
   if (type === 'vanish') return score >= UNLOCK.vanish;
 
-  // Rain cloud (moving) — only once night has started
+
   if (type === 'cloudX') {
-    const night = nightFactorAtScore(score);   // 0..1
-    return score >= UNLOCK.cloudX && night > 0.05; // tweak 0.05 if you want later/earlier appearance
+    const night = nightFactorAtScore(score);
+    return score >= UNLOCK.cloudX && night > 0.05;
   }
   return false;
 }
 
 
-  // ===== State =====
-  let state, running = false, paused = false, lastT = performance.now();
-    // Dev state
 
-    // Storm controller
+  let state, running = false, paused = false, lastT = performance.now();
+
+
+
   let storm = {
     active:false,
     flashT:0,
     nextFlashIn:0,
     bolts:[],
-    afterglowT:0,      // time remaining of soft brightness
-    firstFlashTime:0,  // time until first lightning (for gradual darkening)
-    hasFirstFlash:false, // track if first lightning has occurred
-    afterglowMax:0,     // length of the current afterglow segment
-      pendingSpace:false    // NEW: wait for max darkness to jump to space
+    afterglowT:0,
+    firstFlashTime:0,
+    hasFirstFlash:false,
+    afterglowMax:0,
+      pendingSpace:false
 
   };
 
@@ -1589,8 +1575,8 @@ function isTypeUnlocked(type, score){
     state = {
       score: 0,
       cameraY: 0,
-        powerups: [],   // === POWERUPS: world pickups ===
-          enemies: [],       // NEW: alien enemies
+        powerups: [],
+          enemies: [],
 
 player: {
   x: W*0.5 - PLAYER_W*0.5,
@@ -1601,44 +1587,44 @@ player: {
   h: PLAYER_H,
   alive: true,
   canDouble: true,
-   jetpackT: 0,       // seconds left of jetpack
-  jumpBoostT: 0,     // seconds left of boots
-  slowT: 0,          // seconds left of slow-mo
-  shield: 0,          // 0/1 free rescue
+   jetpackT: 0,
+  jumpBoostT: 0,
+  slowT: 0,
+  shield: 0,
 
-  // NEW (slippery physics)
-  lastFacing: 1,   // +1 right, -1 left
-  animT: 0,          // running cycle time
-  blinkAcc: 0,       // timer to schedule next blink
-  blinkNext: 2.4,    // seconds until next blink
-  blinkT: 0,         // blink currently playing (sec, counts down)
-  squashT: 0,        // landing squash timer (sec)
-  justBounced: false // set on bounce this frame
+
+  lastFacing: 1,
+  animT: 0,
+  blinkAcc: 0,
+  blinkNext: 2.4,
+  blinkT: 0,
+  squashT: 0,
+  justBounced: false
 },
 
 
       plats: [],
       particles: [],
-      drops: [],       // NEW: raindrops
+      drops: [],
       spawnGrace: 0.1,
       spawnBase: null,
-      // Progressive-intro helpers
+
       forceType: null,
       intro: { blue:false, green:false, red:false, cloud:false, rain:false }
     };
-        // reset storm
+
         storm.active = false;
     storm.flashT = 0;
     storm.nextFlashIn = 0;
     storm.bolts = [];
     storm.afterglowT = 0;
     storm.afterglowMax = 0;
-    storm.pendingSpace = false;   // NEW
+    storm.pendingSpace = false;
 
-    // ADD: ensure we return to the hills/day cycle (not space) on a new run
+
 space.active = false;
-space.planets.length = 0;  // clear any generated planets
-// ADD: clear flyers
+space.planets.length = 0;
+
 space.shooters.length = 0;
 space.ufos.length = 0;
 space.shooterT = 0;
@@ -1647,19 +1633,19 @@ space.ufoT = 0;
 
 
 
-    // Seed a guaranteed wide static base
+
     const baseY = Math.min(H - 40, H - PLATFORM_H - 8);
     const baseX = clamp(W * 0.5 - PLATFORM_W * 0.8, WORLD_MARGIN, W - WORLD_MARGIN - PLATFORM_W * 1.6);
     const base = makePlatform(baseX, baseY, 'static', true);
     state.plats.push(base);
 
-    // Build upward
+
     let y = baseY - 90;
     while (y > -H * 0.6) {
       const type = pickType();
       const p = placePlatform(y, type);
       if (p){ state.plats.push(p);
-          maybeSpawnPowerupAtPlatform(p);   // <-- add this line
+          maybeSpawnPowerupAtPlatform(p);
       }
 
       y -= rand(GAP_MIN, GAP_MAX);
@@ -1701,7 +1687,7 @@ space.ufoT = 0;
 
     reset();
       if (state?.player) state.player.vy = bounceVy(JUMP_VY);
-      scoreEl.textContent = '0'; // <-- add this line to reset HUD immediately
+      scoreEl.textContent = '0';
       updateBuffHUD();
 
 
@@ -1748,19 +1734,19 @@ space.ufoT = 0;
     if (!paused) lastT = performance.now();
   }
 
-  // ===== Helpers =====
+
   const clamp = (v,min,max)=> Math.max(min, Math.min(max, v));
   function rand(a,b){ return a + Math.random()*(b-a); }
   function applySlipperyImpulse(P, pl) {
-  // Only solid platforms get slippery impulse (rain clouds/vanish do nothing)
+
   if (pl.type === 'vanish' || pl.type === 'cloudX') return;
 
-  const wet = pl.wetVis || 0;            // 0..1 visual wetness at impact
+  const wet = pl.wetVis || 0;
   if (wet <= 0.05) return;
 
-  // Carry some platform motion + add one-time shove proportional to wetness
-  const carry = (pl.vx || 0) * 0.25 * wet;  // inherit a bit of moving platform
-  const baseImpulse = 220;                  // px/s at full wetness (tune)
+
+  const carry = (pl.vx || 0) * 0.25 * wet;
+  const baseImpulse = 220;
   const dir =
     (Math.abs(P.vx) > 6 ? Math.sign(P.vx)
      : (pl.vx && Math.abs(pl.vx) > 1 ? Math.sign(pl.vx)
@@ -1771,8 +1757,8 @@ space.ufoT = 0;
 
 function pickType() {
   const s = Math.round(state ? state.score : 0);
-  // copy & (optionally) reweight during storm
-  let candidates = PLATFORM_TYPES              // <-- was const
+
+  let candidates = PLATFORM_TYPES
     .filter(o => isTypeUnlocked(o.k, s))
     .map(o => ({...o}));
 
@@ -1799,13 +1785,13 @@ function pickType() {
 const p = {
   x, y, w, h:PLATFORM_H, type, vx:0, dir:1, alive:true, alpha:1,
   stepped:false, springStretch:0, hits:0, crackShakeT:0,
-  // NEW: smooth wet accumulation
-  wetFill: 0,   // target wetness 0..1 (drops add here, drains slowly)
-  wetVis:  0,   // what you see; eases toward wetFill
-  wetCover:0    // horizontal coverage 0..1 (spreads as it fills)
+
+  wetFill: 0,
+  wetVis:  0,
+  wetCover:0
 };
 
-    // CHANGED: moving types setup (blue, green, red, rain-cloud)
+
     if (type === 'moveX' || type === 'cloudX' || type === 'moveBreakX' || type === 'moveSpringX') {
       p.baseSpeed = rand(MOVE_X_START_MIN, MOVE_X_START_MAX);
       p.dir = Math.random() < .5 ? -1 : 1;
@@ -1813,9 +1799,9 @@ const p = {
 
 
 
-// NEW: rain emitter for moving clouds
+
 if (type === 'cloudX') {
-  p.rainRate = rand(14, 22); // drops/sec — higher frequency
+  p.rainRate = rand(14, 22);
   p.rainAcc  = 0;
 }
 
@@ -1823,7 +1809,7 @@ if (type === 'cloudX') {
     return p;
   }
 
-  // Find a non-overlapping position for a platform at y
+
   function placePlatform(y, type='static', wide=false) {
     const w = wide ? PLATFORM_W*1.6 : PLATFORM_W;
     const h = PLATFORM_H;
@@ -1856,7 +1842,7 @@ if (type === 'cloudX') {
     return null;
   }
 
-  // Safety-aware spawner
+
 function spawnIfNeeded(initial=false) {
   let minY = Infinity;
   for (const p of state.plats) if (p.alive) minY = Math.min(minY, p.y);
@@ -1873,7 +1859,7 @@ function spawnIfNeeded(initial=false) {
   const main = placePlatform(y, type);
   if (main) state.plats.push(main);
 
-  // GUARANTEED PATH: always ensure at least one static platform at this row
+
   let safety = null;
   if (!main || main.type !== 'static') {
     safety = placePlatform(y + rand(-8, 8), 'static');
@@ -1883,7 +1869,7 @@ function spawnIfNeeded(initial=false) {
     if (buddy) state.plats.push(buddy);
   }
 
-  // ---- POWER-UPS: spawn with drought protection ----
+
   let spawnedOnRow = false;
   if (main)   spawnedOnRow = maybeSpawnPowerupAtPlatform(main) || spawnedOnRow;
   if (safety) spawnedOnRow = maybeSpawnPowerupAtPlatform(safety) || spawnedOnRow;
@@ -1891,7 +1877,7 @@ function spawnIfNeeded(initial=false) {
   if (!spawnedOnRow) {
     state.puDryRows = (state.puDryRows || 0) + 1;
     if (state.puDryRows >= FORCE_POWERUP_AFTER_ROWS) {
-      // Force a spawn on a non-vanish platform if possible
+
       const target = (main && main.type !== 'vanish') ? main : safety;
       if (target) {
         const ok = maybeSpawnPowerupAtPlatform(target, true);
@@ -1901,8 +1887,8 @@ function spawnIfNeeded(initial=false) {
   } else {
     state.puDryRows = 0;
   }
-  // -----------------------------------------------
-  // After power-up drought logic (keep your existing code)
+
+
 if (space.active) {
   if (main)   maybeSpawnAlienAtPlatform(main);
   if (safety) maybeSpawnAlienAtPlatform(safety);
@@ -1915,12 +1901,12 @@ if (space.active) {
 }
 
 
-  // === POWERUPS: spawn helpers ===
+
 function spawnPowerup(x, y, type, parent=null){
   state.powerups.push({
     x, y, w: PU_W, h: PU_H,
     type, t: 0, bob: Math.random()*Math.PI*2,
-    parent,                        // platform reference (optional)
+    parent,
     dx: parent ? (x - parent.x) : 0,
     dy: parent ? (y - parent.y) : 0
   });
@@ -1931,7 +1917,7 @@ function maybeSpawnPowerupAtPlatform(pl, force=false){
   if (!pl || !pl.alive) return false;
   if (pl.type === 'vanish') return false;
 
-  // Count only on-screen (or nearly on-screen) pickups to avoid false caps
+
   const onscreen = state.powerups.filter(it => it.y > -20 && it.y < H + 60).length;
   if (!force && onscreen >= MAX_POWERUPS_ON_SCREEN) return false;
 
@@ -1945,12 +1931,12 @@ function maybeSpawnPowerupAtPlatform(pl, force=false){
   return true;
 }
 
-// === ALIENS ===
+
 function maybeSpawnAlienAtPlatform(pl){
   if (!space.active) return false;
   if (!pl || !pl.alive) return false;
   if (pl.type === 'vanish' || pl.type === 'cloudX') return false;
-  if (Math.random() > 0.22) return false; // 22% chance on a spawn row
+  if (Math.random() > 0.22) return false;
 
   const w = 28, h = 22;
   const x = clamp(pl.x + rand(6, pl.w - w - 6), WORLD_MARGIN, W - WORLD_MARGIN - w);
@@ -1974,7 +1960,7 @@ function updateEnemies(dt){
     e.t += dt;
 
     if (e.base && e.base.alive){
-      // patrol on platform
+
       e.y = e.base.y - e.h - 2;
       e.x += e.vx * dt;
       const L = e.base.x + 4;
@@ -1982,18 +1968,18 @@ function updateEnemies(dt){
       if (e.x < L) { e.x = L; e.vx = Math.abs(e.vx); }
       if (e.x > R) { e.x = R; e.vx = -Math.abs(e.vx); }
     } else {
-      // base gone → fall
+
       e.vy = (e.vy||0) + GRAVITY*dt;
       e.y += e.vy*dt;
     }
 
-    // player collision
+
     const prevBottom = P.y + P.h - P.vy*dt;
     const stomping = (P.vy > 0) && (prevBottom <= e.y) && (P.y + P.h >= e.y);
 
     if (aabb(P.x,P.y,P.w,P.h, e.x,e.y,e.w,e.h)){
       if (stomping){
-        // stomp: bounce & kill alien
+
         P.y = e.y - P.h;
         P.vy = bounceVy(JUMP_VY * 0.9);
         P.canDouble = true;
@@ -2002,7 +1988,7 @@ function updateEnemies(dt){
         sound.beep(980,.06,'triangle',.1, 'hazard-hit');
         recordFeedback('enemy-hit', { hitType: 'stomp', label: 'STOMP', x: e.x + e.w / 2, y: e.y + e.h / 2 });
       } else {
-        // hit from side/front
+
         if (P.shield > 0) {
           P.shield = 0;
           e.alive = false;
@@ -2014,7 +2000,7 @@ function updateEnemies(dt){
           gameOver();
           return;
         } else {
-          // stun + knockback
+
           P.stunT = 0.9;
           const kb = 360;
           P.vx += (P.x + P.w/2 < e.x + e.w/2 ? -kb : kb);
@@ -2032,7 +2018,7 @@ function drawEnemies(g){
     g.save();
     g.translate(e.x + e.w/2, e.y + e.h/2);
 
-    // body
+
     roundRect(g, -e.w/2, -e.h/2, e.w, e.h, 6);
     g.fillStyle = (e.type === 'lethal') ? '#4c1d1d' : '#064e3b';
     g.fill();
@@ -2040,19 +2026,19 @@ function drawEnemies(g){
     g.strokeStyle = (e.type === 'lethal') ? '#dc2626' : '#0f766e';
     g.stroke();
 
-    // eye
+
     g.beginPath(); g.ellipse(0, -3, 6, 4, 0, 0, Math.PI*2);
     g.fillStyle = '#eef5ff'; g.fill();
     g.beginPath(); g.arc(1.5, -3, 1.6, 0, Math.PI*2);
     g.fillStyle = '#0b0f14'; g.fill();
 
-    // antennae
+
     g.beginPath();
     g.moveTo(-6,-8); g.lineTo(-10,-14);
     g.moveTo( 6,-8); g.lineTo( 10,-14);
     g.strokeStyle = g.strokeStyle; g.lineWidth = 2; g.stroke();
 
-    // feet
+
     g.fillStyle = 'rgba(0,0,0,.55)';
     roundRect(g, -e.w/2,  e.h/2 - 4, 8, 4, 2); g.fill();
     roundRect(g,  e.w/2 - 8, e.h/2 - 4, 8, 4, 2); g.fill();
@@ -2088,7 +2074,7 @@ function drawEnemies(g){
         vx = rand(-360, 360);
         vy = rand(-420, -80);
         rmin = 1.6; rmax = 3.2;
-      } else if (tone === 'splash') { // NEW: rain splash
+      } else if (tone === 'splash') {
         col = '#93c5fd';
         vx = rand(-90, 90);
         vy = rand(-280, -60);
@@ -2104,7 +2090,7 @@ function drawEnemies(g){
     }
   }
 
-  // === Unlock announcement + first-example spawner ===
+
 function handleUnlocks(){
   const s = Math.round(state?.score || 0);
   if (!state.intro.blue  && s >= UNLOCK.moveX)   { state.intro.blue  = true; state.forceType = 'moveX';   toast('New: Blue moving platforms'); }
@@ -2112,15 +2098,15 @@ function handleUnlocks(){
   if (!state.intro.red   && s >= UNLOCK.break)   { state.intro.red   = true; state.forceType = 'break';   toast('New: Red cracking platforms'); }
   if (!state.intro.cloud && s >= UNLOCK.vanish)  { state.intro.cloud = true; state.forceType = 'vanish';  toast('New: Cloud platforms'); }
 
-  // Only announce + force-spawn rain clouds after night begins
+
   if (!state.intro.rain && s >= UNLOCK.cloudX) {
     const night = nightFactorAtScore(s);
-    if (night > 0.05) {                      // same threshold as above
+    if (night > 0.05) {
       state.intro.rain = true;
       state.forceType = 'cloudX';
       toast('New: Rain clouds');
     }
-    // else: wait — this will auto-trigger as soon as night starts
+
   }
 }
 
@@ -2129,7 +2115,7 @@ function handleUnlocks(){
 
 
 
-  // ===== Main loop =====
+
   function loop(t) {
     requestAnimationFrame(loop);
     if (!running || paused) return;
@@ -2146,26 +2132,26 @@ function update(dt) {
   stepFeedback(dt);
   const P = state.player;
 
-  // --- animation clocks (NEW) ---
+
   P.animT = (P.animT || 0) + dt * (1 + Math.min(1, Math.abs(P.vx)/MOVE_MAX));
 
-  // landing squash decays
+
   if (P.squashT > 0) P.squashT = Math.max(0, P.squashT - dt);
-  // reset; bounceVy() will set this true during collision phase
+
   P.justBounced = false;
 
-  // blink scheduling
+
   P.blinkAcc = (P.blinkAcc || 0) + dt;
   if (P.blinkT > 0) {
     P.blinkT = Math.max(0, P.blinkT - dt);
   } else if (P.blinkAcc > (P.blinkNext || 2.4)) {
     P.blinkAcc = 0;
-    P.blinkNext = rand(2.2, 4.6); // next blink in 2.2–4.6s
-    P.blinkT = 0.12;              // quick close→open
+    P.blinkNext = rand(2.2, 4.6);
+    P.blinkT = 0.12;
   }
 
-  // === POWERUPS: effect ticking & timescale ===
-  // Slow-mo should not affect the player; only the world.
+
+
   const worldScale = (P.slowT > 0) ? 0.6 : 1;
 
   if (P.jetpackT > 0)  P.jetpackT = Math.max(0, P.jetpackT - dt);
@@ -2173,7 +2159,7 @@ function update(dt) {
   if (P.slowT > 0)     P.slowT = Math.max(0, P.slowT - dt);
   updateBuffHUD();
 
-  // Trigger storm once the moon has fully completed its path
+
 {
   const s = Math.round(state.score || 0);
   const tMraw     = clamp((s - MOON_START_OFFSET)  / MOON_PATH_SPAN,   0, 1);
@@ -2184,17 +2170,17 @@ function update(dt) {
 if (storm.active) {
   updateStorm(dt);
 
-  // 1) When storm has traveled its full span (distance-based), arm the handoff…
+
   if (!space.active && !storm.pendingSpace && tStormRaw >= 1) {
     storm.pendingSpace = true;
   }
 
-  // (Optional fallback) If you also want a minimum *time* in storm:
-  // if (!space.active && !storm.pendingSpace && storm.elapsed >= STORM_TOTAL_DURATION) {
-  //   storm.pendingSpace = true;
-  // }
 
-  // 2) …but only trigger the transition at maximum pitch black
+
+
+
+
+
   if (storm.pendingSpace && isStormMaxDark()) {
     beginSpace();
     storm.pendingSpace = false;
@@ -2209,44 +2195,44 @@ if (space.active) updateSpace(dt);
     if (space.active && state.drops.length) state.drops = [];
 
 
-  // ====== STUN handling (NEW) ======
-  // Tick down stun timer; while stunned the player cannot accelerate
+
+
   P.stunT = Math.max(0, (P.stunT || 0) - dt);
 
-  // Horizontal input
+
   const left  = keys.has('ArrowLeft') || keys.has('KeyA') || touchLeft;
   const right = keys.has('ArrowRight') || keys.has('KeyD') || touchRight;
 
   const moveAcc = MOVE_ACC;
-  const fric = FRICTION;   // base friction; stun changes how it's applied
+  const fric = FRICTION;
 
   let ax = 0;
-  if (P.stunT <= 0) {           // no steering while stunned
+  if (P.stunT <= 0) {
     if (left)  ax -= moveAcc;
     if (right) ax += moveAcc;
   }
   P.vx += ax * dt;
 
-  // NEW: passive drift if slippery and no input
+
   const inputActive = left || right;
 
-  // Friction/air drag
-  // While stunned, reduce effective friction so you slide a bit more
+
+
   P.vx *= (1 - (P.stunT > 0 ? fric * 0.5 : fric));
 
-  // Clamp speed
+
   P.vx = clamp(P.vx, -MOVE_MAX, MOVE_MAX);
 
-  // Track facing for drift defaults
+
   if (P.vx !== 0) state.player.lastFacing = (P.vx >= 0 ? 1 : -1);
 
-  // Integrate
+
   const prevY = P.y;
   P.x += P.vx * dt;
-  const G = GRAVITY;                 // slow-mo does not change player gravity
+  const G = GRAVITY;
   P.vy += G * dt;
 
-  // === POWERUPS: jetpack thrust ===
+
   if (P.jetpackT > 0) {
     P.vy += JETPACK_ACCEL * dt;
     if (Math.random() < 0.5) addParticles(P.x + P.w/2, P.y + P.h, 3, 'spring');
@@ -2254,19 +2240,19 @@ if (space.active) updateSpace(dt);
 
   P.y += P.vy * dt;
 
-  // Wrap around horizontally
+
   if (P.x + P.w/2 < 0) P.x = W - P.w/2;
   if (P.x + P.w/2 > W) P.x = -P.w/2;
 
-  // Platform updates
+
   for (const pl of state.plats) {
     if (!pl.alive) continue;
 
-    // CHANGED: move motion logic shared by moveX, cloudX, moveBreakX, moveSpringX
+
     if (pl.type === 'moveX' || pl.type === 'cloudX' || pl.type === 'moveBreakX' || pl.type === 'moveSpringX') {
       const base = pl.baseSpeed || Math.abs(pl.vx) || 160;
-      const v = base * speedMult() * worldScale;      // slow-mo impacts movers too
-      pl.vx = pl.dir * v;           // track horizontal velocity
+      const v = base * speedMult() * worldScale;
+      pl.vx = pl.dir * v;
       pl.x += pl.vx * dt;
 
       if (pl.x < WORLD_MARGIN) {
@@ -2289,28 +2275,28 @@ if (space.active) updateSpace(dt);
       pl.springStretch = Math.max(0, pl.springStretch - dt*4);
     }
 
-    // NEW: wet accumulation/drain + smoothing (non-cloud platforms visually “fill up”) 
-    pl.wetFill = Math.max(0, (pl.wetFill || 0) - dt * 0.20);     // drains in ~5s
-    const ease1 = Math.min(1, dt * 5.0);                          // ~0.2s time constant
+
+    pl.wetFill = Math.max(0, (pl.wetFill || 0) - dt * 0.20);
+    const ease1 = Math.min(1, dt * 5.0);
     pl.wetVis  = (pl.wetVis  || 0) + ((pl.wetFill || 0) - (pl.wetVis || 0)) * ease1;
 
-    // coverage spreads across width as wetness increases
+
     const targetCover = 0.15 + 0.85 * (pl.wetFill || 0);
     const ease2 = Math.min(1, dt * 2.5);
     pl.wetCover = (pl.wetCover || 0) + (targetCover - (pl.wetCover || 0)) * ease2;
 
-    // Rain emission for moving clouds
+
     if (pl.type === 'cloudX') {
       const rate = pl.rainRate * (storm.active ? STORM_RAIN_RATE_MULT : 1);
       pl.rainAcc += dt * rate * worldScale;
-      const maxDrops = 600; // soft cap to avoid overload
+      const maxDrops = 600;
       while (pl.rainAcc >= 1 && state.drops.length < maxDrops) {
         pl.rainAcc -= 1;
         const dx = rand(8, pl.w - 8);
         const drop = {
           x: pl.x + dx,
           y: pl.y - 2,
-          vx: pl.vx || 0,          // inherit current cloud horizontal velocity
+          vx: pl.vx || 0,
           vy: rand(520, 680),
           r: rand(1.2, 1.8),
           alive: true
@@ -2320,7 +2306,7 @@ if (space.active) updateSpace(dt);
     }
   }
 
-  // --- Spawn grace: keep player snapped to base for first few frames ---
+
   if (state.spawnGrace > 0) {
     state.spawnGrace -= dt;
     const base = (state.spawnBase && state.spawnBase.alive) ? state.spawnBase : getBottomPlatform();
@@ -2331,7 +2317,7 @@ if (space.active) updateSpace(dt);
     }
   }
 
-  // Collisions — only when falling
+
   if (P.vy > 0) {
     const prevBottom = prevY + P.h;
     const nextBottom = P.y + P.h;
@@ -2342,7 +2328,7 @@ if (space.active) updateSpace(dt);
       if (!withinX) continue;
       if (prevBottom <= top && nextBottom >= top) {
 
-        // RED BREAK PLATFORM: 2-hit logic (CHANGED: respect wet) — includes moving red
+
         if (pl.type === 'break' || pl.type === 'moveBreakX') {
           P.y = pl.y - P.h;
           P.vy = bounceVy(JUMP_VY);
@@ -2366,7 +2352,7 @@ if (space.active) updateSpace(dt);
           break;
         }
 
-        // Spring (CHANGED: respect wet) — includes moving green
+
         if (pl.type === 'spring' || pl.type === 'moveSpringX') {
           P.y = pl.y - P.h;
           P.vy = bounceVy(SPRING_VY);
@@ -2379,7 +2365,7 @@ if (space.active) updateSpace(dt);
           break;
         }
 
-        // Vanish (cloud) — softer bounce, resets double-jump
+
         if (pl.type === 'vanish') {
           P.y = pl.y - P.h;
           P.vy = bounceVy(JUMP_VY * 0.75);
@@ -2391,7 +2377,7 @@ if (space.active) updateSpace(dt);
           break;
         }
 
-        // Moving rain cloud — soft bounce, no fade
+
         if (pl.type === 'cloudX') {
           P.y = pl.y - P.h;
           P.vy = bounceVy(JUMP_VY * 0.80);
@@ -2403,7 +2389,7 @@ if (space.active) updateSpace(dt);
           break;
         }
 
-        // Static & blue moving (generic) — respect wet
+
         P.y = pl.y - P.h;
         P.vy = bounceVy(JUMP_VY);
         applySlipperyImpulse(P, pl);
@@ -2416,7 +2402,7 @@ if (space.active) updateSpace(dt);
     }
   }
 
-  // Camera
+
   if (P.y < CAM_ANCHOR_Y) {
     const dy = CAM_ANCHOR_Y - P.y;
     P.y = CAM_ANCHOR_Y;
@@ -2424,7 +2410,7 @@ if (space.active) updateSpace(dt);
     state.cameraY += dy;
     for (const pl of state.plats) pl.y += dy;
     for (const pa of state.particles) pa.y += dy;
-    for (const d of state.drops) d.y += dy; // move rain with camera
+    for (const d of state.drops) d.y += dy;
     for (const it of state.powerups)  it.y += dy;
     for (const en of state.enemies) en.y += dy;
 
@@ -2432,14 +2418,14 @@ if (space.active) updateSpace(dt);
     if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03, 'score');
   }
 
-  // Check & announce unlocks after score updates
+
   handleUnlocks();
 
-  // Despawn & spawn
+
   state.plats = state.plats.filter(pl => pl.alive && pl.y < H + 60);
   spawnIfNeeded(false);
 
-  // Particles
+
   state.particles = state.particles.filter(p => {
     p.t += dt;
     p.x += p.vx*dt;
@@ -2447,7 +2433,7 @@ if (space.active) updateSpace(dt);
     p.vy += 1200*dt;
     return p.t < p.life;
   });
-  // keep offscreen-above power-ups so they can scroll into view
+
   state.powerups = state.powerups.filter(it => it.y < H + 80);
 
   state.drops = state.drops.filter(d => {
@@ -2455,49 +2441,49 @@ if (space.active) updateSpace(dt);
     const prevY = d.y;
     const prevX = d.x;
 
-    // Move with initial horizontal velocity and constant downward speed
+
     d.x += d.vx * dt * worldScale;
     d.y += d.vy * dt * worldScale;
 
-    // Player hit: trigger once when the drop crosses the player's TOP edge
+
     if (!hit &&
         d.x >= P.x && d.x <= P.x + P.w &&
         prevY <= P.y && d.y >= P.y) {
-      P.vy += 120;                        // small downward nudge only
+      P.vy += 120;
       addParticles(d.x, P.y + 1, 6, 'splash');
       sound.beep(2000, .015, 'sine', .03, 'hazard-hit');
       hit = true;
     }
 
-    // Platform hits: trigger when crossing a platform's TOP edge
+
     if (!hit) {
       for (const pl of state.plats) {
         if (!pl.alive) continue;
-        if (pl.type === 'cloudX' || pl.type === 'vanish') continue; // skip clouds
+        if (pl.type === 'cloudX' || pl.type === 'vanish') continue;
         if (d.x >= pl.x && d.x <= pl.x + pl.w &&
             prevY <= pl.y && d.y >= pl.y) {
-          // each hit adds ~22% wetness (clamped), will drain over time
+
           pl.wetFill = Math.min(1, (pl.wetFill || 0) + 0.22);
           addParticles(d.x, pl.y + 1, 6, 'splash');
           hit = true;
-          break; // stop checking more platforms for this drop
+          break;
         }
       }
     }
 
-    // Despawn immediately if we hit something
+
     if (hit) return false;
 
-    // Otherwise keep the drop until it passes the bottom of the screen
+
     return d.y < H + 40;
   });
 
-  // Death
-  // if (state.spawnGrace <= 0 && P.y > H + 80) gameOver();
+
+
   if (state.spawnGrace <= 0 && P.y > H + 80) {
     if (state.player.shield > 0) {
       state.player.shield = 0;
-      // rescue: place on lowest platform and launch up
+
       const base = getBottomPlatform();
       if (base) {
         P.x = clamp(base.x + (base.w - P.w)/2, WORLD_MARGIN, W - WORLD_MARGIN - P.w);
@@ -2514,26 +2500,26 @@ if (space.active) updateSpace(dt);
       gameOver();
     }
   }
-  updateEnemies(dt);   // ⬅️ NEW
+  updateEnemies(dt);
   updateSkyDecor(dt);
   updatePowerups(dt);
   updateBuffHUD();
 }
 
-  // ===================== NEW BACKGROUND SYSTEM =====================
-// Phase 1: rolling hills only (no sky)
-// Phase 2: sky + sun slide in from the top; hills descend & fade out
+
+
+
 
 
 
 
 function buildStars(){
-  // deterministic but simple
+
   stars = [];
   for (let i=0;i<STAR_COUNT;i++){
     const x = Math.random() * W;
-    const y = Math.random() * H * 0.9;      // keep mostly above horizon
-    const r = Math.random() * 1.6 + 0.4;    // 0.4..2.0
+    const y = Math.random() * H * 0.9;
+    const r = Math.random() * 1.6 + 0.4;
     const twinkle = Math.random() * Math.PI * 2;
     stars.push({x,y,r,twinkle});
   }
@@ -2543,7 +2529,7 @@ const smoothstep = (a,b,x)=> {
   const t = clamp((x - a) / (b - a), 0, 1);
   return t*t*(3 - 2*t);
 };
-// Quadratic Bezier (for the sun path)
+
 function bezierQ(p0, p1, p2, t){
   const u = 1 - t;
   return { x: u*u*p0.x + 2*u*t*p1.x + t*t*p2.x,
@@ -2555,22 +2541,22 @@ function bezierQ(p0, p1, p2, t){
 
 
 
-function skyNightFactor(u){          // 0..1 as sun approaches bottom-right
+function skyNightFactor(u){
   return smoothstep(0.90, 0.98, u);
 }
 
-// Draw only the gradient sky + optional stars. Return the night factor.
+
 function drawSkyBase(g, u){
   const night = skyNightFactor(u);
 
-  // Subtle day gradient
+
   const skyDay = g.createLinearGradient(0, 0, 0, H);
   skyDay.addColorStop(0, '#6fa7cc');
   skyDay.addColorStop(1, '#bed6ea');
   g.fillStyle = skyDay;
   g.fillRect(0, 0, W, H);
 
-  // Darken to night near the end of the path
+
   if (night > 0){
     g.save();
     g.globalAlpha = 0.65 * night;
@@ -2578,7 +2564,7 @@ function drawSkyBase(g, u){
     g.fillRect(0, 0, W, H);
     g.restore();
 
-    // Stars fade in with night
+
     const t = performance.now() * 0.001;
     g.save();
     g.fillStyle = '#dbeafe';
@@ -2593,19 +2579,19 @@ function drawSkyBase(g, u){
 }
 
 function drawSun(g, u, night=0){
-  // Parabola endpoints just off the bottom corners, peak centered.
-  // Margin scales with the sun size so it really starts/ends off-screen.
-  const coreR = Math.max(28, Math.min(58, H*0.05));
-  const M = Math.max(40, coreR * 1.4);     // off-screen margin
-  const APEX_HEIGHT_FRAC = 0.18;            // 0.0 = at top edge, higher = lower peak
 
-  const start = { x: -M,   y: H + M };                     // just left/below
-  const apex  = { x: 0.5*W, y: H * APEX_HEIGHT_FRAC };     // centered peak
-  const end   = { x: W + M, y: H + M };                    // just right/below
+
+  const coreR = Math.max(28, Math.min(58, H*0.05));
+  const M = Math.max(40, coreR * 1.4);
+  const APEX_HEIGHT_FRAC = 0.18;
+
+  const start = { x: -M,   y: H + M };
+  const apex  = { x: 0.5*W, y: H * APEX_HEIGHT_FRAC };
+  const end   = { x: W + M, y: H + M };
 
   const pos   = bezierQ(start, apex, end, u);
 
-  // --- the rest of your drawSun stays the same (uses coreR, pos, etc.) ---
+
   const coronaR = coreR * 4.8;
   const rayAlpha = 0.28 * (1 - 0.70*night);
   const glowAlpha = 0.26 * (1 - 0.65*night);
@@ -2645,18 +2631,18 @@ function drawSun(g, u, night=0){
   g.restore();
 }
 function drawMoon(g, v, night=1){
-  // v: 0..1 progress across the sky (left → right like the sun)
+
   const coreR = Math.max(24, Math.min(54, H * 0.045));
   const M = Math.max(36, coreR * 1.4);
   const APEX_HEIGHT_FRAC = 0.20;
 
-  const start = { x: -M,    y: H + M };             // left/below
+  const start = { x: -M,    y: H + M };
   const apex  = { x: 0.5*W, y: H * APEX_HEIGHT_FRAC };
-  const end   = { x: W + M, y: H + M };             // right/below
+  const end   = { x: W + M, y: H + M };
 
   const pos = bezierQ(start, apex, end, v);
 
-  // Base body (no phase shading)
+
   const body = g.createRadialGradient(pos.x, pos.y, coreR*0.2, pos.x, pos.y, coreR);
   body.addColorStop(0.00, '#f7fbff');
   body.addColorStop(0.55, '#e6ecff');
@@ -2667,7 +2653,7 @@ function drawMoon(g, v, night=1){
   g.fillStyle = body;
   g.beginPath(); g.arc(pos.x, pos.y, coreR, 0, Math.PI*2); g.fill();
 
-  // Rim glow from a fixed light direction (upper-left)
+
   const glowOffsetX = -coreR * 0.35;
   const coronaR = coreR * 3.5;
   const glow = g.createRadialGradient(pos.x + glowOffsetX, pos.y - coreR*0.1, coreR*0.7, pos.x, pos.y, coronaR);
@@ -2678,19 +2664,19 @@ function drawMoon(g, v, night=1){
   g.fillStyle = glow;
   g.beginPath(); g.arc(pos.x, pos.y, coronaR, 0, Math.PI*2); g.fill();
 
-  // --- Craters (kept) ---
-  // Clip to lunar disk so nothing spills out.
+
+
   g.save();
   g.beginPath(); g.arc(pos.x, pos.y, coreR, 0, Math.PI*2); g.clip();
 
-  // Fixed light from upper-left: brighten rims on the lower-right side of each crater
-  const rimSign = +1;                 // push rim highlight to the light-opposite side
+
+  const rimSign = +1;
   for (const c of moonCraters){
     const cx = pos.x + Math.cos(c.a) * coreR * c.r;
     const cy = pos.y + Math.sin(c.a) * coreR * c.r;
     const r  = coreR * c.s;
 
-    // base crater depression (darker center)
+
     const crater = g.createRadialGradient(cx, cy, r*0.25, cx, cy, r);
     crater.addColorStop(0.00, `rgba(80,92,130,${0.35*c.al})`);
     crater.addColorStop(0.65, `rgba(80,92,130,${0.18*c.al})`);
@@ -2699,7 +2685,7 @@ function drawMoon(g, v, night=1){
     g.fillStyle = crater;
     g.beginPath(); g.arc(cx, cy, r, 0, Math.PI*2); g.fill();
 
-    // tiny lit rim on the side facing the light (upper-left light ⇒ rim on lower-right)
+
     const rimDX = rimSign * r * 0.45;
     g.globalAlpha = 0.75 * (0.4 + 0.6*night);
     g.strokeStyle = 'rgba(240,245,255,0.55)';
@@ -2708,13 +2694,13 @@ function drawMoon(g, v, night=1){
     g.arc(cx + rimDX, cy + r*0.10, r*0.92, -0.2*Math.PI, 0.55*Math.PI);
     g.stroke();
   }
-  g.restore(); // crater clip
-  g.restore(); // moon group
+  g.restore();
+  g.restore();
 }
 
 
 
-// ======= SKY DECOR — spawn, update, draw =======
+
 function spawnFlock(){
   const dirRight = Math.random() < 0.5;
   const dir = dirRight ? 1 : -1;
@@ -2745,21 +2731,21 @@ function spawnPlane(){
 function updateSkyDecor(dt){
   const s = Math.round(state?.score || 0);
 
-  // compute sun progress u (0..1) same as drawBackground
+
   const tS = clamp((s - SUN_START_OFFSET) / SUN_PATH_SPAN, 0, 1);
   const u  = easeInOut(tS);
 
-  // Sky activity only after reveal begins; stop spawning just before night (u≈0.90)
+
   const skyActive  = s >= SKY_REVEAL_START;
-  const allowSpawn = skyActive && u < 0.88; // stop a touch before night kicks in
+  const allowSpawn = skyActive && u < 0.88;
 
   if (!skyActive) return;
 
-  // timers
+
   skySpawn.flockT += dt;
   skySpawn.planeT += dt;
 
-  // spawn (conservative)
+
   if (allowSpawn && skySpawn.flockT > rand(3.5, 6.5) && skyDecor.flocks.length < 3) {
     spawnFlock(); skySpawn.flockT = 0;
   }
@@ -2767,7 +2753,7 @@ function updateSkyDecor(dt){
     spawnPlane(); skySpawn.planeT = 0;
   }
 
-  // move + cull
+
   skyDecor.flocks = skyDecor.flocks.filter(f => {
     f.t += dt;
     f.x += f.vx * dt;
@@ -2780,14 +2766,14 @@ function updateSkyDecor(dt){
     p.x += p.vx * dt;
     p.y += Math.sin(p.t*0.5 + p.phase) * 4 * dt;
 
-    // contrail points
+
     p.trailAcc += dt;
     if (p.trailAcc > 0.04){
       p.trailAcc = 0;
       p.trail.push({ x:p.x-10*(p.vx>0?1:-1), y:p.y, a:1 });
       if (p.trail.length > 80) p.trail.shift();
     }
-    // fade trail points (age-based only; no night fade)
+
     for (let i=0;i<p.trail.length;i++) p.trail[i].a *= (1 - dt*0.06);
 
     return (p.vx > 0 ? p.x < W + 160 : p.x > -160);
@@ -2795,7 +2781,7 @@ function updateSkyDecor(dt){
 }
 
 
-// --- drawing helpers (BG canvas 'g')
+
 function drawBird(g, x, y, sc=1){
   const wing = 3 + Math.sin(performance.now()*0.006 + x*0.03) * 2;
   g.save();
@@ -2819,12 +2805,12 @@ function drawFlock(g, f){
 }
 function drawPlane(g, x, y){
   g.save(); g.translate(x, y);
-  // contrail is drawn outside here; this just draws the body
+
   g.fillStyle = '#e5eef9';
   g.strokeStyle = '#c1d2ea';
   g.lineWidth = 1;
   roundRect(g, -14, -4, 28, 8, 3); g.fill(); g.stroke();
-  // wings
+
   g.fillStyle = '#d7e6f7';
   g.beginPath(); g.moveTo(-2,0); g.lineTo(10,6); g.lineTo(6,6); g.lineTo(-2,2); g.closePath(); g.fill();
   g.beginPath(); g.moveTo(-6,0); g.lineTo(-18,-6); g.lineTo(-14,-6); g.lineTo(-4,-2); g.closePath(); g.fill();
@@ -2832,7 +2818,7 @@ function drawPlane(g, x, y){
 }
 
 function drawSkyDecor(g){
-  // contrails first (background)
+
   for (const p of skyDecor.planes){
     for (let i=1;i<p.trail.length;i++){
       const p0 = p.trail[i-1], p1 = p.trail[i];
@@ -2848,7 +2834,7 @@ function drawSkyDecor(g){
     }
   }
 
-  // flocks + planes (full opacity)
+
   g.globalAlpha = 1;
   for (const f of skyDecor.flocks) drawFlock(g, f);
   for (const p of skyDecor.planes) drawPlane(g, p.x, p.y);
@@ -2857,27 +2843,27 @@ function drawSkyDecor(g){
 function beginStorm(){
   storm.active = true;
   storm.flashT = 0;
-  storm.nextFlashIn = STORM_FADE_IN + rand(0.8, 1.8); // wait until fade-in completes
-  storm.firstFlashTime = storm.nextFlashIn; // store initial time for gradual darkening
-  storm.hasFirstFlash = false; // reset flag
+  storm.nextFlashIn = STORM_FADE_IN + rand(0.8, 1.8);
+  storm.firstFlashTime = storm.nextFlashIn;
+  storm.hasFirstFlash = false;
   storm.bolts = [];
   toast('⚡ Storm incoming');
-    storm.elapsed = 0;              // NEW
-      storm.pendingSpace = false; // NEW
+    storm.elapsed = 0;
+      storm.pendingSpace = false;
 
 
 }
 function isStormMaxDark(){
-  // Max darkness = no flash + no afterglow (blackout alpha = STORM_DARK_A)
+
   return storm.active && storm.flashT <= 0 && storm.afterglowT <= 0;
 }
 
 
 function updateStorm(dt){
   storm.nextFlashIn -= dt;
-  storm.elapsed += dt;            // NEW
+  storm.elapsed += dt;
 
-  // decay afterglow brightness
+
   if (storm.afterglowT > 0) {
     storm.afterglowT = Math.max(0, storm.afterglowT - dt);
   }
@@ -2885,11 +2871,11 @@ function updateStorm(dt){
   if (storm.nextFlashIn <= 0){
     triggerLightningFlash();
 
-    // Choose a big gap (fewer strikes)
+
     const gap = rand(STORM_FLASH_GAP_MIN, STORM_FLASH_GAP_MAX);
 
-    // Reserve only 1–2s at the END of that gap for total darkness.
-    // The remainder becomes a visible AFTERGLOW.
+
+
     const darkWin = rand(STORM_DARK_WINDOW_MIN, STORM_DARK_WINDOW_MAX);
     const ag = Math.max(0, gap - darkWin);
 
@@ -2905,13 +2891,13 @@ function updateStorm(dt){
 function triggerLightningFlash(){
   storm.flashT = STORM_FLASH_DUR;
   storm.bolts = buildLightningBolts();
-  storm.hasFirstFlash = true; // mark that first flash has occurred
+  storm.hasFirstFlash = true;
   sound.thunder(0.28);
 }
 
 function buildLightningBolts(){
   const bolts = [];
-  const count = Math.floor(rand(1, 4)); // 1-3 bolts
+  const count = Math.floor(rand(1, 4));
   for (let i=0;i<count;i++){
     const x0 = rand(40, W-40);
     let x = x0, y = -20;
@@ -2931,18 +2917,18 @@ function buildLightningBolts(){
 
 function drawLightning(g){
   if (!storm.active || storm.flashT <= 0) return;
-  const k = storm.flashT / STORM_FLASH_DUR; // 1→0
+  const k = storm.flashT / STORM_FLASH_DUR;
 
-  // screen wash to simulate exposure
+
   g.save();
   g.globalAlpha = 0.65 * k;
   g.fillStyle = '#e6f2ff';
   g.fillRect(0,0,W,H);
   g.restore();
 
-  // glow + core strokes
+
   g.save();
-  // outer glow
+
   g.globalAlpha = 0.35 * k;
   g.strokeStyle = '#ffffff';
   for (const segs of storm.bolts){
@@ -2951,7 +2937,7 @@ function drawLightning(g){
       g.lineWidth = 8; g.stroke();
     }
   }
-  // core
+
   g.globalAlpha = 1;
   g.strokeStyle = '#ecf7ff';
   for (const segs of storm.bolts){
@@ -2971,26 +2957,26 @@ function drawStormOverlay(g){
   const darkA = STORM_DARK_A * fadeEase;
   const brightA = STORM_BRIGHT_A * fadeEase;
 
-  // Base blackout alpha: fully dark (scaled by fade-in)
+
   let a = darkA;
 
-  // Pre-lightning gradual darkening: darken from 0 to STORM_DARK_A as we approach first lightning
-  // This happens when nextFlashIn > 0 and we haven't had the first flash yet
+
+
   if (!storm.hasFirstFlash && storm.nextFlashIn > 0 && storm.firstFlashTime > 0) {
-    const progress = 1 - (storm.nextFlashIn / storm.firstFlashTime); // 0 → 1 as we approach first flash
-    const ease = progress * progress * (3 - 2 * progress); // smoothstep easing
-    a = ease * darkA; // gradually increase from 0 to darkA
+    const progress = 1 - (storm.nextFlashIn / storm.firstFlashTime);
+    const ease = progress * progress * (3 - 2 * progress);
+    a = ease * darkA;
   }
-  // After first lightning, use normal storm darkness logic
+
   else {
-    // During afterglow, ease the blackout alpha toward a brighter level
+
     if (storm.afterglowT > 0 && storm.afterglowMax > 0) {
-      const f = storm.afterglowT / storm.afterglowMax;        // 1 → 0
-      const ease = f*f*(3 - 2*f);                              // smoothstep
-      a = brightA + (darkA - brightA) * (1 - ease);     // starts bright, fades darker
+      const f = storm.afterglowT / storm.afterglowMax;
+      const ease = f*f*(3 - 2*f);
+      a = brightA + (darkA - brightA) * (1 - ease);
     }
 
-    // During the instantaneous flash, keep it very bright
+
     if (storm.flashT > 0) a = Math.min(a, 0.15);
   }
 
@@ -3005,21 +2991,21 @@ function drawStormOverlay(g){
 
 
 
-// Reveal timing
-const SKY_REVEAL_START = UNLOCK.vanish; // when the reveal begins
 
-// delay the sun until the hills are clearly moving
+const SKY_REVEAL_START = UNLOCK.vanish;
+
+
 const SUN_START_OFFSET = SKY_REVEAL_START-3000;
 
-// Sun spans its path once. Give the moon its own offset/span afterwards.
-const MOON_PATH_SPAN    = SUN_PATH_SPAN;                 // how long the moon travels
-const MOON_START_OFFSET = SUN_START_OFFSET + SUN_PATH_SPAN * 0.8; 
-// Storm spans a similar distance as day/night and starts right after the moon finishes
+
+const MOON_PATH_SPAN    = SUN_PATH_SPAN;
+const MOON_START_OFFSET = SUN_START_OFFSET + SUN_PATH_SPAN * 0.8;
+
 const STORM_PATH_SPAN   = SUN_PATH_SPAN;
 const STORM_START_OFFSET = MOON_START_OFFSET + MOON_PATH_SPAN;
 
-// ↑ starts a bit before full night so it rises shortly after sunset
-// (Move this earlier/later to taste, or tie it to unlocks/screen height.)
+
+
 function drawPlanet(g,p){
   const grd = g.createRadialGradient(p.x - p.r*0.35, p.y - p.r*0.4, p.r*0.35, p.x, p.y, p.r);
   grd.addColorStop(0, p.pal[0]);
@@ -3041,9 +3027,9 @@ function drawPlanet(g,p){
     g.restore();
   }
 }
-// ADD — Draw a shooting star (tail + bright head)
+
 function drawShootingStarG(g, s){
-  const ax = s.x - s.vx * 0.18;          // tail anchor a bit behind
+  const ax = s.x - s.vx * 0.18;
   const ay = s.y - s.vy * 0.18;
   const dx = s.x - ax;
   const dy = s.y - ay;
@@ -3054,48 +3040,48 @@ function drawShootingStarG(g, s){
   const fade = 1 - (s.age / s.life);
   const alpha = Math.max(0, Math.min(1, s.a0 * (0.4 + 0.6*fade)));
 
-  // tail
+
   g.save();
   g.globalAlpha = 0.7 * alpha;
   g.strokeStyle = '#e6f1ff';
   g.lineWidth = 2;
   g.beginPath(); g.moveTo(nx, ny); g.lineTo(s.x, s.y); g.stroke();
 
-  // head
+
   g.globalAlpha = alpha;
   g.fillStyle = '#ffffff';
   g.beginPath(); g.arc(s.x, s.y, 2.4, 0, Math.PI*2); g.fill();
   g.restore();
 }
 
-// ADD — Draw a background UFO (simple saucer with dome + blinking lights)
+
 function drawUFOG(g, u){
   g.save();
   g.translate(u.x, u.y);
   g.scale(u.scale, u.scale);
 
-  // shadow (subtle)
+
   g.globalAlpha = 0.18;
   g.fillStyle = '#000';
   g.beginPath(); g.ellipse(0, 10, 18, 4, 0, 0, Math.PI*2); g.fill();
   g.globalAlpha = 1;
 
-  // hull
+
   g.fillStyle = '#b7c7db';
   g.strokeStyle = '#8fa1b8';
   g.lineWidth = 1.5;
   g.beginPath(); g.ellipse(0, 0, 20, 7, 0, 0, Math.PI*2); g.fill(); g.stroke();
 
-  // rim
+
   g.fillStyle = '#d9e4f1';
   g.beginPath(); g.ellipse(0, 0, 22, 3.5, 0, 0, Math.PI*2); g.fill();
 
-  // dome
+
   g.fillStyle = '#9fd4ff';
   g.strokeStyle = '#6aa8d6';
   g.beginPath(); g.ellipse(0, -6, 8, 5, 0, 0, Math.PI*2); g.fill(); g.stroke();
 
-  // blinking lights along rim
+
   const blink = (Math.sin(u.t * 6 + u.phase) > 0) ? 1 : 0;
   const lights = 5;
   for (let i=0;i<lights;i++){
@@ -3114,13 +3100,13 @@ function drawSpaceBackground(g){
   g.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
   g.clearRect(0,0,W,H);
 
-  // deep space gradient
+
   const sky = g.createLinearGradient(0,0,0,H);
   sky.addColorStop(0, '#04070c');
   sky.addColorStop(1, '#0a0f1a');
   g.fillStyle = sky; g.fillRect(0,0,W,H);
 
-  // brighter twinkling stars
+
   const t = performance.now() * 0.001;
   g.save();
   for (const s of stars){
@@ -3131,22 +3117,22 @@ function drawSpaceBackground(g){
   }
   g.restore();
 
-  // planets
-// planets (fade in as they drop)
+
+
 for (const p of space.planets){
   g.save();
   g.globalAlpha = p.a ?? 1;
   drawPlanet(g, p);
   g.restore();
 }
-// planets (already drawn above)
 
-// ADD — shooting stars
+
+
 for (const s of space.shooters){
   drawShootingStarG(g, s);
 }
 
-// ADD — UFOs
+
 for (const u of space.ufos){
   drawUFOG(g, u);
 }
@@ -3158,41 +3144,41 @@ for (const u of space.ufos){
 
 
 function drawBackground(){
-    if (space.active) {              // NEW: space overrides everything
+    if (space.active) {
     drawSpaceBackground(bgCtx);
     return;
   }
   const s  = Math.round(state?.score || 0);
 
-  // Hills slide progress
+
   const tH = clamp((s - SKY_REVEAL_START) / HILLS_REVEAL_SPAN, 0, 1);
   const kH = easeInOut(tH);
 
-  // Sun progress with delay
+
   const tS = clamp((s - SUN_START_OFFSET) / SUN_PATH_SPAN, 0, 1);
   const u  = easeInOut(tS);
 
-  // 1) Sky first
+
   bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
   bgCtx.clearRect(0, 0, W, H);
   const night = drawSkyBase(bgCtx, u);
 
-  // 2) Sun (behind hills)
+
   if (tS > 0){
     drawSun(bgCtx, u, night);
   }
 
-  // 2.5) Moon (behind hills): starts later, moves on its own path
+
   const tM = clamp((s - MOON_START_OFFSET) / MOON_PATH_SPAN, 0, 1);
   const v  = easeInOut(tM);
   if (tM > 0){
     drawMoon(bgCtx, v, night);
   }
 
-  // 2.75) Day sky decor (birds/planes)
+
   drawSkyDecor(bgCtx);
 
-  // 3) Hills on top (occlude horizon)
+
   if (hillsTex){
     const shiftY = kH * (H + 160);
     bgCtx.drawImage(hillsTex, 0, shiftY);
@@ -3206,8 +3192,8 @@ function drawBackground(){
 function drawHillBandG(g, xOff, y, h, colTop, colBot, a=1, tight=1){
   g.save(); g.globalAlpha = a;
 
-  const w  = W * 2.6;              // extra wide so it never ends on-screen
-  const cx = W * 0.5 + xOff;       // crest center
+  const w  = W * 2.6;
+  const cx = W * 0.5 + xOff;
   const x  = cx - w * 0.5;
 
   const grad = g.createLinearGradient(0, y - h, 0, y + h * 0.6);
@@ -3217,8 +3203,8 @@ function drawHillBandG(g, xOff, y, h, colTop, colBot, a=1, tight=1){
 
   g.beginPath();
   g.moveTo(x, y);
-  g.quadraticCurveTo(x + w*0.25, y - h * (1.0 * tight), x + w*0.5,  y);       // higher crest
-  g.quadraticCurveTo(x + w*0.75, y + h * (0.30 * tight), x + w,      y);       // deeper dip
+  g.quadraticCurveTo(x + w*0.25, y - h * (1.0 * tight), x + w*0.5,  y);
+  g.quadraticCurveTo(x + w*0.75, y + h * (0.30 * tight), x + w,      y);
   g.lineTo(x + w, H); g.lineTo(x, H); g.closePath();
   g.fill();
 
@@ -3231,9 +3217,9 @@ function drawHillBandG(g, xOff, y, h, colTop, colBot, a=1, tight=1){
   g.restore();
 }
 
-// =================== END NEW BACKGROUND SYSTEM ===================
 
-// simple lerp already exists in your file; reuse if present
+
+
 
 
 
@@ -3311,7 +3297,7 @@ function drawBandFlowersG(g, seedBase, xOff, y, h, count=24, a=1){
 function rebuildHillsOnce(){
   if (!USE_BG_CACHE) return;
 
-  // (Re)create offscreen hills texture at window size
+
   hillsTex = document.createElement('canvas');
   hillsTex.width  = Math.round(W * BG_DPR);
   hillsTex.height = Math.round(H * BG_DPR);
@@ -3320,7 +3306,7 @@ function rebuildHillsOnce(){
 
   hillsCtx.clearRect(0, 0, W, H);
 
-  // ---- your staggered bands (keep your latest values) ----
+
   const bands = [
     { y: H-900, h:120, off:  W*0.50, top:'#8ccf6a', bot:'#5aa24a', stripe:'#f3ea8a', density:18, trees:0, flowers:0, tight:1.05 },
     { y: H-750, h:105, off:  W*0.18, top:'#7ec45e', bot:'#4e9a40', stripe:'#e5ea84', density:20, trees:3, flowers:0, tight:1.00 },
@@ -3330,19 +3316,19 @@ function rebuildHillsOnce(){
     { y: H-150, h: 88, off:  W*0.42, top:'#5aa344', bot:'#317d2d', stripe:'#cde064', density:22, trees:3, flowers:0, tight:1.08 },
   ];
 
-  // Draw all hills onto the offscreen texture ONCE
+
   bands.forEach((b, i) => {
     drawHillBandG(hillsCtx, b.off, b.y, b.h, b.top, b.bot, 1, b.tight ?? 1);
-    // stripes optional:
-    // drawBandStripesG(hillsCtx, b.off, b.y, b.h, b.stripe, b.density, 1, b.tight ?? 1);
+
+
     if (b.trees)   drawBandTreesG(hillsCtx, i*17 + 101, b.off, b.y, b.h, b.trees, 1);
     if (b.flowers) drawBandFlowersG(hillsCtx, i*23 + 707, b.off, b.y, b.h, 10*b.flowers, 1);
   });
 
-  // Make sure the bg canvas has the same transform
+
   bgCtx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
 }
-// === POWERUPS: update/draw ===
+
 function activatePowerup(type){
   const P = state.player;
   if (type === 'jetpack')  { P.jetpackT = DURATION.jetpack; sound.beep(1100,.12,'triangle',.12, 'powerup'); }
@@ -3353,16 +3339,16 @@ function activatePowerup(type){
   updateBuffHUD();
 }
 
-// Simple AABB
+
 function aabb(ax,ay,aw,ah, bx,by,bw,bh){
   return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
 }
 
-// Called from update()
+
 function updatePowerups(dt){
   const P = state.player;
   for (const it of state.powerups) { it.t += dt;
-    // Follow parent platform if we have one
+
 if (it.parent && it.parent.alive) {
   it.x = it.parent.x + it.dx;
   it.y = it.parent.y + it.dy;
@@ -3370,7 +3356,7 @@ if (it.parent && it.parent.alive) {
 
    }
 
-  // collisions
+
   let consumed = -1;
   for (let i=0;i<state.powerups.length;i++){
     const it = state.powerups[i];
@@ -3390,13 +3376,13 @@ function drawPowerups(g){
     g.save();
     g.translate(it.x + it.w/2, it.y + it.h/2 + yBob);
 
-    // token base
+
     g.globalAlpha = 0.95;
     g.fillStyle = '#0f1c2d';
     roundRect(g, -PU_W/2, -PU_H/2, PU_W, PU_H, 6); g.fill();
     g.lineWidth = 1.5; g.strokeStyle = '#304b73'; g.stroke();
 
-    // icon
+
     g.lineWidth = 2.0; g.lineCap = 'round'; g.lineJoin = 'round';
     if (it.type === 'jetpack'){
       g.strokeStyle = '#e5e7eb';
@@ -3410,31 +3396,31 @@ function drawPowerups(g){
       g.beginPath(); g.moveTo(-6,3); g.lineTo(0,-5); g.lineTo(6,3); g.stroke();
       g.beginPath(); g.moveTo(-6,6); g.lineTo(0,-2); g.lineTo(6,6); g.stroke();
    } else if (it.type === 'shield') {
-  // Beveled kite shield icon (fills + outline + small highlight)
+
   g.save();
 
-  // Outer silhouette
+
   g.beginPath();
-  g.moveTo(0, -8);              // top
+  g.moveTo(0, -8);
   g.quadraticCurveTo(7, -6, 7, -1);
-  g.quadraticCurveTo(6,  5, 0,  8);   // bottom point
+  g.quadraticCurveTo(6,  5, 0,  8);
   g.quadraticCurveTo(-6, 5, -7, -1);
   g.quadraticCurveTo(-7,-6, 0, -8);
   g.closePath();
 
-  // Fill gradient (light → mid blue)
+
   const grad = g.createLinearGradient(0, -8, 0, 8);
   grad.addColorStop(0, '#e9f3ff');
   grad.addColorStop(1, '#7fb8ff');
   g.fillStyle = grad;
   g.fill();
 
-  // Outer border
+
   g.lineWidth = 2;
   g.strokeStyle = '#93c5fd';
   g.stroke();
 
-  // Subtle central ridge highlight
+
   g.beginPath();
   g.moveTo(0, -4.5);
   g.lineTo(0, 5.5);
@@ -3442,7 +3428,7 @@ function drawPowerups(g){
   g.lineWidth = 1.1;
   g.stroke();
 
-  // Top arc gloss
+
   g.beginPath();
   g.moveTo(-5.8, -4.8);
   g.quadraticCurveTo(0, -7.6, 5.8, -4.8);
@@ -3471,12 +3457,12 @@ else if (it.type === 'slow'){
     ctx.clearRect(0,0,W,H);
     drawBackground();
 
-    // draw platforms
+
     for (const pl of state.plats) drawPlatform(pl);
     drawPowerups(ctx);
 
 
-    // draw rain (NEW: little streaks)
+
     for (const d of state.drops) {
       ctx.save();
       ctx.globalAlpha = 0.9;
@@ -3491,7 +3477,7 @@ else if (it.type === 'slow'){
 
     drawPlayer(state.player);
 
-    // particles
+
     for (const p of state.particles) {
       const a = 1 - (p.t / p.life);
       ctx.globalAlpha = a;
@@ -3504,30 +3490,30 @@ else if (it.type === 'slow'){
     drawEnemies(ctx);
     drawFeedbackCues(ctx);
 
-        // Storm visuals (flash + blackout)
+
     if (storm.active) {
-      drawLightning(ctx);   // bright momentary flash & bolts
-      drawStormOverlay(ctx); // persistent blackout (or dim during flash)
+      drawLightning(ctx);
+      drawStormOverlay(ctx);
     }
-    
+
 
   }
 
 
-// ===== CARTOON CLOUD (reference-style) =====
-// CHANGED: split into two palettes so rain clouds can be darker.
+
+
 const CLOUD_PALE = {
   body: '#bfe3ff',
   shadow: '#8dc9ff',
   highlight: 'rgba(255,255,255,.95)',
-  shadeA: 0.55   // underside gradient strength
+  shadeA: 0.55
 };
 
 const CLOUD_RAIN = {
-  body: '#9db8f5',      // darker base for rain clouds
-  shadow: '#5f88d9',    // darker shadow tone
-  highlight: 'rgba(255,255,255,.80)', // dimmer highlight
-  shadeA: 0.82          // stronger underside shading
+  body: '#9db8f5',
+  shadow: '#5f88d9',
+  highlight: 'rgba(255,255,255,.80)',
+  shadeA: 0.82
 };
 
 
@@ -3572,7 +3558,7 @@ const CLOUD_RAIN = {
     p.cloud = { top, bot };
   }
 
-// CHANGED: accept a 'colors' palette (default to CLOUD_PALE)
+
 function drawCartoonCloudOnly(ctx, p, colors = CLOUD_PALE){
   seedCloudLobes(p);
   const { top, bot } = p.cloud;
@@ -3581,29 +3567,29 @@ function drawCartoonCloudOnly(ctx, p, colors = CLOUD_PALE){
   ctx.save();
   ctx.globalAlpha = p.alpha;
 
-  // body from puffs
+
   ctx.beginPath();
   for (const b of top){ ctx.moveTo(x0+b.ox+b.r, y0+b.oy); ctx.arc(x0+b.ox, y0+b.oy, b.r, 0, Math.PI*2); }
   for (const b of bot){ ctx.moveTo(x0+b.ox+b.r, y0+b.oy); ctx.arc(x0+b.ox, y0+b.oy, b.r, 0, Math.PI*2); }
-  ctx.fillStyle = colors.body;                 // CHANGED
+  ctx.fillStyle = colors.body;
   ctx.fill();
 
-  // underside shade
+
   ctx.save();
   ctx.clip();
   const gy = ctx.createLinearGradient(0, y0 + 4, 0, y0 + p.h + 28);
   gy.addColorStop(0.00, 'rgba(0,0,0,0)');
   gy.addColorStop(0.55, 'rgba(0,0,0,0.00)');
-  // CHANGED: stronger/darker end-stop based on palette
+
   gy.addColorStop(1.00, `rgba(141,201,255,${colors.shadeA ?? 0.55})`);
   ctx.fillStyle = gy;
   ctx.fillRect(x0 - 60, y0 - 40, p.w + 120, p.h + 120);
   ctx.restore();
 
-  // highlights
+
   ctx.lineWidth = 3;
   ctx.lineCap   = 'round';
-  ctx.strokeStyle = colors.highlight;          // CHANGED
+  ctx.strokeStyle = colors.highlight;
   for (const b of top){
     const cx = x0 + b.ox, cy = y0 + b.oy, r = b.r*0.95;
     ctx.beginPath();
@@ -3626,7 +3612,7 @@ function drawCartoonCloudOnly(ctx, p, colors = CLOUD_PALE){
 
     ctx.globalAlpha = p.alpha;
 
-// Clouds (vanish & moving cloud)
+
 if (p.type === 'vanish' || p.type === 'cloudX') {
   const palette = (p.type === 'cloudX') ? CLOUD_RAIN : CLOUD_PALE;
   drawCartoonCloudOnly(ctx, p, palette);
@@ -3635,23 +3621,23 @@ if (p.type === 'vanish' || p.type === 'cloudX') {
 }
 
 
-    // Base colors for other platform types
+
     let fill = '#22314c', stroke = '#2c4163';
     if (p.type === 'moveX') { fill = '#1e3a8a'; stroke = '#3556a8'; }
     if (p.type === 'break' || p.type === 'moveBreakX') { fill = '#4c1d1d'; stroke = '#7f1d1d'; }
     if (p.type === 'spring' || p.type === 'moveSpringX'){ fill = '#064e3b'; stroke = '#0f766e'; }
 
-    // Body
+
     roundRect(ctx, p.x, p.y, p.w, p.h, r);
     ctx.fillStyle = fill;
     ctx.fill();
 
-    // Normal stroke
+
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 2;
     ctx.stroke();
 
-// NEW: smooth wet film that “fills up” (wider & stronger as wetness grows)
+
 if ((p.wetVis || 0) > 0.01) {
   const cover = clamp(p.wetCover || 0, 0, 1);
   const a = Math.min(0.5, 0.08 + (p.wetVis || 0) * 0.45);
@@ -3659,7 +3645,7 @@ if ((p.wetVis || 0) > 0.01) {
   ctx.save();
   ctx.globalAlpha = a;
 
-  // glossy puddle ellipse—width & height grow with coverage
+
   const filmW = p.w * (0.30 + 0.70 * cover);
   const filmH = 6 + 6 * cover;
   ctx.fillStyle = '#8ed0ff';
@@ -3667,7 +3653,7 @@ if ((p.wetVis || 0) > 0.01) {
   ctx.ellipse(p.x + p.w * 0.5, p.y + 3, filmW * 0.5, filmH * 0.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // thin vertical fade to suggest a shallow water film
+
   const gx = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 8 + 6 * cover);
   gx.addColorStop(0, 'rgba(142,208,255,0.35)');
   gx.addColorStop(1, 'rgba(142,208,255,0.00)');
@@ -3677,7 +3663,7 @@ if ((p.wetVis || 0) > 0.01) {
   ctx.restore();
 }
 
-    // Spring decoration (also for moving green)
+
     if (p.type === 'spring' || p.type === 'moveSpringX') {
       const cx = p.x + p.w/2, cy = p.y - 4;
       const stretch = 1 + (p.springStretch||0)*0.6;
@@ -3693,7 +3679,7 @@ if ((p.wetVis || 0) > 0.01) {
       ctx.strokeStyle = '#134e4a'; ctx.lineWidth = 1.5; ctx.stroke();
     }
 
-    // Break cracks (phase by hits) — also for moving red
+
     if (p.type === 'break' || p.type === 'moveBreakX') {
       const deep = (p.hits >= 1);
       ctx.beginPath();
@@ -3751,20 +3737,20 @@ function drawPlayer(P) {
   const facing = (P.vx >= 0) ? 1 : -1;
   const cx = P.x + P.w/2, cy = P.y + P.h/2;
 
-  // motion pose
+
   const speedRatio = Math.max(0, Math.min(1, Math.abs(P.vx)/MOVE_MAX));
   const runFreq = 6 + 6*speedRatio;
   const step  = Math.sin((P.animT||0) * runFreq);
   const step2 = Math.sin((P.animT||0) * runFreq + Math.PI);
   const tilt = Math.max(-1, Math.min(1, P.vx/MOVE_MAX)) * 0.22 + (P.vy < 0 ? -0.06 : 0.08);
 
-  // squash & stretch (from landings)
+
   const k = Math.max(0, Math.min(1, (P.squashT||0) / 0.14));
   const easeOut = k*k*(2 - k);
   const sy = 1 - 0.25*easeOut;
   const sx = 1 + 0.18*easeOut;
 
-  // blink factor
+
   let eyeOpen = 1;
   if (P.blinkT > 0) {
     const b = P.blinkT / 0.12;
@@ -3772,9 +3758,9 @@ function drawPlayer(P) {
     eyeOpen = Math.max(0.08, Math.min(1, 1 - tri*0.92));
   }
 
-  // --- NO ground shadow anymore ---
 
-  // body group
+
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(tilt);
@@ -3783,9 +3769,9 @@ function drawPlayer(P) {
   const w = P.w, h = P.h;
   const bx = -w*0.5, by = -h*0.5;
 
-  
 
-  // body capsule
+
+
   roundRect(ctx, bx, by, w, h, 12);
   const g = ctx.createLinearGradient(0, by, 0, by+h);
   g.addColorStop(0.00, '#27d3ef');
@@ -3794,16 +3780,16 @@ function drawPlayer(P) {
   ctx.fillStyle = g; ctx.fill();
   ctx.lineWidth = 2.2; ctx.strokeStyle = '#135f79'; ctx.stroke();
 
-  // chest sheen (kept)
+
   ctx.globalAlpha = 0.16;
   roundRect(ctx, bx+8, by+10, w-16, h-22, 10); ctx.fillStyle = '#fff'; ctx.fill();
   ctx.globalAlpha = 1;
 
-  // --- REMOVED belt stripe (the “horizontal capsule” under lips) ---
 
-  // --- REMOVED arms (this was the little dark circle near the eye) ---
 
-  // legs/feet
+
+
+
   const legAmp = 2 * speedRatio;
   const footY = by + h - 6;
   const footW = 12, footH = 6;
@@ -3820,7 +3806,7 @@ function drawPlayer(P) {
     ctx.restore();
   }
 
-  // face (eyes + mouth)
+
   const headY = by + h*0.33;
   const eyeCx = 2*facing;
   const eyeCy = headY - 4;
@@ -3840,7 +3826,7 @@ function drawPlayer(P) {
       ctx.fillRect(-7, -6, 14, 12);
       ctx.restore();
     }
-    // spec highlight
+
     ctx.globalAlpha = 0.9;
     ctx.beginPath(); ctx.arc(-1, -1.5, 0.9, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
     ctx.globalAlpha = 1;
@@ -3849,7 +3835,7 @@ function drawPlayer(P) {
   drawEye(eyeCx - 7);
   drawEye(eyeCx + 7);
 
-  // mouth
+
   ctx.beginPath();
   const mY = headY + 10;
   const smile = 4;
@@ -3858,7 +3844,7 @@ function drawPlayer(P) {
   ctx.lineWidth = 2; ctx.strokeStyle = '#0b0f14'; ctx.stroke();
 
 
-  // jetpack flame (kept)
+
   if (P.jetpackT > 0) {
     ctx.save();
     const flameY = by + h - 2;
@@ -3879,7 +3865,7 @@ function drawPlayer(P) {
     ctx.restore();
   }
 
-  // shield ring (kept)
+
   if (P.shield > 0){
     const rx = w*0.65, ry = h*0.65;
     ctx.save();
@@ -3890,12 +3876,12 @@ function drawPlayer(P) {
     ctx.restore();
   }
 
-  ctx.restore(); // end body
+  ctx.restore();
 }
 
 
 
-  // ===== Toast helper =====
+
   let toastTimer = 0, toastText = '', toastAlpha = 0, toastRafId = 0;
   function toast(msg) {
     toastText = msg; toastAlpha = 1;
@@ -3909,18 +3895,18 @@ function drawToast() {
   ctx.save();
   ctx.globalAlpha = toastAlpha * .9;
 
-  // Use the same font for measuring and drawing
+
   const font = '600 16px system-ui, sans-serif';
   ctx.font = font;
 
-  const sidePad = 20;                      // left/right padding
-  const maxW = Math.min(W - 24, 720);      // wider cap (up to near-full width)
+  const sidePad = 20;
+  const maxW = Math.min(W - 24, 720);
   const textW = ctx.measureText(toastText).width;
-  const tw = Math.min(maxW, textW + sidePad * 2); // widget width based on text
+  const tw = Math.min(maxW, textW + sidePad * 2);
 
   const x = (W - tw) / 2;
 
-  // keep your lowered Y logic from earlier reply:
+
   const hudH = (document.getElementById('hud')?.clientHeight || 44);
   const y = hudH + 16;
 
@@ -3930,7 +3916,7 @@ function drawToast() {
 
   ctx.globalAlpha = toastAlpha;
   ctx.fillStyle = '#e6edf3';
-  ctx.font = font;                          // ensure same font when drawing
+  ctx.font = font;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(toastText, W/2, y + 20);
 
@@ -3939,7 +3925,7 @@ function drawToast() {
 }
 
 
-  // Start by clicking/tapping canvas or pressing Space
+
   function renderGameToText() {
     const P = state?.player || null;
     const gameOverVisible = gameover && gameover.style.display !== 'none';

@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Gridline Tactics - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Command two neon units through compact cover-based tactics missions." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/gridline-tactics.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Gridline Tactics — Workshop Arcade" />
+<meta property="og:description" content="Command two neon units through compact cover-based tactics missions." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/gridline-tactics.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/gridline-tactics.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Gridline Tactics — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Gridline Tactics — Workshop Arcade" />
+<meta name="twitter:description" content="Command two neon units through compact cover-based tactics missions." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/gridline-tactics.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Gridline Tactics",
+  "description": "Command two neon units through compact cover-based tactics missions.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/gridline-tactics.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/gridline-tactics.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Strategy",
+    "Tactics",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Command two units through compact deterministic tactics missions with cover, cursor controls, and turn pressure." />
+<meta name="theme-color" content="#081018" />
+<link rel="icon" href="data:," />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{min-height:100vh;display:flex;justify-content:center;padding:16px 10px 20px;overflow-x:hidden;background:radial-gradient(760px 460px at 12% -8%,rgba(45,212,191,.16),transparent 62%),radial-gradient(700px 460px at 96% 0%,rgba(248,113,113,.12),transparent 64%),linear-gradient(180deg,#081018,#050812 88%)}
+  .shell{width:min(960px,100%);display:flex;flex-direction:column;gap:10px}
+  .top{display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap}
+  .brand{line-height:1;user-select:none}.eyebrow{display:block;font-size:10px;text-transform:uppercase;color:#5eead4;font-weight:900}.title{display:block;margin-top:4px;font-size:25px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.22)}
+  .hint{max-width:560px;color:#a6b5c8;font-size:12px;line-height:1.35;text-align:right}
+  .hud,.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .pill{min-width:76px;padding:7px 9px;border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(8,13,24,.92));box-shadow:0 8px 24px rgba(0,0,0,.2);font-size:11px;color:#a8bed2;text-transform:uppercase;font-weight:850}
+  .pill b{display:block;margin-top:2px;color:#f8fbff;font-size:16px;font-variant-numeric:tabular-nums}
+  button{border:1px solid rgba(94,234,212,.35);border-radius:8px;background:linear-gradient(180deg,#155e75,#0f3b52);color:#eaffff;font-weight:900;font-size:12px;padding:9px 11px;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.22)}
+  button:hover,button:focus-visible{outline:2px solid rgba(94,234,212,.45);outline-offset:2px}
+  canvas{display:block;width:100%;max-width:900px;aspect-ratio:16/10;margin:0 auto;border:1px solid rgba(94,234,212,.26);border-radius:8px;background:#07111a;box-shadow:0 22px 70px rgba(0,0,0,.38);touch-action:none}
+  .touch{display:grid;grid-template-columns:repeat(5,44px);gap:7px;justify-content:center}.touch button{height:40px;padding:0}
+  .wide{grid-column:span 2}
+  @media (max-width:700px){body{padding:10px 8px}.top{justify-content:center}.brand{display:none}.hint{text-align:center;font-size:11px}.pill{min-width:66px;padding:6px 7px}.pill b{font-size:14px}button{padding:8px 9px}.touch{grid-template-columns:repeat(5,40px)}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <h1 class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Gridline Tactics</span></h1>
+    <div class="hint">Arrows/WASD move cursor. Enter/Space moves or attacks. Tab switches unit. R restarts. F fullscreen.</div>
+  </div>
+  <section class="hud" aria-label="Game status">
+    <div class="pill">Mission<b id="mission">1/5</b></div>
+    <div class="pill">Score<b id="score">0</b></div>
+    <div class="pill">Best<b id="best">0</b></div>
+    <div class="pill">Turn<b id="turn">Player</b></div>
+    <div class="pill">Unit<b id="unit">A</b></div>
+    <div class="pill">State<b id="state">Ready</b></div>
+  </section>
+  <canvas id="game" width="900" height="560" tabindex="0" aria-label="Gridline Tactics deterministic turn-based tactics game"></canvas>
+  <section class="bar" aria-label="Actions">
+    <button id="restart" type="button">Restart</button>
+    <button id="sound" type="button">Sound On</button>
+    <button id="full" type="button">Fullscreen</button>
+  </section>
+  <section class="touch" aria-label="Touch controls">
+    <button type="button" data-key="Tab">Unit</button><button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Action</button><button type="button" data-key="r">Reset</button>
+    <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="ArrowDown">Down</button><button type="button" data-key="ArrowRight">Right</button><button type="button" data-key="f" class="wide">Full</button>
+  </section>
+</main>
+<script src="workshop-runtime.js"></script>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const hud = {
+    mission: document.getElementById("mission"), score: document.getElementById("score"),
+    best: document.getElementById("best"), turn: document.getElementById("turn"),
+    unit: document.getElementById("unit"), state: document.getElementById("state"),
+    sound: document.getElementById("sound")
+  };
+  const W = 7, H = 6, KEY = "gridline-tactics.best.v1", SOUND = "gridline-tactics.sound.v1";
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const missions = [
+    {name:"Depot Breach",goal:{x:6,y:5},cover:[[2,1],[4,2],[1,4]],units:[[0,0],[0,2]],enemies:[[5,1,4],[4,4,4]]},
+    {name:"Crossfire Yard",goal:{x:6,y:0},cover:[[2,0],[2,3],[4,1],[4,4]],units:[[0,5],[1,4]],enemies:[[5,0,4],[6,3,5],[3,5,3]]},
+    {name:"Signal Steps",goal:{x:3,y:0},cover:[[1,1],[3,2],[5,1],[2,4]],units:[[0,5],[6,5]],enemies:[[1,0,4],[5,0,4],[3,3,5]]},
+    {name:"Box Canyon",goal:{x:6,y:2},cover:[[1,2],[2,2],[4,2],[5,3],[3,4]],units:[[0,1],[0,4]],enemies:[[6,0,5],[6,5,5],[3,1,4]]},
+    {name:"Last Grid",goal:{x:6,y:5},cover:[[1,1],[3,1],[5,1],[2,3],[4,3]],units:[[0,0],[0,5]],enemies:[[6,0,5],[5,2,4],[6,4,5],[3,5,4]]}
+  ];
+  let audioCtx = null, lastTime = 0;
+  const state = {
+    mode:"playing", mission:0, score:0, best:loadBest(), selected:0, cursor:{x:0,y:0},
+    units:[], enemies:[], cover:[], goal:{x:0,y:0}, turn:"player", action:"ready",
+    sound:loadSound(), fullscreen:false, runComplete:false, gameOver:false, feedback:[]
+  };
+  function storage(){ try { return window.localStorage; } catch (_) { return window.workshopStorage || null; } }
+  function loadBest(){ try { return Math.max(0, parseInt((storage()||{}).getItem(KEY),10)||0); } catch (_) { return 0; } }
+  function saveBest(){ if (state.score > state.best) { state.best = state.score; try { (storage()||{}).setItem(KEY, String(state.best)); } catch (_) {} } }
+  function loadSound(){ try { const v = (storage()||{}).getItem(SOUND); return v == null ? true : v === "true"; } catch (_) { return true; } }
+  function saveSound(){ try { (storage()||{}).setItem(SOUND, String(state.sound)); } catch (_) {} }
+  function beep(type){
+    if (!state.sound) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      audioCtx = audioCtx || new AC();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      const now = audioCtx.currentTime, freq = {move:260,hit:130,win:520,lose:90,select:390}[type] || 220;
+      o.type = type === "lose" ? "sawtooth" : "triangle"; o.frequency.setValueAtTime(freq, now);
+      g.gain.setValueAtTime(.0001, now); g.gain.exponentialRampToValueAtTime(.08, now + .01); g.gain.exponentialRampToValueAtTime(.0001, now + .16);
+      o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + .18);
+    } catch (_) {}
+  }
+  function startMission(index){
+    const m = missions[index];
+    state.mode = "playing"; state.turn = "player"; state.action = "ready"; state.selected = 0;
+    state.goal = {x:m.goal.x,y:m.goal.y,armed:false};
+    state.cover = m.cover.map(([x,y]) => ({x,y,hp:2}));
+    state.units = m.units.map(([x,y], i) => ({id:i ? "B" : "A",x,y,hp:7,max:7,acted:false}));
+    state.enemies = m.enemies.map(([x,y,hp], i) => ({id:"E"+(i+1),x,y,hp,max:hp,acted:false}));
+    state.cursor = {x:state.units[0].x,y:state.units[0].y};
+    state.feedback.length = 0; updateHud(); render();
+  }
+  function restart(run=false){ state.score = run ? 0 : state.score; state.mission = run ? 0 : state.mission; state.runComplete=false; state.gameOver=false; startMission(state.mission); }
+  function aliveUnits(){ return state.units.filter(u => u.hp > 0); }
+  function aliveEnemies(){ return state.enemies.filter(e => e.hp > 0); }
+  function selectedUnit(){ return state.units[state.selected] && state.units[state.selected].hp > 0 ? state.units[state.selected] : aliveUnits()[0]; }
+  function isCover(x,y){ return state.cover.find(c => c.hp > 0 && c.x === x && c.y === y); }
+  function enemyAt(x,y){ return state.enemies.find(e => e.hp > 0 && e.x === x && e.y === y); }
+  function unitAt(x,y){ return state.units.find(u => u.hp > 0 && u.x === x && u.y === y); }
+  function blocked(x,y){ return x<0 || y<0 || x>=W || y>=H || isCover(x,y) || enemyAt(x,y) || unitAt(x,y); }
+  function dist(a,b){ return Math.abs(a.x-b.x)+Math.abs(a.y-b.y); }
+  function coverBetween(a,b){ return state.cover.some(c => c.hp > 0 && ((c.x === a.x && c.x === b.x && between(c.y,a.y,b.y)) || (c.y === a.y && c.y === b.y && between(c.x,a.x,b.x)))); }
+  function between(v,a,b){ return v > Math.min(a,b) && v < Math.max(a,b); }
+  function float(text,x,y,color){ state.feedback.push({text,x,y,color,life:42}); }
+  function cycleUnit(){
+    const live = aliveUnits(); if (!live.length) return;
+    let idx = state.selected;
+    for (let i=0;i<state.units.length;i++){ idx = (idx + 1) % state.units.length; if (state.units[idx].hp > 0) break; }
+    state.selected = idx; const u = selectedUnit(); state.cursor = {x:u.x,y:u.y}; beep("select"); updateHud(); render();
+  }
+  function playerAction(){
+    if (state.mode === "missionComplete") return nextMission();
+    if (state.mode === "runComplete" || state.mode === "gameOver") return restart(true);
+    if (state.turn !== "player") return;
+    let u = selectedUnit(); if (!u) return finishLoss();
+    const target = {x:state.cursor.x,y:state.cursor.y}, e = enemyAt(target.x,target.y);
+    if (e && !u.acted && dist(u,e) <= 2) {
+      const dmg = coverBetween(u,e) ? 2 : 3;
+      e.hp -= dmg; u.acted = true; state.score += e.hp <= 0 ? 90 : 20; float("-"+dmg,e.x,e.y,"#fb7185"); beep("hit");
+      if (e.hp <= 0) float("down",e.x,e.y,"#facc15");
+      afterPlayerAction(); return;
+    }
+    if (!e && !u.acted && !blocked(target.x,target.y) && dist(u,target) > 0 && dist(u,target) <= 3) {
+      u.x = target.x; u.y = target.y; u.acted = true; state.score += 4; float("move",u.x,u.y,"#5eead4"); beep("move");
+      afterPlayerAction(); return;
+    }
+    const c = isCover(target.x,target.y);
+    if (c && !u.acted && dist(u,c) === 1) {
+      c.hp -= 1; u.acted = true; state.score += 8; float("cover",c.x,c.y,"#f59e0b"); beep("hit");
+      afterPlayerAction(); return;
+    }
+    float("no line",target.x,target.y,"#94a3b8"); beep("select"); updateHud(); render();
+  }
+  function afterPlayerAction(){
+    if (checkWin()) return;
+    if (state.units.every(u => u.hp <= 0 || u.acted)) enemyTurn();
+    else { cycleUnitToReady(); state.action = "ready"; updateHud(); render(); }
+  }
+  function cycleUnitToReady(){
+    for (let i=0;i<state.units.length;i++){ const idx=(state.selected+1+i)%state.units.length; if(state.units[idx].hp>0 && !state.units[idx].acted){ state.selected=idx; state.cursor={x:state.units[idx].x,y:state.units[idx].y}; return; } }
+  }
+  function enemyTurn(){
+    state.turn = "enemy"; state.action = "enemy"; updateHud();
+    for (const e of aliveEnemies()) {
+      const targets = aliveUnits().sort((a,b)=>dist(e,a)-dist(e,b));
+      const t = targets[0]; if (!t) break;
+      if (dist(e,t) <= 1) {
+        const inCover = dirs.some(([dx,dy]) => isCover(t.x+dx,t.y+dy));
+        const dmg = inCover ? 1 : 2; t.hp -= dmg; float("-"+dmg,t.x,t.y,"#fb7185"); beep("hit");
+      } else {
+        const options = dirs.map(([dx,dy]) => ({x:e.x+dx,y:e.y+dy})).filter(p => !blocked(p.x,p.y)).sort((a,b)=>dist(a,t)-dist(b,t));
+        if (options[0] && dist(options[0],t) < dist(e,t)) { e.x = options[0].x; e.y = options[0].y; }
+      }
+    }
+    if (aliveUnits().length === 0) return finishLoss();
+    state.turn = "player"; state.action = "ready"; state.units.forEach(u => u.acted = false); cycleUnitToReady(); updateHud(); render();
+  }
+  function checkWin(){
+    if (aliveEnemies().length) return false;
+    state.goal.armed = true;
+    const allGoal = aliveUnits().some(u => u.x === state.goal.x && u.y === state.goal.y);
+    if (!allGoal) { state.action = "reach goal"; updateHud(); render(); return false; }
+    state.score += 250 + aliveUnits().reduce((n,u)=>n+u.hp,0)*12; saveBest();
+    if (state.mission === missions.length - 1) { state.mode = "runComplete"; state.runComplete = true; beep("win"); }
+    else { state.mode = "missionComplete"; beep("win"); }
+    state.action = state.mode; updateHud(); render(); return true;
+  }
+  function nextMission(){ state.mission += 1; startMission(state.mission); }
+  function finishLoss(){ state.mode = "gameOver"; state.gameOver = true; state.action = "game over"; saveBest(); beep("lose"); updateHud(); render(); }
+  function moveCursor(dx,dy){ if (state.mode !== "playing") return; state.cursor.x = Math.max(0, Math.min(W-1, state.cursor.x+dx)); state.cursor.y = Math.max(0, Math.min(H-1, state.cursor.y+dy)); updateHud(); render(); }
+  function handleKey(key){
+    const k = key.length === 1 ? key.toLowerCase() : key;
+    if (k === "r") return restart(true);
+    if (k === "f") return toggleFull();
+    if (k === "Tab") return cycleUnit();
+    if (k === "Enter" || k === " ") return playerAction();
+    if (k === "ArrowLeft" || k === "a") return moveCursor(-1,0);
+    if (k === "ArrowRight" || k === "d") return moveCursor(1,0);
+    if (k === "ArrowUp" || k === "w") return moveCursor(0,-1);
+    if (k === "ArrowDown" || k === "s") return moveCursor(0,1);
+  }
+  function toggleFull(){ try { if (!document.fullscreenElement) canvas.requestFullscreen(); else document.exitFullscreen(); } catch (_) {} }
+  function updateHud(){
+    const u = selectedUnit();
+    hud.mission.textContent = (state.mission + 1) + "/" + missions.length;
+    hud.score.textContent = state.score; hud.best.textContent = state.best;
+    hud.turn.textContent = state.turn === "enemy" ? "Enemy" : "Player";
+    hud.unit.textContent = u ? u.id + " " + u.hp : "--";
+    hud.state.textContent = state.mode === "playing" ? state.action : state.mode;
+    hud.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    state.fullscreen = !!document.fullscreenElement;
+  }
+  function cellRect(x,y){
+    const pad = 28, top = 54, size = Math.min((canvas.width-pad*2)/W, (canvas.height-top-26)/H);
+    const ox = (canvas.width - size*W)/2, oy = top + (canvas.height - top - 22 - size*H)/2;
+    return {x:ox+x*size,y:oy+y*size,s:size};
+  }
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const g = ctx.createLinearGradient(0,0,0,canvas.height); g.addColorStop(0,"#0b1722"); g.addColorStop(1,"#071018"); ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "#e6edf3"; ctx.font = "900 22px system-ui"; ctx.fillText("Gridline Tactics", 28, 34);
+    ctx.font = "12px system-ui"; ctx.fillStyle = "#9fb0c8"; ctx.fillText(missions[state.mission].name + " - clear enemies, then step onto the cyan goal.", 28, 53);
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+      const r = cellRect(x,y); ctx.fillStyle = (x+y)%2 ? "#0d1b28" : "#102233"; ctx.fillRect(r.x+2,r.y+2,r.s-4,r.s-4);
+      ctx.strokeStyle = "rgba(94,234,212,.18)"; ctx.strokeRect(r.x+2,r.y+2,r.s-4,r.s-4);
+    }
+    const gr = cellRect(state.goal.x,state.goal.y); ctx.fillStyle = state.goal.armed ? "rgba(94,234,212,.42)" : "rgba(94,234,212,.18)"; ctx.fillRect(gr.x+8,gr.y+8,gr.s-16,gr.s-16);
+    ctx.strokeStyle = "#5eead4"; ctx.lineWidth = 3; ctx.strokeRect(gr.x+10,gr.y+10,gr.s-20,gr.s-20);
+    for (const c of state.cover.filter(c=>c.hp>0)) { const r=cellRect(c.x,c.y); ctx.fillStyle="#7c4a1e"; ctx.fillRect(r.x+12,r.y+14,r.s-24,r.s-26); ctx.fillStyle="#f59e0b"; ctx.fillRect(r.x+16,r.y+18,(r.s-32)*(c.hp/2),5); }
+    for (const e of aliveEnemies()) drawAgent(e,"#fb7185","#7f1d1d");
+    for (const u of aliveUnits()) drawAgent(u,u.id==="A"?"#67e8f9":"#a7f3d0","#0f766e", u.acted);
+    const cr = cellRect(state.cursor.x,state.cursor.y); ctx.strokeStyle="#facc15"; ctx.lineWidth=4; ctx.strokeRect(cr.x+5,cr.y+5,cr.s-10,cr.s-10);
+    for (const f of state.feedback) { const r=cellRect(f.x,f.y); ctx.globalAlpha=Math.max(0,f.life/42); ctx.fillStyle=f.color; ctx.font="900 15px system-ui"; ctx.textAlign="center"; ctx.fillText(f.text,r.x+r.s/2,r.y+18+(42-f.life)*.45); ctx.textAlign="left"; ctx.globalAlpha=1; }
+    if (state.mode !== "playing") {
+      ctx.fillStyle="rgba(3,7,18,.72)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.textAlign="center"; ctx.fillStyle="#f8fbff"; ctx.font="900 34px system-ui";
+      ctx.fillText(state.mode === "gameOver" ? "Game Over" : state.mode === "runComplete" ? "Run Complete" : "Mission Complete", canvas.width/2, canvas.height/2-18);
+      ctx.font="15px system-ui"; ctx.fillStyle="#b8c7d9"; ctx.fillText(state.mode === "missionComplete" ? "Press Enter for the next mission." : "Press Enter or R to restart.", canvas.width/2, canvas.height/2+18); ctx.textAlign="left";
+    }
+  }
+  function drawAgent(a,fill,stroke,dim=false){
+    const r=cellRect(a.x,a.y), cx=r.x+r.s/2, cy=r.y+r.s/2; ctx.globalAlpha=dim?.55:1; ctx.fillStyle=fill; ctx.strokeStyle=stroke; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.arc(cx,cy,r.s*.26,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle="#071018"; ctx.font="900 15px system-ui"; ctx.textAlign="center"; ctx.fillText(a.id,cx,cy+5);
+    ctx.fillStyle="#22c55e"; ctx.fillRect(r.x+12,r.y+r.s-13,(r.s-24)*Math.max(0,a.hp/a.max),5); ctx.textAlign="left"; ctx.globalAlpha=1;
+  }
+  function step(){
+    for (const f of state.feedback) f.life -= 1;
+    state.feedback = state.feedback.filter(f => f.life > 0);
+  }
+  function tick(ts){ if (!lastTime) lastTime = ts; if (ts-lastTime > 40) { step(); render(); lastTime = ts; } requestAnimationFrame(tick); }
+  canvas.addEventListener("keydown", e => { if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Tab"].includes(e.key)) e.preventDefault(); handleKey(e.key); });
+  window.addEventListener("keydown", e => { if (e.target === canvas || e.target.tagName === "BUTTON") return; handleKey(e.key); });
+  canvas.addEventListener("pointerdown", e => {
+    canvas.focus(); const b=canvas.getBoundingClientRect(), px=(e.clientX-b.left)*(canvas.width/b.width), py=(e.clientY-b.top)*(canvas.height/b.height);
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){ const r=cellRect(x,y); if(px>=r.x&&px<=r.x+r.s&&py>=r.y&&py<=r.y+r.s){ state.cursor={x,y}; playerAction(); return; } }
+  });
+  document.getElementById("restart").addEventListener("click", () => restart(true));
+  document.getElementById("sound").addEventListener("click", () => { state.sound = !state.sound; saveSound(); updateHud(); if (state.sound) beep("select"); });
+  document.getElementById("full").addEventListener("click", toggleFull);
+  document.querySelectorAll("[data-key]").forEach(btn => btn.addEventListener("click", () => { canvas.focus(); handleKey(btn.dataset.key); }));
+  document.addEventListener("fullscreenchange", () => { updateHud(); render(); });
+  window.render_game_to_text = function render_game_to_text(){
+    const u = selectedUnit();
+    return JSON.stringify({
+      mode:state.mode, mission:state.mission+1, missionName:missions[state.mission].name, score:state.score, best:state.best,
+      selectedUnit:u?u.id:null, units:state.units.map(p=>({id:p.id,x:p.x,y:p.y,hp:p.hp,acted:p.acted})),
+      enemies:state.enemies.filter(e=>e.hp>0).map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp})),
+      cover:state.cover.filter(c=>c.hp>0).map(c=>({x:c.x,y:c.y,hp:c.hp})), goal:state.goal,
+      cursor:state.cursor, turn:state.turn, action:state.action, sound:state.sound, fullscreen:state.fullscreen,
+      feedbackActive: state.feedback.length > 0,
+      feedback: { effects: state.feedback.length, last: state.feedback[0]?.text || "", lastAge: state.feedback[0] ? Math.round(state.feedback[0].life / 10) / 10 : 0 },
+      runComplete:state.runComplete, gameOver:state.gameOver, note:"grid origin top-left, x right, y down"
+    });
+  };
+  window.advanceTime = function advanceTime(ms){
+    const frames = Math.max(1, Math.round((Number(ms)||0)/(1000/60)));
+    for (let i=0;i<frames;i++) step();
+    render(); return window.render_game_to_text();
+  };
+  startMission(0); requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

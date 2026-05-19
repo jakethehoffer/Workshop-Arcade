@@ -84,6 +84,8 @@
   .help-btn:hover { background:rgba(9,30,49,0.9); }
   .sound-btn { right:auto; left:12px; }
   .sound-btn[aria-pressed="false"] { color:#cbd5e1; border-color:rgba(203,213,225,0.28); }
+  .fullscreen-btn { right:auto; left:50%; transform:translateX(-50%); }
+  .fullscreen-btn[aria-pressed="true"] { background:rgba(45,212,191,0.9); color:#05202a; border-color:rgba(45,212,191,0.86); }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(2,8,18,0.78); }
   .overlay.show { display:grid; pointer-events:auto; }
   .help-card { background:linear-gradient(180deg, #0f2537, #081827); border:1px solid rgba(125,229,237,0.34); padding:24px 26px; border-radius:16px; max-width:min(92vw, 500px); box-shadow:0 18px 46px rgba(0,0,0,.62); pointer-events:auto; color:#d7f7fb; }
@@ -101,6 +103,7 @@
 <canvas id="game" tabindex="0" aria-label="Sky Hopper game canvas"></canvas>
 <button class="help-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">❓ Help</button>
 <button class="help-btn sound-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Toggle sound" title="Sound">Sound On</button>
+<button class="help-btn fullscreen-btn" id="fullscreenBtn" type="button" aria-pressed="false" aria-label="Enter fullscreen" title="Enter fullscreen (F)">Fullscreen</button>
 
 <!-- Help Menu -->
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -112,6 +115,10 @@
       <div class="control-row">
         <span><kbd>Space</kbd> or <kbd>Click</kbd> or <kbd>Tap</kbd></span>
         <span>Make the bird flap upward</span>
+      </div>
+      <div class="control-row">
+        <span><kbd>F</kbd></span>
+        <span>Toggle fullscreen</span>
       </div>
     </div>
 
@@ -140,6 +147,7 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha: false }); // better perf for full-screen
 const soundBtn = document.getElementById("soundBtn");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
 
 /* ----- HiDPI fullscreen + virtual world ----- */
 let dpr = window.devicePixelRatio || 1;
@@ -179,6 +187,7 @@ let soundEnabled = true;
 try { soundEnabled = JSON.parse(localStorage.getItem(SOUND_KEY) ?? "true"); } catch(_) {}
 let lastSound = "none";
 let newBestThisRun = false;
+let lastFullscreenAction = "none";
 
 const feedback = {};
 function resetFeedback() {
@@ -201,6 +210,43 @@ function syncSoundButton() {
   soundBtn.textContent = soundEnabled ? "Sound On" : "Sound Off";
   soundBtn.setAttribute("aria-pressed", String(soundEnabled));
   soundBtn.setAttribute("aria-label", `Toggle sound, currently ${soundEnabled ? "on" : "off"}`);
+}
+
+function fullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function fullscreenAvailable() {
+  return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+}
+
+function syncFullscreenButton() {
+  if (!fullscreenBtn) return;
+  const active = !!fullscreenElement();
+  fullscreenBtn.textContent = active ? "Exit Fullscreen" : "Fullscreen";
+  fullscreenBtn.setAttribute("aria-pressed", String(active));
+  fullscreenBtn.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+  fullscreenBtn.title = active ? "Exit fullscreen (F)" : "Enter fullscreen (F)";
+}
+
+function toggleFullscreen() {
+  const active = !!fullscreenElement();
+  lastFullscreenAction = active ? "exit-requested" : "enter-requested";
+  try {
+    if (active) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      const result = exit && exit.call(document);
+      if (result && typeof result.catch === "function") result.catch(() => { lastFullscreenAction = "exit-failed"; syncFullscreenButton(); });
+    } else {
+      const target = document.documentElement;
+      const request = target.requestFullscreen || target.webkitRequestFullscreen;
+      const result = request && request.call(target);
+      if (result && typeof result.catch === "function") result.catch(() => { lastFullscreenAction = "enter-failed"; syncFullscreenButton(); });
+    }
+  } catch (_) {
+    lastFullscreenAction = active ? "exit-failed" : "enter-failed";
+  }
+  syncFullscreenButton();
 }
 
 function feedbackColor(type) {
@@ -1422,6 +1468,14 @@ function renderGameToText() {
     audioReady: !!audioCtx,
     soundEnabled,
     lastSound,
+    fullscreen: {
+      active: !!fullscreenElement(),
+      available: fullscreenAvailable(),
+      buttonPressed: fullscreenBtn ? fullscreenBtn.getAttribute('aria-pressed') === 'true' : false,
+      label: fullscreenBtn ? fullscreenBtn.getAttribute('aria-label') : null,
+      title: fullscreenBtn ? fullscreenBtn.title : null,
+      lastAction: lastFullscreenAction
+    },
     tactile: {
       lastEvent: feedback.lastEvent,
       active: feedback.screenFlash > 0 || feedback.screenShake > 0 || feedback.cues.length > 0,
@@ -1470,6 +1524,13 @@ soundBtn.addEventListener('click', () => {
   syncSoundButton();
 });
 syncSoundButton();
+syncFullscreenButton();
+document.addEventListener('fullscreenchange', syncFullscreenButton);
+document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
+if (fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  toggleFullscreen();
+});
 const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let activeDialogTrigger = null;
@@ -1507,6 +1568,11 @@ function closeHelp(){
 }
 
 document.addEventListener("keydown", e => { 
+  if (e.code === "KeyF" && !e.repeat) {
+    e.preventDefault();
+    toggleFullscreen();
+    return;
+  }
   if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && e.code !== "Tab" && e.code !== "Escape") return;
   if (helpOpen && e.code === "Tab") {
     const focusables = helpFocusables();

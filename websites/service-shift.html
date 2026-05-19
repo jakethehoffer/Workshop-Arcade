@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Service Shift</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Juggle deterministic customer orders across prep stations before patience runs out." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/service-shift.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Service Shift — Workshop Arcade" />
+<meta property="og:description" content="Juggle deterministic customer orders across prep stations before patience runs out." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/service-shift.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/service-shift.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Service Shift — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Service Shift — Workshop Arcade" />
+<meta name="twitter:description" content="Juggle deterministic customer orders across prep stations before patience runs out." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/service-shift.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Service Shift",
+  "description": "Juggle deterministic customer orders across prep stations before patience runs out.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/service-shift.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/service-shift.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Simulation",
+    "Strategy",
+    "Arcade"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="A compact time-management arcade shift with three stations, impatient customers, combos, and deterministic order flow." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}body{min-height:100vh;display:flex;justify-content:center;padding:16px 10px 20px;overflow-x:hidden;background:radial-gradient(780px 520px at 8% -8%,rgba(45,212,191,.16),transparent 60%),radial-gradient(720px 500px at 96% 0,rgba(244,114,182,.13),transparent 62%),linear-gradient(180deg,#0b0f14,#061018 84%)}.shell{width:min(980px,100%);display:flex;flex-direction:column;gap:9px}.brand{line-height:1;user-select:none}.eyebrow{display:block;font-size:10px;text-transform:uppercase;color:rgba(94,234,212,.86);font-weight:900}.title{display:block;margin-top:3px;font-size:23px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.2)}.hud,.controls,.stations{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}.pill{min-width:72px;padding:7px 9px;border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(20,30,50,.94),rgba(9,15,28,.96));box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.04);text-align:center;line-height:1.05}.pill[data-hot=true]{border-color:rgba(251,191,36,.72);box-shadow:0 0 18px rgba(251,191,36,.14),0 6px 14px rgba(0,0,0,.25)}.pill[data-warn=true]{border-color:rgba(251,113,133,.66);box-shadow:0 0 18px rgba(251,113,133,.14),0 6px 14px rgba(0,0,0,.25)}.label{display:block;font-size:9px;color:rgba(94,234,212,.86);font-weight:900;text-transform:uppercase}.value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}.stage{border:1px solid rgba(94,234,212,.28);border-radius:8px;overflow:hidden;background:#071018;box-shadow:0 18px 38px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:62vh;background:#071018;touch-action:none}canvas:focus-visible{outline:3px solid rgba(94,234,212,.82);outline-offset:-4px}.status{min-height:20px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}.btn{border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(20,30,50,.95),rgba(9,15,28,.96));color:#e6edf3;font:inherit;font-size:12px;font-weight:850;text-transform:uppercase;padding:8px 11px;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04)}.btn:hover{border-color:rgba(94,234,212,.56)}.btn.primary,.btn[aria-pressed=true]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}.btn.station{min-width:126px;min-height:44px}.btn.station[aria-current=true]{outline:3px solid rgba(251,191,36,.7);outline-offset:2px}.help{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}@media(max-width:620px){body{padding:10px 8px 16px}.shell{gap:7px}.title{font-size:19px}.pill{min-width:58px;padding:6px}.value{font-size:15px}.btn{padding:8px;font-size:11px}.btn.station{flex:1 1 94px;min-width:94px}.help{font-size:11px}canvas{max-height:50vh}}
+</style>
+</head>
+<body>
+<main class="shell" aria-label="Service Shift game">
+  <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Service Shift</span></div>
+  <div class="hud" aria-label="Shift status">
+    <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0.0</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill" id="comboPill"><span class="label">Combo</span><span class="value" id="comboValue">0</span></div>
+    <div class="pill" id="queuePill"><span class="label">Queue</span><span class="value" id="queueValue">0</span></div>
+    <div class="pill" id="missPill"><span class="label">Miss</span><span class="value" id="missValue">0/3</span></div>
+  </div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Service Shift kitchen canvas. Select one of three stations, prepare matching orders, then serve before customer patience expires."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Select a station and prepare the first matching order.</div>
+  <div class="stations" aria-label="Station selection">
+    <button class="btn station primary" type="button" data-station="0" aria-current="true">1 Grill</button>
+    <button class="btn station" type="button" data-station="1" aria-current="false">2 Pour</button>
+    <button class="btn station" type="button" data-station="2" aria-current="false">3 Pack</button>
+  </div>
+  <div class="controls" aria-label="Game controls">
+    <button class="btn primary" id="actionBtn" type="button">Prepare</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </div>
+  <div class="help">1/2/3 select stations. Arrows/WASD move focus. Enter/Space prepares or serves. R restart. F fullscreen. M sound.</div>
+</main>
+<script src="workshop-runtime.js"></script>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height, TAU = Math.PI * 2;
+  const BEST_KEY = "service-shift.best.v1";
+  const SOUND_KEY = "service-shift.sound.v1";
+  const DAY_MS = 78000, MISS_LIMIT = 3;
+  const stations = [
+    { id: "grill", name: "Grill", color: "#f97316", x: 190, y: 350, prep: 2800 },
+    { id: "pour", name: "Pour", color: "#22d3ee", x: 480, y: 350, prep: 2200 },
+    { id: "pack", name: "Pack", color: "#a78bfa", x: 770, y: 350, prep: 2500 }
+  ];
+  const menu = [
+    { item: "Noodle Box", station: 2, patience: 17500, value: 120 },
+    { item: "Sizzle Plate", station: 0, patience: 16000, value: 130 },
+    { item: "Citrus Fizz", station: 1, patience: 14500, value: 115 },
+    { item: "Fire Skewer", station: 0, patience: 13500, value: 150 },
+    { item: "Ice Tea", station: 1, patience: 15000, value: 105 },
+    { item: "Parcel Set", station: 2, patience: 15500, value: 125 },
+    { item: "Steam Bun", station: 2, patience: 12500, value: 140 },
+    { item: "Griddle Roll", station: 0, patience: 12000, value: 160 },
+    { item: "Berry Soda", station: 1, patience: 11800, value: 145 }
+  ];
+  const els = {
+    time: document.getElementById("timeValue"), score: document.getElementById("scoreValue"), best: document.getElementById("bestValue"),
+    combo: document.getElementById("comboValue"), queue: document.getElementById("queueValue"), miss: document.getElementById("missValue"),
+    comboPill: document.getElementById("comboPill"), queuePill: document.getElementById("queuePill"), missPill: document.getElementById("missPill"),
+    status: document.getElementById("statusLine"), action: document.getElementById("actionBtn"), restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"), full: document.getElementById("fullBtn"), stationButtons: [...document.querySelectorAll("[data-station]")]
+  };
+  function storage() {
+    if (window.workshopStorage) return window.workshopStorage;
+    try { return window.localStorage; } catch (_) { return null; }
+  }
+  const safe = {
+    get(k, fallback) {
+      const store = storage();
+      if (!store) return fallback;
+      try { const raw = store.getItem(k); return raw == null ? fallback : JSON.parse(raw); } catch (_) { return fallback; }
+    },
+    set(k, v) {
+      const store = storage();
+      if (!store) return;
+      try { store.setItem(k, JSON.stringify(v)); } catch (_) {}
+    }
+  };
+  let audioCtx = null, orderSeq = 1, lastTs = performance.now();
+  function loadSound() {
+    const raw = safe.get(SOUND_KEY, true);
+    if (typeof raw === "boolean") return raw;
+    if (raw && typeof raw === "object") {
+      if (typeof raw.sound === "boolean") return raw.sound;
+      if (typeof raw.soundEnabled === "boolean") return raw.soundEnabled;
+      if (typeof raw.muted === "boolean") return !raw.muted;
+    }
+    const text = String(raw).toLowerCase();
+    if (["0", "false", "off", "muted", "disabled"].includes(text)) return false;
+    if (["1", "true", "on", "unmuted", "enabled"].includes(text)) return true;
+    return true;
+  }
+  const state = {
+    mode: "playing", timeMs: 0, score: 0, best: Number(safe.get(BEST_KEY, 0)) || 0, combo: 0, misses: 0,
+    selected: 0, queue: [], completed: [], spawnIndex: 0, spawnTimer: 300, served: 0,
+    stationState: stations.map(() => ({ orderId: null, progress: 0, ready: false })),
+    sound: loadSound(), userGesture: false, lastSound: "none", feedback: "Shift open.", feedbackMs: 900,
+    runComplete: false, gameOver: false, particles: []
+  };
+  function orderAt(index) {
+    const base = menu[(index * 5 + 2) % menu.length];
+    return { id: orderSeq++, item: base.item, station: base.station, stationName: stations[base.station].name, patienceMax: base.patience - Math.min(3200, index * 90), patience: base.patience - Math.min(3200, index * 90), value: base.value + (index % 4) * 10 };
+  }
+  function setFeedback(text, ms = 700) { state.feedback = text; state.feedbackMs = Math.max(state.feedbackMs, ms); }
+  function updateBest() { if (state.score > state.best) { state.best = state.score; safe.set(BEST_KEY, state.best); } }
+  function markGesture() { state.userGesture = true; canvas.focus({ preventScroll: true }); }
+  function play(name) {
+    state.lastSound = state.sound ? name : "muted-" + name;
+    if (!state.sound || !state.userGesture) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try { if (!audioCtx) audioCtx = new AC(); } catch (_) { audioCtx = null; }
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+    const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    const freq = { select: 300, prep: 440, serve: 760, miss: 120, over: 90, done: 620, toggle: 520 }[name] || 360;
+    osc.type = name === "miss" || name === "over" ? "sawtooth" : "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    if (name === "serve") osc.frequency.linearRampToValueAtTime(freq + 180, now + .12);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(name === "over" ? .07 : .045, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .18);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + .2);
+  }
+  function restart() {
+    orderSeq = 1;
+    Object.assign(state, { mode: "playing", timeMs: 0, score: 0, combo: 0, misses: 0, selected: 0, queue: [], completed: [], spawnIndex: 0, spawnTimer: 300, served: 0, runComplete: false, gameOver: false, particles: [], feedback: "Shift open.", feedbackMs: 900 });
+    state.stationState = stations.map(() => ({ orderId: null, progress: 0, ready: false }));
+    play("prep"); render();
+  }
+  function spawnOrder() {
+    if (state.spawnIndex >= 18 || state.timeMs >= DAY_MS - 9000) return;
+    state.queue.push(orderAt(state.spawnIndex));
+    state.spawnIndex += 1;
+    state.spawnTimer = 2600 + (state.spawnIndex % 4) * 520;
+    setFeedback("New customer at the counter.", 520);
+  }
+  function selectedStation() { return state.stationState[state.selected]; }
+  function findOrderForStation(index) { return state.queue.find((order) => order.station === index); }
+  function act() {
+    if (state.gameOver || state.runComplete) { restart(); return; }
+    const st = selectedStation();
+    if (st.orderId && st.ready) return serve(st.orderId);
+    if (st.orderId) { setFeedback(stations[state.selected].name + " is still preparing.", 460); play("select"); return; }
+    const order = findOrderForStation(state.selected);
+    if (!order) { setFeedback("No " + stations[state.selected].name + " orders waiting.", 480); play("select"); return; }
+    st.orderId = order.id; st.progress = 0; st.ready = false;
+    setFeedback("Preparing " + order.item + ".", 620); play("prep");
+  }
+  function serve(id) {
+    const st = selectedStation();
+    const index = state.queue.findIndex((order) => order.id === id);
+    if (index < 0) { st.orderId = null; st.progress = 0; st.ready = false; return; }
+    const order = state.queue.splice(index, 1)[0];
+    const patienceRatio = Math.max(0, order.patience / order.patienceMax);
+    state.combo += 1;
+    state.served += 1;
+    const gain = order.value + Math.round(patienceRatio * 70) + state.combo * 12;
+    state.score += gain;
+    state.completed.push({ id: order.id, item: order.item, score: gain, combo: state.combo });
+    if (state.completed.length > 8) state.completed.shift();
+    st.orderId = null; st.progress = 0; st.ready = false;
+    state.particles.push({ x: stations[state.selected].x, y: stations[state.selected].y - 40, text: "+" + gain, life: 850 });
+    updateBest(); setFeedback("Served " + order.item + " +" + gain + ".", 800); play("serve");
+  }
+  function miss(order, reason) {
+    const qi = state.queue.findIndex((o) => o.id === order.id);
+    if (qi >= 0) state.queue.splice(qi, 1);
+    for (const st of state.stationState) if (st.orderId === order.id) { st.orderId = null; st.progress = 0; st.ready = false; }
+    state.combo = 0; state.misses += 1;
+    setFeedback(reason + ": " + order.item + ".", 900); play("miss");
+    if (state.misses >= MISS_LIMIT) finish(false, "Too many missed customers.");
+  }
+  function finish(won, text) {
+    state.mode = won ? "run-complete" : "game-over";
+    state.runComplete = won; state.gameOver = !won;
+    updateBest(); setFeedback(text, 1400); play(won ? "done" : "over");
+  }
+  function update(dt) {
+    if (state.gameOver || state.runComplete) { state.feedbackMs = Math.max(0, state.feedbackMs - dt); return; }
+    state.timeMs += dt;
+    state.feedbackMs = Math.max(0, state.feedbackMs - dt);
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) spawnOrder();
+    for (const order of [...state.queue]) {
+      order.patience -= dt;
+      if (order.patience <= 0) miss(order, "Customer left");
+    }
+    state.stationState.forEach((st, i) => {
+      if (!st.orderId || st.ready) return;
+      st.progress += dt;
+      if (st.progress >= stations[i].prep) { st.ready = true; setFeedback(stations[i].name + " order ready.", 560); play("done"); }
+    });
+    state.particles.forEach((p) => { p.life -= dt; p.y -= dt * .035; });
+    state.particles = state.particles.filter((p) => p.life > 0);
+    const allOrdersOut = state.spawnIndex >= 18 && state.queue.length === 0 && state.stationState.every((st) => !st.orderId);
+    if (allOrdersOut || (state.timeMs >= DAY_MS && state.queue.length === 0 && state.stationState.every((st) => !st.orderId))) finish(true, "Day complete. Shift closed clean.");
+  }
+  function step(ms) { const frames = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60))); for (let i = 0; i < frames; i++) update(1000 / 60); render(); }
+  function selectStation(index) {
+    state.selected = (index + stations.length) % stations.length;
+    els.stationButtons.forEach((b, i) => { b.classList.toggle("primary", i === state.selected); b.setAttribute("aria-current", String(i === state.selected)); });
+    setFeedback(stations[state.selected].name + " selected.", 360); play("select"); render();
+  }
+  function toggleSound() { state.sound = !state.sound; safe.set(SOUND_KEY, state.sound); play("toggle"); render(); }
+  function toggleFullscreen() {
+    const target = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+    if (target && target.catch) target.catch(() => {});
+  }
+  function roundRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();ctx.stroke();}
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0,0,W,H); g.addColorStop(0,"#071018"); g.addColorStop(1,"#101827"); ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = "rgba(94,234,212,.07)"; ctx.lineWidth = 1;
+    for (let x=-100;x<W+160;x+=46){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+170,H);ctx.stroke();}
+    ctx.fillStyle = "rgba(34,211,238,.08)"; ctx.beginPath(); ctx.arc(820,70,120,0,TAU); ctx.fill();
+  }
+  function drawOrder(order, i) {
+    const x = 38, y = 72 + i * 46, w = 310, h = 36, ratio = Math.max(0, order.patience / order.patienceMax);
+    ctx.fillStyle = "rgba(15,23,42,.88)"; ctx.strokeStyle = i === 0 ? "rgba(251,191,36,.82)" : "rgba(94,234,212,.24)"; ctx.lineWidth = 2; roundRect(x,y,w,h,8);
+    ctx.fillStyle = stations[order.station].color; ctx.fillRect(x+8,y+27,Math.max(0,(w-16)*ratio),4);
+    ctx.fillStyle = "#e6edf3"; ctx.font = "800 14px system-ui"; ctx.textAlign = "left"; ctx.fillText("#"+order.id+" "+order.item, x+12, y+22);
+    ctx.fillStyle = stations[order.station].color; ctx.textAlign = "right"; ctx.fillText(order.stationName, x+w-12, y+22);
+  }
+  function drawStation(station, i) {
+    const ss = state.stationState[i], selected = i === state.selected, x = station.x - 92, y = station.y - 66, w = 184, h = 132;
+    ctx.save(); ctx.shadowColor = station.color; ctx.shadowBlur = selected ? 25 : 10;
+    ctx.fillStyle = selected ? "rgba(30,41,59,.96)" : "rgba(15,23,42,.9)"; ctx.strokeStyle = selected ? "#fbbf24" : "rgba(94,234,212,.32)"; ctx.lineWidth = selected ? 4 : 2; roundRect(x,y,w,h,12);
+    ctx.shadowBlur = 0; ctx.fillStyle = station.color; ctx.font = "900 20px system-ui"; ctx.textAlign = "center"; ctx.fillText((i+1)+" "+station.name, station.x, y+32);
+    if (ss.orderId) {
+      const order = state.queue.find((o) => o.id === ss.orderId), pct = ss.ready ? 1 : Math.min(1, ss.progress / station.prep);
+      ctx.fillStyle = "#e6edf3"; ctx.font = "800 13px system-ui"; ctx.fillText(order ? order.item : "Order", station.x, y+62);
+      ctx.fillStyle = "rgba(2,6,23,.8)"; ctx.fillRect(x+24,y+82,w-48,12); ctx.fillStyle = ss.ready ? "#fbbf24" : station.color; ctx.fillRect(x+24,y+82,(w-48)*pct,12);
+      ctx.fillStyle = ss.ready ? "#fbbf24" : "#aab8d2"; ctx.font = "900 12px system-ui"; ctx.fillText(ss.ready ? "READY" : "PREP", station.x, y+112);
+    } else {
+      ctx.fillStyle = "#94a3b8"; ctx.font = "800 13px system-ui"; ctx.fillText("Idle", station.x, y+76);
+    }
+    ctx.restore();
+  }
+  function render() {
+    els.time.textContent = Math.max(0, (DAY_MS - state.timeMs) / 1000).toFixed(1);
+    els.score.textContent = state.score; els.best.textContent = state.best; els.combo.textContent = state.combo; els.queue.textContent = state.queue.length; els.miss.textContent = state.misses + "/" + MISS_LIMIT;
+    els.comboPill.dataset.hot = String(state.combo >= 4); els.queuePill.dataset.warn = String(state.queue.length >= 7); els.missPill.dataset.warn = String(state.misses > 0);
+    els.status.textContent = state.feedback; els.action.textContent = state.gameOver || state.runComplete ? "New Run" : selectedStation().ready ? "Serve" : selectedStation().orderId ? "Working" : "Prepare";
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.sound));
+    drawBackground();
+    ctx.fillStyle = "#5eead4"; ctx.font = "900 13px system-ui"; ctx.textAlign = "left"; ctx.fillText("ORDER QUEUE", 40, 46);
+    state.queue.slice(0, 8).forEach(drawOrder);
+    stations.forEach(drawStation);
+    for (const p of state.particles) { ctx.globalAlpha = Math.max(0, p.life / 850); ctx.fillStyle = "#fbbf24"; ctx.font = "900 22px system-ui"; ctx.textAlign = "center"; ctx.fillText(p.text, p.x, p.y); ctx.globalAlpha = 1; }
+    if (state.gameOver || state.runComplete) {
+      ctx.fillStyle = "rgba(3,7,18,.74)"; ctx.fillRect(0,0,W,H); ctx.textAlign = "center"; ctx.fillStyle = state.runComplete ? "#5eead4" : "#fb7185"; ctx.font = "900 38px system-ui"; ctx.fillText(state.runComplete ? "DAY COMPLETE" : "SHIFT MISSED", W/2, H/2-18);
+      ctx.fillStyle = "#e6edf3"; ctx.font = "800 16px system-ui"; ctx.fillText("Score "+state.score+" · Served "+state.served+" · Best "+state.best, W/2, H/2+20);
+    }
+  }
+  function snapshot() {
+    return JSON.stringify({
+      mode: state.mode, time: Number((state.timeMs / 1000).toFixed(3)), timeRemaining: Number(Math.max(0, (DAY_MS - state.timeMs) / 1000).toFixed(3)),
+      score: state.score, best: state.best, orders: state.queue.map((o) => ({ id: o.id, item: o.item, station: o.stationName, patience: Math.max(0, Math.round(o.patience)), max: o.patienceMax })),
+      stations: stations.map((s, i) => ({ id: s.id, name: s.name, selected: i === state.selected, orderId: state.stationState[i].orderId, progress: Math.round(state.stationState[i].progress), ready: state.stationState[i].ready })),
+      queue: state.queue.map((o) => o.id), selectedStation: stations[state.selected].id, "selected station": stations[state.selected].id,
+      patience: state.queue.map((o) => Math.max(0, Math.round(o.patience))), combo: state.combo, misses: state.misses, sound: state.sound,
+      fullscreen: Boolean(document.fullscreenElement), feedbackActive: state.feedbackMs > 0 || state.particles.length > 0,
+      gameOver: state.gameOver, "game-over": state.gameOver, runComplete: state.runComplete, "run-complete": state.runComplete,
+      served: state.served, completed: state.completed, feedback: state.feedback, lastSound: state.lastSound
+    });
+  }
+  canvas.addEventListener("pointerdown", (e) => {
+    markGesture();
+    const r = canvas.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+    const hit = stations.findIndex((s) => Math.abs(x - s.x) < 115 && Math.abs(y - s.y) < 85);
+    if (hit >= 0) { selectStation(hit); act(); }
+  });
+  els.stationButtons.forEach((b) => b.addEventListener("click", () => { markGesture(); selectStation(Number(b.dataset.station)); }));
+  els.action.addEventListener("click", () => { markGesture(); act(); render(); });
+  els.restart.addEventListener("click", () => { markGesture(); restart(); });
+  els.sound.addEventListener("click", () => { markGesture(); toggleSound(); });
+  els.full.addEventListener("click", () => { markGesture(); toggleFullscreen(); });
+  window.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    const k = e.key, moves = { ArrowLeft:-1, ArrowUp:-1, a:-1, A:-1, w:-1, W:-1, ArrowRight:1, ArrowDown:1, d:1, D:1, s:1, S:1 };
+    if (["1","2","3"," ","Enter","r","R","f","F","m","M"].includes(k) || moves[k]) e.preventDefault();
+    markGesture();
+    if (k === "1" || k === "2" || k === "3") selectStation(Number(k)-1);
+    else if (moves[k]) selectStation(state.selected + moves[k]);
+    else if (k === " " || k === "Enter") { act(); render(); }
+    else if (k === "r" || k === "R") restart();
+    else if (k === "f" || k === "F") toggleFullscreen();
+    else if (k === "m" || k === "M") toggleSound();
+  });
+  window.render_game_to_text = snapshot;
+  window.advanceTime = (ms = 0) => { step(Number(ms) || 0); return snapshot(); };
+  function frame(now) { step(Math.min(50, now - lastTs)); lastTs = now; requestAnimationFrame(frame); }
+  render(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1131,6 +1131,86 @@ function getInteractionRecipe(slug) {
         await settlePage(page, 600);
       },
     },
+    "gridline-tactics": {
+      name: "move a unit into the first mission lane",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          window.advanceTime(60);
+          press("ArrowRight");
+          window.advanceTime(90);
+          press("Enter");
+          window.advanceTime(260);
+        });
+      },
+    },
+    "service-shift": {
+      name: "prepare and serve the first order",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          window.advanceTime(640);
+          const snap = JSON.parse(window.render_game_to_text());
+          const order = snap.orders[0];
+          const stationIndex = order
+            ? Math.max(0, snap.stations.findIndex((station) => station.name === order.station || station.id === order.station))
+            : 0;
+          press(String(stationIndex + 1));
+          window.advanceTime(80);
+          press(" ", "Space");
+          window.advanceTime(3300);
+          press(" ", "Space");
+          window.advanceTime(320);
+        });
+      },
+    },
+    "letter-foundry": {
+      name: "forge the starter STONE word",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          for (const key of ["s", "t", "o", "n", "e"]) {
+            press(key);
+            window.advanceTime(30);
+          }
+          press("Enter");
+          window.advanceTime(320);
+        });
+      },
+    },
+    "penalty-circuit": {
+      name: "drive a curved penalty shot toward goal",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          press("ArrowRight");
+          press("w");
+          window.advanceTime(80);
+          press(" ", "Space");
+          window.advanceTime(820);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

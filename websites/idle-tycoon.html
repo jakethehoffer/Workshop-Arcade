@@ -156,6 +156,14 @@
       z-index: 1;
     }
 
+    .app:fullscreen {
+      overflow: auto;
+      background:
+        radial-gradient(1100px 700px at 10% -10%, rgba(70, 211, 194, 0.25), transparent 60%),
+        radial-gradient(900px 600px at 90% 10%, rgba(246, 196, 83, 0.18), transparent 60%),
+        linear-gradient(180deg, var(--bg-0), var(--bg-1) 55%, var(--bg-2));
+    }
+
     body.menu-open {
       overflow: hidden;
     }
@@ -1822,6 +1830,10 @@
         padding: 7px 8px;
       }
 
+      .stat-actions .fullscreen-btn {
+        flex-basis: 100%;
+      }
+
       .grid,
       .layout,
       .missions-scroll,
@@ -2074,6 +2086,7 @@
       <div class="stat stat-actions">
         <button class="btn ghost" id="menuBtn" type="button">Menu</button>
         <button class="btn ghost" id="saveBtn" type="button">Save</button>
+        <button class="btn ghost fullscreen-btn" id="fullscreenBtn" type="button" aria-pressed="false" title="Enter fullscreen (Shift+F)">Fullscreen</button>
         <button class="btn danger" id="resetBtn" type="button">Reset</button>
       </div>
     </div>
@@ -2145,7 +2158,7 @@
               <div class="boost-fill" id="boostFill"></div>
             </div>
             <div class="boost-actions">
-              <button class="btn boost-btn" id="boostBtn" type="button" data-hotkey="F">Activate Surge</button>
+              <button class="btn boost-btn" id="boostBtn" type="button">Activate Surge</button>
             </div>
           </div>
         </div>
@@ -3195,6 +3208,7 @@
       buyToggle: document.getElementById("buyToggle"),
       runAllBtn: document.getElementById("runAllBtn"),
       hireAllBtn: document.getElementById("hireAllBtn"),
+      fullscreenBtn: document.getElementById("fullscreenBtn"),
       resetBtn: document.getElementById("resetBtn"),
       saveBtn: document.getElementById("saveBtn"),
       menuBtn: document.getElementById("menuBtn"),
@@ -4381,6 +4395,63 @@
       });
     }
 
+    function getFullscreenTarget() {
+      return document.querySelector(".app") || document.documentElement;
+    }
+
+    function getFullscreenElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || null;
+    }
+
+    function isFullscreenSupported() {
+      const target = getFullscreenTarget();
+      const request = target && (target.requestFullscreen || target.webkitRequestFullscreen);
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      return !!(request && exit && document.fullscreenEnabled !== false);
+    }
+
+    function isFullscreenShortcutBlocked(target) {
+      if (!target || target === document || target === window) return false;
+      const element = target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
+      if (!element) return false;
+      const tag = element.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (element.isContentEditable || element.closest("[contenteditable='true']")) return true;
+      return !!element.closest("dialog, [role='dialog'], [aria-modal='true']");
+    }
+
+    function syncFullscreenButton() {
+      if (!ui.fullscreenBtn) return;
+      const supported = isFullscreenSupported();
+      const target = getFullscreenTarget();
+      const active = getFullscreenElement() === target;
+      ui.fullscreenBtn.disabled = !supported;
+      ui.fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
+      ui.fullscreenBtn.textContent = active ? "Exit Fullscreen" : "Fullscreen";
+      ui.fullscreenBtn.title = supported
+        ? (active ? "Exit fullscreen (Shift+F)" : "Enter fullscreen (Shift+F)")
+        : "Fullscreen unavailable";
+      ui.fullscreenBtn.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+    }
+
+    function toggleFullscreen() {
+      if (!isFullscreenSupported()) {
+        syncFullscreenButton();
+        return;
+      }
+      const target = getFullscreenTarget();
+      if (getFullscreenElement() === target) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        const result = exit.call(document);
+        if (result && typeof result.catch === "function") result.catch(syncFullscreenButton);
+      } else {
+        const request = target.requestFullscreen || target.webkitRequestFullscreen;
+        const result = request.call(target);
+        if (result && typeof result.catch === "function") result.catch(syncFullscreenButton);
+      }
+      syncFullscreenButton();
+    }
+
     function bindEvents() {
       ui.clicker.addEventListener("click", handleClick);
       ui.buyToggle.querySelectorAll("button").forEach((btn) => {
@@ -4419,11 +4490,17 @@
       if (ui.boostBtn) {
         ui.boostBtn.addEventListener("click", activateSurge);
       }
+      if (ui.fullscreenBtn) {
+        ui.fullscreenBtn.addEventListener("click", toggleFullscreen);
+      }
+      document.addEventListener("fullscreenchange", syncFullscreenButton);
+      document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
+      syncFullscreenButton();
       window.addEventListener("keydown", (event) => {
         if (event.repeat) return;
         if (document.body.classList.contains("tutorial-open")) return;
         if (document.body.classList.contains("menu-open")) return;
-        const target = document.activeElement;
+        const target = event.target || document.activeElement;
         const tag = target ? target.tagName : "";
         const isTextInput = tag === "INPUT" || tag === "TEXTAREA";
         if (event.code === "Space") {
@@ -4431,8 +4508,13 @@
           event.preventDefault();
           handleClick();
         }
-        if (event.code === "KeyF") {
-          if (isTextInput) return;
+        if (event.code === "KeyF" && event.shiftKey) {
+          if (isFullscreenShortcutBlocked(target)) return;
+          event.preventDefault();
+          toggleFullscreen();
+        }
+        if (event.code === "KeyF" && !event.shiftKey) {
+          if (isFullscreenShortcutBlocked(target)) return;
           event.preventDefault();
           activateSurge();
         }
@@ -4563,6 +4645,14 @@
           menuOpen: document.body.classList.contains("menu-open"),
           tutorialOpen: document.body.classList.contains("tutorial-open"),
           toastVisible: ui.toast?.classList.contains("show") || false
+        },
+        fullscreen: {
+          available: isFullscreenSupported(),
+          active: getFullscreenElement() === getFullscreenTarget(),
+          elementTag: getFullscreenElement()?.tagName || null,
+          target: getFullscreenTarget()?.className || getFullscreenTarget()?.tagName || null,
+          buttonPressed: ui.fullscreenBtn?.getAttribute("aria-pressed") === "true",
+          buttonTitle: ui.fullscreenBtn?.title || ""
         },
         settings: {
           soundEnabled: settings.soundEnabled,

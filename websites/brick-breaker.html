@@ -1059,6 +1059,24 @@ function addMovingToBricks(level, bricks, brickWidth){
 }
 
 
+function makeBrick(r, c, x, y, w, dif, extra = 0){
+  const rowBase = (r < 2 ? 2 : 1);
+  let hp = rowBase + dif.hpBase;
+  const rowWeight = (G.brickRows <= 1) ? 1
+    : 1 - (r / Math.max(1, G.brickRows - 1));
+  const eligible = (Math.random() < dif.reinforceBias);
+  if (eligible && Math.random() < dif.hpFrac * rowWeight) hp += 1;
+  hp = Math.min(4, hp + extra);
+
+  const isBomb = (r < Math.floor(G.brickRows*0.6)) && Math.random() < 0.06;
+  return {
+    x, y, w, h:G.brickHeight,
+    hp, color: isBomb ? '#f97316' : rowColor(r,hp),
+    type: isBomb ? 'BOMB' : 'NORMAL'
+  };
+}
+
+
 function buildLevel(level){
   const dif = difficultyFor(level);
   G.brickRows = dif.rows; G.brickCols = dif.cols; G.dropChance = dif.dropChance;
@@ -1099,39 +1117,8 @@ function buildLevel(level){
       const x = 20 + c*(bw + G.brickPadding);
       const y = G.brickTop + r*(G.brickHeight + G.brickPadding);
 
-      // Base still rewards top rows
-const rowBase = (r < 2 ? 2 : 1);
-
-// Smooth reinforcement:
-// Everyone gets +hpBase.
-// A fraction get +1 more, weighted to upper rows and limited by reinforceBias.
-let hp = rowBase + dif.hpBase;
-
-// probability knob: top rows more likely to get the fractional +1
-const rowWeight = (G.brickRows <= 1) ? 1
-  : 1 - (r / Math.max(1, G.brickRows - 1));  // 1 at top row → 0 at bottom
-
-// Only a portion of bricks are even *eligible* to reinforce this level:
-const eligible = (Math.random() < dif.reinforceBias);
-
-// If eligible, apply the fractional chance:
-if (eligible && Math.random() < dif.hpFrac * rowWeight){
-  hp += 1;
-}
-
-// Keep your pattern “extra” (if you like that spice)
-const extra = (comboMode==='AND' && (c%4===0)) ? 1 : 0;
-hp = Math.min(4, hp + extra);
-
-
-// ~6% chance for a bomb (more likely in upper rows)
-const isBomb = (r < Math.floor(G.brickRows*0.6)) && Math.random() < 0.06;
-const brick = {
-  x, y, w:bw, h:G.brickHeight,
-  hp, color: isBomb ? '#f97316' : rowColor(r,hp),
-  type: isBomb ? 'BOMB' : 'NORMAL'
-};
-bricks.push(brick);
+      const extra = (comboMode==='AND' && (c%4===0)) ? 1 : 0;
+      bricks.push(makeBrick(r, c, x, y, bw, dif, extra));
     }
   }
 
@@ -1143,26 +1130,7 @@ bricks.push(brick);
         if (((r+c)&1)===0){ // checkerboard fallback
           const x = 20 + c*(bw + G.brickPadding);
           const y = G.brickTop + r*(G.brickHeight + G.brickPadding);
-         // Same smooth reinforcement as above
-const rowBase = (r < 2 ? 2 : 1);
-let hp2 = rowBase + dif.hpBase;
-
-const rowWeight = (G.brickRows <= 1) ? 1
-  : 1 - (r / Math.max(1, G.brickRows - 1));
-const eligible = (Math.random() < dif.reinforceBias);
-if (eligible && Math.random() < dif.hpFrac * rowWeight){
-  hp2 += 1;
-}
-const hp = Math.min(4, hp2);
-
-// ~6% chance for a bomb (more likely in upper rows)
-const isBomb = (r < Math.floor(G.brickRows*0.6)) && Math.random() < 0.06;
-const brick = {
-  x, y, w:bw, h:G.brickHeight,
-  hp, color: isBomb ? '#f97316' : rowColor(r,hp),
-  type: isBomb ? 'BOMB' : 'NORMAL'
-};
-bricks.push(brick);
+          bricks.push(makeBrick(r, c, x, y, bw, dif));
         }
       }
     }
@@ -1192,11 +1160,6 @@ G.portals = computePortals(G.bricks);
     G.powerups = [];
     G.puCounts = Object.create(null);   // reset per-level spawn counts
       G.puCap    = 2;
-
-    if (DEV_FORCE_PU){
-    G.dropChance = 1;  // always drop
-    G.puCap = 999;     // don't cap per-type
-  }
     G.effects = []; // reset active effects
     G.speedMod = 1;
     G.shrinkDebt = 0;
@@ -1373,10 +1336,6 @@ for (const b of G.balls){
 {type:'GUN', color:'#06b6d4', label:'G', weight:1},   // ← NEW
 
   ];
-
-  // --- DEV TEST SWITCH (turn on/off) ---
-const DEV_FORCE_PU = false;                      // ← set to false when done
-const DEV_FORCE_TYPES = ['STICKY','MULTI'];     // what to force
 
 // quick lookup by type
 const PU_BY_TYPE = Object.fromEntries(PU_TYPES.map(p => [p.type, p]));
@@ -1720,24 +1679,6 @@ ctx.fillStyle = grad;
 }
 
 function maybeDropPower(br){
-  if (DEV_FORCE_PU){
-    // spawn all forced types, centered on the brick
-    for (const t of DEV_FORCE_TYPES){
-      const spec = PU_BY_TYPE[t];
-      if (!spec) continue;
-      G.powerups.push({
-        x: br.x + br.w/2,
-        y: br.y + br.h/2,
-        vy: 120, w: 28, h: 18,
-        type: t, color: spec.color, label: spec.label
-      });
-      // still increment counts so your HUD/tests stay honest
-      G.puCounts[t] = (G.puCounts[t] || 0) + 1;
-    }
-    return;
-  }
-
-  // --- normal behavior ---
   if (Math.random() < G.dropChance){
     const pt = pickPowerType();
     if (!pt) return;

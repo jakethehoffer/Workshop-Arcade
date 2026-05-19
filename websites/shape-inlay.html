@@ -344,6 +344,19 @@
         animation: floatIn 0.7s ease 0.2s both;
       }
 
+      .canvas-frame:fullscreen,
+      .canvas-frame:-webkit-full-screen {
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        border-radius: 0;
+      }
+
+      .canvas-frame:fullscreen canvas,
+      .canvas-frame:-webkit-full-screen canvas {
+        height: 100%;
+      }
+
       .canvas-frame::before {
         content: "";
         position: absolute;
@@ -573,6 +586,7 @@
         <div class="mast-actions">
           <button class="btn" id="startBtn" type="button">Start run</button>
           <button class="btn secondary" id="resetBtn" type="button">New track</button>
+          <button class="btn secondary" id="fullscreenBtn" type="button" aria-pressed="false">Fullscreen</button>
           <button class="btn secondary sound-toggle" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
         </div>
       </header>
@@ -650,6 +664,7 @@
         const overlayBtn = document.getElementById("overlayBtn");
         const startBtn = document.getElementById("startBtn");
         const resetBtn = document.getElementById("resetBtn");
+        const fullscreenBtn = document.getElementById("fullscreenBtn");
         const soundBtn = document.getElementById("soundBtn");
         const distanceEl = document.getElementById("distance");
         const speedEl = document.getElementById("speed");
@@ -682,6 +697,59 @@
           if (restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
             setTimeout(() => target.focus({ preventScroll: true }), 0);
           }
+        }
+
+        function editableTarget(target) {
+          return target instanceof HTMLElement && (
+            target.isContentEditable ||
+            target.matches("input, textarea, select, [role='textbox']")
+          );
+        }
+
+        function fullscreenElement() {
+          return document.fullscreenElement || document.webkitFullscreenElement || null;
+        }
+
+        function fullscreenSupported() {
+          return !!(frameEl && (frameEl.requestFullscreen || frameEl.webkitRequestFullscreen));
+        }
+
+        function fullscreenActive() {
+          return fullscreenElement() === frameEl;
+        }
+
+        function syncFullscreenButton() {
+          if (!fullscreenBtn) return;
+          const supported = fullscreenSupported();
+          const active = fullscreenActive();
+          fullscreenBtn.hidden = !supported;
+          fullscreenBtn.disabled = !supported;
+          fullscreenBtn.setAttribute("aria-pressed", String(active));
+          fullscreenBtn.textContent = active ? "Exit full" : "Fullscreen";
+          fullscreenBtn.title = active ? "Exit fullscreen (F)" : "Enter fullscreen (F)";
+          fullscreenBtn.setAttribute("aria-label", fullscreenBtn.title);
+        }
+
+        async function toggleFullscreen() {
+          if (!fullscreenSupported()) return false;
+          try {
+            if (fullscreenActive()) {
+              if (document.exitFullscreen) {
+                await document.exitFullscreen();
+              } else if (document.webkitExitFullscreen) {
+                await document.webkitExitFullscreen();
+              }
+            } else if (frameEl.requestFullscreen) {
+              await frameEl.requestFullscreen();
+            } else if (frameEl.webkitRequestFullscreen) {
+              await frameEl.webkitRequestFullscreen();
+            }
+          } catch (error) {
+            console.warn("Fullscreen request failed", error);
+          } finally {
+            syncFullscreenButton();
+          }
+          return fullscreenActive();
         }
 
         document.addEventListener("keydown", (event) => {
@@ -1761,6 +1829,11 @@
           noteAudioGesture();
           resetGame();
         });
+        if (fullscreenBtn) {
+          fullscreenBtn.addEventListener("click", () => {
+            toggleFullscreen();
+          });
+        }
         if (soundBtn) {
           soundBtn.addEventListener("click", () => {
             noteAudioGesture();
@@ -1774,6 +1847,11 @@
         }
 
         window.addEventListener("keydown", (event) => {
+          if (event.key.toLowerCase() === "f" && !event.ctrlKey && !event.metaKey && !event.altKey && !editableTarget(event.target)) {
+            event.preventDefault();
+            toggleFullscreen();
+            return;
+          }
           noteAudioGesture();
           if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
             if (!input.left) {
@@ -1842,7 +1920,10 @@
         });
 
         window.addEventListener("resize", resizeCanvas);
+        document.addEventListener("fullscreenchange", syncFullscreenButton);
+        document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
 
+        syncFullscreenButton();
         updateSoundButton();
         resizeCanvas();
         resetGame();
@@ -1883,6 +1964,10 @@
             },
             audio: audioDiagnostics,
             sound: audioDiagnostics,
+            fullscreen: {
+              supported: fullscreenSupported(),
+              active: fullscreenActive()
+            },
             input: {
               left: input.left,
               right: input.right,

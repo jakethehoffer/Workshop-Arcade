@@ -116,6 +116,7 @@
   }
   .btn:hover{ border-color:rgba(125,211,252,0.55); }
   .btn:active { transform:translateY(1px); }
+  .fullscreen-btn[aria-pressed="true"] { background:rgba(45,212,191,0.9); color:#05202a; border-color:rgba(45,212,191,0.86); }
   .btns .btn { touch-action: none; flex:1 1 0; min-width:0; padding:10px 8px; }
   @media (min-width: 860px){ .btns { display:none; } }
   #holdCanvas, #nextCanvas { background:#0e1522; margin-top:4px; }
@@ -160,6 +161,7 @@
     .hud .pill { padding:4px 5px; font-size:12px; border-radius:9px; }
     #holdCanvas, #nextCanvas { width:34px; height:34px; }
     #status, #resetBtn, #soundBtn { display:none; }
+    #fullscreenBtn { padding:4px 5px; font-size:12px; border-radius:9px; line-height:1.1; }
     .start-panel { top:48%; width:min(88vw, 260px); padding:12px; }
     .start-actions { grid-template-columns:1fr 72px; }
     .help-card { padding:14px; }
@@ -222,6 +224,7 @@
     <div class="pill" id="status">Press Space to Start</div>
     <button class="btn" id="resetBtn" type="button" aria-label="Reset game">Reset</button>
     <button class="btn" id="soundBtn" type="button" aria-label="Toggle sound (M)">Sound: On (M)</button>
+    <button class="btn fullscreen-btn" id="fullscreenBtn" type="button" aria-pressed="false" aria-label="Enter fullscreen" title="Enter fullscreen (F)">Fullscreen</button>
   </div>
 
   <div class="btns">
@@ -250,12 +253,14 @@
   const startPanel = document.getElementById('startPanel');
   const playBtn = document.getElementById('playBtn');
   const openHelpBtn = document.getElementById('openHelpBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
   const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
   let helpTrigger = null;
   let helpUp = false;
   let helpMode = 'start';      // 'start' | 'pause'
 
   const SOUND_SHORTCUT = 'M';
+  const FULLSCREEN_SHORTCUT = 'F';
   const SOUND_STORAGE_KEY = 'blockdrop.sound.v1';
 
   let audioCtx=null;
@@ -428,6 +433,75 @@
   resize();
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
+
+  function getFullscreenTarget(){
+    return document.documentElement;
+  }
+
+  function getFullscreenElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function isFullscreenSupported(){
+    const target = getFullscreenTarget();
+    const request = target && (target.requestFullscreen || target.webkitRequestFullscreen);
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    return !!(request && exit && document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false);
+  }
+
+  function isFullscreenShortcutBlocked(target){
+    if(helpUp) return true;
+    if(!target || target === document || target === window) return false;
+    const element = target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
+    if(!element) return false;
+    const tag = element.tagName;
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if(element.isContentEditable || element.closest('[contenteditable="true"]')) return true;
+    return !!element.closest('dialog, [role="dialog"], [aria-modal="true"], [role="menu"], [role="menuitem"]');
+  }
+
+  function syncFullscreenButton(){
+    if(!fullscreenBtn) return;
+    const supported = isFullscreenSupported();
+    const active = getFullscreenElement() === getFullscreenTarget();
+    fullscreenBtn.disabled = !supported;
+    fullscreenBtn.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
+    fullscreenBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    fullscreenBtn.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+    fullscreenBtn.title = supported
+      ? (active ? 'Exit fullscreen (' + FULLSCREEN_SHORTCUT + ')' : 'Enter fullscreen (' + FULLSCREEN_SHORTCUT + ')')
+      : 'Fullscreen unavailable';
+  }
+
+  function refreshFullscreenLayout(){
+    syncFullscreenButton();
+    resize();
+    draw();
+  }
+
+  function toggleFullscreen(){
+    if(!isFullscreenSupported()){
+      syncFullscreenButton();
+      return;
+    }
+    const target = getFullscreenTarget();
+    try{
+      if(getFullscreenElement() === target){
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        const result = exit.call(document);
+        if(result && typeof result.catch === 'function') result.catch(syncFullscreenButton);
+      } else {
+        const request = target.requestFullscreen || target.webkitRequestFullscreen;
+        const result = request.call(target);
+        if(result && typeof result.catch === 'function') result.catch(syncFullscreenButton);
+      }
+    }catch(_){}
+    syncFullscreenButton();
+  }
+
+  document.addEventListener('fullscreenchange', refreshFullscreenLayout);
+  document.addEventListener('webkitfullscreenchange', refreshFullscreenLayout);
+  syncFullscreenButton();
 
   const scoreEl = document.getElementById('score');
   const linesEl = document.getElementById('lines');
@@ -1205,6 +1279,12 @@
       setMuted(!muted);
       return;
     }
+    if (e.code === 'Key' + FULLSCREEN_SHORTCUT && !e.ctrlKey && !e.metaKey && !e.altKey){
+      if (isFullscreenShortcutBlocked(e.target || document.activeElement)) return;
+      e.preventDefault();
+      if (!e.repeat) toggleFullscreen();
+      return;
+    }
     // HELP: while overlay is up, only Space/Enter (and P if paused) dismiss it
     if (helpUp){
       if (e.code === 'Tab') {
@@ -1311,6 +1391,10 @@
   if (resetBtn) resetBtn.addEventListener('click', () => newGame());
   if (playBtn) playBtn.addEventListener('click', () => newGame());
   if (openHelpBtn) openHelpBtn.addEventListener('click', () => showHelp('start'));
+  if (fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFullscreen();
+  });
 
   // 🔊 Sound toggle (HUD)
   const soundBtn = document.getElementById('soundBtn');
@@ -1451,6 +1535,16 @@
         lastSoundAge: lastSoundAge === null ? null : round(lastSoundAge),
         soundCount: audioState.soundCount,
         persistedKey: SOUND_STORAGE_KEY
+      },
+      fullscreen: {
+        available: isFullscreenSupported(),
+        active: getFullscreenElement() === getFullscreenTarget(),
+        elementTag: getFullscreenElement() ? getFullscreenElement().tagName : null,
+        targetTag: getFullscreenTarget().tagName,
+        buttonPressed: fullscreenBtn ? fullscreenBtn.getAttribute('aria-pressed') === 'true' : false,
+        label: fullscreenBtn ? fullscreenBtn.textContent : null,
+        ariaLabel: fullscreenBtn ? fullscreenBtn.getAttribute('aria-label') : null,
+        title: fullscreenBtn ? fullscreenBtn.title : null
       },
       muted: !!muted,
       status: statusEl.textContent

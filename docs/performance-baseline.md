@@ -21,6 +21,24 @@ CI budgets:
 | Brick Breaker | 130 KB | 4 |
 | Other manifest games | 100 KB | 4 |
 
+## Four mechanics + Lexica compaction (pass 76)
+
+Captured 2026-05-19 against `http://127.0.0.1:4295` after adding Gridline Tactics, Service Shift, Letter Foundry, and Penalty Circuit; compacting Lexica word payloads; trimming Brick Breaker and Arcade Jump; and adding fullscreen polish to 2048, Sky Hopper, Slope Runner, Idle Tycoon, and Block Drop. The strict audit covered the catalog plus 44 manifest games, 45 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 84 ms | 72 ms | 🟢 77 ms | 🟢 182.9 KB | 16 | 0 |
+| Gridline Tactics | 🟢 40 ms | 17 ms | 🟢 17 ms | 🟢 23.7 KB | 2 | 0 |
+| Service Shift | 🟢 44 ms | 14 ms | 🟢 14 ms | 🟢 26.8 KB | 2 | 0 |
+| Letter Foundry | 🟢 44 ms | 9 ms | 🟢 9 ms | 🟢 23.1 KB | 2 | 0 |
+| Penalty Circuit | 🟢 44 ms | 10 ms | 🟢 10 ms | 🟢 25.9 KB | 2 | 0 |
+| Lexica | 🟢 68 ms | 19 ms | 🟢 20 ms | 🟢 144.7 KB | 4 | 0 |
+| Idle Tycoon | 🟢 472 ms | 13 ms | 🟢 15 ms | 🟢 189.7 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 53 ms | 🟢 53 ms | 🟢 117.8 KB | 2 | 0 |
+| Brick Breaker | 🟢 100 ms | 74 ms | 🟢 74 ms | 🟢 111.9 KB | 2 | 0 |
+
+All four new games are well inside the default 100 KB / 4 request publish budget. Service Shift and Letter Foundry include `workshop-runtime.js`, so they now use the same sandbox-safe storage fallback as the rest of the catalog while still staying at two requests each. Lexica dropped from the previous 215.9 KB transfer observation to 144.7 KB after replacing array literal wrappers with newline-string payloads; its largest resource is now `websites/words5.js` at 93.3 KB. Arcade Jump dropped from 135.3 KB to 117.8 KB, and Brick Breaker dropped from 113.7 KB to 111.9 KB. No console/page errors appeared across audited URLs, every page passed strict meta/alt checks, and every named exception remains below its CI budget.
+
 ## Per-game budget tightening (pass 75)
 
 Captured 2026-05-18 against `http://127.0.0.1:4174` after tightening the per-game default publish budget from **150 KB / 8 requests** to **100 KB / 4 requests** to match the observed actuals (32 of 40 games fit under 70 KB / 2 requests; the typical new game lands ~30-45 KB / 2 requests).

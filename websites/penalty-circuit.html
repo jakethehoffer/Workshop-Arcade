@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Penalty Circuit - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Take five neon penalty shots with aim, power, curve, and a reactive keeper." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/penalty-circuit.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Penalty Circuit — Workshop Arcade" />
+<meta property="og:description" content="Take five neon penalty shots with aim, power, curve, and a reactive keeper." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/penalty-circuit.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/penalty-circuit.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Penalty Circuit — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Penalty Circuit — Workshop Arcade" />
+<meta name="twitter:description" content="Take five neon penalty shots with aim, power, curve, and a reactive keeper." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/penalty-circuit.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Penalty Circuit",
+  "description": "Take five neon penalty shots with aim, power, curve, and a reactive keeper.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/penalty-circuit.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/penalty-circuit.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Sports",
+    "Action",
+    "Arcade"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Take five neon penalty shots with aim, power, curve, and a keeper that reads your setup." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  body{min-height:100vh;display:flex;justify-content:center;padding:16px 10px 22px;overflow-x:hidden;background:radial-gradient(760px 460px at 10% -4%,rgba(34,211,238,.16),transparent 62%),radial-gradient(700px 460px at 96% 6%,rgba(45,212,191,.11),transparent 64%),linear-gradient(180deg,#081018,#050812 88%)}
+  .shell{width:min(980px,100%);display:flex;flex-direction:column;gap:10px}
+  .topbar{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;user-select:none}
+  .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:#5eead4;font-weight:900}
+  .title{font-size:25px;letter-spacing:0;text-transform:uppercase;font-weight:950;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,.24)}
+  .hint{max-width:620px;color:#9fb0c8;font-size:12px;line-height:1.35;text-align:right}
+  .hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  .pill{min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px;border-radius:8px;background:linear-gradient(180deg,rgba(18,30,48,.94),rgba(8,15,27,.96));border:1px solid rgba(94,234,212,.24);box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);line-height:1.05}
+  .pill[data-hot="true"]{border-color:rgba(94,234,212,.72);box-shadow:0 0 18px rgba(94,234,212,.16),0 8px 18px rgba(0,0,0,.24)}
+  .pill[data-warn="true"]{border-color:rgba(251,113,133,.66);box-shadow:0 0 18px rgba(251,113,133,.14),0 8px 18px rgba(0,0,0,.24)}
+  .label{font-size:9px;text-transform:uppercase;color:rgba(94,234,212,.82);font-weight:900;white-space:nowrap}
+  .value{font-size:18px;font-weight:950;color:#e6edf3;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stage-wrap{width:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(94,234,212,.28);background:linear-gradient(180deg,rgba(12,24,38,.96),rgba(5,10,18,.98));box-shadow:0 20px 46px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}
+  canvas{display:block;width:100%;aspect-ratio:45/28;background:#061019;touch-action:none}
+  canvas:focus-visible{outline:3px solid rgba(94,234,212,.78);outline-offset:-4px}
+  .status{min-height:18px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{min-height:40px;border-radius:8px;border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,30,48,.94),rgba(8,15,27,.96));color:#e6edf3;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0;padding:8px 12px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}
+  button.primary{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#05272d;box-shadow:0 10px 24px rgba(34,211,238,.24)}
+  button:hover{border-color:rgba(94,234,212,.6)}
+  button[aria-pressed="false"]{color:rgba(230,237,243,.72);border-color:rgba(255,255,255,.18)}
+  @media (max-width:720px){body{padding:10px 8px 18px}.shell{gap:8px}.title{font-size:20px}.hint{text-align:left;font-size:11px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:7px}.value{font-size:16px}canvas{aspect-ratio:45/31}.controls button{flex:1 1 112px;min-height:38px}}
+  @media (max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Penalty Circuit</span></div>
+    <div class="hint">Drag or tap the pitch to set aim and power. Left/Right aim, Up/Down curve, W/S power, Space shoots, R restarts, F fullscreen.</div>
+  </div>
+  <div class="hud" aria-label="Penalty Circuit status">
+    <div class="pill"><span class="label">Shot</span><span class="value" id="shotValue">1/5</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill" id="aimPill"><span class="label">Aim</span><span class="value" id="aimValue">0</span></div>
+    <div class="pill" id="powerPill"><span class="label">Power</span><span class="value" id="powerValue">62%</span></div>
+    <div class="pill" id="curvePill"><span class="label">Curve</span><span class="value" id="curveValue">0</span></div>
+  </div>
+  <div class="stage-wrap"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Penalty Circuit canvas. Drag or tap to aim and set power, then release or press Space to shoot."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Place the first shot.</div>
+  <div class="controls" aria-label="Penalty Circuit controls">
+    <button class="primary" id="shootBtn" type="button">Shoot</button>
+    <button id="restartBtn" type="button">Restart</button>
+    <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button id="fullscreenBtn" type="button">Fullscreen</button>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const BEST_KEY = "penalty-circuit.best.v1";
+  const SOUND_KEY = "penalty-circuit.sound.v1";
+  const SHOTS_PER_ROUND = 5;
+  const GOAL = { x: 190, y: 76, w: 520, h: 122 };
+  const BALL_START = { x: 450, y: 468 };
+  const KEEPER_Y = 166;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const norm = (v) => Math.round(v * 100) / 100;
+
+  const els = {
+    shot: document.getElementById("shotValue"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    aim: document.getElementById("aimValue"),
+    power: document.getElementById("powerValue"),
+    curve: document.getElementById("curveValue"),
+    aimPill: document.getElementById("aimPill"),
+    powerPill: document.getElementById("powerPill"),
+    curvePill: document.getElementById("curvePill"),
+    status: document.getElementById("statusLine"),
+    shoot: document.getElementById("shootBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn")
+  };
+
+  function readStore(key, fallback) {
+    try {
+      const value = window.localStorage.getItem(key);
+      return value === null ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    try { window.localStorage.setItem(key, String(value)); } catch (_) {}
+  }
+
+  const state = {
+    mode: "ready",
+    shot: 1,
+    round: 1,
+    score: 0,
+    best: Number(readStore(BEST_KEY, "0")) || 0,
+    aim: 0,
+    power: 0.62,
+    curve: 0,
+    result: "none",
+    feedback: "Place the first shot.",
+    sound: readStore(SOUND_KEY, "1") !== "0",
+    fullscreen: false,
+    roundComplete: false,
+    gameOver: false,
+    drag: null,
+    timer: 0,
+    ball: { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0, r: 10, spin: 0 },
+    keeper: { x: 450, y: KEEPER_Y, targetX: 450, read: 0 },
+    trail: []
+  };
+
+  let audio = null;
+  function ensureAudio() {
+    if (!state.sound || audio) return audio;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      audio = new AudioContext();
+      return audio;
+    } catch (_) {
+      return null;
+    }
+  }
+  function beep(freq, dur, gain, type) {
+    if (!state.sound) return;
+    const ac = ensureAudio();
+    if (!ac) return;
+    try {
+      const osc = ac.createOscillator();
+      const vol = ac.createGain();
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, ac.currentTime);
+      vol.gain.setValueAtTime(0.0001, ac.currentTime);
+      vol.gain.exponentialRampToValueAtTime(gain, ac.currentTime + 0.015);
+      vol.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      osc.connect(vol).connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + dur + 0.02);
+    } catch (_) {}
+  }
+  function play(kind) {
+    if (kind === "kick") beep(180 + state.power * 220, 0.11, 0.045, "triangle");
+    if (kind === "goal") { beep(523, 0.12, 0.04, "sine"); setTimeout(() => beep(784, 0.16, 0.035, "sine"), 75); }
+    if (kind === "save") beep(120, 0.16, 0.045, "sawtooth");
+    if (kind === "end") beep(330, 0.18, 0.035, "square");
+  }
+
+  function resetBall() {
+    state.ball.x = BALL_START.x;
+    state.ball.y = BALL_START.y;
+    state.ball.vx = 0;
+    state.ball.vy = 0;
+    state.ball.spin = 0;
+    state.trail.length = 0;
+    state.keeper.x = 450;
+    state.keeper.targetX = 450;
+    state.keeper.read = 0;
+  }
+  function restart() {
+    state.mode = "ready";
+    state.shot = 1;
+    state.round = 1;
+    state.score = 0;
+    state.result = "none";
+    state.feedback = "Place the first shot.";
+    state.roundComplete = false;
+    state.gameOver = false;
+    state.timer = 0;
+    resetBall();
+    syncUi();
+    draw();
+    canvas.focus({ preventScroll: true });
+  }
+  function nextShot() {
+    if (state.shot >= SHOTS_PER_ROUND) {
+      state.roundComplete = true;
+      state.gameOver = true;
+      state.mode = "game-over";
+      state.best = Math.max(state.best, state.score);
+      writeStore(BEST_KEY, state.best);
+      state.feedback = `Round complete: ${state.score}/${SHOTS_PER_ROUND}.`;
+      play("end");
+    } else {
+      state.shot += 1;
+      state.mode = "ready";
+      state.result = "none";
+      state.feedback = "Set the next shot.";
+      resetBall();
+    }
+    syncUi();
+  }
+  function shoot() {
+    if (state.mode === "game-over") return restart();
+    if (state.mode !== "ready" && state.mode !== "aiming" && state.mode !== "result") return;
+    if (state.mode === "result") return nextShot();
+    const targetX = GOAL.x + GOAL.w / 2 + state.aim * (GOAL.w * 0.47);
+    const shotSpeed = 540 + state.power * 520;
+    const dx = targetX - state.ball.x;
+    const dy = GOAL.y + 62 - state.ball.y;
+    const len = Math.hypot(dx, dy) || 1;
+    state.ball.vx = dx / len * shotSpeed;
+    state.ball.vy = dy / len * shotSpeed;
+    state.ball.spin = state.curve * (120 + state.power * 170);
+    state.keeper.read = clamp(0.24 + Math.abs(state.aim) * 0.16 + state.power * 0.22 - Math.abs(state.curve) * 0.32, 0.12, 0.66);
+    state.keeper.targetX = clamp(450 + (state.aim + state.curve * 0.14) * GOAL.w * 0.48 * state.keeper.read, GOAL.x + 48, GOAL.x + GOAL.w - 48);
+    state.mode = "flying";
+    state.result = "in-flight";
+    state.feedback = "Shot away.";
+    state.timer = 0;
+    state.drag = null;
+    play("kick");
+    syncUi();
+  }
+  function resolveShot() {
+    if (state.mode !== "flying") return;
+    const ball = state.ball;
+    const inFrame = ball.x > GOAL.x + 14 && ball.x < GOAL.x + GOAL.w - 14 && ball.y > GOAL.y + 14 && ball.y < GOAL.y + GOAL.h - 12;
+    const keeperReach = 55 + state.keeper.read * 24;
+    const saved = Math.abs(ball.x - state.keeper.x) < keeperReach && ball.y < KEEPER_Y + 46 && ball.y > KEEPER_Y - 76;
+    if (inFrame && !saved) {
+      state.score += 1;
+      state.result = "goal";
+      state.feedback = "Goal. Press Shoot or Space for the next kick.";
+      play("goal");
+    } else {
+      state.result = saved ? "save" : "miss";
+      state.feedback = saved ? "Saved. The keeper read it." : "Missed the frame.";
+      play("save");
+    }
+    state.mode = "result";
+    state.timer = 0;
+    state.best = Math.max(state.best, state.score);
+    writeStore(BEST_KEY, state.best);
+    syncUi();
+  }
+  function update(dt) {
+    state.fullscreen = !!document.fullscreenElement;
+    if (state.mode === "flying") {
+      state.timer += dt;
+      const ball = state.ball;
+      state.keeper.x = lerp(state.keeper.x, state.keeper.targetX, clamp(dt * 4.8, 0, 1));
+      ball.vx += ball.spin * dt;
+      ball.x += ball.vx * dt;
+      ball.y += ball.vy * dt;
+      ball.vx *= 0.997;
+      ball.vy *= 0.997;
+      state.trail.push({ x: ball.x, y: ball.y });
+      if (state.trail.length > 18) state.trail.shift();
+      if (ball.y <= GOAL.y + GOAL.h - 10 || ball.x < 30 || ball.x > W - 30 || ball.y < 20 || state.timer > 1.35) resolveShot();
+    } else if (state.mode === "result") {
+      state.timer += dt;
+      if (state.timer > 1.35 && !state.gameOver) nextShot();
+    }
+  }
+  function stepMs(ms) {
+    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < steps; i++) update(1 / 60);
+    syncUi();
+    draw();
+  }
+
+  function pitchPoint(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * W / rect.width,
+      y: (ev.clientY - rect.top) * H / rect.height
+    };
+  }
+  function setFromPoint(p, start) {
+    const goalCenter = GOAL.x + GOAL.w / 2;
+    state.aim = clamp((p.x - goalCenter) / (GOAL.w * 0.47), -1, 1);
+    const dragPower = start ? Math.hypot(p.x - start.x, p.y - start.y) / 280 : (BALL_START.y - p.y) / 360;
+    state.power = clamp(0.22 + dragPower, 0.2, 1);
+    if (start) state.curve = clamp((p.x - start.x) / 210, -1, 1);
+    state.mode = "aiming";
+    state.feedback = "Release to shoot.";
+    syncUi();
+  }
+  canvas.addEventListener("pointerdown", (ev) => {
+    if (state.mode === "game-over" || state.mode === "result") return;
+    canvas.setPointerCapture(ev.pointerId);
+    canvas.focus({ preventScroll: true });
+    const p = pitchPoint(ev);
+    state.drag = { x: p.x, y: p.y, moved: false };
+    setFromPoint(p, null);
+    draw();
+  });
+  canvas.addEventListener("pointermove", (ev) => {
+    if (!state.drag || state.mode === "flying") return;
+    const p = pitchPoint(ev);
+    state.drag.moved = true;
+    setFromPoint(p, state.drag);
+    draw();
+  });
+  canvas.addEventListener("pointerup", (ev) => {
+    if (!state.drag || state.mode === "flying") return;
+    const p = pitchPoint(ev);
+    setFromPoint(p, state.drag.moved ? state.drag : null);
+    shoot();
+  });
+
+  function toggleSound() {
+    state.sound = !state.sound;
+    writeStore(SOUND_KEY, state.sound ? "1" : "0");
+    if (state.sound) play("kick");
+    syncUi();
+  }
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await canvas.requestFullscreen();
+    } catch (_) {}
+    state.fullscreen = !!document.fullscreenElement;
+    syncUi();
+  }
+  function interactiveTarget(target) {
+    return target instanceof HTMLElement && (
+      target.isContentEditable ||
+      target.matches("button, input, select, textarea, [role='button'], [role='textbox']")
+    );
+  }
+  window.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey || interactiveTarget(ev.target)) return;
+    const key = ev.key.toLowerCase();
+    if (["arrowleft","arrowright","arrowup","arrowdown"," ","w","s","+","-","="].includes(key)) ev.preventDefault();
+    if (key === "arrowleft") state.aim = clamp(state.aim - 0.06, -1, 1);
+    else if (key === "arrowright") state.aim = clamp(state.aim + 0.06, -1, 1);
+    else if (key === "arrowup") state.curve = clamp(state.curve + 0.06, -1, 1);
+    else if (key === "arrowdown") state.curve = clamp(state.curve - 0.06, -1, 1);
+    else if (key === "w" || key === "+" || key === "=") state.power = clamp(state.power + 0.05, 0.2, 1);
+    else if (key === "s" || key === "-") state.power = clamp(state.power - 0.05, 0.2, 1);
+    else if (key === " ") shoot();
+    else if (key === "r") restart();
+    else if (key === "f") toggleFullscreen();
+    else if (key === "m") toggleSound();
+    if (state.mode === "ready") state.feedback = "Aim adjusted.";
+    syncUi();
+    draw();
+  });
+  els.shoot.addEventListener("click", shoot);
+  els.restart.addEventListener("click", restart);
+  els.sound.addEventListener("click", toggleSound);
+  els.fullscreen.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => { state.fullscreen = !!document.fullscreenElement; syncUi(); draw(); });
+
+  function syncUi() {
+    els.shot.textContent = `${Math.min(state.shot, SHOTS_PER_ROUND)}/${SHOTS_PER_ROUND}`;
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.best);
+    els.aim.textContent = String(Math.round(state.aim * 100));
+    els.power.textContent = `${Math.round(state.power * 100)}%`;
+    els.curve.textContent = String(Math.round(state.curve * 100));
+    els.status.textContent = state.feedback;
+    els.shoot.textContent = state.mode === "game-over" ? "Restart" : state.mode === "result" ? "Next" : "Shoot";
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.sound ? "true" : "false");
+    els.fullscreen.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+    els.aimPill.dataset.hot = String(Math.abs(state.aim) > .62);
+    els.powerPill.dataset.hot = String(state.power > .78);
+    els.curvePill.dataset.hot = String(Math.abs(state.curve) > .5);
+    els.powerPill.dataset.warn = String(state.power < .32);
+  }
+
+  function drawField() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#0b2430");
+    g.addColorStop(.42, "#0b6a58");
+    g.addColorStop(1, "#0d3b36");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(230,237,243,.16)";
+    ctx.lineWidth = 2;
+    for (let y = 225; y < H; y += 54) {
+      ctx.beginPath();
+      ctx.moveTo(70, y);
+      ctx.quadraticCurveTo(450, y - 18, 830, y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(6,16,25,.8)";
+    ctx.fillRect(GOAL.x - 20, GOAL.y - 16, GOAL.w + 40, 20);
+    ctx.strokeStyle = "#e6edf3";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(GOAL.x, GOAL.y, GOAL.w, GOAL.h);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(230,237,243,.35)";
+    for (let i = 1; i < 5; i++) {
+      const x = GOAL.x + i * GOAL.w / 5;
+      ctx.beginPath();
+      ctx.moveTo(x, GOAL.y + 4);
+      ctx.lineTo(x, GOAL.y + GOAL.h - 4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(230,237,243,.7)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(450, 474, 84, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(240, 208);
+    ctx.lineTo(660, 208);
+    ctx.lineTo(720, 360);
+    ctx.lineTo(180, 360);
+    ctx.closePath();
+    ctx.strokeStyle = "rgba(230,237,243,.22)";
+    ctx.stroke();
+  }
+  function drawAim() {
+    if (state.mode === "flying" || state.mode === "game-over") return;
+    const targetX = GOAL.x + GOAL.w / 2 + state.aim * GOAL.w * .47;
+    ctx.save();
+    ctx.strokeStyle = "rgba(94,234,212,.72)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(BALL_START.x, BALL_START.y);
+    ctx.quadraticCurveTo(lerp(BALL_START.x, targetX, .55) + state.curve * 90, 310, targetX, GOAL.y + 70);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(94,234,212,.22)";
+    ctx.beginPath();
+    ctx.arc(targetX, GOAL.y + 70, 18 + state.power * 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawKeeper() {
+    const k = state.keeper;
+    ctx.save();
+    ctx.translate(k.x, k.y);
+    ctx.strokeStyle = "#fda4af";
+    ctx.fillStyle = "#fb7185";
+    ctx.lineWidth = 10;
+    const lean = clamp((k.targetX - k.x) / 70, -1, 1);
+    ctx.beginPath();
+    ctx.moveTo(-34 - lean * 16, 4);
+    ctx.lineTo(34 + lean * 16, 4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-18, 45);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(18, 45);
+    ctx.stroke();
+    ctx.fillRect(-18, -10, 36, 48);
+    ctx.fillStyle = "#fecdd3";
+    ctx.beginPath();
+    ctx.arc(0, -24, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawBall() {
+    ctx.save();
+    state.trail.forEach((p, i) => {
+      ctx.globalAlpha = (i + 1) / state.trail.length * .3;
+      ctx.fillStyle = "#ccfbf1";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4 + i * .18, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    const b = state.ball;
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r * .55, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawOverlayText() {
+    if (state.mode !== "result" && state.mode !== "game-over") return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.62)";
+    ctx.fillRect(260, 238, 380, 92);
+    ctx.strokeStyle = state.result === "goal" ? "rgba(94,234,212,.82)" : "rgba(251,113,133,.76)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(260, 238, 380, 92);
+    ctx.fillStyle = state.result === "goal" ? "#5eead4" : "#fda4af";
+    ctx.font = "900 30px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    const text = state.gameOver ? `ROUND ${state.score}/${SHOTS_PER_ROUND}` : state.result.toUpperCase();
+    ctx.fillText(text, 450, 294);
+    ctx.restore();
+  }
+  function draw() {
+    drawField();
+    drawAim();
+    drawKeeper();
+    drawBall();
+    drawOverlayText();
+  }
+  function loop() {
+    stepMs(1000 / 60);
+    requestAnimationFrame(loop);
+  }
+
+  window.render_game_to_text = () => JSON.stringify({
+    mode: state.mode,
+    coordinateSystem: "canvas pixels, origin top-left, x right, y down",
+    shot: state.shot,
+    shotsPerRound: SHOTS_PER_ROUND,
+    round: state.round,
+    score: state.score,
+    best: state.best,
+    ball: { x: norm(state.ball.x), y: norm(state.ball.y), vx: norm(state.ball.vx), vy: norm(state.ball.vy) },
+    keeper: { x: norm(state.keeper.x), y: norm(state.keeper.y), targetX: norm(state.keeper.targetX), read: norm(state.keeper.read) },
+    aim: norm(state.aim),
+    power: norm(state.power),
+    curve: norm(state.curve),
+    result: state.result,
+    feedback: state.feedback,
+    feedbackActive: state.mode === "flying" || state.mode === "result" || Boolean(state.result),
+    sound: state.sound,
+    fullscreen: state.fullscreen,
+    roundComplete: state.roundComplete,
+    gameOver: state.gameOver
+  });
+  window.advanceTime = stepMs;
+
+  syncUi();
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -112,6 +112,10 @@
 
     /* Canvas container keeps a square that scales responsively */
     .board{position:relative;margin-top:16px;aspect-ratio:1/1;width:min(100%,620px);justify-self:center;background:transparent;filter:drop-shadow(0 26px 42px rgba(0,0,0,.38))}
+    .board:fullscreen{width:min(96vmin,720px);margin:auto;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,rgba(88,226,206,.18),rgba(7,16,21,.94) 62%,#071015)}
+    .board:fullscreen canvas{width:min(96vmin,720px);height:min(96vmin,720px)}
+    .board:-webkit-full-screen{width:min(96vmin,720px);margin:auto;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,rgba(88,226,206,.18),rgba(7,16,21,.94) 62%,#071015)}
+    .board:-webkit-full-screen canvas{width:min(96vmin,720px);height:min(96vmin,720px)}
     .board.invalid canvas{animation:invalidWobble .22s ease-out}
     .board.major-merge canvas{animation:mergePulse .34s ease-out}
     .board:active canvas{box-shadow:0 0 0 2px rgba(88,226,206,.28),0 0 36px rgba(88,226,206,.12)}
@@ -179,6 +183,7 @@
       <button type="button" id="newBtn" title="Start a new game (N)">New Game</button>
       <button type="button" id="undoBtn" title="Undo last move (Z)" disabled>Undo</button>
       <button type="button" id="soundBtn" title="Toggle sound effects" aria-pressed="true">Sound On</button>
+      <button type="button" id="fullscreenBtn" title="Enter fullscreen (F)" aria-pressed="false">⛶ Full</button>
       <button type="button" id="helpBtn" title="Help (H)">❓ Help</button>
       <span class="controls-hint" aria-hidden="true">Use ← ↑ → ↓ or WASD (swipe if mobile)</span>
     </div>
@@ -215,6 +220,10 @@
           <div class="control-row">
             <span><kbd>Z</kbd></span>
             <span>Undo last move</span>
+          </div>
+          <div class="control-row">
+            <span><kbd>F</kbd></span>
+            <span>Toggle fullscreen</span>
           </div>
         </div>
 
@@ -275,6 +284,7 @@
   const newBtn = document.getElementById('newBtn');
   const undoBtn = document.getElementById('undoBtn');
   const soundBtn = document.getElementById('soundBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
   const boardEl = document.getElementById('board');
 
   // --- Game state ------------------------------------------------------------
@@ -1093,6 +1103,56 @@ function checkWinOnly(){
       e.stopPropagation();
     });
   }
+
+  function editableTarget(target){
+    return !!target && (
+      target.isContentEditable ||
+      ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(target.tagName)
+    );
+  }
+
+  function fullscreenElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function fullscreenSupported(){
+    return !!((boardEl.requestFullscreen || boardEl.webkitRequestFullscreen) &&
+      (document.exitFullscreen || document.webkitExitFullscreen));
+  }
+
+  function fullscreenActive(){
+    return fullscreenElement() === boardEl;
+  }
+
+  function syncFullscreenButton(){
+    if(!fullscreenBtn) return;
+    const supported = fullscreenSupported();
+    const active = fullscreenActive();
+    fullscreenBtn.disabled = !supported;
+    fullscreenBtn.textContent = active ? '⛶ Exit' : '⛶ Full';
+    fullscreenBtn.setAttribute('aria-pressed', String(active));
+    fullscreenBtn.title = supported
+      ? (active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)')
+      : 'Fullscreen unavailable';
+  }
+
+  function toggleFullscreen(){
+    if(!fullscreenSupported()) return;
+    noteAudioGesture();
+    if(fullscreenActive()){
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      const result = exit.call(document);
+      if(result && typeof result.catch === 'function') result.catch(()=>{});
+      return;
+    }
+    const request = boardEl.requestFullscreen || boardEl.webkitRequestFullscreen;
+    const result = request.call(boardEl);
+    if(result && typeof result.catch === 'function') result.catch(()=>{});
+  }
+
+  if(fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); });
+  document.addEventListener('fullscreenchange', syncFullscreenButton);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
   window.addEventListener('keydown', (e) => {
     noteAudioGesture();
     if(e.code === 'KeyH' && !e.repeat) {
@@ -1119,6 +1179,11 @@ function checkWinOnly(){
   window.addEventListener('keydown', e=>{
     noteAudioGesture();
     const k = e.key;
+    if((k==='f'||k==='F') && !helpOpen && !overlay.classList.contains('show') && !editableTarget(e.target)){
+      e.preventDefault();
+      toggleFullscreen();
+      return;
+    }
     if((k==='n'||k==='N') && !helpOpen){ newGame({ sound: true }); return; }
     if(k==='z' || k==='Z') { if(!over) undo(); return; } // Prevent undo when game over
     if(overlay.classList.contains('show') || helpOpen){
@@ -1191,6 +1256,10 @@ function checkWinOnly(){
       grid: matrix,
       overlay: overlay.classList.contains('show') ? overlayTitle.textContent : null,
       helpOpen,
+      fullscreen: {
+        supported: fullscreenSupported(),
+        active: fullscreenActive()
+      },
       sound: {
         enabled: soundState.enabled,
         persistedKey: SOUND_KEY,
@@ -1351,6 +1420,7 @@ function checkWinOnly(){
   }
 
   // --- Kick off --------------------------------------------------------------
+  syncFullscreenButton();
   updateSoundButton();
   fitCanvasToCSSSize();
   newGame();              // start immediately with two tiles
