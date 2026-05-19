@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ARCHITECTURE.md contract check.
 //
-// The repo's quality bar has grown to ~30 scripts, 4 generators, 21
+// The repo's quality bar has grown to ~30 scripts, 4 generators, 27
 // fast validators, and a 4-job CI workflow. ARCHITECTURE.md exists
 // so new contributors (and AI agents) can find the right surface to
 // change without reading every file. This check makes sure the doc
