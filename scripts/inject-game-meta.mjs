@@ -26,7 +26,7 @@ const MARK_END = "<!-- workshop-meta:end -->";
 const JSONLD_MARK_START = "<!-- workshop-jsonld:start -->";
 const JSONLD_MARK_END = "<!-- workshop-jsonld:end -->";
 
-export { JSONLD_MARK_START, JSONLD_MARK_END };
+export { MARK_START, MARK_END, JSONLD_MARK_START, JSONLD_MARK_END };
 
 function escapeAttr(s) {
   return String(s || "")
@@ -36,7 +36,7 @@ function escapeAttr(s) {
     .replace(/>/g, "&gt;");
 }
 
-function buildBlock(game) {
+export function buildBlock(game) {
   const title = game.title + " — Workshop Arcade";
   const desc = game.subtitle || "A standalone HTML5 game from the Workshop Arcade catalog.";
   const canonical = SITE + "/" + game.url;

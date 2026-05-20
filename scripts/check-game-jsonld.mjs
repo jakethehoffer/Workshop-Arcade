@@ -13,7 +13,10 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  buildBlock,
   buildGameJsonLd,
+  MARK_START,
+  MARK_END,
   JSONLD_MARK_START,
   JSONLD_MARK_END,
 } from './inject-game-meta.mjs';
@@ -29,6 +32,17 @@ function fail(message) {
 
 function normalizeNewlines(value) {
   return String(value).replace(/\r\n/g, '\n');
+}
+
+function extractMarkedBlock(html, startMarker, endMarker, fileLabel, blockLabel) {
+  const startIndex = html.indexOf(startMarker);
+  const endIndex = html.indexOf(endMarker);
+  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+    fail(`${fileLabel}: missing ${blockLabel} marker block — run \`npm run inject:meta\``);
+    return null;
+  }
+
+  return html.slice(startIndex, endIndex + endMarker.length);
 }
 
 async function exists(absolute) {
@@ -61,14 +75,16 @@ async function checkGame(game) {
   }
 
   const html = await readFile(filePath, 'utf8');
-  const startIndex = html.indexOf(JSONLD_MARK_START);
-  const endIndex = html.indexOf(JSONLD_MARK_END);
-  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-    fail(`${game.url}: missing JSON-LD marker block — run \`npm run inject:meta\``);
-    return;
+  const metaBlock = extractMarkedBlock(html, MARK_START, MARK_END, game.url, 'workshop-meta');
+  if (metaBlock) {
+    const expectedMeta = buildBlock(game);
+    if (normalizeNewlines(metaBlock) !== normalizeNewlines(expectedMeta)) {
+      fail(`${game.url}: workshop-meta block drifted from manifest — run \`npm run inject:meta\` to refresh`);
+    }
   }
 
-  const committed = html.slice(startIndex, endIndex + JSONLD_MARK_END.length);
+  const committed = extractMarkedBlock(html, JSONLD_MARK_START, JSONLD_MARK_END, game.url, 'JSON-LD');
+  if (!committed) return;
   const expected = buildGameJsonLd(game);
   if (normalizeNewlines(committed) !== normalizeNewlines(expected)) {
     fail(`${game.url}: JSON-LD drifted from manifest — run \`npm run inject:meta\` to refresh`);

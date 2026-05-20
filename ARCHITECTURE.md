@@ -44,6 +44,7 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 | **Manifest contract** | `test:manifest-schema` |
 | **Catalog source of truth** | `validate-catalog.ps1` (no npm wrapper) |
 | **Generator output mirrors manifest** | `test:seo` · `test:feed` · `test:og-images` · `test:game-jsonld` |
+| **Asset/runtime contracts** | `test:cover-assets` · `test:storage-contract` |
 | **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:random-game` · `test:keyboard-help` · `test:sw-update-toast` |
 | **Accessibility** | `test:a11y` · `test:a11y-polish` |
 | **PWA + fallback pages** | `test:pwa` · `test:fallback-pages` |
@@ -59,7 +60,7 @@ The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `RE
 
 1. **`catalog-docs-a11y`** — all the fast structural validators above, in roughly the order generators → validators → a11y → tooling-meta. This is the job that gates merges on most catalog edits.
 2. **`game-smoke`** — Playwright spawns the catalog page and opens every manifest game on desktop and mobile viewports, asserting no console errors and that filter chips / card tags behave correctly. Runs `npm run test:games`.
-3. **`performance-audit`** — boots the static server on port 4173 and runs `npm run audit:perf:ci` against it. Strict mode fails if any page exceeds its publish budget (Catalog ≤ 200 KB / ≤ 22 requests; Lexica ≤ 300 KB / ≤ 8 requests; Idle Tycoon ≤ 225 KB / ≤ 8 requests; Arcade Jump ≤ 160 KB / ≤ 4 requests; Brick Breaker ≤ 130 KB / ≤ 4 requests; everything else ≤ 100 KB / ≤ 4 requests).
+3. **`performance-audit`** — boots the static server on port 4173 and runs `npm run audit:perf:ci` against it. Strict mode fails if any page exceeds its publish budget (Catalog ≤ 200 KB / ≤ 18 requests; Lexica ≤ 160 KB / ≤ 4 requests; Idle Tycoon ≤ 210 KB / ≤ 4 requests; Arcade Jump ≤ 130 KB / ≤ 4 requests; Brick Breaker ≤ 120 KB / ≤ 4 requests; everything else ≤ 100 KB / ≤ 3 requests).
 4. **`render-capture`** — runs `npm run capture:games:ci` to take desktop + mobile screenshots of every game and score them against a render-quality bar. Strict mode fails if any surface scores above 0.
 
 Two additional workflows live alongside:

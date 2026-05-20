@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -8,6 +8,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const manifestPath = path.join(repoRoot, "websites", "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const failures = [];
+const startedAt = new Date().toISOString();
+const outputRoot = path.join(repoRoot, "test-results", "smoke-games", startedAt.replace(/[:.]/g, "-"));
 const categoryCounts = new Map([["All", manifest.length]]);
 
 for (const game of manifest) {
@@ -34,6 +36,25 @@ const mimeTypes = new Map([
 
 function addFailure(label, message) {
   failures.push(`${label}: ${message}`);
+}
+
+async function writeSummary() {
+  await mkdir(outputRoot, { recursive: true });
+  const summary = {
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    manifestCount: manifest.length,
+    failureCount: failures.length,
+    passed: failures.length === 0,
+    failures: failures.map((failure) => {
+      const split = failure.indexOf(": ");
+      return split === -1
+        ? { label: "unknown", message: failure }
+        : { label: failure.slice(0, split), message: failure.slice(split + 2) };
+    }),
+  };
+  await writeFile(path.join(outputRoot, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+  return summary;
 }
 
 function countForCategory(category) {
@@ -377,21 +398,28 @@ async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {
   await page.close();
 }
 
-const { server, baseUrl } = await startServer();
+let server;
+let baseUrl;
 let browser;
 try {
+  ({ server, baseUrl } = await startServer());
   browser = await chromium.launch({ headless: !process.env.HEADED });
   await checkCatalog(browser, baseUrl);
   for (const game of manifest) {
     await checkGame(browser, baseUrl, game, { width: 1280, height: 800 }, "desktop");
     await checkGame(browser, baseUrl, game, { width: 390, height: 844, isMobile: true, hasTouch: true }, "mobile");
   }
+} catch (error) {
+  addFailure("runner", error instanceof Error ? error.stack || error.message : String(error));
 } finally {
   if (browser) await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  if (server) await new Promise((resolve) => server.close(resolve));
 }
 
-if (failures.length) {
+const summary = await writeSummary();
+console.log(`Smoke summary: ${path.join(outputRoot, "summary.json")}`);
+
+if (summary.failureCount) {
   console.error("Game smoke tests failed:");
   for (const failure of failures) {
     console.error(` - ${failure}`);

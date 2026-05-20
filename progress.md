@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-05-19 Codex pass 77
+
+- Implemented `codex/max-parallel-next-2026-05-19` with a sub-agent fan-out: added five compact standalone games (Orbit Salvage, Harbor Switchboard, Relay Choir, Circuit Draft, and Switchback Rally), integrated their SVG covers, manifest entries, catalog fallback data, JSON-LD/meta tags, sitemap/feed entries, OG share cards, and render-capture recipes.
+- Added fullscreen polish to the requested legacy set while preserving gameplay rules: Lexica from a worker pass plus Gemline Cascade, Dungeon Circuit, Circuit Putt, Minesweeper, Klondike Solitaire, Signal Siege, Starline Strafe, Pinball Foundry, and Deckforge Duel locally. The shared helper syncs `aria-pressed`, guards Space/Enter/F shortcuts, and adds additive fullscreen diagnostics.
+- Added tool truth gates: `npm run test:cover-assets`, `npm run test:storage-contract`, exact `workshop-meta` drift checking, tighter perf budgets (Catalog 200 KB / 18 requests, default games 100 KB / 3 requests), and a compact smoke-test summary artifact. Bumped the service worker cache key to `wa-v5-2026-05-19` for the changed catalog shell.
+- Verification passed locally: `validate-catalog.ps1 -Fix`; `npm run inject:meta`; `npm run build:sitemap`; `npm run build:feed`; `npm run build:og-images`; `validate-catalog.ps1` for 49 games; `npm test` with 29 fast gates; `npm run test:games` for 49 games; `npm run capture:games:ci` across 98 surfaces with max score 0; strict local `audit:perf:ci` across 50 pages with all five new games at 30.3-38.8 KB / 2 requests and the catalog at 184.0 KB / 16 requests; `git diff --check`.
+- Suggested next pass: run branch CI and publish this bundle, then pause broad content expansion for a subjective play-feel/contact-sheet review on the now-49-game catalog.
+
 ## 2026-05-19 Codex pass 76
 
 - Implemented the max-parallel bundle on `codex/max-parallel-2026-05-19` with worker-separated changes: four new standalone games, five fullscreen legacy polish passes, Lexica payload compaction, Brick Breaker and Arcade Jump trims, and stricter docs-budget drift checking.

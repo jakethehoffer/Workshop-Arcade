@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Orbit Salvage - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Thread a rescue skiff through compact gravity slingshot puzzles." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/orbit-salvage.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Orbit Salvage — Workshop Arcade" />
+<meta property="og:description" content="Thread a rescue skiff through compact gravity slingshot puzzles." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/orbit-salvage.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/orbit-salvage.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Orbit Salvage — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Orbit Salvage — Workshop Arcade" />
+<meta name="twitter:description" content="Thread a rescue skiff through compact gravity slingshot puzzles." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/orbit-salvage.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Orbit Salvage",
+  "description": "Thread a rescue skiff through compact gravity slingshot puzzles.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/orbit-salvage.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/orbit-salvage.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Physics",
+    "Puzzle",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Thread a rescue skiff through compact gravity slingshot puzzles." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#edf7ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:16px 10px 20px;background:radial-gradient(820px 520px at 14% -10%,rgba(34,211,238,.18),transparent 64%),radial-gradient(720px 500px at 94% 4%,rgba(251,113,133,.14),transparent 64%),linear-gradient(180deg,#081019,#050812 86%)}
+.shell{width:min(980px,100%);display:flex;flex-direction:column;gap:10px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:3px;line-height:1}
+.eyebrow{font-size:10px;text-transform:uppercase;color:#67e8f9;font-weight:900;letter-spacing:0}
+.title{font-size:25px;text-transform:uppercase;font-weight:950;text-shadow:0 0 18px rgba(103,232,249,.24)}
+.hint{max-width:620px;color:#a9b9ca;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.pill{min-width:0;display:flex;flex-direction:column;gap:2px;align-items:center;padding:8px;border-radius:8px;border:1px solid rgba(103,232,249,.24);background:linear-gradient(180deg,rgba(18,30,48,.95),rgba(8,15,27,.96));box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}
+.label{font-size:9px;text-transform:uppercase;color:#67e8f9;font-weight:900;white-space:nowrap}.value{font-size:18px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border:1px solid rgba(103,232,249,.28);border-radius:10px;overflow:hidden;background:#061019;box-shadow:0 20px 54px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#061019;touch-action:none}
+canvas:focus-visible,button:focus-visible{outline:3px solid rgba(250,204,21,.82);outline-offset:2px}
+.status{min-height:20px;text-align:center;color:#67e8f9;font-size:12px;font-weight:900;text-transform:uppercase}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button{min-height:40px;border:1px solid rgba(103,232,249,.28);border-radius:8px;background:linear-gradient(180deg,rgba(20,38,58,.96),rgba(9,18,31,.98));color:#edf7ff;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;padding:8px 12px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}
+button.primary{border-color:transparent;background:linear-gradient(180deg,#7df9ff,#22d3ee);color:#05272d;box-shadow:0 10px 24px rgba(34,211,238,.24)}
+button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.18)}
+@media (max-width:720px){body{padding:10px 8px 18px}.shell{gap:8px}.brand{display:none}.hint{text-align:left;font-size:11px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:7px}.value{font-size:16px}.controls button{flex:1 1 112px;min-height:38px}}
+@media (max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.hint{font-size:10px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Orbit Salvage</span></div>
+    <div class="hint">Pull from the skiff or use arrows/WASD to aim. Release or press Space to launch. Rescue every pod before docking.</div>
+  </div>
+  <section class="hud" aria-label="Orbit Salvage status">
+    <div class="pill"><span class="label">Sector</span><span class="value" id="sectorValue">1/4</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill"><span class="label">Pods</span><span class="value" id="podsValue">0/0</span></div>
+    <div class="pill"><span class="label">Power</span><span class="value" id="powerValue">62%</span></div>
+    <div class="pill"><span class="label">Shots</span><span class="value" id="shotsValue">0</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Orbit Salvage gravity slingshot rescue puzzle canvas"></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Start a rescue run.</div>
+  <section class="controls" aria-label="Orbit Salvage controls">
+    <button class="primary" id="startBtn" type="button">Start</button>
+    <button id="restartBtn" type="button">Restart</button>
+    <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button id="fullscreenBtn" type="button">Fullscreen</button>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const BEST_KEY = "orbit-salvage.best.v1";
+  const SOUND_KEY = "orbit-salvage.sound.v1";
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const round = (v) => Math.round(v * 100) / 100;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  const levels = [
+    {
+      name: "Relay Moon",
+      station: { x: 92, y: 326 },
+      beacon: { x: 820, y: 192 },
+      aim: -0.03,
+      power: 0.99,
+      planets: [{ x: 408, y: 260, r: 47, mass: 116000, c1: "#34d399", c2: "#14532d" }],
+      pods: [{ x: 548, y: 136 }, { x: 624, y: 310 }]
+    },
+    {
+      name: "Twin Wells",
+      station: { x: 120, y: 138 },
+      beacon: { x: 822, y: 392 },
+      aim: -0.13,
+      power: 1,
+      planets: [
+        { x: 356, y: 170, r: 39, mass: 93000, c1: "#facc15", c2: "#713f12" },
+        { x: 610, y: 336, r: 52, mass: 134000, c1: "#fb7185", c2: "#7f1d1d" }
+      ],
+      pods: [{ x: 476, y: 86 }, { x: 674, y: 238 }, { x: 736, y: 432 }]
+    },
+    {
+      name: "Needle Drift",
+      station: { x: 122, y: 410 },
+      beacon: { x: 808, y: 118 },
+      aim: -1.13,
+      power: 0.98,
+      planets: [
+        { x: 306, y: 286, r: 35, mass: 76000, c1: "#38bdf8", c2: "#0c4a6e" },
+        { x: 520, y: 206, r: 58, mass: 155000, c1: "#a78bfa", c2: "#4c1d95" },
+        { x: 704, y: 332, r: 34, mass: 72000, c1: "#f97316", c2: "#7c2d12" }
+      ],
+      pods: [{ x: 296, y: 106 }, { x: 642, y: 118 }, { x: 664, y: 432 }]
+    },
+    {
+      name: "Last Tow",
+      station: { x: 110, y: 264 },
+      beacon: { x: 842, y: 276 },
+      aim: -0.06,
+      power: 0.99,
+      planets: [
+        { x: 312, y: 160, r: 42, mass: 98000, c1: "#2dd4bf", c2: "#134e4a" },
+        { x: 500, y: 360, r: 50, mass: 132000, c1: "#f472b6", c2: "#831843" },
+        { x: 690, y: 174, r: 44, mass: 108000, c1: "#fde047", c2: "#713f12" }
+      ],
+      pods: [{ x: 416, y: 92 }, { x: 560, y: 256 }, { x: 742, y: 404 }, { x: 804, y: 142 }]
+    }
+  ];
+
+  const els = {
+    sector: document.getElementById("sectorValue"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    pods: document.getElementById("podsValue"),
+    power: document.getElementById("powerValue"),
+    shots: document.getElementById("shotsValue"),
+    status: document.getElementById("statusLine"),
+    start: document.getElementById("startBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn")
+  };
+
+  function readStore(key, fallback) {
+    try {
+      const value = window.localStorage.getItem(key);
+      return value === null ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    try { window.localStorage.setItem(key, String(value)); } catch (_) {}
+  }
+
+  const state = {
+    mode: "start",
+    level: 0,
+    score: 0,
+    best: Number(readStore(BEST_KEY, "0")) || 0,
+    shots: 0,
+    totalShots: 0,
+    rescuedTotal: 0,
+    sound: readStore(SOUND_KEY, "1") !== "0",
+    fullscreen: false,
+    message: "Start a rescue run.",
+    lastSound: "none",
+    aim: -0.42,
+    power: 0.64,
+    dragging: false,
+    elapsed: 0,
+    trail: [],
+    ship: { x: 0, y: 0, vx: 0, vy: 0, r: 8 },
+    pods: []
+  };
+
+  let audio = null;
+  let rafTime = 0;
+
+  function activeLevel() { return levels[state.level]; }
+  function allRescued() { return state.pods.every((p) => p.rescued); }
+  function storageBest() {
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+  }
+
+  function ensureAudio() {
+    if (!state.sound || audio) return audio;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      audio = new AudioContext();
+      return audio;
+    } catch (_) {
+      return null;
+    }
+  }
+  function tone(kind) {
+    state.lastSound = state.sound ? kind : "muted-" + kind;
+    if (!state.sound) return;
+    const ac = ensureAudio();
+    if (!ac) return;
+    const map = {
+      launch: [240, 0.12, 0.045, "triangle"],
+      pod: [660, 0.1, 0.04, "sine"],
+      dock: [520, 0.16, 0.04, "sine"],
+      crash: [110, 0.18, 0.05, "sawtooth"],
+      click: [360, 0.07, 0.035, "square"]
+    };
+    const [freq, dur, gain, type] = map[kind] || map.click;
+    try {
+      if (ac.state === "suspended") ac.resume().catch(() => {});
+      const osc = ac.createOscillator();
+      const vol = ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ac.currentTime);
+      vol.gain.setValueAtTime(0.0001, ac.currentTime);
+      vol.gain.exponentialRampToValueAtTime(gain, ac.currentTime + 0.012);
+      vol.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      osc.connect(vol).connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + dur + 0.03);
+    } catch (_) {}
+  }
+
+  function resetLevel(keepRun) {
+    const level = activeLevel();
+    state.mode = keepRun ? "ready" : "start";
+    state.aim = level.aim;
+    state.power = level.power;
+    state.elapsed = 0;
+    state.shots = 0;
+    state.dragging = false;
+    state.trail.length = 0;
+    state.ship.x = level.station.x;
+    state.ship.y = level.station.y;
+    state.ship.vx = 0;
+    state.ship.vy = 0;
+    state.pods = level.pods.map((p, i) => ({ id: i + 1, x: p.x, y: p.y, r: 14, rescued: false }));
+    state.message = keepRun ? "Sector ready." : "Start a rescue run.";
+    syncUi();
+    draw();
+  }
+  function startRun() {
+    if (state.mode === "level-complete") return nextLevel();
+    if (state.mode === "complete") return restartRun();
+    if (state.mode === "crashed") return retrySector();
+    if (state.mode === "start") {
+      state.mode = "ready";
+      state.message = "Plot the rescue arc.";
+      tone("click");
+    }
+    canvas.focus({ preventScroll: true });
+    syncUi();
+    draw();
+  }
+  function restartRun() {
+    state.level = 0;
+    state.score = 0;
+    state.totalShots = 0;
+    state.rescuedTotal = 0;
+    resetLevel(true);
+    state.message = "Fresh rescue run.";
+    tone("click");
+    syncUi();
+  }
+  function retrySector() {
+    resetLevel(true);
+    state.message = "Sector reset.";
+    tone("click");
+    syncUi();
+  }
+  function nextLevel() {
+    if (state.level >= levels.length - 1) {
+      state.mode = "complete";
+      state.message = "All sectors clear.";
+      storageBest();
+      tone("dock");
+      syncUi();
+      draw();
+      return;
+    }
+    state.level += 1;
+    resetLevel(true);
+    state.message = "Next gravity chart loaded.";
+    tone("click");
+  }
+  function launch() {
+    if (state.mode === "start") return startRun();
+    if (state.mode === "level-complete") return nextLevel();
+    if (state.mode === "complete") return restartRun();
+    if (state.mode === "crashed") return retrySector();
+    if (state.mode !== "ready" && state.mode !== "aiming") return;
+    const speed = 260 + state.power * 360;
+    state.ship.vx = Math.cos(state.aim) * speed;
+    state.ship.vy = Math.sin(state.aim) * speed;
+    state.mode = "flight";
+    state.elapsed = 0;
+    state.shots += 1;
+    state.totalShots += 1;
+    state.trail.length = 0;
+    state.dragging = false;
+    state.message = "Skiff away.";
+    tone("launch");
+    syncUi();
+  }
+  function crash(reason) {
+    const level = activeLevel();
+    state.mode = "ready";
+    state.message = (reason || "Skiff recovered.") + " Plot again.";
+    state.score = Math.max(0, state.score - 10);
+    state.ship.x = level.station.x;
+    state.ship.y = level.station.y;
+    state.ship.vx = 0;
+    state.ship.vy = 0;
+    state.elapsed = 0;
+    state.dragging = false;
+    state.trail.length = 0;
+    storageBest();
+    tone("crash");
+    syncUi();
+    draw();
+  }
+  function completeSector() {
+    const levelBonus = 220 + state.pods.length * 80 + Math.max(0, 180 - Math.round(state.elapsed * 8)) - Math.max(0, state.shots - 1) * 35;
+    state.score += levelBonus;
+    storageBest();
+    state.mode = state.level === levels.length - 1 ? "complete" : "level-complete";
+    state.message = state.mode === "complete" ? "All sectors clear." : "Sector docked.";
+    tone("dock");
+    syncUi();
+  }
+  function setAimFromPoint(point, start) {
+    const level = activeLevel();
+    const pullX = level.station.x - point.x;
+    const pullY = level.station.y - point.y;
+    const len = Math.hypot(pullX, pullY);
+    if (len > 6) state.aim = Math.atan2(pullY, pullX);
+    state.power = clamp(len / 190, 0.18, 1);
+    state.mode = "aiming";
+    state.message = start ? "Release to launch." : "Slingshot set.";
+    syncUi();
+    draw();
+  }
+  function pointerPoint(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * W / rect.width,
+      y: (ev.clientY - rect.top) * H / rect.height
+    };
+  }
+
+  function update(dt) {
+    state.fullscreen = !!document.fullscreenElement;
+    if (state.mode !== "flight") return;
+    state.elapsed += dt;
+    let ax = 0, ay = 0;
+    for (const p of activeLevel().planets) {
+      const dx = p.x - state.ship.x, dy = p.y - state.ship.y;
+      const d2 = Math.max(900, dx * dx + dy * dy);
+      const d = Math.sqrt(d2);
+      const force = Math.min(520, p.mass / d2);
+      ax += dx / d * force;
+      ay += dy / d * force;
+      if (d < p.r + state.ship.r) {
+        crash("Gravity well collision.");
+        return;
+      }
+    }
+    state.ship.vx += ax * dt;
+    state.ship.vy += ay * dt;
+    state.ship.x += state.ship.vx * dt;
+    state.ship.y += state.ship.vy * dt;
+    state.ship.vx *= 0.999;
+    state.ship.vy *= 0.999;
+    state.trail.push({ x: state.ship.x, y: state.ship.y });
+    if (state.trail.length > 48) state.trail.shift();
+    for (const pod of state.pods) {
+      if (!pod.rescued && dist(state.ship, pod) < state.ship.r + pod.r + 7) {
+        pod.rescued = true;
+        state.score += 120;
+        state.rescuedTotal += 1;
+        state.message = `Pod ${pod.id} secured.`;
+        tone("pod");
+      }
+    }
+    const beacon = activeLevel().beacon;
+    if (allRescued() && dist(state.ship, beacon) < 31) {
+      completeSector();
+      return;
+    }
+    if (state.ship.x < -90 || state.ship.x > W + 90 || state.ship.y < -90 || state.ship.y > H + 90) crash("Skiff drifted beyond recovery.");
+    else if (state.elapsed > 16) crash("Signal window expired.");
+  }
+  function advance(ms) {
+    const frames = Math.max(1, Math.round((Number(ms) || 0) / (1000 / 60)));
+    for (let i = 0; i < frames; i += 1) update(1 / 60);
+    syncUi();
+    draw();
+    return textState();
+  }
+
+  function syncUi() {
+    const rescued = state.pods.filter((p) => p.rescued).length;
+    els.sector.textContent = `${state.level + 1}/${levels.length}`;
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.best);
+    els.pods.textContent = `${rescued}/${state.pods.length}`;
+    els.power.textContent = `${Math.round(state.power * 100)}%`;
+    els.shots.textContent = String(state.totalShots);
+    els.status.textContent = state.message;
+    els.start.textContent = state.mode === "level-complete" ? "Next Sector" : state.mode === "complete" || state.mode === "crashed" ? "Retry" : state.mode === "start" ? "Start" : "Launch";
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", state.sound ? "true" : "false");
+    els.fullscreen.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+  }
+
+  function starField() {
+    ctx.fillStyle = "#061019";
+    ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 82; i += 1) {
+      const x = (i * 113) % W;
+      const y = (i * 71 + 39) % H;
+      const a = 0.22 + ((i * 17) % 40) / 100;
+      ctx.fillStyle = `rgba(226,247,255,${a})`;
+      ctx.fillRect(x, y, i % 7 === 0 ? 2 : 1, 1);
+    }
+  }
+  function drawPlanet(p) {
+    const g = ctx.createRadialGradient(p.x - p.r * .35, p.y - p.r * .4, p.r * .1, p.x, p.y, p.r * 1.1);
+    g.addColorStop(0, p.c1);
+    g.addColorStop(1, p.c2);
+    ctx.fillStyle = "rgba(103,232,249,.08)";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r + 28, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.18)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  function drawStation(level) {
+    ctx.save();
+    ctx.translate(level.station.x, level.station.y);
+    ctx.strokeStyle = "#67e8f9";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, TAU);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(103,232,249,.16)";
+    ctx.fillRect(-18, -10, 36, 20);
+    ctx.fillStyle = "#dffaff";
+    ctx.beginPath();
+    ctx.arc(0, 0, 7, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawBeacon(level) {
+    const ready = allRescued();
+    ctx.save();
+    ctx.translate(level.beacon.x, level.beacon.y);
+    ctx.strokeStyle = ready ? "#facc15" : "rgba(148,163,184,.5)";
+    ctx.fillStyle = ready ? "rgba(250,204,21,.18)" : "rgba(148,163,184,.08)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 30, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-17, 0);
+    ctx.lineTo(17, 0);
+    ctx.moveTo(0, -17);
+    ctx.lineTo(0, 17);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawAim(level) {
+    if (state.mode === "flight" || state.mode === "complete") return;
+    const s = level.station;
+    const len = 70 + state.power * 118;
+    const tx = s.x + Math.cos(state.aim) * len;
+    const ty = s.y + Math.sin(state.aim) * len;
+    ctx.save();
+    ctx.strokeStyle = "rgba(103,232,249,.72)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([9, 8]);
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(103,232,249,.24)";
+    ctx.beginPath();
+    ctx.arc(tx, ty, 10, 0, TAU);
+    ctx.fill();
+    if (state.dragging) {
+      ctx.strokeStyle = "rgba(250,204,21,.72)";
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - Math.cos(state.aim) * len * .68, s.y - Math.sin(state.aim) * len * .68);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawPods() {
+    for (const pod of state.pods) {
+      ctx.save();
+      ctx.translate(pod.x, pod.y);
+      ctx.globalAlpha = pod.rescued ? .32 : 1;
+      ctx.fillStyle = pod.rescued ? "rgba(52,211,153,.35)" : "#f8fafc";
+      ctx.strokeStyle = pod.rescued ? "#34d399" : "#fb7185";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-14, -10, 28, 20, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = pod.rescued ? "#34d399" : "#fb7185";
+      ctx.fillRect(-5, -4, 10, 8);
+      ctx.restore();
+    }
+  }
+  function drawShip() {
+    const angle = state.mode === "flight" ? Math.atan2(state.ship.vy, state.ship.vx) : state.aim;
+    ctx.save();
+    ctx.translate(state.ship.x, state.ship.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = "#e0fbff";
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(14, 0);
+    ctx.lineTo(-9, -8);
+    ctx.lineTo(-5, 0);
+    ctx.lineTo(-9, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#facc15";
+    ctx.fillRect(-12, -3, 4, 6);
+    ctx.restore();
+  }
+  function drawOverlay() {
+    if (!["start", "crashed", "level-complete", "complete"].includes(state.mode)) return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.66)";
+    ctx.fillRect(230, 188, 500, 142);
+    ctx.strokeStyle = state.mode === "crashed" ? "rgba(251,113,133,.72)" : "rgba(103,232,249,.72)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(230, 188, 500, 142);
+    ctx.textAlign = "center";
+    ctx.fillStyle = state.mode === "crashed" ? "#fda4af" : "#eaffff";
+    ctx.font = "900 31px system-ui, sans-serif";
+    const title = state.mode === "start" ? "Orbit Salvage" : state.mode === "crashed" ? "Rescue Failed" : state.mode === "complete" ? "Run Complete" : "Sector Clear";
+    ctx.fillText(title, W / 2, 242);
+    ctx.fillStyle = "#b8c7d9";
+    ctx.font = "14px system-ui, sans-serif";
+    const line = state.mode === "start" ? "Recover every pod, then dock at the lit beacon." : state.message;
+    ctx.fillText(line, W / 2, 276);
+    ctx.fillText("Drag on the canvas or use arrows and Space.", W / 2, 302);
+    ctx.restore();
+  }
+  function draw() {
+    const level = activeLevel();
+    starField();
+    ctx.strokeStyle = "rgba(103,232,249,.12)";
+    ctx.lineWidth = 1;
+    for (const p of level.planets) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + 64, 0, TAU);
+      ctx.stroke();
+    }
+    for (const p of level.planets) drawPlanet(p);
+    drawBeacon(level);
+    drawStation(level);
+    drawAim(level);
+    state.trail.forEach((p, i) => {
+      ctx.globalAlpha = (i + 1) / state.trail.length * .36;
+      ctx.fillStyle = "#67e8f9";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.2 + i * .03, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+    drawPods();
+    drawShip();
+    ctx.fillStyle = "#c7d7e7";
+    ctx.font = "900 13px system-ui, sans-serif";
+    ctx.fillText(activeLevel().name, 24, 32);
+    ctx.fillStyle = "#89a6b8";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(allRescued() ? "Beacon is open." : "Beacon unlocks after pod recovery.", 24, 52);
+    drawOverlay();
+  }
+
+  function handleKey(key) {
+    const k = key.length === 1 ? key.toLowerCase() : key;
+    if (key === "R") return restartRun();
+    if (k === "r") return retrySector();
+    if (k === "f") return toggleFullscreen();
+    if (k === "m") return toggleSound();
+    if (k === " " || k === "Enter") return launch();
+    let adjusted = false;
+    if (k === "ArrowLeft" || k === "a") state.aim -= 0.08;
+    else if (k === "ArrowRight" || k === "d") state.aim += 0.08;
+    else if (k === "ArrowUp" || k === "w") state.power = clamp(state.power + 0.05, 0.18, 1);
+    else if (k === "ArrowDown" || k === "s") state.power = clamp(state.power - 0.05, 0.18, 1);
+    else return;
+    adjusted = true;
+    if (!adjusted) return;
+    state.mode = state.mode === "start" ? "ready" : state.mode;
+    state.message = "Trajectory adjusted.";
+    syncUi();
+    draw();
+  }
+  function interactiveTarget(target) {
+    return target instanceof HTMLElement && (
+      target.isContentEditable ||
+      target.matches("button, input, select, textarea, [role='button'], [role='textbox']")
+    );
+  }
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await canvas.requestFullscreen();
+    } catch (_) {}
+    state.fullscreen = !!document.fullscreenElement;
+    syncUi();
+    draw();
+  }
+  function toggleSound() {
+    state.sound = !state.sound;
+    writeStore(SOUND_KEY, state.sound ? "1" : "0");
+    if (state.sound) tone("click");
+    syncUi();
+  }
+
+  canvas.addEventListener("pointerdown", (ev) => {
+    canvas.focus({ preventScroll: true });
+    if (state.mode === "flight") return;
+    if (state.mode === "level-complete") return nextLevel();
+    if (state.mode === "complete" || state.mode === "crashed") return retrySector();
+    if (state.mode === "start") startRun();
+    const point = pointerPoint(ev);
+    state.dragging = true;
+    canvas.setPointerCapture(ev.pointerId);
+    setAimFromPoint(point, true);
+  });
+  canvas.addEventListener("pointermove", (ev) => {
+    if (!state.dragging || state.mode === "flight") return;
+    setAimFromPoint(pointerPoint(ev), true);
+  });
+  canvas.addEventListener("pointerup", (ev) => {
+    if (!state.dragging) return;
+    state.dragging = false;
+    setAimFromPoint(pointerPoint(ev), false);
+    launch();
+  });
+  window.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey || interactiveTarget(ev.target)) return;
+    if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Enter"].includes(ev.key)) ev.preventDefault();
+    handleKey(ev.key);
+  });
+  els.start.addEventListener("click", () => {
+    if (state.mode === "ready" || state.mode === "aiming") launch();
+    else startRun();
+  });
+  els.restart.addEventListener("click", restartRun);
+  els.sound.addEventListener("click", toggleSound);
+  els.fullscreen.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => {
+    state.fullscreen = !!document.fullscreenElement;
+    syncUi();
+    draw();
+  });
+
+  function textState() {
+    const level = activeLevel();
+    return JSON.stringify({
+      mode: state.mode,
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down",
+      level: { index: state.level + 1, total: levels.length, name: level.name },
+      score: state.score,
+      best: state.best,
+      shotsInSector: state.shots,
+      totalShots: state.totalShots,
+      aimRadians: round(state.aim),
+      power: round(state.power),
+      elapsed: round(state.elapsed),
+      ship: { x: round(state.ship.x), y: round(state.ship.y), vx: round(state.ship.vx), vy: round(state.ship.vy), r: state.ship.r },
+      station: level.station,
+      beacon: { x: level.beacon.x, y: level.beacon.y, unlocked: allRescued() },
+      pods: state.pods.map((p) => ({ id: p.id, x: p.x, y: p.y, rescued: p.rescued })),
+      planets: level.planets.map((p) => ({ x: p.x, y: p.y, r: p.r, mass: p.mass })),
+      message: state.message,
+      feedback: { text: state.message, active: state.mode === "flight" || state.mode === "aiming" || state.message !== "Start a rescue run.", lastSound: state.lastSound },
+      feedbackActive: state.mode === "flight" || state.mode === "aiming" || state.message !== "Start a rescue run.",
+      sound: state.sound,
+      lastSound: state.lastSound,
+      fullscreen: state.fullscreen,
+      runComplete: state.mode === "complete",
+      crashed: state.mode === "crashed"
+    });
+  }
+  window.render_game_to_text = textState;
+  window.advanceTime = advance;
+
+  function loop(ts) {
+    if (!rafTime) rafTime = ts;
+    const delta = Math.min(50, ts - rafTime);
+    rafTime = ts;
+    if (delta > 0) {
+      update(delta / 1000);
+      syncUi();
+      draw();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  resetLevel(false);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

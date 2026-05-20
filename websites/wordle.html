@@ -134,6 +134,16 @@
       linear-gradient(180deg,var(--bg),#070d18 80%);
   }
   .wrap{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;position:relative;z-index:1}
+  .wrap:fullscreen,.wrap:-webkit-full-screen{
+    min-height:100vh;
+    overflow:auto;
+    background:
+      radial-gradient(900px 600px at 12% -6%,rgba(34,211,238,0.16),transparent 60%),
+      radial-gradient(700px 480px at 90% 10%,rgba(34,211,238,0.10),transparent 60%),
+      linear-gradient(180deg,var(--bg),#070d18 80%);
+  }
+  .wrap:fullscreen main,.wrap:-webkit-full-screen main{align-content:center}
+  .wrap:fullscreen .play-card,.wrap:-webkit-full-screen .play-card{width:min(100%,620px)}
   header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 22px;border-bottom:1px solid rgba(34,211,238,0.16);flex-wrap:wrap;backdrop-filter:blur(2px)}
   header h1{margin:0;font-size:22px;letter-spacing:0.16em;font-weight:800}
   .brand{display:flex;flex-direction:column;gap:2px;line-height:1}
@@ -237,6 +247,7 @@
       <label class="pill" data-hotkey="1"><input id="hard" type="checkbox"> Hard</label>
       <button type="button" class="pill" id="helpBtn" title="How to play" data-hotkey="2">How to play</button>
       <label class="pill" data-hotkey="3"><input id="sound" type="checkbox" checked> Sound</label> <!-- ADDED -->
+      <button type="button" class="pill" id="fullscreenBtn" title="Enter fullscreen (Shift+F)" aria-label="Enter fullscreen" aria-pressed="false" data-hotkey="Shift+F">Fullscreen</button>
     </div>
   </header>
 
@@ -275,7 +286,7 @@
     <li><b>Slate</b> = not in the word.</li>
   </ul>
   <p>Hard mode forces you to reuse revealed letters in the same spots on later guesses.</p>
-  <p><b>Hotkeys</b>: 1 hard mode, 2 how to play, 3 sound, Esc closes dialogs, Ctrl+Enter for new game, Ctrl+Backspace clears the row.</p>
+  <p><b>Hotkeys</b>: 1 hard mode, 2 how to play, 3 sound, Shift+F fullscreen, Esc closes dialogs, Ctrl+Enter for new game, Ctrl+Backspace clears the row.</p>
 </dialog>
 <!-- ADDED: Start (home) screen -->
 <dialog id="start"> <!-- ADDED -->
@@ -329,6 +340,7 @@
   const help = document.getElementById('help');
   const hardChk = document.getElementById('hard');
   const helpBtn = document.getElementById('helpBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
   const newBtn = document.getElementById('newBtn');
   const row1 = document.getElementById('row1');
   const row2 = document.getElementById('row2');
@@ -342,6 +354,7 @@
   const overSecret = document.getElementById('overSecret');   // ADDED
   const againBtn = document.getElementById('againBtn');       // ADDED
   const soundChk = document.getElementById('sound'); // ADDED
+  const FULLSCREEN_SHORTCUT = 'Shift+F';
 
   helpBtn.addEventListener('click', () => help.showModal());
 
@@ -552,8 +565,82 @@ const AudioFX = (() => {                               // ADDED
     save();
   }
 
+  // ===== Fullscreen handling =====
+  function getFullscreenTarget(){
+    return document.querySelector('.wrap') || document.documentElement;
+  }
+  function getFullscreenElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function fullscreenSupported(){
+    const target = getFullscreenTarget();
+    const request = target && (target.requestFullscreen || target.webkitRequestFullscreen);
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    return !!(request && exit && document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false);
+  }
+  function fullscreenActive(){
+    return getFullscreenElement() === getFullscreenTarget();
+  }
+  function syncFullscreenButton(){
+    if(!fullscreenBtn) return;
+    const supported = fullscreenSupported();
+    const active = fullscreenActive();
+    fullscreenBtn.disabled = !supported;
+    fullscreenBtn.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
+    fullscreenBtn.setAttribute('aria-pressed', String(active));
+    fullscreenBtn.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+    fullscreenBtn.title = supported
+      ? (active ? `Exit fullscreen (${FULLSCREEN_SHORTCUT})` : `Enter fullscreen (${FULLSCREEN_SHORTCUT})`)
+      : 'Fullscreen unavailable';
+  }
+  function toggleFullscreen(){
+    if(!fullscreenSupported()){
+      syncFullscreenButton();
+      return;
+    }
+    const target = getFullscreenTarget();
+    try{
+      if(fullscreenActive()){
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        const result = exit.call(document);
+        if(result && typeof result.catch === 'function') result.catch(syncFullscreenButton);
+      } else {
+        const request = target.requestFullscreen || target.webkitRequestFullscreen;
+        const result = request.call(target);
+        if(result && typeof result.catch === 'function') result.catch(syncFullscreenButton);
+      }
+    }catch(e){}
+    syncFullscreenButton();
+  }
+  function handleFullscreenChange(){
+    syncFullscreenButton();
+    repaint();
+  }
 
   // ===== Input handling =====
+  function getTargetElement(target){
+    if(!target || target === document || target === window) return null;
+    return target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
+  }
+  function isEditableTarget(target){
+    const element = getTargetElement(target);
+    if(!element) return false;
+    const tag = element.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || element.isContentEditable || !!element.closest('[contenteditable="true"]');
+  }
+  function isInteractiveTarget(target){
+    const element = getTargetElement(target);
+    return !!element && !!element.closest('button, a, input, select, textarea, label, [role="button"], [role="menu"], [role="menuitem"]');
+  }
+  function isFullscreenShortcut(event){
+    return event.key.toLowerCase() === 'f' && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey;
+  }
+  function isFullscreenShortcutBlocked(target){
+    if(isDialogOpen()) return true;
+    const element = getTargetElement(target);
+    if(isEditableTarget(target)) return true;
+    return !!element && !!element.closest('dialog, [role="dialog"], [aria-modal="true"], [role="menu"], [role="menuitem"]');
+  }
   function isDialogOpen(){
     return !!(help?.open || start?.open || over?.open);
   }
@@ -625,9 +712,14 @@ const AudioFX = (() => {                               // ADDED
     if(current.length>0){ current=current.slice(0,-1); recordInputFeedback('backspace', current); repaint(); save(); }
   }
   document.addEventListener('keydown', (e)=>{
-    const tag = (e.target && e.target.tagName) || '';
-    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
-    if (typing) return;
+    const target = e.target || document.activeElement;
+    if (isFullscreenShortcut(e)) {
+      if (isFullscreenShortcutBlocked(target)) return;
+      e.preventDefault();
+      if (!e.repeat) toggleFullscreen();
+      return;
+    }
+    if (isEditableTarget(target)) return;
 
     if (e.key === 'Escape' && closeDialogs()) { e.preventDefault(); return; }
     if (e.key === '2' && !e.repeat) { e.preventDefault(); AudioFX.start(); toggleHelp(); return; }
@@ -653,6 +745,7 @@ const AudioFX = (() => {                               // ADDED
       return;
     }
     if (isDialogOpen()) return;
+    if (isInteractiveTarget(target)) return;
     if(e.key==='Enter'){ onKey('enter'); }
     else if(e.key==='Backspace' || e.key==='Delete'){ onKey('backspace'); }
     else if(/^[a-zA-Z]$/.test(e.key)){ onKey(e.key.toLowerCase()); }
@@ -829,6 +922,15 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
       answer: finished ? secret : null,
       answerLength: secret.length,
       status: statusEl.textContent,
+      fullscreen: {
+        supported: fullscreenSupported(),
+        active: fullscreenActive(),
+        elementTag: getFullscreenElement()?.tagName || null,
+        targetTag: getFullscreenTarget()?.tagName || null,
+        buttonPressed: fullscreenBtn ? fullscreenBtn.getAttribute('aria-pressed') === 'true' : false,
+        buttonTitle: fullscreenBtn ? fullscreenBtn.title : null,
+        shortcut: FULLSCREEN_SHORTCUT
+      },
       dialogs: {
         start: !!start.open,
         help: !!help.open,
@@ -871,6 +973,12 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
     startNew({fromOverlay: true});
   }); // CHANGED
   hardChk.addEventListener('change', ()=>{ save(); setStatus('Hard mode '+(hardChk.checked?'on':'off')); });
+  fullscreenBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    toggleFullscreen();
+  });
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
   startBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // ADDED
   againBtn.addEventListener('click', ()=>startNew({fromOverlay:true})); // ADDED
   // Kick audio on user actions (first time)                 // ADDED
@@ -889,6 +997,7 @@ document.addEventListener('keydown', () => AudioFX.start(), {once:true}); // ADD
   try { soundChk.checked = JSON.parse(localStorage.getItem('lexica:sound') ?? 'true'); } catch(e){}
   // Save when changed                                          // ADDED
   soundChk.addEventListener('change', ()=> localStorage.setItem('lexica:sound', JSON.stringify(soundChk.checked)));
+  syncFullscreenButton();
 
 
 })();

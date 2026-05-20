@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Harbor Switchboard - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Route deterministic harbor traffic through lane switches, brake signals, and dock delivery goals." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/harbor-switchboard.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Harbor Switchboard — Workshop Arcade" />
+<meta property="og:description" content="Route deterministic harbor traffic through lane switches, brake signals, and dock delivery goals." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/harbor-switchboard.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/harbor-switchboard.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Harbor Switchboard — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Harbor Switchboard — Workshop Arcade" />
+<meta name="twitter:description" content="Route deterministic harbor traffic through lane switches, brake signals, and dock delivery goals." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/harbor-switchboard.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Harbor Switchboard",
+  "description": "Route deterministic harbor traffic through lane switches, brake signals, and dock delivery goals.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/harbor-switchboard.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/harbor-switchboard.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Simulation",
+    "Strategy",
+    "Puzzle"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Route deterministic harbor traffic through lane switches, brake signals, and dock delivery goals." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:#e6edf3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}body{min-height:100vh;display:flex;justify-content:center;padding:14px 10px 20px;overflow-x:hidden;background:radial-gradient(760px 480px at 7% -6%,rgba(34,211,238,.16),transparent 62%),radial-gradient(700px 470px at 97% 2%,rgba(45,212,191,.13),transparent 64%),linear-gradient(180deg,#071018,#050914 88%)}.shell{width:min(980px,100%);display:flex;flex-direction:column;gap:9px}.top{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}.brand{line-height:1;user-select:none}.eyebrow{display:block;font-size:10px;text-transform:uppercase;color:#5eead4;font-weight:900}.title{display:block;margin-top:3px;font-size:24px;text-transform:uppercase;font-weight:950;color:#f8fbff;text-shadow:0 0 18px rgba(94,234,212,.24)}.help{max-width:610px;text-align:right;color:#9fb0c8;font-size:12px;line-height:1.35}.hud,.switches,.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}.pill{min-width:75px;padding:7px 9px;border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(17,31,48,.95),rgba(8,15,28,.97));box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);text-align:center;line-height:1.05}.pill[data-hot=true]{border-color:rgba(251,191,36,.78);box-shadow:0 0 18px rgba(251,191,36,.15),0 8px 18px rgba(0,0,0,.24)}.pill[data-warn=true]{border-color:rgba(251,113,133,.72);box-shadow:0 0 18px rgba(251,113,133,.14),0 8px 18px rgba(0,0,0,.24)}.label{display:block;font-size:9px;color:rgba(94,234,212,.86);font-weight:900;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}.stage{border:1px solid rgba(94,234,212,.28);border-radius:8px;overflow:hidden;background:#061019;box-shadow:0 18px 42px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:62vh;background:#061019;touch-action:none}canvas:focus-visible{outline:3px solid rgba(94,234,212,.82);outline-offset:-4px}.status{min-height:19px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}.btn{border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(17,31,48,.95),rgba(8,15,28,.97));color:#e6edf3;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;padding:8px 10px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04)}.btn:hover{border-color:rgba(94,234,212,.58)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#05272d}.btn.switch{min-width:128px}.btn.switch[aria-current=true]{outline:3px solid rgba(251,191,36,.72);outline-offset:2px}.btn[data-warn=true]{border-color:rgba(251,113,133,.66)}@media(max-width:700px){body{padding:10px 8px 16px}.shell{gap:7px}.top{align-items:start}.title{font-size:20px}.help{text-align:left;font-size:11px}.pill{min-width:62px;padding:6px}.value{font-size:15px}.btn{font-size:11px;padding:8px}.btn.switch{flex:1 1 104px;min-width:104px}.controls .btn{flex:1 1 104px}canvas{max-height:51vh}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="shell" aria-label="Harbor Switchboard game">
+  <div class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Harbor Switchboard</span></div>
+    <div class="help">Route cargo skiffs through three lane switches. 1/2/3 toggle switches, arrows choose a switch, Enter toggles, Space controls the signal, R restarts, M sound.</div>
+  </div>
+  <div class="hud" aria-label="Harbor status">
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill" id="goalPill"><span class="label">Deliveries</span><span class="value" id="goalValue">0/12</span></div>
+    <div class="pill" id="missPill"><span class="label">Miss</span><span class="value" id="missValue">0/3</span></div>
+    <div class="pill" id="riskPill"><span class="label">Brakes</span><span class="value" id="brakeValue">0</span></div>
+    <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">90.0</span></div>
+  </div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Harbor Switchboard canvas. Toggle track switches and the signal gate to guide cargo skiffs to their matching delivery lanes without collisions."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Signal green. Prepare the first switch route.</div>
+  <div class="switches" aria-label="Switch controls">
+    <button class="btn switch primary" id="switch0" type="button" data-switch="0" aria-current="true" aria-pressed="false">1 North Straight</button>
+    <button class="btn switch" id="switch1" type="button" data-switch="1" aria-current="false" aria-pressed="false">2 Basin Straight</button>
+    <button class="btn switch" id="switch2" type="button" data-switch="2" aria-current="false" aria-pressed="false">3 Tide Straight</button>
+  </div>
+  <div class="controls" aria-label="Game controls">
+    <button class="btn primary" id="gateBtn" type="button" aria-pressed="true">Signal Green</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const BEST_KEY = "harbor-switchboard.best.v1";
+  const SOUND_KEY = "harbor-switchboard.sound.v1";
+  const RUN_MS = 90000;
+  const MISS_LIMIT = 3;
+  const TOTAL_GOAL = 12;
+  const MIN_GAP = 66;
+  const COLLISION_GAP = 24;
+  const START_X = 66;
+  const EXIT_X = 880;
+  const lanes = [
+    { id: "crane", name: "Crane", short: "C", y: 116, color: "#f97316", goal: 3 },
+    { id: "reefer", name: "Reefer", short: "R", y: 206, color: "#22d3ee", goal: 3 },
+    { id: "forge", name: "Forge", short: "F", y: 296, color: "#a78bfa", goal: 3 },
+    { id: "tide", name: "Tide", short: "T", y: 386, color: "#fbbf24", goal: 3 }
+  ];
+  const switches = [
+    { id: "north", name: "North", x: 250, a: 1, b: 0, divert: false },
+    { id: "basin", name: "Basin", x: 455, a: 1, b: 2, divert: false },
+    { id: "tide", name: "Tide", x: 660, a: 2, b: 3, divert: false }
+  ];
+  const cargoPlan = [0,2,1,3,2,0,1,3,3,1,0,2,1,0,3,2,0,1,2,3,1,2,0,3];
+  const cargoNames = ["Ore","Ice","Parts","Buoy","Grain","Cable","Fuel","Tools"];
+  const els = {
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    goal: document.getElementById("goalValue"),
+    miss: document.getElementById("missValue"),
+    brake: document.getElementById("brakeValue"),
+    time: document.getElementById("timeValue"),
+    goalPill: document.getElementById("goalPill"),
+    missPill: document.getElementById("missPill"),
+    riskPill: document.getElementById("riskPill"),
+    status: document.getElementById("statusLine"),
+    gate: document.getElementById("gateBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    full: document.getElementById("fullBtn"),
+    switchButtons: [...document.querySelectorAll("[data-switch]")]
+  };
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const norm = (value) => Math.round(value * 100) / 100;
+
+  function store() {
+    if (window.workshopStorage) return window.workshopStorage;
+    try { return window.localStorage; } catch (_) { return null; }
+  }
+  function readStore(key, fallback) {
+    const s = store();
+    if (!s) return fallback;
+    try {
+      const raw = s.getItem(key);
+      return raw === null ? fallback : raw;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    const s = store();
+    if (!s) return;
+    try { s.setItem(key, String(value)); } catch (_) {}
+  }
+  function readSound() {
+    const raw = String(readStore(SOUND_KEY, "1")).toLowerCase();
+    return !["0","false","off","muted"].includes(raw);
+  }
+
+  let audioContext = null;
+  let lastTs = 0;
+  let nextId = 1;
+  const state = {
+    mode: "playing",
+    score: 0,
+    best: Number(readStore(BEST_KEY, "0")) || 0,
+    timeMs: 0,
+    spawnIndex: 0,
+    spawnTimer: 450,
+    vehicles: [],
+    delivered: 0,
+    deliveredByLane: [0,0,0,0],
+    misses: 0,
+    brakeSaves: 0,
+    gateOpen: true,
+    selectedSwitch: 0,
+    collisionRisk: false,
+    runComplete: false,
+    gameOver: false,
+    sound: readSound(),
+    feedback: "Signal green. Prepare the first switch route.",
+    feedbackMs: 1200,
+    lastSound: "none",
+    userGesture: false,
+    particles: []
+  };
+
+  function markGesture() {
+    state.userGesture = true;
+    canvas.focus({ preventScroll: true });
+  }
+  function setFeedback(text, ms = 700) {
+    state.feedback = text;
+    state.feedbackMs = Math.max(state.feedbackMs, ms);
+  }
+  function ensureAudio() {
+    if (!state.sound || !state.userGesture) return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try {
+      if (!audioContext) audioContext = new AC();
+      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+      return audioContext;
+    } catch (_) {
+      audioContext = null;
+      return null;
+    }
+  }
+  function play(kind) {
+    state.lastSound = state.sound ? kind : "muted-" + kind;
+    const ac = ensureAudio();
+    if (!ac) return;
+    const freq = { switch: 440, gate: 260, deliver: 720, wrong: 120, brake: 180, done: 620, over: 90 }[kind] || 360;
+    try {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = kind === "wrong" || kind === "over" ? "sawtooth" : "triangle";
+      osc.frequency.setValueAtTime(freq, ac.currentTime);
+      if (kind === "deliver") osc.frequency.linearRampToValueAtTime(freq + 160, ac.currentTime + 0.13);
+      gain.gain.setValueAtTime(0.0001, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(kind === "over" ? 0.07 : 0.04, ac.currentTime + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18);
+      osc.connect(gain).connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + 0.2);
+    } catch (_) {}
+  }
+  function updateBest() {
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+  }
+  function goalsMet() {
+    return lanes.every((lane, i) => state.deliveredByLane[i] >= lane.goal);
+  }
+  function finish(won, message) {
+    if (state.gameOver || state.runComplete) return;
+    state.mode = won ? "run-complete" : "game-over";
+    state.runComplete = won;
+    state.gameOver = !won;
+    updateBest();
+    setFeedback(message, 1600);
+    play(won ? "done" : "over");
+  }
+  function makeCargo(targetLane) {
+    const lane = lanes[targetLane];
+    const id = nextId++;
+    return {
+      id,
+      name: cargoNames[(id * 3 + targetLane) % cargoNames.length],
+      targetLane,
+      target: lane.short,
+      lane: 1,
+      y: lanes[1].y,
+      x: START_X,
+      speed: 126 + (id % 4) * 8,
+      held: false,
+      passed: Object.create(null),
+      trace: [],
+      wrong: false
+    };
+  }
+  function spawnCargo() {
+    if (state.spawnIndex >= cargoPlan.length || state.vehicles.length >= 8 || !state.gateOpen) return false;
+    state.vehicles.push(makeCargo(cargoPlan[state.spawnIndex]));
+    state.spawnIndex += 1;
+    state.spawnTimer = 2300 + (state.spawnIndex % 5) * 310;
+    setFeedback("New skiff cleared into the harbor lanes.", 560);
+    return true;
+  }
+  function resetRun() {
+    nextId = 1;
+    switches.forEach((sw) => { sw.divert = false; });
+    Object.assign(state, {
+      mode: "playing",
+      score: 0,
+      timeMs: 0,
+      spawnIndex: 0,
+      spawnTimer: 450,
+      vehicles: [],
+      delivered: 0,
+      deliveredByLane: [0,0,0,0],
+      misses: 0,
+      brakeSaves: 0,
+      gateOpen: true,
+      selectedSwitch: 0,
+      collisionRisk: false,
+      runComplete: false,
+      gameOver: false,
+      feedback: "Signal green. Prepare the first switch route.",
+      feedbackMs: 1200,
+      particles: []
+    });
+    play("gate");
+    syncUi();
+    render();
+  }
+  function selectSwitch(index) {
+    state.selectedSwitch = (index + switches.length) % switches.length;
+    setFeedback(switches[state.selectedSwitch].name + " switch selected.", 340);
+    syncUi();
+    render();
+  }
+  function toggleSwitch(index = state.selectedSwitch) {
+    const sw = switches[(index + switches.length) % switches.length];
+    sw.divert = !sw.divert;
+    state.selectedSwitch = switches.indexOf(sw);
+    setFeedback(sw.name + " switch set to " + (sw.divert ? "divert." : "straight."), 580);
+    play("switch");
+    syncUi();
+    render();
+  }
+  function toggleGate() {
+    state.gateOpen = !state.gateOpen;
+    setFeedback(state.gateOpen ? "Signal green. Traffic released." : "Signal red. Staging traffic held.", 640);
+    play("gate");
+    syncUi();
+    render();
+  }
+  function toggleSound() {
+    state.sound = !state.sound;
+    writeStore(SOUND_KEY, state.sound ? "1" : "0");
+    play("switch");
+    syncUi();
+  }
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await canvas.requestFullscreen();
+    } catch (_) {}
+    syncUi();
+  }
+  function routeThroughSwitch(vehicle, sw) {
+    if (vehicle.passed[sw.id] || vehicle.x < sw.x) return;
+    vehicle.passed[sw.id] = true;
+    if (!sw.divert) return;
+    if (vehicle.lane === sw.a) {
+      vehicle.lane = sw.b;
+      vehicle.trace.push(sw.id);
+    } else if (vehicle.lane === sw.b) {
+      vehicle.lane = sw.a;
+      vehicle.trace.push(sw.id);
+    }
+  }
+  function shouldHold(vehicle) {
+    if (!state.gateOpen && vehicle.x < 118) return true;
+    let hold = false;
+    for (const other of state.vehicles) {
+      if (other === vehicle || other.lane !== vehicle.lane) continue;
+      const distance = other.x - vehicle.x;
+      if (distance > 0 && distance < MIN_GAP) {
+        hold = true;
+        break;
+      }
+    }
+    return hold;
+  }
+  function checkCollision() {
+    for (let i = 0; i < state.vehicles.length; i++) {
+      for (let j = i + 1; j < state.vehicles.length; j++) {
+        const a = state.vehicles[i];
+        const b = state.vehicles[j];
+        if (a.lane === b.lane && Math.abs(a.x - b.x) < COLLISION_GAP && Math.abs(a.y - b.y) < 16) {
+          state.collisionRisk = true;
+          finish(false, "Collision at lane " + lanes[a.lane].name + ".");
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  function deliver(vehicle) {
+    const correct = vehicle.lane === vehicle.targetLane;
+    if (correct) {
+      state.delivered += 1;
+      state.deliveredByLane[vehicle.targetLane] += 1;
+      const bonus = Math.max(0, 90 - Math.floor(state.timeMs / 1000));
+      const points = 110 + bonus + state.brakeSaves * 2;
+      state.score += points;
+      state.particles.push({ x: EXIT_X - 22, y: lanes[vehicle.lane].y - 24, text: "+" + points, life: 850, color: lanes[vehicle.lane].color });
+      setFeedback(vehicle.name + " delivered to " + lanes[vehicle.lane].name + " dock.", 760);
+      play("deliver");
+    } else {
+      state.misses += 1;
+      state.score = Math.max(0, state.score - 45);
+      state.particles.push({ x: EXIT_X - 22, y: lanes[vehicle.lane].y - 24, text: "WRONG", life: 950, color: "#fb7185" });
+      setFeedback(vehicle.name + " missed " + lanes[vehicle.targetLane].name + " dock.", 880);
+      play("wrong");
+      if (state.misses >= MISS_LIMIT) finish(false, "Too many wrong deliveries.");
+    }
+    updateBest();
+    if (goalsMet()) finish(true, "Run complete. All dock goals met.");
+  }
+  function update(dtMs) {
+    if (state.gameOver || state.runComplete) {
+      state.feedbackMs = Math.max(0, state.feedbackMs - dtMs);
+      state.particles.forEach((p) => { p.life -= dtMs; p.y -= dtMs * 0.026; });
+      state.particles = state.particles.filter((p) => p.life > 0);
+      return;
+    }
+    const dt = dtMs / 1000;
+    state.timeMs += dtMs;
+    state.feedbackMs = Math.max(0, state.feedbackMs - dtMs);
+    state.spawnTimer -= dtMs;
+    if (state.spawnTimer <= 0) {
+      if (!spawnCargo()) state.spawnTimer = state.gateOpen ? 420 : 220;
+    }
+    state.collisionRisk = false;
+    for (const vehicle of state.vehicles) {
+      const hold = shouldHold(vehicle);
+      if (hold && !vehicle.held) {
+        state.brakeSaves += 1;
+        setFeedback("Collision avoidance brakes caught a tight lane.", 560);
+        play("brake");
+      }
+      vehicle.held = hold;
+      if (!hold) vehicle.x += vehicle.speed * dt;
+      for (const sw of switches) routeThroughSwitch(vehicle, sw);
+      const targetY = lanes[vehicle.lane].y;
+      vehicle.y += (targetY - vehicle.y) * clamp(dtMs / 140, 0, 1);
+    }
+    if (checkCollision()) return;
+    const deliveredNow = state.vehicles.filter((vehicle) => vehicle.x >= EXIT_X);
+    state.vehicles = state.vehicles.filter((vehicle) => vehicle.x < EXIT_X);
+    deliveredNow.forEach(deliver);
+    state.particles.forEach((p) => { p.life -= dtMs; p.y -= dtMs * 0.026; });
+    state.particles = state.particles.filter((p) => p.life > 0);
+    if (state.timeMs >= RUN_MS && !goalsMet()) finish(false, "Harbor shift timed out.");
+    if (state.spawnIndex >= cargoPlan.length && state.vehicles.length === 0 && !goalsMet()) finish(false, "Cargo plan ended before dock goals.");
+  }
+  function stepMs(ms) {
+    const safeMs = Math.max(0, Number(ms) || 0);
+    const frames = Math.max(1, Math.round(safeMs / (1000 / 60)));
+    for (let i = 0; i < frames; i++) update(1000 / 60);
+    syncUi();
+    render();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.fill();
+    ctx.stroke();
+  }
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#061019");
+    g.addColorStop(1, "#0f1d2f");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(94,234,212,.07)";
+    ctx.lineWidth = 1;
+    for (let x = -120; x < W + 160; x += 48) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 180, H);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(34,211,238,.08)";
+    ctx.beginPath();
+    ctx.arc(820, 70, 125, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function drawLanes() {
+    ctx.save();
+    lanes.forEach((lane, i) => {
+      ctx.strokeStyle = "rgba(230,237,243,.18)";
+      ctx.lineWidth = 18;
+      ctx.beginPath();
+      ctx.moveTo(42, lane.y);
+      ctx.lineTo(910, lane.y);
+      ctx.stroke();
+      ctx.strokeStyle = lane.color;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([14, 16]);
+      ctx.beginPath();
+      ctx.moveTo(50, lane.y);
+      ctx.lineTo(900, lane.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(15,23,42,.92)";
+      ctx.strokeStyle = lane.color;
+      ctx.lineWidth = 2;
+      roundRect(20, lane.y - 24, 92, 48, 8);
+      ctx.fillStyle = lane.color;
+      ctx.font = "900 13px system-ui";
+      ctx.textAlign = "left";
+      ctx.fillText(lane.name, 32, lane.y - 3);
+      ctx.fillStyle = "#e6edf3";
+      ctx.font = "800 11px system-ui";
+      ctx.fillText(state.deliveredByLane[i] + "/" + lane.goal + " goal", 32, lane.y + 15);
+      ctx.fillStyle = "rgba(15,23,42,.95)";
+      ctx.strokeStyle = lane.color;
+      roundRect(858, lane.y - 28, 76, 56, 8);
+      ctx.fillStyle = lane.color;
+      ctx.font = "900 21px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(lane.short, 896, lane.y + 8);
+    });
+    ctx.restore();
+  }
+  function drawSwitches() {
+    ctx.save();
+    switches.forEach((sw, index) => {
+      const yA = lanes[sw.a].y;
+      const yB = lanes[sw.b].y;
+      ctx.strokeStyle = sw.divert ? "#fbbf24" : "rgba(94,234,212,.26)";
+      ctx.lineWidth = sw.divert ? 8 : 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(sw.x - 38, yA);
+      ctx.lineTo(sw.x + 38, yB);
+      ctx.stroke();
+      ctx.fillStyle = index === state.selectedSwitch ? "#fbbf24" : "#5eead4";
+      ctx.beginPath();
+      ctx.arc(sw.x, (yA + yB) / 2, index === state.selectedSwitch ? 18 : 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#061019";
+      ctx.font = "900 14px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(String(index + 1), sw.x, (yA + yB) / 2 + 5);
+      ctx.fillStyle = "#dff7fb";
+      ctx.font = "800 11px system-ui";
+      ctx.fillText(sw.divert ? "DIVERT" : "STRAIGHT", sw.x, yB + 36);
+    });
+    ctx.restore();
+  }
+  function drawSignal() {
+    ctx.save();
+    ctx.fillStyle = "rgba(15,23,42,.94)";
+    ctx.strokeStyle = state.gateOpen ? "#5eead4" : "#fb7185";
+    ctx.lineWidth = 3;
+    roundRect(126, 418, 124, 54, 8);
+    ctx.fillStyle = state.gateOpen ? "#5eead4" : "#fb7185";
+    ctx.beginPath();
+    ctx.arc(148, 445, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "900 13px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText(state.gateOpen ? "SIGNAL GREEN" : "SIGNAL RED", 168, 449);
+    ctx.restore();
+  }
+  function drawVehicle(vehicle) {
+    const lane = lanes[vehicle.targetLane];
+    ctx.save();
+    ctx.translate(vehicle.x, vehicle.y);
+    ctx.shadowColor = vehicle.held ? "#fbbf24" : lane.color;
+    ctx.shadowBlur = vehicle.held ? 18 : 10;
+    ctx.fillStyle = vehicle.held ? "#3d2d12" : "#17243a";
+    ctx.strokeStyle = lane.color;
+    ctx.lineWidth = 3;
+    roundRect(-23, -15, 46, 30, 8);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = lane.color;
+    ctx.fillRect(-15, -7, 30, 14);
+    ctx.fillStyle = "#061019";
+    ctx.font = "900 11px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(vehicle.target, 0, 4);
+    if (vehicle.held) {
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "900 10px system-ui";
+      ctx.fillText("HOLD", 0, -22);
+    }
+    ctx.restore();
+  }
+  function drawQueue() {
+    ctx.save();
+    ctx.fillStyle = "rgba(15,23,42,.88)";
+    ctx.strokeStyle = "rgba(94,234,212,.24)";
+    ctx.lineWidth = 2;
+    roundRect(308, 418, 330, 54, 8);
+    ctx.fillStyle = "#5eead4";
+    ctx.font = "900 12px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText("NEXT CARGO", 324, 439);
+    const next = cargoPlan.slice(state.spawnIndex, state.spawnIndex + 5);
+    next.forEach((target, i) => {
+      ctx.fillStyle = lanes[target].color;
+      ctx.beginPath();
+      ctx.arc(428 + i * 38, 446, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#061019";
+      ctx.font = "900 10px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(lanes[target].short, 428 + i * 38, 450);
+    });
+    ctx.restore();
+  }
+  function drawParticles() {
+    ctx.save();
+    state.particles.forEach((p) => {
+      ctx.globalAlpha = clamp(p.life / 850, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.font = "900 22px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(p.text, p.x, p.y);
+    });
+    ctx.restore();
+  }
+  function drawOverlay() {
+    if (!state.gameOver && !state.runComplete) return;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,7,18,.74)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = state.runComplete ? "#5eead4" : "#fb7185";
+    ctx.font = "900 40px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(state.runComplete ? "RUN COMPLETE" : "GAME OVER", W / 2, H / 2 - 20);
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "800 16px system-ui";
+    ctx.fillText("Score " + state.score + " - Deliveries " + state.delivered + "/" + TOTAL_GOAL + " - Best " + state.best, W / 2, H / 2 + 20);
+    ctx.restore();
+  }
+  function render() {
+    drawBackground();
+    drawLanes();
+    drawSwitches();
+    drawSignal();
+    drawQueue();
+    state.vehicles.forEach(drawVehicle);
+    drawParticles();
+    drawOverlay();
+  }
+  function syncUi() {
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.best);
+    els.goal.textContent = state.delivered + "/" + TOTAL_GOAL;
+    els.miss.textContent = state.misses + "/" + MISS_LIMIT;
+    els.brake.textContent = String(state.brakeSaves);
+    els.time.textContent = Math.max(0, (RUN_MS - state.timeMs) / 1000).toFixed(1);
+    els.status.textContent = state.feedback;
+    els.goalPill.dataset.hot = String(goalsMet());
+    els.missPill.dataset.warn = String(state.misses > 0);
+    els.riskPill.dataset.hot = String(state.brakeSaves > 0);
+    els.riskPill.dataset.warn = String(state.collisionRisk);
+    els.gate.textContent = state.gateOpen ? "Signal Green" : "Signal Red";
+    els.gate.setAttribute("aria-pressed", String(state.gateOpen));
+    els.gate.dataset.warn = String(!state.gateOpen);
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.sound));
+    els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+    els.switchButtons.forEach((button, index) => {
+      const sw = switches[index];
+      button.textContent = (index + 1) + " " + sw.name + " " + (sw.divert ? "Divert" : "Straight");
+      button.setAttribute("aria-current", String(index === state.selectedSwitch));
+      button.setAttribute("aria-pressed", String(sw.divert));
+      button.classList.toggle("primary", index === state.selectedSwitch);
+    });
+  }
+  function snapshot() {
+    return JSON.stringify({
+      mode: state.mode,
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down",
+      score: state.score,
+      best: state.best,
+      time: norm(state.timeMs / 1000),
+      timeRemaining: norm(Math.max(0, RUN_MS - state.timeMs) / 1000),
+      delivered: state.delivered,
+      deliveryGoal: TOTAL_GOAL,
+      dockGoals: lanes.map((lane, i) => ({ id: lane.id, name: lane.name, delivered: state.deliveredByLane[i], goal: lane.goal })),
+      misses: state.misses,
+      missLimit: MISS_LIMIT,
+      brakeSaves: state.brakeSaves,
+      collisionRisk: state.collisionRisk,
+      gateOpen: state.gateOpen,
+      selectedSwitch: switches[state.selectedSwitch].id,
+      switches: switches.map((sw) => ({ id: sw.id, name: sw.name, pair: [lanes[sw.a].id, lanes[sw.b].id], mode: sw.divert ? "divert" : "straight", x: sw.x })),
+      vehicles: state.vehicles.map((vehicle) => ({ id: vehicle.id, name: vehicle.name, x: norm(vehicle.x), y: norm(vehicle.y), lane: lanes[vehicle.lane].id, targetLane: lanes[vehicle.targetLane].id, held: vehicle.held, route: vehicle.trace })),
+      upcoming: cargoPlan.slice(state.spawnIndex, state.spawnIndex + 5).map((target) => lanes[target].id),
+      sound: state.sound,
+      fullscreen: Boolean(document.fullscreenElement),
+      runComplete: state.runComplete,
+      "run-complete": state.runComplete,
+      gameOver: state.gameOver,
+      "game-over": state.gameOver,
+      feedbackText: state.feedback,
+      feedback: { text: state.feedback, active: state.feedbackMs > 0, lastSound: state.lastSound },
+      lastSound: state.lastSound
+    });
+  }
+  function canvasPoint(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: (ev.clientX - rect.left) * W / rect.width, y: (ev.clientY - rect.top) * H / rect.height };
+  }
+  function switchAtPoint(point) {
+    let best = -1;
+    let bestDist = 9999;
+    switches.forEach((sw, i) => {
+      const cy = (lanes[sw.a].y + lanes[sw.b].y) / 2;
+      const d = Math.hypot(point.x - sw.x, point.y - cy);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    return bestDist < 58 ? best : -1;
+  }
+  function interactiveTarget(target) {
+    return target instanceof HTMLElement && (
+      target.isContentEditable ||
+      target.matches("button,input,select,textarea,[role='button'],[role='textbox']")
+    );
+  }
+
+  canvas.addEventListener("pointerdown", (ev) => {
+    markGesture();
+    const hit = switchAtPoint(canvasPoint(ev));
+    if (hit >= 0) toggleSwitch(hit);
+    else toggleGate();
+  });
+  els.switchButtons.forEach((button) => {
+    button.addEventListener("click", () => { markGesture(); toggleSwitch(Number(button.dataset.switch)); });
+  });
+  els.gate.addEventListener("click", () => { markGesture(); toggleGate(); });
+  els.restart.addEventListener("click", () => { markGesture(); resetRun(); });
+  els.sound.addEventListener("click", () => { markGesture(); toggleSound(); });
+  els.full.addEventListener("click", () => { markGesture(); toggleFullscreen(); });
+  document.addEventListener("fullscreenchange", () => { syncUi(); render(); });
+  window.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey || interactiveTarget(ev.target)) return;
+    const key = ev.key.toLowerCase();
+    const handled = ["1","2","3","arrowleft","arrowright","arrowup","arrowdown","enter"," ","r","m","f"].includes(key);
+    if (!handled) return;
+    ev.preventDefault();
+    markGesture();
+    if (key === "1" || key === "2" || key === "3") toggleSwitch(Number(key) - 1);
+    else if (key === "arrowleft" || key === "arrowup") selectSwitch(state.selectedSwitch - 1);
+    else if (key === "arrowright" || key === "arrowdown") selectSwitch(state.selectedSwitch + 1);
+    else if (key === "enter") toggleSwitch();
+    else if (key === " ") toggleGate();
+    else if (key === "r") resetRun();
+    else if (key === "m") toggleSound();
+    else if (key === "f") toggleFullscreen();
+  });
+
+  window.render_game_to_text = snapshot;
+  window.advanceTime = (ms = 0) => {
+    stepMs(ms);
+    return snapshot();
+  };
+
+  function loop(ts) {
+    if (!lastTs) lastTs = ts;
+    stepMs(Math.min(50, ts - lastTs));
+    lastTs = ts;
+    requestAnimationFrame(loop);
+  }
+  syncUi();
+  render();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

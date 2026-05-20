@@ -1211,6 +1211,108 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "orbit-salvage": {
+      name: "launch the rescue skiff past the first gravity well",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(120);
+          const key = (type, value, code = value) => {
+            window.dispatchEvent(new KeyboardEvent(type, { key: value, code, bubbles: true }));
+          };
+          key("keydown", "ArrowUp", "ArrowUp");
+          window.advanceTime(80);
+          key("keyup", "ArrowUp", "ArrowUp");
+          key("keydown", " ", "Space");
+          key("keyup", " ", "Space");
+          window.advanceTime(1100);
+        });
+      },
+    },
+    "harbor-switchboard": {
+      name: "toggle a harbor route and release traffic",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          document.querySelector('button[data-switch="0"]')?.click();
+          window.advanceTime(120);
+          document.querySelector("#gateBtn")?.click();
+          window.advanceTime(220);
+          document.querySelector("#gateBtn")?.click();
+          window.advanceTime(1700);
+        });
+      },
+    },
+    "relay-choir": {
+      name: "edit the sequencer and capture the pulse scan",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+            window.advanceTime(90);
+          };
+          press("2", "Digit2");
+          press(" ", "Space");
+          press("ArrowRight", "ArrowRight");
+          press("3", "Digit3");
+          press(" ", "Space");
+          window.advanceTime(360);
+        });
+      },
+    },
+    "circuit-draft": {
+      name: "install the first drafted engine card",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          document.querySelector('[data-draft="0"]')?.dispatchEvent(new PointerEvent("pointerdown", {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 42,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: 1
+          }));
+          window.advanceTime(260);
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+            window.advanceTime(90);
+          };
+          press("2", "Digit2");
+          press("q", "KeyQ");
+          press("Enter", "Enter");
+          window.advanceTime(220);
+        });
+      },
+    },
+    "switchback-rally": {
+      name: "commit a corner plan and capture replay",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+            window.advanceTime(90);
+          };
+          for (let i = 0; i < 5; i += 1) {
+            press("Enter", "Enter");
+          }
+          window.advanceTime(1350);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

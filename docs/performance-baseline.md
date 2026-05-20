@@ -14,12 +14,31 @@ CI budgets:
 
 | Page group | Transfer | Requests |
 |------------|----------|----------|
-| Catalog | 200 KB | 22 |
-| Lexica | 300 KB | 8 |
-| Idle Tycoon | 225 KB | 8 |
-| Arcade Jump | 160 KB | 4 |
-| Brick Breaker | 130 KB | 4 |
-| Other manifest games | 100 KB | 4 |
+| Catalog | 200 KB | 18 |
+| Lexica | 160 KB | 4 |
+| Idle Tycoon | 210 KB | 4 |
+| Arcade Jump | 130 KB | 4 |
+| Brick Breaker | 120 KB | 4 |
+| Other manifest games | 100 KB | 3 |
+
+## Five mechanics + contract gates (pass 77)
+
+Captured 2026-05-20 against `http://127.0.0.1:4317` after adding Orbit Salvage, Harbor Switchboard, Relay Choir, Circuit Draft, and Switchback Rally; adding stricter cover-asset and storage/runtime contract validators; tightening per-game meta drift checks; and preserving the current CI budget table. The strict audit covered the catalog plus 49 manifest games, 50 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 140 ms | 114 ms | 🟢 115 ms | 🟢 184.0 KB | 16 | 0 |
+| Orbit Salvage | 🟢 40 ms | 24 ms | 🟢 24 ms | 🟢 30.3 KB | 2 | 0 |
+| Harbor Switchboard | 🟢 44 ms | 15 ms | 🟢 15 ms | 🟢 33.5 KB | 2 | 0 |
+| Relay Choir | 🟢 48 ms | 16 ms | 🟢 16 ms | 🟢 38.8 KB | 2 | 0 |
+| Circuit Draft | 🟢 68 ms | 9 ms | 🟢 10 ms | 🟢 31.8 KB | 2 | 0 |
+| Switchback Rally | 🟢 44 ms | 14 ms | 🟢 14 ms | 🟢 36.0 KB | 2 | 0 |
+| Lexica | 🟢 52 ms | 17 ms | 🟢 18 ms | 🟢 131.9 KB | 4 | 0 |
+| Idle Tycoon | 🟢 488 ms | 14 ms | 🟢 16 ms | 🟢 190.1 KB | 2 | 0 |
+| Arcade Jump | 🟢 96 ms | 61 ms | 🟢 61 ms | 🟢 117.8 KB | 2 | 0 |
+| Brick Breaker | 🟢 116 ms | 84 ms | 🟢 84 ms | 🟢 111.9 KB | 2 | 0 |
+
+All five new games are well inside the current default 100 KB / 3 request publish budget. The catalog remains inside the tightened 200 KB / 18 request budget at 184.0 KB / 16 requests, despite growing to 49 games, because the lazy cover pipeline keeps first-paint cover requests bounded. Lexica now audits at 131.9 KB transfer with `websites/words5.js` as its largest resource at 76.7 KB. No console/page errors appeared across audited URLs, every page passed strict meta/alt checks, and every named exception remains below its CI budget.
 
 ## Four mechanics + Lexica compaction (pass 76)
 

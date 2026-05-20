@@ -57,8 +57,14 @@ jobs:
       - name: Run catalog perf contract check
         run: npm run test:catalog-perf
 
+      - name: Run cover asset contract check
+        run: npm run test:cover-assets
+
       - name: Run per-game diagnostic-hook contract check
         run: npm run test:game-contract
+
+      - name: Run storage runtime contract check
+        run: npm run test:storage-contract
 
       - name: Run CSP contract check
         run: npm run test:csp
@@ -130,6 +136,15 @@ jobs:
 
       - name: Run game smoke tests
         run: npm run test:games
+
+      - name: Upload game smoke summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: game-smoke-summary
+          path: test-results/smoke-games/**/summary.json
+          if-no-files-found: ignore
+          retention-days: 14
 
   performance-audit:
     name: Performance audit

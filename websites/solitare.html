@@ -1282,5 +1282,69 @@ deal();
   // ✂ REMOVED: reading unlimited from DOM (always true now)
 })();
 </script>
+<script>
+(()=>{
+  const fullShortcutLabel = "F";
+  const editable = (el) => el && (el.closest?.('input,textarea,select,button,[contenteditable="true"]') || el.isContentEditable);
+  const active = () => Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+  const root = () => document.querySelector('.stage') || document.documentElement;
+  let created = false;
+  let button = document.getElementById('fullBtn') || document.querySelector('[data-fullscreen-control]');
+  if (!button) {
+    button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn wa-game-fullscreen';
+    button.dataset.fullscreenControl = 'true';
+    const host = document.querySelector('.toolbar,.controls,.actions,.topbar,header,main') || document.body;
+    host.appendChild(button);
+    created = true;
+  }
+  button.setAttribute('aria-label', 'Toggle game fullscreen');
+  function sync(){
+    const isActive = active();
+    button.textContent = isActive ? 'Exit Fullscreen' : 'Fullscreen';
+    button.title = isActive ? 'Exit fullscreen' : 'Enter fullscreen (' + fullShortcutLabel + ')';
+    button.setAttribute('aria-pressed', String(isActive));
+  }
+  function toggle(){
+    if (active()) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    } else {
+      const target = root();
+      (target.requestFullscreen || target.webkitRequestFullscreen)?.call(target);
+    }
+    setTimeout(sync, 0);
+  }
+  button.addEventListener('keydown', (event) => {
+    if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
+  });
+  if (created) button.addEventListener('click', toggle);
+  document.addEventListener('fullscreenchange', sync);
+  document.addEventListener('webkitfullscreenchange', sync);
+  window.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || editable(event.target)) return;
+    const wants = event.key && event.key.toLowerCase() === 'f' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey;
+    if (!wants) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    toggle();
+  }, true);
+  const previousRenderGameToText = window.render_game_to_text;
+  if (typeof previousRenderGameToText === 'function') {
+    window.render_game_to_text = function render_game_to_text_with_fullscreen(){
+      const raw = previousRenderGameToText();
+      try {
+        const data = JSON.parse(String(raw));
+        data.fullscreenActive = active();
+        data.fullscreenShortcut = fullShortcutLabel;
+        return JSON.stringify(data);
+      } catch {
+        return raw;
+      }
+    };
+  }
+  sync();
+})();
+</script>
 </body>
 </html>

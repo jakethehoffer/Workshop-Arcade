@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Switchback Rally - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Plan gear, brake, and apex calls for each corner, then watch a deterministic ghost rally replay." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/switchback-rally.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Switchback Rally — Workshop Arcade" />
+<meta property="og:description" content="Plan gear, brake, and apex calls for each corner, then watch a deterministic ghost rally replay." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/switchback-rally.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/switchback-rally.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Switchback Rally — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Switchback Rally — Workshop Arcade" />
+<meta name="twitter:description" content="Plan gear, brake, and apex calls for each corner, then watch a deterministic ghost rally replay." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/switchback-rally.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Switchback Rally",
+  "description": "Plan gear, brake, and apex calls for each corner, then watch a deterministic ghost rally replay.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/switchback-rally.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/switchback-rally.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Racing",
+    "Strategy",
+    "Physics"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Plan gear, brake, and apex calls for each corner, then watch a deterministic ghost rally replay." />
+<meta name="theme-color" content="#101312" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:#f4f7f3;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}body{min-height:100vh;display:flex;justify-content:center;padding:14px 10px 18px;overflow-x:hidden;background:radial-gradient(760px 420px at 8% -8%,rgba(45,212,191,.16),transparent 58%),radial-gradient(680px 460px at 94% 2%,rgba(251,191,36,.12),transparent 60%),linear-gradient(180deg,#161713,#0a0d0c 86%)}.shell{width:min(980px,100%);display:flex;flex-direction:column;gap:9px}.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{line-height:1;user-select:none}.eyebrow{display:block;color:#7dd3fc;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:3px;color:#fff7ed;font-size:24px;font-weight:950;text-transform:uppercase;text-shadow:0 0 18px rgba(251,191,36,.24)}.hint{max-width:650px;text-align:right;color:#b9c7be;font-size:12px;line-height:1.35}.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}.pill{min-width:0;padding:7px 8px;border:1px solid rgba(125,211,252,.26);border-radius:8px;background:linear-gradient(180deg,rgba(31,35,31,.95),rgba(13,17,16,.97));box-shadow:0 8px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05);text-align:center;line-height:1.05}.pill[data-hot=true]{border-color:rgba(251,191,36,.74);box-shadow:0 0 18px rgba(251,191,36,.15),0 8px 18px rgba(0,0,0,.28)}.pill[data-bad=true]{border-color:rgba(248,113,113,.72);box-shadow:0 0 18px rgba(248,113,113,.14),0 8px 18px rgba(0,0,0,.28)}.label{display:block;color:#99f6e4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fafc;font-size:16px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}.stage{border:1px solid rgba(125,211,252,.3);border-radius:9px;overflow:hidden;background:#11140f;box-shadow:0 18px 42px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:60vh;background:#11140f;touch-action:none}canvas:focus-visible{outline:3px solid rgba(251,191,36,.82);outline-offset:-4px}.status{min-height:20px;text-align:center;color:#fde68a;font-size:12px;font-weight:900;text-transform:uppercase}.panel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.control{border:1px solid rgba(125,211,252,.24);border-radius:8px;background:linear-gradient(180deg,rgba(32,38,35,.96),rgba(12,16,15,.98));padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center}.control b{font-size:10px;text-transform:uppercase;color:#99f6e4}.steppers{display:flex;gap:5px;width:100%}button{border:1px solid rgba(125,211,252,.25);border-radius:8px;background:linear-gradient(180deg,rgba(40,45,40,.97),rgba(17,22,20,.98));color:#f8fafc;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;padding:8px 10px;min-height:38px;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}button:hover{border-color:rgba(251,191,36,.66)}button.primary{border-color:transparent;background:linear-gradient(180deg,#facc15,#fb923c);color:#25160a}button.toggle[aria-pressed=true]{background:linear-gradient(180deg,#5eead4,#38bdf8);color:#06242a;border-color:transparent}.steppers button{flex:1 1 0}.wide{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.wide button{min-width:116px}.readout{font-size:18px;font-weight:950;color:#fff7ed}.mini{font-size:11px;color:#b9c7be;text-align:center;line-height:1.25}@media(max-width:720px){body{padding:10px 8px 16px}.title{font-size:20px}.hint{text-align:left;font-size:11px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.value{font-size:15px}.panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.control{padding:7px}canvas{max-height:48vh}.wide button{flex:1 1 106px;min-width:104px}}@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{grid-template-columns:1fr}.control:last-child{order:-1}.top{gap:6px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="shell" aria-label="Switchback Rally game">
+  <div class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Switchback Rally</span></div>
+    <div class="hint">Plan gear, brake, and apex for each corner. Enter commits, Space replays or advances, arrows tune calls, 1-5 set gear, R restarts, M sound, F fullscreen.</div>
+  </div>
+  <div class="hud" aria-label="Rally status">
+    <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/3</span></div>
+    <div class="pill"><span class="label">Corner</span><span class="value" id="cornerValue">1/5</span></div>
+    <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0.00</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">--</span></div>
+    <div class="pill" id="scorePill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill" id="damagePill"><span class="label">Damage</span><span class="value" id="damageValue">0</span></div>
+  </div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Switchback Rally canvas. Plan rally commands and watch the ghost replay."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Call the first corner.</div>
+  <section class="panel" aria-label="Command planner">
+    <div class="control"><b>Gear</b><div class="steppers"><button type="button" id="gearDown" aria-label="Lower gear">-</button><span class="readout" id="gearRead">3</span><button type="button" id="gearUp" aria-label="Raise gear">+</button></div><span class="mini">Keys 1-5 or Up/Down</span></div>
+    <div class="control"><b>Brake</b><div class="steppers"><button type="button" id="brakeDown" aria-label="Less brake">-</button><span class="readout" id="brakeRead">1</span><button type="button" id="brakeUp" aria-label="More brake">+</button></div><span class="mini">0 light, 3 maximum</span></div>
+    <div class="control"><b>Apex</b><div class="steppers"><button type="button" id="apexPrev" aria-label="Earlier apex">-</button><span class="readout" id="apexRead">Mid</span><button type="button" id="apexNext" aria-label="Later apex">+</button></div><span class="mini">Left/Right cycles</span></div>
+    <div class="control"><b>Mode</b><button class="primary" type="button" id="mainBtn">Commit</button><span class="mini" id="cornerHint">Medium right, late exit.</span></div>
+  </section>
+  <div class="wide" aria-label="Auxiliary controls">
+    <button type="button" id="restartBtn">Restart</button>
+    <button class="toggle" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button type="button" id="fullBtn">Fullscreen</button>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height, TAU = Math.PI * 2;
+  const BEST_KEY = "switchback-rally.best-time.v1", SOUND_KEY = "switchback-rally.sound.v1";
+  const APEX = ["early", "mid", "late"];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const fmt = (ms) => ms > 0 ? (ms / 1000).toFixed(2) : "0.00";
+  const norm = (v) => Math.round(v * 100) / 100;
+  const stages = [
+    { name: "Pine Cut", color: "#22c55e", road: [[96,424],[246,356],[146,288],[338,232],[252,174],[548,130],[438,86],[742,118]], corners: [
+      { call: "R3 camber", gear: 4, brake: 1, apex: "late", len: 780, sev: 2, note: "Fast right; late apex keeps speed." },
+      { call: "L2 narrows", gear: 3, brake: 2, apex: "mid", len: 640, sev: 3, note: "Narrow left; brake before turn-in." },
+      { call: "R4 crest", gear: 4, brake: 1, apex: "early", len: 720, sev: 2, note: "Crest rewards early commitment." },
+      { call: "L1 hairpin", gear: 2, brake: 3, apex: "late", len: 590, sev: 5, note: "Hairpin needs heavy brake and late exit." },
+      { call: "R5 flat", gear: 5, brake: 0, apex: "mid", len: 860, sev: 1, note: "Flat right; braking costs time." }
+    ]},
+    { name: "Quarry Loop", color: "#f59e0b", road: [[118,410],[384,372],[288,296],[516,264],[386,206],[640,166],[512,112],[774,86]], corners: [
+      { call: "L3 gravel", gear: 3, brake: 1, apex: "mid", len: 700, sev: 3, note: "Loose gravel wants balanced calls." },
+      { call: "R2 wall", gear: 3, brake: 2, apex: "late", len: 620, sev: 4, note: "Wall outside; late apex avoids damage." },
+      { call: "L4 jump", gear: 4, brake: 0, apex: "early", len: 810, sev: 2, note: "Jump unloads the car; do not overbrake." },
+      { call: "R1 switchback", gear: 2, brake: 3, apex: "mid", len: 560, sev: 5, note: "Tight switchback; stabilize mid-corner." },
+      { call: "L5 sprint", gear: 5, brake: 0, apex: "late", len: 900, sev: 1, note: "Open sprint; carry exit speed." }
+    ]},
+    { name: "Storm Pass", color: "#38bdf8", road: [[92,420],[238,338],[410,380],[330,288],[586,250],[450,174],[666,142],[788,70]], corners: [
+      { call: "R2 wet", gear: 3, brake: 2, apex: "early", len: 650, sev: 4, note: "Wet right; get rotation early." },
+      { call: "L3 bridge", gear: 3, brake: 1, apex: "late", len: 690, sev: 3, note: "Bridge exit matters more than entry." },
+      { call: "R5 kink", gear: 5, brake: 0, apex: "mid", len: 880, sev: 1, note: "Small kink; keep it pinned." },
+      { call: "L2 rocks", gear: 2, brake: 2, apex: "late", len: 610, sev: 4, note: "Rocks outside; protect the exit." },
+      { call: "R1 finish", gear: 2, brake: 3, apex: "early", len: 580, sev: 5, note: "Final hairpin; early nose, slow hands." }
+    ]}
+  ];
+  const els = {
+    stage: document.getElementById("stageValue"), corner: document.getElementById("cornerValue"), time: document.getElementById("timeValue"),
+    best: document.getElementById("bestValue"), score: document.getElementById("scoreValue"), damage: document.getElementById("damageValue"),
+    scorePill: document.getElementById("scorePill"), damagePill: document.getElementById("damagePill"), status: document.getElementById("statusLine"),
+    gear: document.getElementById("gearRead"), brake: document.getElementById("brakeRead"), apex: document.getElementById("apexRead"),
+    hint: document.getElementById("cornerHint"), main: document.getElementById("mainBtn"), restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"), full: document.getElementById("fullBtn")
+  };
+  function store() { try { return window.localStorage; } catch (_) { return window.workshopStorage || null; } }
+  const safeStore = {
+    get(key, fallback) {
+      const s = store(); if (!s) return fallback;
+      try { const raw = s.getItem(key); return raw == null ? fallback : JSON.parse(raw); } catch (_) { return fallback; }
+    },
+    set(key, value) {
+      const s = store(); if (!s) return;
+      try { s.setItem(key, JSON.stringify(value)); } catch (_) {}
+    }
+  };
+  function loadSound() {
+    const raw = safeStore.get(SOUND_KEY, true);
+    if (typeof raw === "boolean") return raw;
+    return !["0", "false", "off", "muted"].includes(String(raw).toLowerCase());
+  }
+  let audioCtx = null, lastFrame = 0;
+  const state = {
+    mode: "planning", stageIndex: 0, cornerIndex: 0, plan: [], replay: [], replayMs: 0, stageMs: 0, totalMs: 0,
+    score: 0, damage: 0, crashes: 0, slowdowns: 0, bestTime: Number(safeStore.get(BEST_KEY, 0)) || 0,
+    command: { gear: 3, brake: 1, apex: "mid" }, feedback: "Call the first corner.", feedbackKind: "info", feedbackTtl: 0,
+    car: { x: 96, y: 424, angle: 0, speed: 0 }, ghost: [], stageResults: [], runComplete: false, gameOver: false,
+    sound: loadSound(), userGesture: false, lastSound: "none", fullscreen: false
+  };
+  function stage() { return stages[state.stageIndex]; }
+  function corner() { return stage().corners[state.cornerIndex]; }
+  function setFeedback(text, kind = "info", ttl = 1300) {
+    state.feedback = text; state.feedbackKind = kind; state.feedbackTtl = ttl;
+  }
+  function markGesture() { state.userGesture = true; canvas.focus({ preventScroll: true }); }
+  function tone(name, freq, dur = .08, type = "triangle") {
+    state.lastSound = state.sound ? name : "muted-" + name;
+    if (!state.sound || !state.userGesture) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try { if (!audioCtx) audioCtx = new AC(); } catch (_) { audioCtx = null; }
+    if (!audioCtx) return;
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+    const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(.045, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + dur);
+    osc.connect(gain).connect(audioCtx.destination); osc.start(now); osc.stop(now + dur + .02);
+  }
+  function defaultCommand(c) {
+    return { gear: clamp(c.gear + (c.sev > 3 ? 1 : 0), 1, 5), brake: clamp(c.brake - 1, 0, 3), apex: "mid" };
+  }
+  function applyCurrentDefaults() {
+    const c = corner();
+    state.command = defaultCommand(c);
+  }
+  function adjust(part, delta) {
+    if (state.mode !== "planning") return;
+    markGesture();
+    if (part === "gear") state.command.gear = clamp(state.command.gear + delta, 1, 5);
+    if (part === "brake") state.command.brake = clamp(state.command.brake + delta, 0, 3);
+    if (part === "apex") {
+      const i = APEX.indexOf(state.command.apex);
+      state.command.apex = APEX[(i + delta + APEX.length) % APEX.length];
+    }
+    tone("tick", 340 + state.command.gear * 30, .04);
+    sync(); draw();
+  }
+  function grade(c, cmd) {
+    const apexErr = Math.abs(APEX.indexOf(cmd.apex) - APEX.indexOf(c.apex));
+    const gearErr = Math.abs(cmd.gear - c.gear);
+    const underBrake = Math.max(0, c.brake - cmd.brake);
+    const overBrake = Math.max(0, cmd.brake - c.brake);
+    const overSpeed = Math.max(0, cmd.gear - c.gear) + underBrake * 1.15 + (apexErr ? .55 * apexErr : 0);
+    const risk = c.sev * .24 + overSpeed + Math.max(0, gearErr - 1) * .28;
+    let feedback = "clean", kind = "good", penalty = 0, damage = 0, speed = 88 + cmd.gear * 16 - cmd.brake * 9 - c.sev * 4;
+    speed = clamp(speed, 42, 152);
+    if (overBrake || cmd.gear < c.gear) {
+      penalty += (overBrake * 650) + Math.max(0, c.gear - cmd.gear) * 520;
+      feedback = "slowdown"; kind = "warn";
+      speed -= overBrake * 5;
+    }
+    if (apexErr) { penalty += apexErr * 720; feedback = "wide"; kind = "warn"; }
+    if (risk >= 3.15 || (c.sev >= 5 && underBrake >= 2) || (cmd.gear - c.gear >= 2 && cmd.brake < c.brake)) {
+      feedback = "crash"; kind = "bad"; penalty += 5200 + c.sev * 700; damage = 1 + Math.round(risk);
+      speed = Math.max(34, speed - 28);
+    }
+    const baseMs = Math.round(c.len / speed * 1000);
+    const timeMs = baseMs + penalty;
+    const score = Math.max(30, Math.round(1120 - timeMs * .055 - damage * 34 - apexErr * 20));
+    return { command: { ...cmd }, ideal: { gear: c.gear, brake: c.brake, apex: c.apex }, timeMs, baseMs, penalty, damage, risk: norm(risk), score, feedback, kind, corner: c.call };
+  }
+  function buildReplay() {
+    let t = 0;
+    state.replay = state.plan.map((cmd, i) => {
+      const result = grade(stage().corners[i], cmd);
+      const from = stage().road[i], to = stage().road[i + 1];
+      const segment = { ...result, index: i, len: stage().corners[i].len, startMs: t, endMs: t + result.timeMs, from, to };
+      t += result.timeMs;
+      return segment;
+    });
+    state.stageMs = t;
+    state.replayMs = 0;
+    state.ghost = [];
+    const p = stage().road[0];
+    state.car.x = p[0]; state.car.y = p[1]; state.car.angle = 0; state.car.speed = 0;
+  }
+  function commit() {
+    markGesture();
+    if (state.mode === "replay") return;
+    if (state.mode === "stage-complete") { nextStage(); return; }
+    if (state.mode === "run-complete") { restart(); return; }
+    state.plan[state.cornerIndex] = { ...state.command };
+    tone("commit", 520, .07);
+    if (state.cornerIndex < stage().corners.length - 1) {
+      state.cornerIndex += 1; applyCurrentDefaults();
+      setFeedback("Next corner: " + corner().call + ".", "info", 900);
+    } else {
+      buildReplay(); state.mode = "replay"; setFeedback("Ghost launched. Watch the stage replay.", "info", 1400); tone("start", 660, .09);
+    }
+    sync(); draw();
+  }
+  function activeReplaySegment() {
+    return state.replay.find((s) => state.replayMs <= s.endMs) || state.replay[state.replay.length - 1] || null;
+  }
+  function placeReplayCar(seg) {
+    if (!seg) return;
+    const local = clamp((state.replayMs - seg.startMs) / Math.max(1, seg.endMs - seg.startMs), 0, 1);
+    const eased = local < .5 ? 2 * local * local : 1 - Math.pow(-2 * local + 2, 2) / 2;
+    const bend = (seg.index % 2 ? -1 : 1) * (22 + seg.ideal.gear * 4);
+    state.car.x = seg.from[0] + (seg.to[0] - seg.from[0]) * eased + Math.sin(eased * Math.PI) * bend;
+    state.car.y = seg.from[1] + (seg.to[1] - seg.from[1]) * eased - Math.sin(eased * Math.PI) * 10;
+    state.car.angle = Math.atan2(seg.to[1] - seg.from[1], seg.to[0] - seg.from[0]);
+    state.car.speed = norm(1000 / Math.max(1, seg.timeMs) * seg.len);
+    if (!state.ghost.length || Math.hypot(state.car.x - state.ghost[state.ghost.length - 1].x, state.car.y - state.ghost[state.ghost.length - 1].y) > 8) {
+      state.ghost.push({ x: state.car.x, y: state.car.y });
+      if (state.ghost.length > 90) state.ghost.shift();
+    }
+  }
+  function reportCrossedSegments(prevMs) {
+    const crossed = state.replay.filter((s) => prevMs < s.endMs && state.replayMs >= s.endMs);
+    const seg = crossed[crossed.length - 1];
+    if (!seg) return;
+    const msg = seg.feedback === "clean" ? "Clean: " + seg.corner : seg.feedback + ": " + seg.corner;
+    setFeedback(msg, seg.kind, 1100);
+    tone(seg.feedback, seg.feedback === "crash" ? 150 : seg.feedback === "clean" ? 720 : 330, .08, seg.feedback === "crash" ? "sawtooth" : "triangle");
+  }
+  function finishStage() {
+    let addedScore = 0, damage = 0, crashes = 0, slowdowns = 0;
+    state.replay.forEach((s) => {
+      addedScore += s.score; damage += s.damage;
+      if (s.feedback === "crash") crashes += 1;
+      if (s.feedback === "slowdown" || s.feedback === "wide") slowdowns += 1;
+    });
+    state.totalMs += state.stageMs; state.score += addedScore; state.damage += damage; state.crashes += crashes; state.slowdowns += slowdowns;
+    state.stageResults.push({ name: stage().name, timeMs: state.stageMs, damage, crashes, slowdowns, score: addedScore });
+    if (state.stageIndex >= stages.length - 1) {
+      state.mode = "run-complete"; state.runComplete = true; state.gameOver = true;
+      if (!state.bestTime || state.totalMs < state.bestTime) { state.bestTime = state.totalMs; safeStore.set(BEST_KEY, state.bestTime); }
+      setFeedback("Rally complete: " + fmt(state.totalMs) + " total.", "good", 2400); tone("finish", 840, .16);
+    } else {
+      state.mode = "stage-complete"; setFeedback(stage().name + " complete in " + fmt(state.stageMs) + ".", crashes ? "bad" : slowdowns ? "warn" : "good", 2000); tone("stage", crashes ? 190 : 740, .13, crashes ? "sawtooth" : "triangle");
+    }
+  }
+  function nextStage() {
+    state.stageIndex += 1; state.cornerIndex = 0; state.plan = []; state.replay = []; state.replayMs = 0; state.stageMs = 0; state.mode = "planning";
+    applyCurrentDefaults(); setFeedback("Stage " + (state.stageIndex + 1) + ": " + stage().name + ".", "info", 1400); sync(); draw();
+  }
+  function restart() {
+    state.mode = "planning"; state.stageIndex = 0; state.cornerIndex = 0; state.plan = []; state.replay = []; state.replayMs = 0; state.stageMs = 0; state.totalMs = 0;
+    state.score = 0; state.damage = 0; state.crashes = 0; state.slowdowns = 0; state.ghost = []; state.stageResults = []; state.runComplete = false; state.gameOver = false;
+    applyCurrentDefaults(); setFeedback("Call the first corner.", "info", 1200); tone("restart", 390, .07); sync(); draw();
+  }
+  function stepChunk(ms, paint = true) {
+    const dt = clamp(Number(ms) || 0, 0, 240);
+    state.feedbackTtl = Math.max(0, state.feedbackTtl - dt);
+    if (state.mode === "replay" && state.replay.length) {
+      const prev = state.replayMs;
+      state.replayMs = Math.min(state.stageMs, state.replayMs + dt);
+      const seg = activeReplaySegment();
+      placeReplayCar(seg);
+      reportCrossedSegments(prev);
+      if (state.replayMs >= state.stageMs) finishStage();
+    }
+    if (paint) { sync(); draw(); }
+    return renderText();
+  }
+  function advance(ms = 0) {
+    let remaining = Math.max(0, Number(ms) || 0);
+    if (!remaining) return stepChunk(0);
+    if (state.mode === "replay" && state.replay.length) {
+      const prev = state.replayMs;
+      state.replayMs = Math.min(state.stageMs, state.replayMs + remaining);
+      placeReplayCar(activeReplaySegment());
+      reportCrossedSegments(prev);
+      if (state.replayMs >= state.stageMs) finishStage();
+      sync(); draw();
+      return renderText();
+    }
+    while (remaining > 0) {
+      const chunk = Math.min(120, remaining);
+      stepChunk(chunk, false);
+      remaining -= chunk;
+    }
+    sync(); draw();
+    return renderText();
+  }
+  function sync() {
+    const s = stage(), c = corner();
+    els.stage.textContent = (state.stageIndex + 1) + "/" + stages.length;
+    els.corner.textContent = state.mode === "replay" ? "Replay" : (state.cornerIndex + 1) + "/" + s.corners.length;
+    els.time.textContent = fmt(state.totalMs + (state.mode === "replay" ? state.replayMs : 0));
+    els.best.textContent = state.bestTime ? fmt(state.bestTime) : "--";
+    els.score.textContent = String(state.score);
+    els.damage.textContent = String(state.damage);
+    els.gear.textContent = String(state.command.gear);
+    els.brake.textContent = String(state.command.brake);
+    els.apex.textContent = state.command.apex[0].toUpperCase() + state.command.apex.slice(1);
+    els.hint.textContent = state.mode === "planning" ? c.call + ": " + c.note : state.mode === "replay" ? "Ghost replay in progress." : state.feedback;
+    els.status.textContent = state.feedback;
+    els.main.textContent = state.mode === "planning" ? "Commit" : state.mode === "replay" ? "Replaying" : state.mode === "stage-complete" ? "Next Stage" : "Restart";
+    els.main.disabled = state.mode === "replay";
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.sound));
+    els.full.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+    els.scorePill.dataset.hot = String(state.score > 0 && state.feedbackKind === "good");
+    els.damagePill.dataset.bad = String(state.damage > 0 || state.feedbackKind === "bad");
+  }
+  function drawTrack() {
+    const s = stage(), pts = s.road;
+    ctx.fillStyle = "#11140f"; ctx.fillRect(0, 0, W, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#18201d"); sky.addColorStop(.52, "#20221a"); sky.addColorStop(1, "#0d1210");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(248,250,252,.06)";
+    for (let i = 0; i < 18; i += 1) ctx.fillRect(26 + i * 58, 48 + (i % 4) * 23, 26, 2);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.strokeStyle = "#32352f"; ctx.lineWidth = 66; ctx.stroke();
+    ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.strokeStyle = "#6b6a5d"; ctx.lineWidth = 48; ctx.stroke();
+    ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.strokeStyle = "#282a27"; ctx.lineWidth = 32; ctx.stroke();
+    ctx.setLineDash([20, 18]);
+    ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.strokeStyle = "rgba(255,247,237,.34)"; ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
+    s.corners.forEach((c, i) => {
+      const p = pts[i + 1], active = i === state.cornerIndex && state.mode === "planning";
+      ctx.fillStyle = active ? "#facc15" : "rgba(248,250,252,.8)";
+      ctx.beginPath(); ctx.arc(p[0], p[1], active ? 12 : 8, 0, TAU); ctx.fill();
+      ctx.fillStyle = active ? "#25160a" : "#0a0d0c"; ctx.font = "900 11px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(i + 1), p[0], p[1]);
+    });
+    ctx.fillStyle = "#d9f99d"; ctx.fillRect(pts[0][0] - 18, pts[0][1] - 8, 36, 16);
+    ctx.fillStyle = "#fef3c7"; ctx.fillRect(pts[pts.length - 1][0] - 22, pts[pts.length - 1][1] - 12, 44, 24);
+    for (let x = -20; x < 44; x += 10) { ctx.fillStyle = x % 20 ? "#111827" : "#f8fafc"; ctx.fillRect(pts[pts.length - 1][0] + x, pts[pts.length - 1][1] - 12, 10, 24); }
+  }
+  function drawCar() {
+    const p = state.mode === "replay" || state.mode === "stage-complete" || state.mode === "run-complete" ? state.car : { x: stage().road[state.cornerIndex][0], y: stage().road[state.cornerIndex][1], angle: Math.atan2(stage().road[state.cornerIndex + 1][1] - stage().road[state.cornerIndex][1], stage().road[state.cornerIndex + 1][0] - stage().road[state.cornerIndex][0]) };
+    if (state.ghost.length > 1) {
+      ctx.beginPath(); state.ghost.forEach((g, i) => i ? ctx.lineTo(g.x, g.y) : ctx.moveTo(g.x, g.y));
+      ctx.strokeStyle = "rgba(56,189,248,.62)"; ctx.lineWidth = 4; ctx.stroke();
+    }
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+    ctx.fillStyle = "rgba(0,0,0,.32)"; ctx.fillRect(-17, 9, 34, 8);
+    ctx.fillStyle = state.feedbackKind === "bad" && state.feedbackTtl > 0 ? "#f87171" : "#facc15"; ctx.fillRect(-18, -10, 36, 20);
+    ctx.fillStyle = "#111827"; ctx.fillRect(0, -7, 12, 14);
+    ctx.fillStyle = "#f8fafc"; ctx.fillRect(-14, -13, 10, 5); ctx.fillRect(-14, 8, 10, 5);
+    ctx.restore();
+  }
+  function drawOverlay() {
+    ctx.save();
+    ctx.fillStyle = "rgba(8,13,12,.74)"; ctx.fillRect(30, 26, 300, 104);
+    ctx.strokeStyle = "rgba(125,211,252,.25)"; ctx.strokeRect(30, 26, 300, 104);
+    ctx.fillStyle = "#99f6e4"; ctx.font = "900 12px system-ui,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(stage().name.toUpperCase(), 48, 52);
+    ctx.fillStyle = "#fff7ed"; ctx.font = "950 22px system-ui,sans-serif";
+    const title = state.mode === "planning" ? corner().call : state.mode === "replay" ? "GHOST REPLAY" : state.runComplete ? "RALLY COMPLETE" : "STAGE COMPLETE";
+    ctx.fillText(title, 48, 82);
+    ctx.fillStyle = state.feedbackKind === "bad" ? "#fca5a5" : state.feedbackKind === "warn" ? "#fde68a" : "#d9f99d";
+    ctx.font = "900 13px system-ui,sans-serif"; ctx.fillText(state.feedback.slice(0, 34), 48, 108);
+    if (state.mode === "planning") {
+      const c = corner();
+      ctx.fillStyle = "rgba(248,250,252,.76)"; ctx.font = "800 12px system-ui,sans-serif";
+      ctx.fillText("Co-driver: G" + c.gear + " B" + c.brake + " " + c.apex.toUpperCase(), 712, 52);
+      ctx.fillText("Your call: G" + state.command.gear + " B" + state.command.brake + " " + state.command.apex.toUpperCase(), 712, 76);
+    }
+    if (state.mode === "replay") {
+      const seg = activeReplaySegment();
+      ctx.fillStyle = "rgba(248,250,252,.78)"; ctx.font = "800 12px system-ui,sans-serif"; ctx.textAlign = "right";
+      ctx.fillText(seg ? seg.corner + " / " + seg.feedback.toUpperCase() : "Finish", 914, 52);
+      ctx.fillText(fmt(state.replayMs) + " / " + fmt(state.stageMs), 914, 76);
+    }
+    ctx.restore();
+  }
+  function draw() { drawTrack(); drawCar(); drawOverlay(); }
+  function renderText() {
+    const seg = activeReplaySegment();
+    return JSON.stringify({
+      mode: state.mode,
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down",
+      stage: { index: state.stageIndex + 1, total: stages.length, name: stage().name },
+      corner: { index: state.cornerIndex + 1, total: stage().corners.length, call: corner().call },
+      command: { ...state.command },
+      plannedCorners: state.plan.length,
+      replay: seg ? { corner: seg.index + 1, feedback: seg.feedback, elapsedMs: Math.round(state.replayMs), stageMs: state.stageMs } : null,
+      car: { x: norm(state.car.x), y: norm(state.car.y), angle: norm(state.car.angle), speed: norm(state.car.speed) },
+      totals: { stageMs: Math.round(state.stageMs || state.replayMs), totalMs: Math.round(state.totalMs + (state.mode === "replay" ? state.replayMs : 0)), score: state.score, bestTimeMs: state.bestTime },
+      damage: { total: state.damage, crashes: state.crashes, slowdowns: state.slowdowns },
+      feedback: { text: state.feedback, kind: state.feedbackKind, active: state.feedbackTtl > 0, lastSound: state.lastSound },
+      soundEnabled: state.sound,
+      fullscreen: state.fullscreen,
+      completionState: { runComplete: state.runComplete, gameOver: state.gameOver, stageResults: state.stageResults.slice() }
+    });
+  }
+  function mainAction() { commit(); }
+  function toggleSound() { markGesture(); state.sound = !state.sound; safeStore.set(SOUND_KEY, state.sound); tone("sound", state.sound ? 620 : 220, .07); sync(); draw(); }
+  function toggleFullscreen() {
+    markGesture();
+    const target = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+    if (target && target.catch) target.catch(() => {});
+  }
+  function interactiveTarget(target) {
+    return target instanceof HTMLElement && (target.isContentEditable || target.matches("button,input,select,textarea,[role='button'],[role='textbox']"));
+  }
+  document.getElementById("gearDown").addEventListener("click", () => adjust("gear", -1));
+  document.getElementById("gearUp").addEventListener("click", () => adjust("gear", 1));
+  document.getElementById("brakeDown").addEventListener("click", () => adjust("brake", -1));
+  document.getElementById("brakeUp").addEventListener("click", () => adjust("brake", 1));
+  document.getElementById("apexPrev").addEventListener("click", () => adjust("apex", -1));
+  document.getElementById("apexNext").addEventListener("click", () => adjust("apex", 1));
+  els.main.addEventListener("click", mainAction);
+  els.restart.addEventListener("click", () => { markGesture(); restart(); });
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFullscreen);
+  canvas.addEventListener("pointerdown", (ev) => {
+    markGesture();
+    if (state.mode !== "planning") return;
+    const rect = canvas.getBoundingClientRect(), x = (ev.clientX - rect.left) / rect.width;
+    if (x < .33) adjust("apex", -1); else if (x > .66) adjust("apex", 1); else commit();
+  });
+  document.addEventListener("fullscreenchange", () => { state.fullscreen = !!document.fullscreenElement; sync(); draw(); });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    const k = ev.key.toLowerCase();
+    if (interactiveTarget(ev.target) && !["f", "m"].includes(k)) return;
+    if (/^[1-5]$/.test(k) && state.mode === "planning") { ev.preventDefault(); markGesture(); state.command.gear = Number(k); tone("gear", 350 + Number(k) * 40, .04); sync(); draw(); return; }
+    if (k === "arrowup") { ev.preventDefault(); adjust("gear", 1); return; }
+    if (k === "arrowdown") { ev.preventDefault(); adjust("gear", -1); return; }
+    if (k === "arrowleft") { ev.preventDefault(); adjust("apex", -1); return; }
+    if (k === "arrowright") { ev.preventDefault(); adjust("apex", 1); return; }
+    if (k === "[" || k === "a") { ev.preventDefault(); adjust("brake", -1); return; }
+    if (k === "]" || k === "d") { ev.preventDefault(); adjust("brake", 1); return; }
+    if (k === "enter" || k === " ") { ev.preventDefault(); markGesture(); if (state.mode === "replay") advance(1000); else commit(); return; }
+    if (k === "r") { ev.preventDefault(); markGesture(); restart(); return; }
+    if (k === "m") { ev.preventDefault(); toggleSound(); return; }
+    if (k === "f") { ev.preventDefault(); toggleFullscreen(); return; }
+  });
+  window.render_game_to_text = renderText;
+  window.advanceTime = advance;
+  function loop(ts) {
+    if (!lastFrame) lastFrame = ts;
+    const dt = Math.min(100, ts - lastFrame); lastFrame = ts;
+    if (state.mode === "replay") stepChunk(dt); else { if (state.feedbackTtl > 0) state.feedbackTtl = Math.max(0, state.feedbackTtl - dt); draw(); }
+    requestAnimationFrame(loop);
+  }
+  applyCurrentDefaults(); sync(); draw(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

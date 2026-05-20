@@ -61,7 +61,9 @@ npm run test:security-workflows
 npm run test:tools
 npm run test:capture-recipes
 npm run test:catalog-perf
+npm run test:cover-assets
 npm run test:game-contract
+npm run test:storage-contract
 npm run test:deep-links
 npm run test:random-game
 npm run test:keyboard-help
@@ -90,6 +92,7 @@ npm run audit:perf:ci
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
+- `npm run test:cover-assets` verifies every manifest cover is a small local 16:9 SVG with no scripts, remote image references, embedded raster blobs, or unsafe SVG primitives.
 - `npm run test:csp` verifies the `<meta http-equiv="Content-Security-Policy">` in `index.html` declares every critical directive (`default-src`, `script-src`, `style-src`, `img-src`, `connect-src`, `frame-src`, `object-src`, `base-uri`, `form-action`) and matches the catalog's runtime contract (e.g. `connect-src` allows `https://api.github.com` for the issue queue + recent updates feeds, `frame-src 'self'` for the player modal). Flags any remote `https://` script-src entries so future remote-script dependencies must be explicitly confirmed.
 - `npm run test:deep-links` locks in the per-game deep-link + Share contract: the catalog parses `#play=<slug>` on cold load and via `hashchange`, `openPlayer` keeps the URL hash in sync, and the player modal exposes a Share button wired to the Web Share API with a `navigator.clipboard.writeText` fallback so a single tap shares the canonical deep-link URL.
 - `npm run test:url-filters` locks in the catalog URL state contract: `?q=`, `?tag=`, `?sort=` are parsed on cold load via `applyUrlStateFromLocation()`, every search/category/sort change calls `syncStateToUrl()` which writes back via `history.replaceState` (omitting defaults so the canonical URL stays clean), a `popstate` listener re-applies state on browser back/forward, and `?sort=` is gated by an allowlist of the three valid sort modes.
@@ -100,6 +103,7 @@ npm run audit:perf:ci
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
 - `npm run test:install-prompt` locks in the PWA install affordance: a hidden header "Install" button with an aria-label naming the install action + inline SVG icon, an `els.installAppBtn` mapping, a `let deferredInstallPrompt = null` cache, a `beforeinstallprompt` listener that calls `preventDefault()` + stashes the event + reveals the button, an `appinstalled` listener that hides it, and a click handler that calls `.prompt()` on the cached event then clears the reference so stale events can't be re-prompted.
 - `npm run test:player-fullscreen` locks in the player-modal Fullscreen API toggle: a `#playerFullscreenBtn` with `aria-pressed` + enter/exit icon swap + (F) shortcut hint, the iframe declares both `allow="fullscreen"` and the legacy `allowfullscreen` attribute, `togglePlayerFullscreen()` exercises both `requestFullscreen()` and `exitFullscreen()`, a `fullscreenchange` listener re-syncs the icon when the user exits via browser chrome, `closePlayer()` calls `exitFullscreen()` first when the modal is currently fullscreen so closing from fullscreen doesn't wedge the page, and an "f"/"F" key shortcut toggles fullscreen while the player modal is visible.
+- `npm run test:storage-contract` verifies every manifest game loads `workshop-runtime.js` before storage-touching game code so sandboxed play keeps the defensive storage fallback.
 - `npm run test:og-images` verifies every manifest game has a matching 1200×630 share card under `covers/og/<slug>.svg`, that the SVG contains the game's title text, and that `scripts/inject-game-meta.mjs` writes `og:image` / `twitter:image` pointing at it with `og:image:width=1200` + `og:image:height=630` so Twitter, Slack, Discord, Facebook, and LinkedIn render proper full-size unfurls. Run `npm run build:og-images` after editing the manifest to regenerate.
 - `npm run test:game-jsonld` checks that every manifest game page has the JSON-LD `VideoGame` block emitted by `scripts/inject-game-meta.mjs` and that its name/url/image match the manifest. Run `npm run inject:meta` after editing the manifest to refresh.
 - `npm run test:seo` verifies `sitemap.xml`, `robots.txt`, the JSON-LD `ItemList` block in `index.html`, and a second JSON-LD `WebSite` + `SearchAction` block (drives Google's "Sitelinks Search Box" feature — searches surface a box that deep-links into the catalog at `?q={query}`, the exact URL state `test:url-filters` enforces). Run `npm run build:sitemap` after editing the manifest to regenerate them.
@@ -112,7 +116,7 @@ npm run audit:perf:ci
 
 CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:a11y`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 27 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 29 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 

@@ -36,12 +36,12 @@ const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jaketh
 // + procedural-level data), plus the two pre-existing wide-cap games
 // (Idle Tycoon = save-file complexity; Lexica = 156 KB 5-letter wordlist).
 const BUDGETS = {
-  Catalog: { transferKb: 200, requests: 22 },
-  "Brick Breaker": { transferKb: 130, requests: 4 },
-  "Arcade Jump": { transferKb: 160, requests: 4 },
-  "Idle Tycoon": { transferKb: 225, requests: 8 },
-  Lexica: { transferKb: 300, requests: 8 },
-  default: { transferKb: 100, requests: 4 },
+  Catalog: { transferKb: 200, requests: 18 },
+  "Brick Breaker": { transferKb: 120, requests: 4 },
+  "Arcade Jump": { transferKb: 130, requests: 4 },
+  "Idle Tycoon": { transferKb: 210, requests: 4 },
+  Lexica: { transferKb: 160, requests: 4 },
+  default: { transferKb: 100, requests: 3 },
 };
 
 function fmtKb(n) { return (n / 1024).toFixed(1) + " KB"; }
