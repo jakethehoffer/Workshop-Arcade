@@ -13,7 +13,7 @@
 // Cache key includes a version stamp so a deploy that ships a changed
 // shell file invalidates the old cache via `activate` cleanup.
 
-const VERSION = 'wa-v5-2026-05-19';
+const VERSION = 'wa-v6-2026-05-20';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 

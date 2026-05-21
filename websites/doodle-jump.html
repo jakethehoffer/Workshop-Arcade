@@ -73,9 +73,8 @@
     --menu-sky: #8ec5f2;
     --menu-sun: #fbbf24;
     --menu-mint: #5eead4;
-    --menu-ink-soft: #93a4b8;
   }
-  html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
   #wrap { position:fixed; inset:0; overflow:hidden; background:
       radial-gradient(1200px 800px at 20% 10%, #0a1322 0%, transparent 60%),
       radial-gradient(1200px 800px at 80% 0%, #0a1829 0%, transparent 60%),
@@ -84,8 +83,9 @@
 
 #bg { position:absolute; z-index: 0; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
 
-#game { position:absolute; inset:0; z-index:1; }
-#game:focus-visible { outline:3px solid var(--accent); outline-offset:-6px; }
+  #game { position:absolute; inset:0; z-index:1; }
+  #game:focus-visible { outline:3px solid var(--accent); outline-offset:-6px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0, 0, 0, 0); white-space:nowrap; border:0; }
 button.action, button.pill.btn {
   appearance:none;
   font:inherit;
@@ -487,9 +487,11 @@ button.action, button.pill.btn {
     <div class="pill">Best: <b id="best">0</b></div>
     <div class="pill" id="buff">No power-ups</div>
     <button class="pill btn" id="pause" type="button" aria-label="Pause or resume">⏸ Pause</button>
+    <button class="pill btn" id="fullscreenBtn" type="button" aria-label="Toggle fullscreen" aria-pressed="false" title="Enter fullscreen (F)">⛶ Fullscreen</button>
     <button class="pill btn" id="mute" type="button" aria-label="Toggle sound" aria-pressed="false">🔊 Sound</button>
-    <div class="pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause • M mute</div>
+    <div class="pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause • F fullscreen • M mute</div>
   </div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Arcade Jump ready.</div>
 
   <div class="overlay menu-overlay fade" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
     <div class="menu-card">
@@ -540,6 +542,7 @@ button.action, button.pill.btn {
               <span class="menu-control-title">Pause</span>
               <div class="menu-control-keys">
                 <span class="menu-key">P</span>
+                <span class="menu-key">F Fullscreen</span>
               </div>
             </div>
             <div class="menu-control">
@@ -709,7 +712,9 @@ function updateBuffHUD(){
   const bestEl  = document.getElementById('best');
   const menuBestEl = document.getElementById('menuBest');
   const pauseBtn = document.getElementById('pause');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
   const muteBtn = document.getElementById('mute');
+  const liveStatus = document.getElementById('liveStatus');
   const menu = document.getElementById('menu');
   const gameover = document.getElementById('gameover');
   const finalScore = document.getElementById('finalScore');
@@ -725,6 +730,22 @@ const startBtnEl = document.getElementById('startBtn');
   let activeDialog = null;
   let activeDialogTrigger = null;
   let activeDialogClose = null;
+  let lastAnnouncedScore = 0;
+  let bestAnnouncedThisRun = false;
+  let motionPhase = 'menu';
+
+  function setLiveStatus(message, force = false) {
+    if (!liveStatus || (!force && liveStatus.textContent === message)) return;
+    liveStatus.textContent = message;
+  }
+
+  function isControlTarget(target) {
+    return !!(target && target.closest && target.closest('button, a, input, select, textarea, [contenteditable="true"]'));
+  }
+
+  function isTextEntryTarget(target) {
+    return !!(target && target.closest && target.closest('input, select, textarea, [contenteditable="true"]'));
+  }
 
   function isShown(el){ return !!el && getComputedStyle(el).display !== 'none'; }
   function dialogFocusables(dialog){
@@ -828,11 +849,60 @@ window.addEventListener('keydown', (e) => {
   }
 function closeHelp(){ deactivateDialog(helpPanel); helpPanel.style.display = 'none'; }
 
+  function isFullscreenActive() {
+    return !!document.fullscreenElement;
+  }
+
+  function updateFullscreenButton() {
+    if (!fullscreenBtn) return;
+    const active = isFullscreenActive();
+    fullscreenBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    fullscreenBtn.textContent = active ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+    fullscreenBtn.title = active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+  }
+
+  async function toggleFullscreen() {
+    if (!document.fullscreenEnabled) {
+      setLiveStatus('Fullscreen is not available in this browser.', true);
+      return;
+    }
+    try {
+      if (isFullscreenActive()) {
+        await document.exitFullscreen();
+        setLiveStatus('Exited fullscreen.', true);
+      } else {
+        await document.getElementById('wrap').requestFullscreen();
+        setLiveStatus('Entered fullscreen. Press Escape or F to exit.', true);
+      }
+    } catch (error) {
+      setLiveStatus('Fullscreen request was blocked.', true);
+    } finally {
+      updateFullscreenButton();
+      resize();
+      if (state?.player) draw();
+    }
+  }
+
+  fullscreenBtn.onclick = () => toggleFullscreen();
+  document.addEventListener('fullscreenchange', () => {
+    updateFullscreenButton();
+    resize();
+    if (state?.player) draw();
+    lastT = performance.now();
+  });
+  updateFullscreenButton();
+
 
 
   const keys = new Set();
   window.addEventListener('keydown', (e) => {
-    if (e.target && e.target.closest && e.target.closest('button, a, input, select, textarea') && !['Tab','Escape','KeyM'].includes(e.code)) return;
+    const controlTarget = isControlTarget(e.target);
+    if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !isTextEntryTarget(e.target) && !activeDialog) {
+      e.preventDefault();
+      toggleFullscreen();
+      return;
+    }
+    if (controlTarget && !['Tab','Escape','KeyM'].includes(e.code)) return;
     if (helpPanel && helpPanel.style.display !== 'none') {
       if (['Space','KeyP','ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code)) e.preventDefault();
       return;
@@ -877,6 +947,8 @@ if (e.code === 'Space' && running && !paused) {
     sound.beep(780, .07, 'triangle', .07, 'double-jump');
     addParticles(P.x + P.w/2, P.y + P.h, 10, 'spring');
     recordFeedback('double-jump');
+    motionPhase = 'jumping';
+    setLiveStatus(`Double jump. Score ${Math.round(state.score || 0)}.`, true);
   }
 }
 
@@ -1693,7 +1765,11 @@ space.ufoT = 0;
 
     paused = false;
     running = true;
+    lastAnnouncedScore = 0;
+    bestAnnouncedThisRun = false;
+    motionPhase = 'jumping';
     recordFeedback('start', { label: 'GO' });
+    setLiveStatus(`Run started. Score 0. Best ${best}. Jumping.`, true);
     lastT = performance.now();
     if (!restarting) {
       sound.beep(880, .09, 'triangle', .08, 'start');
@@ -1706,6 +1782,7 @@ space.ufoT = 0;
     paused = false;
     recordFeedback('game-over');
     const s = Math.round(state.score);
+    const wasBest = best;
     best = Math.max(best, s);
     localStorage.setItem('doodle_best', best);
     finalScore.textContent = s;
@@ -1716,6 +1793,7 @@ space.ufoT = 0;
     setTimeout(()=>sound.beep(330, .12, 'sawtooth', .10, 'game-over'), 90);
     setTimeout(()=>sound.beep(262, .18, 'sawtooth', .10, 'game-over'), 200);
     show(gameover);
+    setLiveStatus(s > wasBest ? `Game over. New best ${best}.` : `Game over. Score ${s}. Best ${best}.`, true);
   }
 
   async function togglePause() {
@@ -1732,6 +1810,29 @@ space.ufoT = 0;
       sound.record('resume');
     }
     if (!paused) lastT = performance.now();
+  }
+
+  function announceMotionPhase() {
+    if (!running || paused || !state?.player) return;
+    const nextPhase = state.player.vy < -80 ? 'jumping' : (state.player.vy > 90 ? 'falling' : motionPhase);
+    if (nextPhase !== motionPhase) {
+      motionPhase = nextPhase;
+      setLiveStatus(`${nextPhase === 'jumping' ? 'Jumping' : 'Falling'}. Score ${Math.round(state.score || 0)}.`);
+    }
+  }
+
+  function announceScoreProgress(score) {
+    if (!running) return;
+    if (!bestAnnouncedThisRun && score > best) {
+      bestAnnouncedThisRun = true;
+      lastAnnouncedScore = score;
+      setLiveStatus(`New best reached. Score ${score}.`, true);
+      return;
+    }
+    if (score >= lastAnnouncedScore + 500) {
+      lastAnnouncedScore = score;
+      setLiveStatus(`Score ${score}.`);
+    }
   }
 
 
@@ -2402,6 +2503,7 @@ if (space.active) updateSpace(dt);
     }
   }
 
+  announceMotionPhase();
 
   if (P.y < CAM_ANCHOR_Y) {
     const dy = CAM_ANCHOR_Y - P.y;
@@ -2415,6 +2517,7 @@ if (space.active) updateSpace(dt);
     for (const en of state.enemies) en.y += dy;
 
     scoreEl.textContent = Math.round(state.score);
+    announceScoreProgress(Math.round(state.score));
     if (Math.random() < 0.03) sound.beep(1200, .02, 'sine', .03, 'score');
   }
 
@@ -3996,6 +4099,15 @@ function drawToast() {
         touchRight
       },
       feedback: getFeedbackDiagnostics(),
+      liveStatus: liveStatus?.textContent || "",
+      motionPhase,
+      fullscreen: {
+        supported: !!document.fullscreenEnabled,
+        active: isFullscreenActive(),
+        elementId: document.fullscreenElement?.id || "",
+        buttonPressed: fullscreenBtn?.getAttribute('aria-pressed') === 'true',
+        title: fullscreenBtn?.title || ""
+      },
       audio: {
         soundEnabled: sound.soundEnabled,
         muted: sound.muted,

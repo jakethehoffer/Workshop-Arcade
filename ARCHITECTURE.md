@@ -43,13 +43,13 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 |---------|--------------|
 | **Manifest contract** | `test:manifest-schema` |
 | **Catalog source of truth** | `validate-catalog.ps1` (no npm wrapper) |
-| **Generator output mirrors manifest** | `test:seo` · `test:feed` · `test:og-images` · `test:game-jsonld` |
+| **Generator output mirrors manifest** | `test:seo` · `test:feed` · `test:og-images` · `test:game-jsonld` · `test:generated-surfaces` |
 | **Asset/runtime contracts** | `test:cover-assets` · `test:storage-contract` |
 | **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:random-game` · `test:keyboard-help` · `test:sw-update-toast` |
 | **Accessibility** | `test:a11y` · `test:a11y-polish` |
 | **PWA + fallback pages** | `test:pwa` · `test:fallback-pages` |
 | **OSS hygiene** | `test:meta-files` · `test:security-workflows` · `test:contributor-onboarding` |
-| **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:capture-recipes` · `test:docs` |
+| **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:capture-recipes` · `test:docs` · `test:performance-baseline` |
 | **Live game smoke** | `test:games` (Playwright, slow — run via `npm run test:games` or `npm run test:all`) |
 
 The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `README.md`, `CONTRIBUTING.md`, `docs/game-contract.md`, the PR/issue templates, and the workflow YAML all naming the same publish-ready command set, so contributor-facing docs can't quietly fall behind CI.

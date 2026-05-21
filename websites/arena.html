@@ -134,6 +134,7 @@
       <div class="hud-actions">
         <button id="muteBtn" class="icon-btn" type="button" aria-label="Sound on" aria-pressed="false" title="M to mute">🔊</button>
         <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause / Resume" title="P or Esc to pause/resume">⏸</button>
+        <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Enter fullscreen" aria-pressed="false" title="Fullscreen (F)">⛶</button>
         <button id="helpBtn" class="icon-btn" type="button" aria-label="Help" title="Help (H)">❓</button>
       </div>
     </div>
@@ -206,6 +207,7 @@
     const restartBtn = document.getElementById('restartBtn');
     const startBtn = document.getElementById('startBtn');
     const muteBtn = document.getElementById('muteBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
     const highEl = document.getElementById('high');
     const bestEl = document.getElementById('bestScore');
     const HS_KEY = 'canvasArena:highscore:v1';
@@ -699,6 +701,48 @@
       state.player.y = Math.max(state.player.r, Math.min(state.player.y, h - state.player.r));
     }
     window.addEventListener('resize', resize);
+
+    function fullscreenElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || null;
+    }
+    function fullscreenSupported() {
+      const target = document.documentElement;
+      return !!((target.requestFullscreen || target.webkitRequestFullscreen) &&
+        (document.exitFullscreen || document.webkitExitFullscreen));
+    }
+    function fullscreenActive() {
+      return !!fullscreenElement();
+    }
+    function syncFullscreenButton() {
+      if (!fullscreenBtn) return;
+      const supported = fullscreenSupported();
+      const active = fullscreenActive();
+      fullscreenBtn.hidden = !supported;
+      fullscreenBtn.disabled = !supported;
+      fullscreenBtn.setAttribute('aria-pressed', String(active));
+      fullscreenBtn.textContent = active ? '⛶' : '⛶';
+      fullscreenBtn.title = active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+      fullscreenBtn.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+    }
+    function toggleFullscreen() {
+      if (!fullscreenSupported()) return;
+      try {
+        if (fullscreenActive()) {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          const result = exit.call(document);
+          if (result && typeof result.catch === 'function') result.catch(syncFullscreenButton);
+        } else {
+          const target = document.documentElement;
+          const enter = target.requestFullscreen || target.webkitRequestFullscreen;
+          const result = enter.call(target);
+          if (result && typeof result.catch === 'function') result.catch(syncFullscreenButton);
+        }
+      } catch {
+        syncFullscreenButton();
+      }
+    }
+    document.addEventListener('fullscreenchange', () => { syncFullscreenButton(); resize(); });
+    document.addEventListener('webkitfullscreenchange', () => { syncFullscreenButton(); resize(); });
 
     /* UPDATED: hides all overlays including paused */
     function hideOverlays() {
@@ -1335,6 +1379,11 @@
         toggleHelp();
       }
 
+      if (e.code === 'KeyF' && !e.repeat) {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+
       // NEW: P or Esc to toggle pause (only when in-game / paused)
       if (e.code === 'KeyP') {
         if (state.mode === 'playing' || state.mode === 'paused') e.preventDefault();
@@ -1432,6 +1481,7 @@
         e.stopPropagation();
       });
     }
+    if (fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); });
 
     let last = performance.now();
     function frame(now) {
@@ -1571,6 +1621,11 @@
         soundCount: audio.soundCount,
         events: audio.events
       },
+      fullscreen: {
+        supported: fullscreenSupported(),
+        active: fullscreenActive(),
+        shortcut: 'F'
+      },
       coordinateSystem: 'canvas pixels, origin top-left, x right, y down',
       player: {
         x: Math.round(state.player.x),
@@ -1641,6 +1696,7 @@
       return window.render_game_to_text();
     };
     requestAnimationFrame(frame);
+    syncFullscreenButton();
   })();
   </script>
 </body>

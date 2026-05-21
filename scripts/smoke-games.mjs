@@ -11,6 +11,12 @@ const failures = [];
 const startedAt = new Date().toISOString();
 const outputRoot = path.join(repoRoot, "test-results", "smoke-games", startedAt.replace(/[:.]/g, "-"));
 const categoryCounts = new Map([["All", manifest.length]]);
+let currentPhase = {
+  label: "startup",
+  game: null,
+  viewport: null,
+  phase: "loading manifest"
+};
 
 for (const game of manifest) {
   for (const tag of game.tags || []) {
@@ -38,6 +44,15 @@ function addFailure(label, message) {
   failures.push(`${label}: ${message}`);
 }
 
+function setPhase(label, phase, extra = {}) {
+  currentPhase = {
+    label,
+    phase,
+    game: extra.game || null,
+    viewport: extra.viewport || null,
+  };
+}
+
 async function writeSummary() {
   await mkdir(outputRoot, { recursive: true });
   const summary = {
@@ -46,6 +61,7 @@ async function writeSummary() {
     manifestCount: manifest.length,
     failureCount: failures.length,
     passed: failures.length === 0,
+    lastPhase: currentPhase,
     failures: failures.map((failure) => {
       const split = failure.indexOf(": ");
       return split === -1
@@ -263,9 +279,12 @@ async function checkCardTagFiltering(page) {
 }
 
 async function checkCatalog(browser, baseUrl) {
+  setPhase("catalog", "open catalog");
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   observePage(page, baseUrl, "catalog");
+  setPhase("catalog", "navigate catalog");
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  setPhase("catalog", "wait for cards");
   await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
 
   const cardCount = await page.locator(".card").count();
@@ -273,7 +292,9 @@ async function checkCatalog(browser, baseUrl) {
     addFailure("catalog", `expected ${manifest.length} cards, found ${cardCount}`);
   }
 
+  setPhase("catalog", "check filter chips");
   await checkFilterChips(page);
+  setPhase("catalog", "check card tag filtering");
   await checkCardTagFiltering(page);
 
   const sandbox = await page.locator("#playerFrame").getAttribute("sandbox");
@@ -281,6 +302,7 @@ async function checkCatalog(browser, baseUrl) {
     addFailure("catalog", `unexpected player sandbox: ${sandbox}`);
   }
 
+  setPhase("catalog", "open first game in player");
   await page.locator(".card .play").first().click();
   await page.waitForSelector("#playerModal:not([hidden])");
   const frameSrc = await page.locator("#playerFrame").getAttribute("src");
@@ -296,6 +318,7 @@ async function checkCatalog(browser, baseUrl) {
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => document.getElementById("playerModal").hidden);
 
+  setPhase("catalog", "workshop issue URL flow");
   await page.locator("#submitGameBtn").click();
   await page.waitForSelector("#workshopModal:not([hidden])");
   await page.locator("#workshopGoal").fill("Smoke-test the issue generation flow.");
@@ -321,6 +344,7 @@ async function checkCatalog(browser, baseUrl) {
   await page.waitForFunction(() => document.getElementById("workshopModal").hidden);
 
   for (const game of manifest) {
+    setPhase("catalog", `deep link ${game.slug}`, { game: game.slug });
     await page.evaluate((slug) => {
       location.hash = `play=${encodeURIComponent(slug)}`;
       window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -339,11 +363,14 @@ async function checkCatalog(browser, baseUrl) {
 
 async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {
   const label = `${game.id} ${labelSuffix}`;
+  setPhase(label, "open page", { game: game.slug || game.id, viewport: labelSuffix });
   const page = await browser.newPage({ viewport });
   observePage(page, baseUrl, label);
+  setPhase(label, "navigate page", { game: game.slug || game.id, viewport: labelSuffix });
   await page.goto(new URL(game.url, baseUrl).href, { waitUntil: "domcontentloaded", timeout: 15000 });
   await page.waitForTimeout(900);
 
+  setPhase(label, "check title/content", { game: game.slug || game.id, viewport: labelSuffix });
   const title = await page.title();
   if (!title.trim()) {
     addFailure(label, "document title is empty");
@@ -359,6 +386,7 @@ async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {
     addFailure(label, "page appears blank or non-interactive");
   }
 
+  setPhase(label, "check diagnostics", { game: game.slug || game.id, viewport: labelSuffix });
   const diagnostics = await page.evaluate(() => {
     const result = {
       hasRender: typeof window.render_game_to_text === "function",
@@ -389,6 +417,7 @@ async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {
   }
 
   if (labelSuffix === "mobile") {
+    setPhase(label, "check mobile overflow", { game: game.slug || game.id, viewport: labelSuffix });
     const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
     if (overflow > 2) {
       addFailure(label, `horizontal overflow ${overflow}px`);
@@ -402,7 +431,9 @@ let server;
 let baseUrl;
 let browser;
 try {
+  setPhase("runner", "start server");
   ({ server, baseUrl } = await startServer());
+  setPhase("runner", "launch browser");
   browser = await chromium.launch({ headless: !process.env.HEADED });
   await checkCatalog(browser, baseUrl);
   for (const game of manifest) {

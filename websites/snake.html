@@ -163,8 +163,9 @@
   <div class="hud">
     <div class="pill" id="score">Score: 0</div>
     <div class="pill" id="best">Best: 0</div>
-    <div class="pill" id="status">Press Space to start</div>
+    <div class="pill" id="status" role="status" aria-live="polite" aria-atomic="true">Press Space to start</div>
     <button class="pill button primary-start" id="startMobileBtn" type="button">Start</button>
+    <button class="pill button utility-pill has-hotkey" id="fullscreenPill" type="button" title="Enter fullscreen (F)" aria-label="Enter fullscreen" aria-pressed="false"><span class="icon" aria-hidden="true">⛶</span><span class="label">Fullscreen</span><span class="hotkey">F</span></button>
     <button class="pill button utility-pill has-hotkey" id="musicPill" type="button" title="Toggle music (M)" aria-label="Toggle music"><span class="icon" aria-hidden="true">♪</span><span class="label">Music: On</span><span class="hotkey">M</span></button>
     <button class="pill button utility-pill has-hotkey" id="soundPill" type="button" title="Toggle sound (N)" aria-label="Toggle sound"><span class="icon" aria-hidden="true">◉</span><span class="label">Sound: On</span><span class="hotkey">N</span></button>
     <button class="pill button utility-pill has-hotkey" id="helpBtn" type="button" title="How to Play (H)" aria-label="How to Play"><span class="icon" aria-hidden="true">?</span><span class="label">How to Play</span><span class="hotkey">H</span></button>
@@ -199,6 +200,14 @@
           <span><kbd>M</kbd></span>
           <span>Toggle music</span>
         </div>
+        <div class="control-row">
+          <span><kbd>N</kbd></span>
+          <span>Toggle sound</span>
+        </div>
+        <div class="control-row">
+          <span><kbd>F</kbd></span>
+          <span>Toggle fullscreen</span>
+        </div>
       </div>
 
       <p><b>Tips:</b></p>
@@ -219,6 +228,7 @@
   const bestEl = document.getElementById('best');
   const statusEl = document.getElementById('status');
   const startMobileBtn = document.getElementById('startMobileBtn');
+  const fullscreenPill=document.getElementById('fullscreenPill');
   const upBtn=document.getElementById('upBtn');
   const leftBtn=document.getElementById('leftBtn');
   const rightBtn=document.getElementById('rightBtn');
@@ -481,6 +491,40 @@
   resize();
   window.addEventListener('resize', resize);
 
+  function setStatus(message){
+    statusEl.textContent = message;
+  }
+
+  function canToggleFullscreen(){
+    return !!(document.fullscreenEnabled && document.documentElement.requestFullscreen);
+  }
+
+  function syncFullscreenButton(){
+    if(!fullscreenPill) return;
+    const active = !!document.fullscreenElement;
+    fullscreenPill.setAttribute('aria-pressed', String(active));
+    fullscreenPill.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+    fullscreenPill.title = active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+    fullscreenPill.disabled = !canToggleFullscreen();
+  }
+
+  async function toggleFullscreen(){
+    if(!canToggleFullscreen()) return;
+    try{
+      if(document.fullscreenElement){
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    }catch(_){}
+    syncFullscreenButton();
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    syncFullscreenButton();
+    resize();
+  });
+
   function newGame(){
     const midX=Math.floor(COLS/2), midY=Math.floor(ROWS/2);
     snake=[{x:midX, y:midY},{x:midX-1, y:midY},{x:midX-2, y:midY}];
@@ -501,7 +545,7 @@
       lastQueuedDirection: null,
       lastAcceptedDirection: null
     });
-    statusEl.textContent='Press Space to start';
+    setStatus('Press Space to start');
     spawnFood();
     updateHUD();
     syncStartMobileButton();
@@ -529,7 +573,7 @@
 
   function triggerWin(){
     gameWon=true; running=false;
-    statusEl.textContent='You Win! — Press Space';
+    setStatus('You Win! - Press Space');
     SFX.eat(); Music.stop();
     syncStartMobileButton();
     draw();
@@ -557,12 +601,12 @@
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
     if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
       recordSnakeFeedback('death');
-      gameOver=true; running=false; statusEl.textContent='Game Over — Press Space'; SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
+      gameOver=true; running=false; setStatus('Game Over - Press Space'); SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
     }
     snake.unshift(head);
     if(food && head.x===food.x && head.y===food.y){
       recordSnakeFeedback('food');
-      score+=1; updateHUD(); spawnFood(); SFX.eat();
+      score+=1; updateHUD(); setStatus('Score: '+score+' - food collected'); spawnFood(); SFX.eat();
     } else {
       snake.pop(); SFX.move();
     }
@@ -748,9 +792,9 @@
     else if(running) pause();
     else start();
   }
-  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; statusEl.textContent='Press Space to pause'; recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); }
+  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; setStatus('Press Space to pause'); recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); }
   function restart(){ newGame(); }
-  function pause(){ if(!running||gameOver||gameWon) return; running=false; statusEl.textContent='Paused — Press Space'; SFX.pause(); Music.stop(); syncStartMobileButton(); }
+  function pause(){ if(!running||gameOver||gameWon) return; running=false; setStatus('Paused - Press Space'); SFX.pause(); Music.stop(); syncStartMobileButton(); }
 
   function onKey(e){
     const c=e.code;
@@ -773,6 +817,11 @@
     }
     else if(c==='KeyN'){
       toggleSound();
+    }
+    else if(c==='KeyF' && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey){
+      toggleFullscreen();
+      e.preventDefault();
+      return;
     }
     // prevent page scroll with arrows/space on some browsers
     if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c)) e.preventDefault();
@@ -813,6 +862,7 @@
   musicPill.addEventListener('click', toggleMusic);
   if(soundToggleBtn) soundToggleBtn.addEventListener('click', toggleSound);
   if(soundPill) soundPill.addEventListener('click', toggleSound);
+  if(fullscreenPill) fullscreenPill.addEventListener('click', toggleFullscreen);
 
   // Help menu
   let wasRunningBeforeHelp = false;
@@ -922,6 +972,13 @@
         lastAcceptedDirection: feedback.lastAcceptedDirection,
         tactileActive: feedback.activeCueCount > 0,
         lastSound
+      },
+      fullscreen: {
+        active: !!document.fullscreenElement,
+        element: document.fullscreenElement ? (document.fullscreenElement.id || document.fullscreenElement.tagName.toLowerCase()) : null,
+        available: canToggleFullscreen(),
+        buttonPressed: fullscreenPill ? fullscreenPill.getAttribute('aria-pressed') : null,
+        title: fullscreenPill ? fullscreenPill.title : null
       }
     });
   }
@@ -942,6 +999,7 @@
   // init
   Music.updateLabels();
   updateSoundLabels();
+  syncFullscreenButton();
   newGame();
   requestAnimationFrame(loop);
 })();

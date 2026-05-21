@@ -143,6 +143,7 @@
     box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 18px rgba(94,234,212,0.18);
   }
   .card:focus-visible{outline:3px solid rgba(124,158,255,0.7);outline-offset:2px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
   .overlay{
     position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
@@ -194,6 +195,7 @@
     <button class="btn" type="button" id="fullscreenBtn" aria-pressed="false" title="Enter fullscreen (F)" aria-label="Enter fullscreen">⛶ Full</button>
     <button class="btn" type="button" id="helpBtn">❓ Help</button>
   </div>
+  <p class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Ready.</p>
   <div class="board" id="board" role="grid" aria-label="Memory match board"></div>
 </div>
 
@@ -252,6 +254,7 @@
     help:    document.getElementById('helpBtn'),
     helpOverlay: document.getElementById('helpOverlay'),
     helpClose:   document.getElementById('helpClose'),
+    liveStatus:  document.getElementById('liveStatus'),
     winOverlay:  document.getElementById('winOverlay'),
     winMoves:    document.getElementById('winMoves'),
     winTime:     document.getElementById('winTime'),
@@ -364,6 +367,9 @@
   }
 
   function nowFn(){ return state.now; }
+  function announce(message){
+    if (els.liveStatus) els.liveStatus.textContent = message;
+  }
 
   function setDifficulty(name){
     if (!DIFFICULTIES[name]) return;
@@ -394,6 +400,7 @@
     renderBoard();
     updateHud();
     closeOverlay(els.winOverlay);
+    announce(state.difficulty + ' board ready. Find ' + conf.pairs + ' pairs.');
   }
 
   function renderBoard(){
@@ -449,6 +456,7 @@
     state.flipped.push(id);
     state.lastFlipAt = state.now;
     state.flipCount += 1;
+    announce('Flipped card ' + (id + 1) + '.');
     playFlip();
     refreshCard(id);
 
@@ -464,6 +472,7 @@
         state.matchCount += 1;
         state.streak += 1;
         if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+        announce('Matched ' + a.icon + '. ' + state.matched + ' of ' + DIFFICULTIES[state.difficulty].pairs + ' pairs found.');
         playMatch(state.streak);
         refreshCard(aId);
         refreshCard(bId);
@@ -475,6 +484,7 @@
         state.lastMismatchAt = state.now;
         state.mismatchCount += 1;
         state.streak = 0;
+        announce('No match. Try another pair.');
         playMismatch();
         updateHud();
       }
@@ -511,6 +521,7 @@
     els.winNote.textContent = (beat
       ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves in ' + formatTime(elapsed) + '.'
       : 'Finished in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.') + streakNote;
+    announce('Board complete in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.');
     playWin();
     openOverlay(els.winOverlay, els.winPlayAgain);
     updateHud();
@@ -670,6 +681,7 @@
       streak: state.streak,
       bestStreak: state.bestStreak,
       soundEnabled: state.soundEnabled,
+      liveStatus: els.liveStatus ? els.liveStatus.textContent : '',
       fullscreenActive: isFullscreenActive(),
       fullscreenSupported: fullscreenSupported(),
       feedback: {

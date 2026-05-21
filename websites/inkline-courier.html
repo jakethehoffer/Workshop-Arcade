@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Inkline Courier - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Draw clean delivery routes through neon blocks before the courier runs the line." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/inkline-courier.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Inkline Courier — Workshop Arcade" />
+<meta property="og:description" content="Draw clean delivery routes through neon blocks before the courier runs the line." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/inkline-courier.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/inkline-courier.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Inkline Courier — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Inkline Courier — Workshop Arcade" />
+<meta name="twitter:description" content="Draw clean delivery routes through neon blocks before the courier runs the line." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/inkline-courier.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Inkline Courier",
+  "description": "Draw clean delivery routes through neon blocks before the courier runs the line.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/inkline-courier.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/inkline-courier.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Strategy",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:#eaf7ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;padding:14px 10px 18px;overflow-x:hidden;background:radial-gradient(760px 500px at 10% -8%,rgba(34,211,238,.16),transparent 62%),radial-gradient(740px 500px at 94% 4%,rgba(244,114,182,.13),transparent 64%),linear-gradient(180deg,#081019,#050813 88%)}
+.shell{width:min(960px,100%);display:flex;flex-direction:column;gap:9px}.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;font-size:10px;text-transform:uppercase;color:#67e8f9;font-weight:900}.title{display:block;margin-top:3px;font-size:24px;text-transform:uppercase;font-weight:950;text-shadow:0 0 18px rgba(103,232,249,.24)}.help{max-width:610px;text-align:right;color:#a8b6ca;font-size:12px;line-height:1.35}
+.hud,.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}.pill{min-width:76px;text-align:center;padding:7px 9px;border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linear-gradient(180deg,rgba(18,32,50,.96),rgba(8,15,28,.97));box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);line-height:1.05}.pill[data-hot=true]{border-color:rgba(250,204,21,.76);box-shadow:0 0 18px rgba(250,204,21,.12),0 8px 18px rgba(0,0,0,.24)}.label{display:block;font-size:9px;color:#67e8f9;font-weight:900;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border:1px solid rgba(103,232,249,.28);border-radius:8px;overflow:hidden;background:#061019;box-shadow:0 18px 44px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:62vh;background:#061019;touch-action:none}canvas:focus-visible,button:focus-visible{outline:3px solid rgba(250,204,21,.82);outline-offset:2px}.status{min-height:20px;text-align:center;color:#67e8f9;font-size:12px;font-weight:900;text-transform:uppercase}
+button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linear-gradient(180deg,rgba(18,32,50,.96),rgba(8,15,28,.97));color:#eaf7ff;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;padding:8px 11px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04)}button.primary,button[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#7df9ff,#22d3ee);color:#05272d}button:hover{border-color:rgba(103,232,249,.58)}
+@media(max-width:700px){body{padding:10px 8px 16px}.shell{gap:7px}.brand{display:none}.help{text-align:left;font-size:11px}.pill{min-width:62px;padding:6px}.value{font-size:15px}button{font-size:11px;padding:8px}.controls button{flex:1 1 104px}canvas{max-height:52vh}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="shell" aria-label="Inkline Courier game">
+  <div class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Inkline Courier</span></div>
+    <div class="help">Drag one ink route from the depot, then release to run it. Pick up parcels before matching drops. Arrows/WASD move the planning cursor, Space adds points, Enter runs.</div>
+  </div>
+  <section class="hud" aria-label="Inkline Courier status">
+    <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/3</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    <div class="pill"><span class="label">Pickup</span><span class="value" id="pickupValue">0/0</span></div>
+    <div class="pill"><span class="label">Drop</span><span class="value" id="dropValue">0/0</span></div>
+    <div class="pill" id="modePill"><span class="label">Mode</span><span class="value" id="modeValue">Plan</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Inkline Courier route drawing puzzle canvas. Draw one route through pickup and delivery nodes while avoiding moving hazards and one-way lanes."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Draw from the depot or add keyboard points.</div>
+  <section class="controls" aria-label="Inkline Courier controls">
+    <button class="primary" id="runBtn" type="button">Run Route</button>
+    <button id="restartBtn" type="button">Restart</button>
+    <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button id="fullBtn" type="button">Fullscreen</button>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const BEST_KEY = "inkline-courier.best.v1";
+  const SOUND_KEY = "inkline-courier.sound.v1";
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const round = (v) => Math.round(v * 100) / 100;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  const stages = [
+    {
+      name: "Postmark Bend",
+      start: { x: 96, y: 304 },
+      speed: 132,
+      nodes: [
+        { id: "A", kind: "pickup", x: 238, y: 160, pair: "A" },
+        { id: "A", kind: "drop", x: 732, y: 150, pair: "A" },
+        { id: "B", kind: "pickup", x: 384, y: 386, pair: "B" },
+        { id: "B", kind: "drop", x: 786, y: 392, pair: "B" }
+      ],
+      lanes: [
+        { x: 456, y: 96, w: 80, h: 332, dx: 0, dy: 1, label: "south" }
+      ],
+      hazards: [
+        { cx: 590, cy: 260, rx: 0, ry: 126, r: 18, phase: .1, rate: .52 }
+      ]
+    },
+    {
+      name: "Canal Sort",
+      start: { x: 96, y: 108 },
+      speed: 128,
+      nodes: [
+        { id: "A", kind: "pickup", x: 250, y: 404, pair: "A" },
+        { id: "A", kind: "drop", x: 782, y: 428, pair: "A" },
+        { id: "B", kind: "pickup", x: 340, y: 178, pair: "B" },
+        { id: "B", kind: "drop", x: 780, y: 116, pair: "B" },
+        { id: "C", kind: "pickup", x: 570, y: 302, pair: "C" },
+        { id: "C", kind: "drop", x: 666, y: 206, pair: "C" }
+      ],
+      lanes: [
+        { x: 142, y: 238, w: 612, h: 58, dx: 1, dy: 0, label: "east" },
+        { x: 472, y: 82, w: 62, h: 360, dx: 0, dy: -1, label: "north" }
+      ],
+      hazards: [
+        { cx: 446, cy: 370, rx: 168, ry: 0, r: 17, phase: .25, rate: .46 },
+        { cx: 656, cy: 260, rx: 0, ry: 112, r: 16, phase: .78, rate: .58 }
+      ]
+    },
+    {
+      name: "Night Dispatch",
+      start: { x: 100, y: 436 },
+      speed: 136,
+      nodes: [
+        { id: "A", kind: "pickup", x: 196, y: 126, pair: "A" },
+        { id: "A", kind: "drop", x: 822, y: 116, pair: "A" },
+        { id: "B", kind: "pickup", x: 328, y: 382, pair: "B" },
+        { id: "B", kind: "drop", x: 814, y: 414, pair: "B" },
+        { id: "C", kind: "pickup", x: 550, y: 172, pair: "C" },
+        { id: "C", kind: "drop", x: 634, y: 360, pair: "C" }
+      ],
+      lanes: [
+        { x: 250, y: 82, w: 64, h: 374, dx: 0, dy: -1, label: "north" },
+        { x: 600, y: 86, w: 64, h: 366, dx: 0, dy: 1, label: "south" },
+        { x: 386, y: 242, w: 306, h: 56, dx: -1, dy: 0, label: "west" }
+      ],
+      hazards: [
+        { cx: 448, cy: 144, rx: 150, ry: 0, r: 17, phase: .15, rate: .53 },
+        { cx: 460, cy: 408, rx: 0, ry: 82, r: 19, phase: .52, rate: .7 },
+        { cx: 750, cy: 260, rx: 76, ry: 104, r: 16, phase: .82, rate: .43 }
+      ]
+    }
+  ];
+
+  const els = {
+    stage: document.getElementById("stageValue"),
+    score: document.getElementById("scoreValue"),
+    best: document.getElementById("bestValue"),
+    pickup: document.getElementById("pickupValue"),
+    drop: document.getElementById("dropValue"),
+    mode: document.getElementById("modeValue"),
+    modePill: document.getElementById("modePill"),
+    status: document.getElementById("statusLine"),
+    run: document.getElementById("runBtn"),
+    restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"),
+    full: document.getElementById("fullBtn")
+  };
+
+  function storage() {
+    if (window.workshopStorage) return window.workshopStorage;
+    try { return window.localStorage; } catch (_) { return null; }
+  }
+  function readStore(key, fallback) {
+    const s = storage();
+    if (!s) return fallback;
+    try {
+      const raw = s.getItem(key);
+      return raw === null ? fallback : raw;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    const s = storage();
+    if (!s) return;
+    try { s.setItem(key, String(value)); } catch (_) {}
+  }
+  function readSound() {
+    const raw = String(readStore(SOUND_KEY, "1")).toLowerCase();
+    return !["0", "false", "off", "muted"].includes(raw);
+  }
+
+  let audioContext = null;
+  let lastTs = 0;
+  const state = {
+    mode: "planning",
+    stage: 0,
+    score: 0,
+    best: Number(readStore(BEST_KEY, "0")) || 0,
+    route: [],
+    routeIndex: 0,
+    courier: { x: 0, y: 0, vx: 0, vy: 0 },
+    cursor: { x: 0, y: 0 },
+    inventory: {},
+    delivered: {},
+    pickups: 0,
+    drops: 0,
+    time: 0,
+    runTime: 0,
+    feedback: "Draw from the depot or add keyboard points.",
+    soundEnabled: readSound(),
+    lastSound: "none",
+    activeInput: "none",
+    pointerDown: false,
+    complete: false,
+    failed: false,
+    failReason: ""
+  };
+
+  function stageDef() { return stages[state.stage]; }
+  function nodeTotals() {
+    const nodes = stageDef().nodes;
+    return {
+      pickups: nodes.filter((n) => n.kind === "pickup").length,
+      drops: nodes.filter((n) => n.kind === "drop").length
+    };
+  }
+  function resetStage(keepScore) {
+    const s = stageDef();
+    const score = keepScore ? state.score : 0;
+    state.mode = "planning";
+    state.score = score;
+    state.route = [{ x: s.start.x, y: s.start.y }];
+    state.routeIndex = 0;
+    state.courier = { x: s.start.x, y: s.start.y, vx: 0, vy: 0 };
+    state.cursor = { x: s.start.x, y: s.start.y };
+    state.inventory = {};
+    state.delivered = {};
+    state.pickups = 0;
+    state.drops = 0;
+    state.time = 0;
+    state.runTime = 0;
+    state.feedback = `Plan ${s.name}.`;
+    state.pointerDown = false;
+    state.complete = false;
+    state.failed = false;
+    state.failReason = "";
+    updateHud();
+    render();
+  }
+  function fullRestart() {
+    state.stage = 0;
+    resetStage(false);
+    ping("restart");
+  }
+
+  function ensureAudio() {
+    if (!state.soundEnabled) return null;
+    if (!audioContext) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audioContext = new AC();
+    }
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    return audioContext;
+  }
+  function ping(name) {
+    state.lastSound = state.soundEnabled ? name : "muted";
+    const ac = ensureAudio();
+    if (!ac) return;
+    const spec = {
+      point: [520, .035],
+      run: [740, .08],
+      pickup: [930, .07],
+      drop: [620, .08],
+      fail: [150, .16],
+      complete: [1040, .18],
+      restart: [360, .05]
+    }[name] || [420, .05];
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(spec[0], ac.currentTime);
+    gain.gain.setValueAtTime(.0001, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.055, ac.currentTime + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + spec[1]);
+    osc.connect(gain).connect(ac.destination);
+    osc.start();
+    osc.stop(ac.currentTime + spec[1] + .02);
+  }
+
+  function addPoint(p) {
+    const last = state.route[state.route.length - 1];
+    const point = { x: clamp(p.x, 24, W - 24), y: clamp(p.y, 24, H - 24) };
+    if (dist(last, point) < 10) return;
+    state.route.push(point);
+    state.cursor = { ...point };
+    state.feedback = `${state.route.length} route points set.`;
+    ping("point");
+  }
+  function clearRouteAt(p) {
+    state.route = [{ x: stageDef().start.x, y: stageDef().start.y }];
+    state.cursor = { ...state.route[0] };
+    if (dist(p, state.route[0]) > 16) addPoint(p);
+  }
+  function beginPointer(ev) {
+    ev.preventDefault();
+    canvas.focus();
+    if (state.mode === "running") return;
+    if (state.mode === "fail" || state.mode === "complete") {
+      if (state.mode === "complete") state.stage = 0;
+      resetStage(false);
+    }
+    state.mode = "drawing";
+    state.activeInput = "pointer";
+    state.pointerDown = true;
+    clearRouteAt(pointerPos(ev));
+    updateHud();
+    render();
+  }
+  function movePointer(ev) {
+    if (!state.pointerDown) return;
+    ev.preventDefault();
+    const p = pointerPos(ev);
+    state.cursor = p;
+    addPoint(p);
+    render();
+  }
+  function endPointer(ev) {
+    if (!state.pointerDown) return;
+    ev.preventDefault();
+    state.pointerDown = false;
+    if (state.route.length > 2) commitRoute();
+    else {
+      state.mode = "planning";
+      state.feedback = "Add a longer route before running.";
+      updateHud();
+      render();
+    }
+  }
+  function pointerPos(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * W / rect.width,
+      y: (ev.clientY - rect.top) * H / rect.height
+    };
+  }
+
+  function commitRoute() {
+    if (state.route.length < 2 || state.mode === "running") return;
+    state.mode = "running";
+    state.routeIndex = 1;
+    state.courier.x = state.route[0].x;
+    state.courier.y = state.route[0].y;
+    state.courier.vx = 0;
+    state.courier.vy = 0;
+    state.inventory = {};
+    state.delivered = {};
+    state.pickups = 0;
+    state.drops = 0;
+    state.runTime = 0;
+    state.failed = false;
+    state.failReason = "";
+    state.feedback = "Courier running the inkline.";
+    ping("run");
+    updateHud();
+  }
+
+  function fail(reason) {
+    state.mode = "fail";
+    state.failed = true;
+    state.failReason = reason;
+    state.feedback = reason;
+    ping("fail");
+    updateHud();
+  }
+  function finishStage() {
+    const base = 900 + state.stage * 350;
+    const routePenalty = Math.max(0, state.route.length - 14) * 9;
+    const timePenalty = Math.floor(state.runTime * 22);
+    state.score += Math.max(150, base - routePenalty - timePenalty);
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+    if (state.stage >= stages.length - 1) {
+      state.mode = "complete";
+      state.complete = true;
+      state.feedback = "All courier stages complete.";
+      ping("complete");
+    } else {
+      state.stage += 1;
+      resetStage(true);
+      state.feedback = `Stage clear. Plan ${stageDef().name}.`;
+      ping("complete");
+    }
+    updateHud();
+  }
+
+  function hazardPositions() {
+    const t = state.time;
+    return stageDef().hazards.map((h, i) => {
+      const a = (t * h.rate + h.phase + i * .17) * TAU;
+      return { x: h.cx + Math.cos(a) * h.rx, y: h.cy + Math.sin(a) * h.ry, r: h.r };
+    });
+  }
+  function inLane(p, lane) {
+    return p.x >= lane.x && p.x <= lane.x + lane.w && p.y >= lane.y && p.y <= lane.y + lane.h;
+  }
+  function checkNodes() {
+    for (const n of stageDef().nodes) {
+      if (dist(state.courier, n) > 24) continue;
+      if (n.kind === "pickup" && !state.inventory[n.pair]) {
+        state.inventory[n.pair] = true;
+        state.pickups += 1;
+        state.score += 50;
+        state.feedback = `Picked up parcel ${n.pair}.`;
+        ping("pickup");
+      }
+      if (n.kind === "drop" && state.inventory[n.pair] && !state.delivered[n.pair]) {
+        state.delivered[n.pair] = true;
+        state.drops += 1;
+        state.score += 120;
+        state.feedback = `Delivered parcel ${n.pair}.`;
+        ping("drop");
+      }
+    }
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+  }
+  function update(dt) {
+    state.time += dt;
+    if (state.mode !== "running") return;
+    state.runTime += dt;
+    for (const h of hazardPositions()) {
+      if (dist(state.courier, h) < h.r + 11) {
+        fail("Hazard clipped the courier.");
+        return;
+      }
+    }
+    for (const lane of stageDef().lanes) {
+      if (inLane(state.courier, lane)) {
+        const dot = state.courier.vx * lane.dx + state.courier.vy * lane.dy;
+        if (dot < -18) {
+          fail(`Wrong way in ${lane.label} lane.`);
+          return;
+        }
+      }
+    }
+    const target = state.route[state.routeIndex];
+    if (!target) {
+      const totals = nodeTotals();
+      if (state.drops >= totals.drops) finishStage();
+      else fail("Route ended before every delivery.");
+      return;
+    }
+    const dx = target.x - state.courier.x;
+    const dy = target.y - state.courier.y;
+    const d = Math.hypot(dx, dy);
+    const step = stageDef().speed * dt;
+    if (d <= step) {
+      state.courier.x = target.x;
+      state.courier.y = target.y;
+      state.routeIndex += 1;
+    } else {
+      state.courier.vx = dx / d * stageDef().speed;
+      state.courier.vy = dy / d * stageDef().speed;
+      state.courier.x += dx / d * step;
+      state.courier.y += dy / d * step;
+    }
+    checkNodes();
+    updateHud();
+  }
+
+  function drawGrid() {
+    ctx.fillStyle = "#061019";
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(103,232,249,.08)";
+    ctx.lineWidth = 1;
+    for (let x = 40; x < W; x += 40) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 40; y < H; y += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+  function drawLane(lane) {
+    ctx.save();
+    ctx.fillStyle = "rgba(34,211,238,.075)";
+    ctx.strokeStyle = "rgba(34,211,238,.34)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([9, 9]);
+    ctx.fillRect(lane.x, lane.y, lane.w, lane.h);
+    ctx.strokeRect(lane.x, lane.y, lane.w, lane.h);
+    ctx.setLineDash([]);
+    const cx = lane.x + lane.w / 2;
+    const cy = lane.y + lane.h / 2;
+    ctx.translate(cx, cy);
+    const angle = Math.atan2(lane.dy, lane.dx);
+    ctx.rotate(angle);
+    ctx.fillStyle = "rgba(125,249,255,.78)";
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 34 + 10, 0);
+      ctx.lineTo(i * 34 - 8, -10);
+      ctx.lineTo(i * 34 - 8, 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawNode(n) {
+    const done = n.kind === "pickup" ? state.inventory[n.pair] : state.delivered[n.pair];
+    const ready = n.kind === "drop" ? state.inventory[n.pair] : true;
+    ctx.save();
+    ctx.translate(n.x, n.y);
+    ctx.fillStyle = done ? "rgba(22,163,74,.9)" : n.kind === "pickup" ? "#facc15" : ready ? "#67e8f9" : "#334155";
+    ctx.strokeStyle = done ? "#bbf7d0" : n.kind === "pickup" ? "#fef08a" : "#a5f3fc";
+    ctx.lineWidth = 3;
+    if (n.kind === "pickup") {
+      ctx.fillRect(-15, -15, 30, 30);
+      ctx.strokeRect(-15, -15, 30, 30);
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#04111d";
+    ctx.font = "900 16px ui-sans-serif, system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(n.pair, 0, 1);
+    ctx.restore();
+  }
+  function drawRoute() {
+    if (state.route.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = state.mode === "fail" ? "#fb7185" : "#7df9ff";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(34,211,238,.55)";
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(state.route[0].x, state.route[0].y);
+    for (let i = 1; i < state.route.length; i++) ctx.lineTo(state.route[i].x, state.route[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawCourier() {
+    const c = state.courier;
+    const a = Math.atan2(state.courier.vy, state.courier.vx || 1);
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(a);
+    ctx.fillStyle = "#ecfeff";
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(17, 0);
+    ctx.lineTo(-12, -10);
+    ctx.lineTo(-7, 0);
+    ctx.lineTo(-12, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  function draw() {
+    drawGrid();
+    const s = stageDef();
+    for (const lane of s.lanes) drawLane(lane);
+    ctx.save();
+    ctx.translate(s.start.x, s.start.y);
+    ctx.fillStyle = "#0f172a";
+    ctx.strokeStyle = "#7df9ff";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#7df9ff";
+    ctx.font = "900 10px ui-sans-serif, system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("DEPOT", 0, 4);
+    ctx.restore();
+    for (const n of s.nodes) drawNode(n);
+    drawRoute();
+    for (const h of hazardPositions()) {
+      ctx.save();
+      ctx.translate(h.x, h.y);
+      ctx.fillStyle = "#fb7185";
+      ctx.strokeStyle = "#fecdd3";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "rgba(251,113,133,.55)";
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(0, 0, h.r, 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "#7f1d1d";
+      ctx.beginPath();
+      ctx.moveTo(-h.r * .6, -h.r * .6);
+      ctx.lineTo(h.r * .6, h.r * .6);
+      ctx.moveTo(h.r * .6, -h.r * .6);
+      ctx.lineTo(-h.r * .6, h.r * .6);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (state.mode === "planning" || state.mode === "drawing") {
+      ctx.save();
+      ctx.translate(state.cursor.x, state.cursor.y);
+      ctx.strokeStyle = "#facc15";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(16, 0);
+      ctx.moveTo(0, -16);
+      ctx.lineTo(0, 16);
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawCourier();
+    if (state.mode === "fail" || state.mode === "complete") {
+      ctx.fillStyle = "rgba(2,8,23,.68)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = state.mode === "complete" ? "#7df9ff" : "#fb7185";
+      ctx.font = "950 44px ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(state.mode === "complete" ? "RUN COMPLETE" : "ROUTE FAILED", W / 2, H / 2 - 18);
+      ctx.fillStyle = "#eaf7ff";
+      ctx.font = "800 18px ui-sans-serif, system-ui";
+      ctx.fillText(state.feedback, W / 2, H / 2 + 22);
+    }
+  }
+  function render() { draw(); }
+
+  function updateHud() {
+    const totals = nodeTotals();
+    els.stage.textContent = `${state.stage + 1}/${stages.length}`;
+    els.score.textContent = String(Math.floor(state.score));
+    els.best.textContent = String(Math.floor(state.best));
+    els.pickup.textContent = `${state.pickups}/${totals.pickups}`;
+    els.drop.textContent = `${state.drops}/${totals.drops}`;
+    els.mode.textContent = state.mode === "drawing" ? "Draw" : state.mode === "running" ? "Run" : state.mode === "complete" ? "Done" : state.mode === "fail" ? "Fail" : "Plan";
+    els.modePill.dataset.hot = String(state.mode === "running");
+    els.status.textContent = state.feedback;
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
+  }
+
+  function handleKey(ev) {
+    const k = ev.key.toLowerCase();
+    if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", " ", "enter"].includes(k)) ev.preventDefault();
+    if (k === "r") { fullRestart(); return; }
+    if (k === "f") { toggleFullscreen(); return; }
+    if (k === "m") { toggleSound(); return; }
+    if (state.mode === "running") return;
+    if (state.mode === "fail" || state.mode === "complete") {
+      state.stage = 0;
+      resetStage(false);
+    }
+    state.activeInput = "keyboard";
+    const step = ev.shiftKey ? 8 : 22;
+    let moved = false;
+    if (k === "arrowleft" || k === "a") { state.cursor.x -= step; moved = true; }
+    if (k === "arrowright" || k === "d") { state.cursor.x += step; moved = true; }
+    if (k === "arrowup" || k === "w") { state.cursor.y -= step; moved = true; }
+    if (k === "arrowdown" || k === "s") { state.cursor.y += step; moved = true; }
+    state.cursor.x = clamp(state.cursor.x, 24, W - 24);
+    state.cursor.y = clamp(state.cursor.y, 24, H - 24);
+    if (moved) {
+      state.mode = "drawing";
+      state.feedback = "Keyboard cursor ready. Space adds ink.";
+    }
+    if (k === " ") addPoint(state.cursor);
+    if (k === "enter") commitRoute();
+    updateHud();
+    render();
+  }
+  function toggleSound() {
+    state.soundEnabled = !state.soundEnabled;
+    writeStore(SOUND_KEY, state.soundEnabled ? "1" : "0");
+    state.lastSound = state.soundEnabled ? "sound-on" : "sound-off";
+    if (state.soundEnabled) ping("point");
+    updateHud();
+  }
+  function toggleFullscreen() {
+    const root = document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
+    else if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+
+  canvas.addEventListener("pointerdown", beginPointer);
+  canvas.addEventListener("pointermove", movePointer);
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+  canvas.addEventListener("keydown", handleKey);
+  window.addEventListener("keydown", (ev) => {
+    if (ev.target === canvas) return;
+    if (["r", "f", "m"].includes(ev.key.toLowerCase())) handleKey(ev);
+  });
+  els.run.addEventListener("click", () => { canvas.focus(); commitRoute(); });
+  els.restart.addEventListener("click", fullRestart);
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => {
+    state.feedback = document.fullscreenElement ? "Fullscreen courier view." : "Fullscreen closed.";
+    updateHud();
+    render();
+  });
+
+  window.render_game_to_text = () => JSON.stringify({
+    mode: state.mode,
+    stage: state.stage + 1,
+    score: Math.floor(state.score),
+    best: Math.floor(state.best),
+    route: {
+      points: state.route.length,
+      first: state.route[0] ? { x: round(state.route[0].x), y: round(state.route[0].y) } : null,
+      last: state.route[state.route.length - 1] ? { x: round(state.route[state.route.length - 1].x), y: round(state.route[state.route.length - 1].y) } : null,
+      activeIndex: state.routeIndex
+    },
+    courier: { x: round(state.courier.x), y: round(state.courier.y), vx: round(state.courier.vx), vy: round(state.courier.vy) },
+    pickups: { count: state.pickups, inventory: Object.keys(state.inventory).sort() },
+    deliveries: { count: state.drops, delivered: Object.keys(state.delivered).sort() },
+    hazards: hazardPositions().map((h) => ({ x: round(h.x), y: round(h.y), r: h.r })),
+    activeCursor: { x: round(state.cursor.x), y: round(state.cursor.y) },
+    activeInput: state.activeInput,
+    feedback: state.feedback,
+    soundEnabled: state.soundEnabled,
+    lastSound: state.lastSound,
+    fullscreen: Boolean(document.fullscreenElement),
+    complete: state.complete,
+    fail: state.failed,
+    failReason: state.failReason
+  });
+  window.advanceTime = (ms) => {
+    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < steps; i++) update(1 / 60);
+    render();
+  };
+
+  function loop(ts) {
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min(.05, (ts - lastTs) / 1000 || 0);
+    lastTs = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  resetStage(false);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

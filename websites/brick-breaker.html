@@ -61,14 +61,14 @@
 <style>
   :root{
     color-scheme: dark;
-    --bg:#0b0f14;        /* page background */
-    --panel:#0e1522;     /* canvas bg */
-    --ink:#e6edf3;       /* text */
-    --muted:#93a4b8;     /* subtle text */
-    --accent:#5eead4;    /* teal */
-    --warn:#fbbf24;      /* yellow */
-    --danger:#fb7185;    /* pink/red */
-    --ok:#34d399;        /* green */
+    --bg:#0b0f14;
+    --panel:#0e1522;
+    --ink:#e6edf3;
+    --muted:#93a4b8;
+    --accent:#5eead4;
+    --warn:#fbbf24;
+    --danger:#fb7185;
+    --ok:#34d399;
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
   #wrap{position:fixed;inset:0;display:grid;place-items:center;}
@@ -180,22 +180,15 @@ kbd{
 /* compact table for power-up legend */
 .powers{ margin:10px auto 0; border-collapse:separate; border-spacing:6px 4px }
 .powers td{ padding:0; vertical-align:middle }
-/* Mini canvases used in the legend */
 .powers canvas.pu-icon{
-  width:22px; height:22px;           /* CSS size */
-  display:inline-block; vertical-align:middle;
-  background:#0b1220; border:1px solid #26334a; border-radius:6px;
-}
-.powers canvas.pu-icon{
-  position: static;   /* override any global absolute positioning */
-  inset: auto;        /* reset */
+  position: static;
+  inset: auto;
   width:22px; height:22px;
   display:inline-block; vertical-align:middle;
   background:#0b1220; border:1px solid #26334a; border-radius:6px;
-  box-shadow:none;    /* avoids the big canvas shadow */
+  box-shadow:none;
 }
 .powers td:first-child{ width:28px; white-space:nowrap }
-/* Grid layout for the controls legend */
 .controls{
   margin:8px auto 0;
   display:grid;
@@ -230,6 +223,7 @@ kbd{
 
   .fade{animation:fade .35s ease both}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
   <script src="workshop-runtime.js"></script>
 </head>
@@ -250,9 +244,11 @@ kbd{
   <button type="button" id="btnRestart" title="R">🔄 Restart</button>
   <button type="button" id="btnMusic" title="M">🎵 Music: On</button>
   <button type="button" id="btnSfx" title="V">🔊 Sound: On</button>
+  <button type="button" id="btnFullscreen" title="Enter fullscreen (F)" aria-pressed="false">⛶ Fullscreen</button>
   <button type="button" id="btnHelp" title="H">❓ Help</button>
 </div>
 
+<div id="liveStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Brick Breaker ready.</div>
 
   <div class="overlay">
 <div id="msgStart" class="card fade" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
@@ -281,6 +277,9 @@ kbd{
 
     <div class="label">Sound</div>
     <div class="keys"><kbd>V</kbd></div>
+
+    <div class="label">Fullscreen</div>
+    <div class="keys"><kbd>F</kbd></div>
 
     <div class="label">Help</div>
     <div class="keys"><kbd>H</kbd></div>
@@ -419,8 +418,59 @@ if (elBest) elBest.textContent = highScore;
   const btnRestart = document.getElementById('btnRestart');
   const btnMusic   = document.getElementById('btnMusic');
   const btnSfx     = document.getElementById('btnSfx');
+  const btnFullscreen = document.getElementById('btnFullscreen');
   const btnHelp = document.getElementById('btnHelp');
   const startGameBtn = document.getElementById('startGameBtn');
+  const liveStatus = document.getElementById('liveStatus');
+  let lastStatus = liveStatus ? liveStatus.textContent : 'Brick Breaker ready.';
+
+  function announce(message){
+    lastStatus = message;
+    if (liveStatus) liveStatus.textContent = message;
+  }
+
+  function isFullscreenActive(){
+    return !!document.fullscreenElement;
+  }
+
+  function syncFullscreenButton(){
+    const active = isFullscreenActive();
+    if (!btnFullscreen) return;
+    btnFullscreen.textContent = active ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+    btnFullscreen.setAttribute('aria-pressed', String(active));
+    btnFullscreen.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+    btnFullscreen.title = active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+  }
+
+  function isEditableTarget(target){
+    if (!target || target === document || target === window) return false;
+    const tag = target.tagName;
+    return target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+
+  function shouldGuardFullscreenShortcut(target){
+    if (isEditableTarget(target)) return true;
+    if (!cardStart.hidden || !cardNext.hidden || !cardOver.hidden) return true;
+    return !!(target && target.closest && target.closest('button, [role="button"], [role="dialog"], [aria-modal="true"]'));
+  }
+
+  async function toggleFullscreen(){
+    if (!document.fullscreenEnabled) {
+      announce('Fullscreen is not available in this browser.');
+      return;
+    }
+    try {
+      if (isFullscreenActive()) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      announce('Fullscreen request was blocked.');
+      syncFullscreenButton();
+    }
+  }
+
+  document.addEventListener('fullscreenchange', syncFullscreenButton);
+  syncFullscreenButton();
+
   // Make canvas focusable and pull focus during play, so Space goes to the game.
 canvas.setAttribute('tabindex', '0');
 canvas.addEventListener('pointerdown', () => canvas.focus());
@@ -1146,6 +1196,7 @@ function buildLevel(level){
     // rebuild bricks using generator
     G.bricks = buildLevel(G.level);
 G.portals = computePortals(G.bricks);
+    if (advance) announce(`Level ${G.level} started. ${G.bricks.filter(br => br.hp > 0).length} bricks remain.`);
     // reset paddle/balls with difficulty scaling
     const dif = difficultyFor(G.level);
     G.paddle.x = css.w/2;
@@ -1188,7 +1239,6 @@ function rowColor(r,hp){
     r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
     return '#'+(r.toString(16).padStart(2,'0'))+(g.toString(16).padStart(2,'0'))+(b.toString(16).padStart(2,'0'));
   }
-  // --- Curses helpers ---
 function isCurse(t){ return t && t.startsWith('CURSE_'); }
 function lerp(a,b,p){ return a + (b-a)*p; }
 
@@ -1197,6 +1247,7 @@ function addScore(points){
   const mult = (G && G.riskMult) ? G.riskMult : 1;
   G.score += Math.round(points * mult);
   elScore.textContent = G.score;
+  announce(`Brick hit. Score ${G.score}.`);
   if (G.score > highScore){
     highScore = G.score;
     if (elBest) elBest.textContent = highScore;
@@ -1246,6 +1297,7 @@ function restartGame(){
   cardOver.hidden = true;
   resetLevel(false);
   SFX.restart();
+  announce('New run ready. Launch the ball.');
 }
 
   // ===== Input =====
@@ -1254,6 +1306,12 @@ function restartGame(){
   
   addEventListener('keydown', (e)=>{
     if (e.repeat) return;
+    if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (shouldGuardFullscreenShortcut(e.target || document.activeElement)) return;
+      e.preventDefault();
+      toggleFullscreen();
+      return;
+    }
     if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') G.keys.left=true;
     if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') G.keys.right=true;
     if (e.key===' '){
@@ -1293,6 +1351,7 @@ canvas.addEventListener('pointerdown', ()=>{
   btnRestart.onclick = ()=> restartGame();
   btnMusic.onclick = ()=> toggleMusic();
   btnSfx.onclick = ()=> toggleSfx();
+  if (btnFullscreen) btnFullscreen.onclick = () => toggleFullscreen();
 btnHelp.onclick = toggleHelp;
 if (startGameBtn) startGameBtn.onclick = () => launchAllBalls();
 
@@ -1320,6 +1379,7 @@ for (const b of G.balls){
   SFX.start();
   recordLaunchFeedback();
   cardStart.hidden = true;
+  announce(`Launch. Level ${G.level}, ${G.bricks.filter(br => br.hp > 0).length} bricks remain.`);
   }
 
   // ===== Power-Ups =====
@@ -1940,6 +2000,7 @@ if (b.y - b.r > css.h){
           G.lives--; elLives.textContent = G.lives;
           if (G.lives <= 0) SFX.gameOver(); else SFX.lose();
           recordLifeLoss(p.x, p.y - 12);
+          announce(G.lives <= 0 ? `Game over. Final score ${G.score}.` : `Life lost. ${G.lives} lives remain.`);
 if (G.lives <= 0){
   G.running = false;
   elFinal.textContent = G.score;
@@ -2064,6 +2125,7 @@ if (br.hp<=0){
     if (remaining===0){
       SFX.levelClear();
       G.running = false; cardNext.hidden = false;
+      announce(`Level ${G.level} cleared. Score ${G.score}.`);
       setTimeout(()=>{ if(G.lives > 0) resetLevel(true); }, 900);
     }
     updateExplosions(dt); // NEW: animate explosion FX
@@ -3094,6 +3156,13 @@ for (const e of G.effects){
       highScore,
       level: G.level,
       lives: G.lives,
+      status: lastStatus,
+      fullscreen: {
+        available: !!document.fullscreenEnabled,
+        active: isFullscreenActive(),
+        buttonPressed: btnFullscreen ? btnFullscreen.getAttribute('aria-pressed') === 'true' : false,
+        title: btnFullscreen ? btnFullscreen.title : ''
+      },
       soundEnabled,
       audioReady: audioReady(),
       lastSound,

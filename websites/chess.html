@@ -147,6 +147,17 @@ canvas{
     min-height: 34px;
     font-weight: 600;
   }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   .controls, .mode {
     display: flex;
     gap: 6px;
@@ -238,6 +249,10 @@ canvas{
   button.toggle[aria-pressed="true"] {
     border-color: rgba(92,230,153,0.5);
     background: linear-gradient(180deg, rgba(92,230,153,0.24), rgba(20,28,42,0.95));
+  }
+  #fullscreen {
+    min-width: 54px;
+    padding-inline: 9px;
   }
   ol.moves {
     margin: 0;
@@ -374,11 +389,13 @@ canvas{
 
       </div>
       <div class="status" id="status">White to move.</div>
+      <div class="sr-only" id="liveStatus" aria-live="polite" aria-atomic="true"></div>
       <div class="controls">
         <button type="button" id="undo">Undo</button>
         <button type="button" id="new">Restart Game</button>
         <button type="button" id="sound" class="toggle" aria-pressed="true" title="Toggle sound">Sound On</button>
         <button type="button" id="helpBtn">❓ Help</button>
+        <button type="button" id="fullscreen" class="toggle" aria-pressed="false" title="Enter fullscreen">Full</button>
         <button type="button" id="flip">Flip Board</button>
       </div>
       <div class="tiny">Click a piece to see its legal moves and click a destination to move.</div>
@@ -447,7 +464,9 @@ const newBtn = document.getElementById('new');
 const undoBtn = document.getElementById('undo');
 const flipBtn = document.getElementById('flip');
 const soundBtn = document.getElementById('sound');
+const fullscreenBtn = document.getElementById('fullscreen');
 const coordsEl = document.getElementById('coords');
+const liveStatusEl = document.getElementById('liveStatus');
 const vsComputerEl = document.getElementById('vsComputer');
 const autoFlipEl = document.getElementById('autoFlip');
 const autoFlipWrap = document.getElementById('autoFlipWrap');
@@ -464,10 +483,74 @@ const audioState = {
   lastSound: null,
   oscillatorCount: 0,
 };
+const fullscreenState = {
+  available: !!document.fullscreenEnabled,
+  active: false,
+  lastError: null,
+  toggleCount: 0,
+};
+let lastAnnouncement = 'White to move.';
+
+function announceStatus(message) {
+  lastAnnouncement = message;
+  if (!liveStatusEl) return;
+  liveStatusEl.textContent = '';
+  requestAnimationFrame(() => {
+    liveStatusEl.textContent = message;
+  });
+}
+
+function setStatus(message, options = {}) {
+  statusEl.textContent = message;
+  if (options.announce) announceStatus(message);
+}
+
+function updateFullscreenButton() {
+  if (!fullscreenBtn) return;
+  fullscreenState.active = !!document.fullscreenElement;
+  fullscreenBtn.setAttribute('aria-pressed', fullscreenState.active ? 'true' : 'false');
+  fullscreenBtn.textContent = fullscreenState.active ? 'Exit' : 'Full';
+  fullscreenBtn.title = fullscreenState.active ? 'Exit fullscreen' : 'Enter fullscreen';
+  fullscreenBtn.disabled = !fullscreenState.available;
+}
+
+function isTypingTarget(target) {
+  if (!target) return false;
+  const tag = target.tagName;
+  return target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
+function shouldIgnoreFullscreenShortcut(event) {
+  return event.repeat
+    || event.altKey
+    || event.ctrlKey
+    || event.metaKey
+    || isTypingTarget(event.target)
+    || (helpOverlay && helpOverlay.classList.contains('show'))
+    || (goEl && goEl.classList.contains('show'));
+}
+
+async function toggleFullscreen() {
+  if (!fullscreenState.available) return;
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await document.querySelector('.wrap').requestFullscreen();
+    }
+    fullscreenState.lastError = null;
+    fullscreenState.toggleCount++;
+  } catch (err) {
+    fullscreenState.lastError = err && err.message ? err.message : String(err);
+  } finally {
+    updateFullscreenButton();
+  }
+}
 
 function showOverlay(title){
   goTitle.textContent = title;
   goEl.classList.add('show');
+  announceStatus(`Game over. ${title}.`);
   playSound('game-over');
 }
 function hideOverlay(){ goEl.classList.remove('show'); }
@@ -561,8 +644,12 @@ function buildSAN(){
 }
 
 // Buttons
-goRematch.addEventListener('click', ()=>{ hideOverlay(); newGame(); playSound('rematch'); draw(); });
+goRematch.addEventListener('click', ()=>{ hideOverlay(); newGame({ announce: true, label: 'Rematch started. White to move.' }); playSound('rematch'); draw(); });
 goReview .addEventListener('click', ()=>{ hideOverlay(); /* leave final board for study */ });
+if (fullscreenBtn) {
+  updateFullscreenButton();
+  fullscreenBtn.addEventListener('click', toggleFullscreen);
+}
 if (soundBtn) {
   updateSoundButton();
   soundBtn.addEventListener('click', () => {
@@ -613,6 +700,15 @@ window.addEventListener('keydown', (e) => {
   if(e.code === 'Escape' && helpOverlay && helpOverlay.classList.contains('show')) {
     closeHelp();
   }
+  if(e.code === 'KeyF' && !shouldIgnoreFullscreenShortcut(e)) {
+    e.preventDefault();
+    toggleFullscreen();
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  updateFullscreenButton();
+  resizeLayout();
 });
 
 // Keyboard shortcuts when overlay is open
@@ -711,7 +807,7 @@ const feedback = {
 let feedbackFrame = null;
 let feedbackLastTick = 0;
 
-function newGame() {
+function newGame(options = {}) {
   // Reset board orientation
   flipped = false;
   hideOverlay();
@@ -721,7 +817,9 @@ function newGame() {
   moveHistory = [];
   stateHistory = [];
   movesEl.innerHTML = '';
-  statusEl.textContent = 'White to move.';
+  const statusText = 'White to move.';
+  setStatus(statusText, { announce: false });
+  if (options.announce) announceStatus(options.label || `Restart. ${statusText}`);
   aiThinking = false;
   resetFeedback();
   draw();
@@ -940,6 +1038,17 @@ function scheduleFeedbackDraw() {
   feedbackFrame = requestAnimationFrame(tick);
 }
 
+function pieceName(type) {
+  return {
+    p: 'pawn',
+    n: 'knight',
+    b: 'bishop',
+    r: 'rook',
+    q: 'queen',
+    k: 'king',
+  }[type] || 'piece';
+}
+
 function recordMoveFeedback(mv, movedPiece, capturedPiece, captureSquare, givesCheck, promotedTo = null) {
   const lastLogged = moveHistory.length ? moveHistory[moveHistory.length - 1] : null;
   const isCastle = !!mv.castle;
@@ -973,6 +1082,10 @@ function recordMoveFeedback(mv, movedPiece, capturedPiece, captureSquare, givesC
     castle: mv.castle || null,
     promotion: promotedTo,
   };
+  const color = feedback.lastMove.color === 'white' ? 'White' : 'Black';
+  const action = captured ? 'captured' : 'moved';
+  const checkText = givesCheck ? ' Check.' : '';
+  announceStatus(`${color} ${pieceName(movedPiece?.type)} ${action} ${feedback.lastMove.from} to ${feedback.lastMove.to}.${checkText}`);
   playSound(soundForMove(captured, givesCheck, isCastle, promoted));
   scheduleFeedbackDraw();
 }
@@ -1130,7 +1243,7 @@ function onClick(evt) {
 
 newBtn.addEventListener('click', () => {
   if (!currentAnimation && !aiThinking) {
-    newGame();
+    newGame({ announce: true, label: 'Restarted game. White to move.' });
     playSound('restart');
   }
   hideOverlay();
@@ -1178,7 +1291,9 @@ undoBtn.addEventListener('click', () => {
 
   // Update status line
   const inCheck = isKingInCheck(state, state.turn);
-  statusEl.textContent = `${state.turn === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : '');
+  const undoStatus = `${state.turn === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : '');
+  setStatus(undoStatus, { announce: false });
+  announceStatus(`Undo complete. ${undoStatus}`);
 
   // Refresh move list & board
   renderMoveList();
@@ -1573,12 +1688,12 @@ function postMoveChecks() {
         const youWin = (winnerColor === 'White'); // you are White vs Computer
         const title = youWin ? 'Checkmate — You win!' : 'Checkmate — You lose';
         const sub   = youWin ? 'Result: 1-0' : 'Result: 0-1';
-        statusEl.textContent = `${title} (${youWin ? '1-0' : '0-1'})`;
+        setStatus(`${title} (${youWin ? '1-0' : '0-1'})`);
         showOverlay(title);
       } else {
         const title = `Checkmate — ${winnerColor} wins`;
         const sub   = `Result: ${state.result}`;
-        statusEl.textContent = `${title} (${state.result})`;
+        setStatus(`${title} (${state.result})`);
         showOverlay(title);
       }
     } else {
@@ -1586,11 +1701,11 @@ function postMoveChecks() {
       state.result = '1/2-1/2';
       const title = 'Draw — Stalemate';
       const sub   = 'Result: 1/2–1/2';
-      statusEl.textContent = `${title} (${state.result})`;
+      setStatus(`${title} (${state.result})`);
       showOverlay(title);
     }
   } else {
-    statusEl.textContent = `${side === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : '');
+    setStatus(`${side === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : ''));
   }
 }
 
@@ -1751,7 +1866,7 @@ function generateAllLegalMovesFrom(st, color) {
 
 function thinkAndMoveAI() {
   aiThinking = true;
-  statusEl.textContent = 'Computer thinking...';
+  setStatus('Computer thinking...');
   undoBtn.disabled = true;
 
 const depth = Math.max(1, Math.min(6, parseInt(depthEl.value || '3', 10)));
@@ -1873,6 +1988,15 @@ function renderGameToText(){
     soundEnabled: !!audioState.enabled,
     lastSound: audioState.lastSound,
     audioOscillatorCount: audioState.oscillatorCount,
+    fullscreen: {
+      available: fullscreenState.available,
+      active: !!document.fullscreenElement,
+      buttonPressed: fullscreenBtn ? fullscreenBtn.getAttribute('aria-pressed') : null,
+      title: fullscreenBtn ? fullscreenBtn.title : null,
+      toggleCount: fullscreenState.toggleCount,
+      lastError: fullscreenState.lastError
+    },
+    liveStatus: lastAnnouncement,
     flipped: !!flipped,
     aiMode: {
       enabled: !!vsComputer,

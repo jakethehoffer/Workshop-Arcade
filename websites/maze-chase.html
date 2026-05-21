@@ -146,7 +146,7 @@
 
       .hud {
         display: grid;
-        grid-template-columns: repeat(4, minmax(150px, 1fr)) auto auto;
+        grid-template-columns: repeat(4, minmax(150px, 1fr)) auto auto auto;
         gap: 8px;
         align-items: stretch;
         margin-bottom: 10px;
@@ -202,6 +202,18 @@
         border-color: rgba(219, 231, 255, 0.35);
         background: rgba(8, 14, 30, 0.8);
         box-shadow: none;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
 
       .game-wrap {
@@ -425,10 +437,18 @@
           </div>
           <button class="hud-action" id="mute-btn" type="button" aria-pressed="false">Mute</button>
           <button class="hud-action" id="pause-btn" type="button">Pause</button>
+          <button
+            class="hud-action"
+            id="fullscreen-btn"
+            type="button"
+            aria-pressed="false"
+            title="Enter fullscreen"
+          >Full</button>
         </div>
 
         <div class="game-wrap">
           <canvas id="game" tabindex="0" aria-label="Maze Chase game board"></canvas>
+          <div class="sr-only" id="live-status" aria-live="polite" aria-atomic="true"></div>
           <div class="overlay show" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
             <div class="overlay-card">
               <h2 id="overlay-title">Ready</h2>
@@ -465,6 +485,8 @@
         const resetBtn = document.getElementById("reset-btn");
         const pauseBtn = document.getElementById("pause-btn");
         const muteBtn = document.getElementById("mute-btn");
+        const fullscreenBtn = document.getElementById("fullscreen-btn");
+        const liveStatus = document.getElementById("live-status");
         const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let activeDialog = null;
         let activeDialogTrigger = null;
@@ -794,6 +816,78 @@
           },
           unavailableNotified: false,
         };
+
+        const fullscreenDiagnostics = {
+          available: !!document.fullscreenEnabled,
+          active: false,
+          element: null,
+          requests: 0,
+          changes: 0,
+          errors: 0,
+          lastError: null,
+        };
+
+        function announceStatus(message) {
+          liveStatus.textContent = "";
+          requestAnimationFrame(() => {
+            liveStatus.textContent = message;
+          });
+        }
+
+        function fullscreenElementName() {
+          const element = document.fullscreenElement;
+          if (!element) {
+            return null;
+          }
+          return element.id || element.tagName.toLowerCase();
+        }
+
+        function syncFullscreenButton() {
+          fullscreenDiagnostics.available = !!document.fullscreenEnabled;
+          fullscreenDiagnostics.active = !!document.fullscreenElement;
+          fullscreenDiagnostics.element = fullscreenElementName();
+          const active = fullscreenDiagnostics.active;
+          fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
+          fullscreenBtn.textContent = active ? "Exit" : "Full";
+          fullscreenBtn.title = active ? "Exit fullscreen" : "Enter fullscreen";
+          fullscreenBtn.disabled = !fullscreenDiagnostics.available;
+        }
+
+        async function toggleFullscreen() {
+          if (!document.fullscreenEnabled) {
+            fullscreenDiagnostics.available = false;
+            fullscreenDiagnostics.errors += 1;
+            fullscreenDiagnostics.lastError = "fullscreen-unavailable";
+            syncFullscreenButton();
+            return;
+          }
+          fullscreenDiagnostics.requests += 1;
+          try {
+            if (document.fullscreenElement) {
+              await document.exitFullscreen();
+            } else {
+              await document.documentElement.requestFullscreen();
+            }
+          } catch (error) {
+            fullscreenDiagnostics.errors += 1;
+            fullscreenDiagnostics.lastError = error && error.name ? error.name : "fullscreen-error";
+            syncFullscreenButton();
+          }
+        }
+
+        function handleFullscreenChange() {
+          fullscreenDiagnostics.changes += 1;
+          syncFullscreenButton();
+          resizeCanvas();
+        }
+
+        function isEditableTarget(target) {
+          return !!(
+            target &&
+            target.closest &&
+            target.closest("button, a, input, select, textarea, [contenteditable='true']")
+          );
+        }
 
         const musicPattern = [
           { freq: 523.25, dur: 0.16 },
@@ -1435,6 +1529,7 @@
           resetPositions();
           resetFeedback(true);
           setPhase("ready", "Ready", "Press Enter or tap Start.");
+          announceStatus("Ready. Press Enter or tap Start.");
           updateHud();
         }
 
@@ -1470,6 +1565,7 @@
           }
           state.pendingNextLevel = false;
           setPhase("playing", "", "");
+          announceStatus(`Started level ${state.level}.`);
           lastTime = performance.now();
           accumulator = 0;
         }
@@ -1491,6 +1587,7 @@
             updateHud();
             playStartSound("start");
             startPlay();
+            announceStatus(`Level ${state.level} started.`);
             return;
           }
           if (state.phase === "gameover") {
@@ -1899,6 +1996,7 @@
             recordPellet(col, row);
             playPelletSound();
             updateHud();
+            announceStatus(`Pellet collected. ${pelletsRemaining} left.`);
             checkFruitSpawn();
           } else if (powerPellets.has(index)) {
             powerPellets.delete(index);
@@ -1908,6 +2006,7 @@
             activatePower();
             playPowerSound();
             updateHud();
+            announceStatus(`Power pellet collected. ${pelletsRemaining} left.`);
             checkFruitSpawn();
           }
         }
@@ -2157,11 +2256,13 @@
           if (state.lives <= 0) {
             playGameOverSound();
             setPhase("gameover", "Game Over", "Press Enter to retry.");
+            announceStatus(`Caught. Game over with ${state.score} points.`);
             return;
           }
           resetGhostModes();
           resetPositions();
           setPhase("ready", "Ready", "Press Enter to continue.");
+          announceStatus(`Caught. ${state.lives} lives left.`);
         }
 
         function updateTimers(dt) {
@@ -2194,6 +2295,7 @@
             state.pendingNextLevel = true;
             playLevelClearSound();
             setPhase("levelcomplete", "Level Clear", "Press Enter for the next wave.");
+            announceStatus(`Level ${state.level} clear. Press Enter for the next wave.`);
           }
         }
 
@@ -2617,6 +2719,16 @@
               lastSoundStatus: audio.lastSoundStatus,
               soundCounts: { ...audio.soundCounts }
             },
+            fullscreen: {
+              available: !!fullscreenDiagnostics.available,
+              active: !!fullscreenDiagnostics.active,
+              element: fullscreenDiagnostics.element,
+              requests: fullscreenDiagnostics.requests,
+              changes: fullscreenDiagnostics.changes,
+              errors: fullscreenDiagnostics.errors,
+              lastError: fullscreenDiagnostics.lastError
+            },
+            liveStatus: liveStatus.textContent,
             overlay: { visible: overlay.classList.contains("show"), title: overlayTitle.textContent },
             controls: { pauseLabel: pauseBtn.textContent, mutedLabel: muteBtn.textContent }
           });
@@ -2642,6 +2754,20 @@
         }
 
         function handleKeydown(event) {
+          const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+          if (
+            key === "f" &&
+            !event.altKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.shiftKey &&
+            !activeDialog &&
+            !isEditableTarget(event.target)
+          ) {
+            event.preventDefault();
+            toggleFullscreen();
+            return;
+          }
           if (
             event.target &&
             event.target.closest &&
@@ -2697,10 +2823,12 @@
 
         function bindControls() {
           document.addEventListener("keydown", handleKeydown);
+          document.addEventListener("fullscreenchange", handleFullscreenChange);
           startBtn.addEventListener("click", handleStartAction);
           resetBtn.addEventListener("click", handleResetAction);
           pauseBtn.addEventListener("click", togglePause);
           muteBtn.addEventListener("click", toggleMute);
+          fullscreenBtn.addEventListener("click", toggleFullscreen);
         }
 
         function init() {
@@ -2709,6 +2837,7 @@
           resetGame();
           bindControls();
           updateMuteButton();
+          syncFullscreenButton();
           requestAnimationFrame(loop);
         }
 

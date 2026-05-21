@@ -147,6 +147,10 @@
   .btn:active{transform:translateY(1px)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   [hidden]{ display:none !important; }
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
 
   .btn[aria-pressed="true"]{
     outline:1px solid rgba(94,234,212,0.55);
@@ -347,6 +351,7 @@
       </div>
       <div class="control-group">
         <button type="button" id="sndBtn" class="btn" aria-pressed="true" aria-label="Sound on">🔊 Sound</button>
+        <button type="button" id="fullscreenBtn" class="btn" aria-pressed="false" title="Enter fullscreen (F)">Fullscreen</button>
         <button type="button" id="helpBtn" class="btn">❓ Help</button>
       </div>
       <label id="autoFlipWrap" style="display:none;"><input type="checkbox" id="autoFlip"> Auto-flip board</label>
@@ -390,6 +395,7 @@
     <h3>Shortcuts</h3>
     <ul>
       <li><span class="kbd">H</span> — Open Help</li>
+      <li><span class="kbd">F</span> — Toggle fullscreen</li>
       <li><span class="kbd">Esc</span> or <span class="kbd">H</span> — Close Help</li>
     </ul>
 
@@ -403,6 +409,7 @@
     <div class="board-wrap">
       <div class="status">
         <div class="turn pill"><span id="turnDot" class="dot red"></span><span id="turnText">Red to move</span></div>
+        <div id="liveStatus" class="sr-only" aria-live="polite" aria-atomic="true"></div>
       </div>
       <div id="board" class="board" aria-label="Checkers board"></div>
       <div id="toast" class="toast" style="display:none"></div>
@@ -467,9 +474,11 @@ const elModePVP = document.getElementById('mode-pvp');
 const elDepth   = document.getElementById('aiDepth');
 const elAiWrap  = document.getElementById('aiWrap');   // ⬅️ add this
 const elSnd     = document.getElementById('sndBtn'); /* 🔊 ADDED */
+const elFullscreen = document.getElementById('fullscreenBtn');
 const elFlipBtn = document.getElementById('flipBtn');
 const elAutoFlip = document.getElementById('autoFlip');
 const elAutoFlipWrap = document.getElementById('autoFlipWrap');
+const elLiveStatus = document.getElementById('liveStatus');
 // Game over elements
 const elGameOver = document.getElementById('gameOver');
 const elGoWinner = document.getElementById('goWinner');
@@ -482,6 +491,14 @@ const elHelpClose= document.getElementById('helpClose');
 /* ⏱️ Animation timing */
 const MOVE_STEP_MS = 420; // tweak 300–600 to taste
 const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+const fullscreenDiagnostics = {
+  requestedCount: 0,
+  changeCount: 0,
+  errorCount: 0,
+  lastError: null,
+};
+let lastForcedAnnouncementKey = '';
 
 
 /* Lightweight synth SFX (no external files). Storage is defensive because some embeds block it. */
@@ -641,6 +658,7 @@ function showGameOver(winnerText){
   locked = true;                  // freeze board interactions
   elGoWinner.textContent = winnerText;
   elGameOver.classList.add('show');
+  announceStatus(winnerText === 'Draw' ? 'Game over. Draw.' : `Game over. ${winnerText} wins.`);
   // Win/loss jingle in singleplayer; local two-player treats either winner as a human win.
   if(winnerText === 'Draw'){
     Sound.gameover('draw');
@@ -692,12 +710,77 @@ function updateForcedHighlights(){
   }
 }
 
+function updateForcedStatus(){
+  const key = `${turn}:${mustContinueFrom ? `${mustContinueFrom.r},${mustContinueFrom.c}` : ''}:${[...forcedSources].sort().join('|')}:${[...forcedTargets].sort().join('|')}`;
+  if(key === lastForcedAnnouncementKey) return;
+  lastForcedAnnouncementKey = key;
+  if(mustContinueFrom){
+    announceStatus('Forced multi-jump. Continue with the same piece.');
+  } else if(forcedSources.size){
+    announceStatus(`Capture available. Choose one of ${forcedSources.size} highlighted piece${forcedSources.size === 1 ? '' : 's'}.`);
+  }
+}
+
 function toast(msg, ms=1400){
   elToast.textContent = msg;
   elToast.style.display = 'block';
   clearTimeout(toast._t);
   toast._t = setTimeout(()=> elToast.style.display='none', ms);
 }
+function announceStatus(message){
+  if(!elLiveStatus || !message) return;
+  elLiveStatus.textContent = message;
+}
+
+function currentFullscreenElement(){
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function fullscreenActive(){
+  return !!currentFullscreenElement();
+}
+
+function updateFullscreenUI(){
+  if(!elFullscreen) return;
+  const active = fullscreenActive();
+  const available = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  elFullscreen.disabled = !available;
+  elFullscreen.setAttribute('aria-pressed', active ? 'true' : 'false');
+  elFullscreen.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+  elFullscreen.title = available
+    ? (active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)')
+    : 'Fullscreen unavailable';
+  elFullscreen.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
+}
+
+async function toggleFullscreen(){
+  if(!elFullscreen || elFullscreen.disabled) return;
+  fullscreenDiagnostics.requestedCount++;
+  try {
+    if(fullscreenActive()){
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if(exit) await exit.call(document);
+    } else {
+      const target = document.documentElement;
+      const request = target.requestFullscreen || target.webkitRequestFullscreen;
+      if(request) await request.call(target);
+    }
+  } catch (err) {
+    fullscreenDiagnostics.errorCount++;
+    fullscreenDiagnostics.lastError = err && err.message ? err.message : String(err);
+    announceStatus('Fullscreen could not be changed.');
+  } finally {
+    updateFullscreenUI();
+  }
+}
+
+function onFullscreenChange(){
+  fullscreenDiagnostics.changeCount++;
+  updateFullscreenUI();
+  announceStatus(fullscreenActive() ? 'Fullscreen enabled.' : 'Fullscreen exited.');
+  render();
+}
+
 function updateTurnUI(){
   elTurnText.textContent = (turn===RED? 'Red':'Black') + ' to move';
   elTurnDot.className = 'dot ' + (turn===RED ? 'red' : 'black');
@@ -967,6 +1050,7 @@ function recordInvalidFeedback(reason, r, c, message){
     message,
     turn: turn === RED ? 'red' : 'black',
   };
+  announceStatus(message);
 }
 
 function recordMoveFeedback(move, piece, capturedSquares, crowned){
@@ -991,6 +1075,10 @@ function recordMoveFeedback(move, piece, capturedSquares, crowned){
     captures: capturedSquares.map(([r,c]) => ({ square: squareName(r,c), row: r, col: c })),
     crowned: !!crowned,
   };
+  const side = colorOf(piece) === RED ? 'Red' : 'Black';
+  const captureText = capturedSquares.length ? ` Captured ${capturedSquares.length}.` : '';
+  const crownText = crowned ? ' Kinged.' : '';
+  announceStatus(`${side} moved ${feedback.lastMove.from} to ${feedback.lastMove.to}.${captureText}${crownText}`);
 }
 
 function lastMoveHasSquare(r, c, kind){
@@ -1006,6 +1094,7 @@ function lastMoveHasSquare(r, c, kind){
 function render(){
   // ⬅️ compute forced-capture hints for the current (human) turn
   updateForcedHighlights();
+  updateForcedStatus();
 
   elBoard.innerHTML='';
   for(let r=0;r<SIZE;r++){
@@ -1286,6 +1375,7 @@ function undo(){
   elUndo.disabled = history.length === 0;
   Sound.undo(); /* 🔊 ADDED */
   render();
+  announceStatus(`Undo complete. ${turn === RED ? 'Red' : 'Black'} to move.`);
 }
 
 /* ======================
@@ -1345,6 +1435,17 @@ function renderGameToText(){
     lastSound: Sound.lastSound,
     oscillatorCount: Sound.oscillatorCount,
     soundStorageKey: Sound.storageKey,
+    fullscreen: {
+      active: fullscreenActive(),
+      enabled: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+      ariaPressed: elFullscreen ? elFullscreen.getAttribute('aria-pressed') : null,
+      title: elFullscreen ? elFullscreen.title : null,
+      requestedCount: fullscreenDiagnostics.requestedCount,
+      changeCount: fullscreenDiagnostics.changeCount,
+      errorCount: fullscreenDiagnostics.errorCount,
+      lastError: fullscreenDiagnostics.lastError,
+    },
+    liveStatus: elLiveStatus ? elLiveStatus.textContent : '',
     invalidFeedback,
     selected: selected ? squareName(selected.r, selected.c) : null,
     selectedLegalDestinations: selectedMoves,
@@ -1407,8 +1508,10 @@ function newGame(soundCue = 'new-game'){
   selected=null; legalDest=[];
   turn=RED;
   resetFeedback();
+  lastForcedAnnouncementKey = '';
   initBoard();
   render();
+  if(soundCue !== null) announceStatus('New game started. Red to move.');
   if(soundCue === 'mode-change') Sound.modeChange();
   else if(soundCue) Sound.newGame();
   if(mode==='SP' && aiPlays===RED){
@@ -1455,6 +1558,12 @@ elSnd.addEventListener('click', ()=>{
   updateSoundUI();
   if (enabled) Sound.click();
 });
+elFullscreen?.addEventListener('click', ()=>{
+  Sound.click();
+  toggleFullscreen();
+});
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
 /* Wire up controls */
 elNew.addEventListener('click', ()=> newGame('new-game'));
@@ -1483,11 +1592,18 @@ document.addEventListener('keydown', (e)=>{
   if (typing) return; // don't hijack typing
 
   const isOpen = elHelp.classList.contains('show');
+  const gameOverOpen = elGameOver.classList.contains('show');
 
   // Close when open: Esc, H
   if (isOpen && (key === 'Escape' || key === 'h' || key === 'H')) {
     e.preventDefault();
     closeHelp();
+    return;
+  }
+
+  if (!isOpen && !gameOverOpen && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && (key === 'f' || key === 'F')) {
+    e.preventDefault();
+    toggleFullscreen();
     return;
   }
 
@@ -1514,6 +1630,7 @@ if(elAutoFlipWrap) {
 newGame(null); // render the board immediately on page load
 setMode('SP');
 updateSoundUI(); /* 🔊 ADDED */
+updateFullscreenUI();
 updateAiVisibility(); // ⬅️ safe extra call on boot
 </script>
 </body>

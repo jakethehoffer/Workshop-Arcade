@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-05-20 Codex pass 78
+
+- Implemented the max-parallel quality bundle on `codex/max-parallel-quality-2026-05-20`: added five compact standalone games (Inkline Courier, Cipher Rooms, Patchwork Foundry, Market Minute, and Bloomkeeper Grid) with SVG covers, manifest entries, generated catalog fallback data, per-game meta/JSON-LD, sitemap/feed entries, OG share cards, and render-capture recipes.
+- Finished legacy parity work without changing gameplay rules: Arena now has fullscreen button/`F` shortcut/diagnostics; Brick Breaker, Arcade Jump, Maze Chase, Metro Dash, Chess, Checkers, and Neon Snake received worker-owned fullscreen/live-status/diagnostic polish; Klondike Solitaire, Memory Match, and Slope Runner now expose explicit live status announcements.
+- Added tool truth gates: `npm run test:generated-surfaces` verifies every manifest game has generated OG, sitemap, feed, meta/JSON-LD, and capture recipe coverage; `npm run test:performance-baseline` keeps the latest performance-baseline pass aligned with the manifest count and strict audit budgets. Improved smoke-test summaries with current phase details for fatal failures. Bumped the service worker cache key to `wa-v6-2026-05-20` for the changed catalog shell.
+- Local verification passed: generated surfaces now cover 54 manifest games and 55 pages; `validate-catalog.ps1 -Fix`; `npm run inject:meta`; `npm run build:sitemap`; `npm run build:feed`; `npm run build:og-images`; `validate-catalog.ps1`; `npm test` across 31 fast gates; `npm run test:games` for 54 games; and `npm run capture:games:ci` across 108 surfaces with max score 0. Strict local `audit:perf:ci` passed across 55 pages with all five new games at 28.0-33.6 KB / 2 requests, catalog at 190.6 KB / 16 requests, and no console/page/meta/alt failures.
+- Suggested next pass: after branch CI/Pages verification, pause broad expansion for a focused subjective contact-sheet/play-feel review of the now-54-game catalog.
+
 ## 2026-05-19 Codex pass 77
 
 - Implemented `codex/max-parallel-next-2026-05-19` with a sub-agent fan-out: added five compact standalone games (Orbit Salvage, Harbor Switchboard, Relay Choir, Circuit Draft, and Switchback Rally), integrated their SVG covers, manifest entries, catalog fallback data, JSON-LD/meta tags, sitemap/feed entries, OG share cards, and render-capture recipes.

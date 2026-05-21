@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Patchwork Foundry - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Place polyomino plates to connect glowing ports across a compact factory grid." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/patchwork-foundry.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Patchwork Foundry — Workshop Arcade" />
+<meta property="og:description" content="Place polyomino plates to connect glowing ports across a compact factory grid." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/patchwork-foundry.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/patchwork-foundry.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Patchwork Foundry — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Patchwork Foundry — Workshop Arcade" />
+<meta name="twitter:description" content="Place polyomino plates to connect glowing ports across a compact factory grid." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/patchwork-foundry.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Patchwork Foundry",
+  "description": "Place polyomino plates to connect glowing ports across a compact factory grid.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/patchwork-foundry.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/patchwork-foundry.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#070b12;color:#e9f2ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;overflow-x:hidden;background:radial-gradient(760px 420px at 8% -8%,rgba(45,212,191,.17),transparent 64%),radial-gradient(680px 420px at 95% 2%,rgba(251,191,36,.13),transparent 62%),linear-gradient(180deg,#070b12,#0b111d 82%)}.shell{width:min(1080px,100%);display:grid;gap:9px}.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.18em}.title{display:block;margin-top:3px;color:#f8fbff;font-size:clamp(22px,4vw,31px);font-weight:1000;text-transform:uppercase;letter-spacing:.04em}.hud,.controls{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.pill{min-width:74px;border:1px solid rgba(103,232,249,.22);border-radius:8px;background:linear-gradient(180deg,rgba(19,31,49,.96),rgba(9,16,29,.96));padding:7px 9px;text-align:center;box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}.label{display:block;color:#9fb3c7;font-size:9px;font-weight:950;text-transform:uppercase}.value{display:block;margin-top:2px;font-size:17px;font-weight:1000;font-variant-numeric:tabular-nums}.stage{border:1px solid rgba(103,232,249,.24);border-radius:9px;overflow:hidden;background:#08111d;box-shadow:0 22px 60px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:68vh;background:#08111d;touch-action:none}canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}.status{min-height:20px;color:#67e8f9;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.btn{border:1px solid rgba(103,232,249,.24);border-radius:8px;background:linear-gradient(180deg,rgba(19,31,49,.96),rgba(9,16,29,.96));color:#e9f2ff;font:inherit;font-size:12px;font-weight:950;text-transform:uppercase;padding:8px 10px;cursor:pointer}.btn:hover{border-color:rgba(251,191,36,.65)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8cf7e8,#22d3ee);color:#06242d}.help{color:#9fb3c7;text-align:center;font-size:12px;line-height:1.45}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;margin:0 1px;padding:0 5px;border:1px solid rgba(103,232,249,.25);border-radius:6px;background:#08111d;color:#f8fbff;font-weight:950}.sr{position:absolute;left:-10000px}@media(max-width:720px){body{padding:8px}.shell{gap:7px}.top{align-items:start}.pill{min-width:62px;padding:6px}.value{font-size:15px}.help{font-size:11px}.btn{flex:1 1 96px;padding:8px;font-size:11px}canvas{max-height:57vh}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="shell" aria-label="Patchwork Foundry game">
+  <div class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Patchwork Foundry</span></div>
+    <div class="hud" aria-label="Foundry status">
+      <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/5</span></div>
+      <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
+      <div class="pill"><span class="label">Ports</span><span class="value" id="portsValue">0/0</span></div>
+      <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+      <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+    </div>
+  </div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Patchwork Foundry board. Select, rotate, and place polyomino machine plates to connect every power port without covering vent cells."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Select a plate and bridge the first power bus.</div>
+  <div class="controls" aria-label="Game controls">
+    <button class="btn primary" id="rotateLeftBtn" type="button">Rotate Q</button>
+    <button class="btn primary" id="rotateRightBtn" type="button">Rotate E</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </div>
+  <div class="help"><span class="kbd">Pointer</span> select/place <span class="kbd">Q/E</span> rotate <span class="kbd">Arrows</span>/<span class="kbd">WASD</span> cursor <span class="kbd">Enter</span>/<span class="kbd">Space</span> place <span class="kbd">R</span> restart <span class="kbd">F</span> fullscreen</div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const BEST_KEY = "patchwork-foundry.best.v1";
+  const SOUND_KEY = "patchwork-foundry.sound.v1";
+  const COLORS = ["#22d3ee","#fbbf24","#a78bfa","#34d399","#fb7185","#f97316"];
+  const BOARDS = [
+    { name:"Bus Primer", w:7, h:5, budget:4, vents:[[3,2]], ports:[[0,2],[6,2]], pieces:[
+      { id:"beam-a", cells:[[0,0],[1,0],[2,0]] }, { id:"elbow-a", cells:[[0,0],[0,1],[1,1]] },
+      { id:"bar-a", cells:[[0,0],[1,0]] }, { id:"stub-a", cells:[[0,0],[0,1]] }
+    ] },
+    { name:"Vent Dogleg", w:8, h:6, budget:5, vents:[[3,2],[4,2]], ports:[[0,1],[7,4]], pieces:[
+      { id:"zig-b", cells:[[0,0],[1,0],[1,1],[2,1]] }, { id:"long-b", cells:[[0,0],[1,0],[2,0],[3,0]] },
+      { id:"tee-b", cells:[[0,0],[1,0],[2,0],[1,1]] }, { id:"dot-b", cells:[[0,0]] }, { id:"elbow-b", cells:[[0,0],[0,1],[1,1]] }
+    ] },
+    { name:"Triple Tap", w:8, h:7, budget:6, vents:[[2,3],[5,3]], ports:[[0,0],[7,0],[3,6]], pieces:[
+      { id:"tee-c", cells:[[0,0],[1,0],[2,0],[1,1]] }, { id:"long-c", cells:[[0,0],[0,1],[0,2],[0,3]] },
+      { id:"zig-c", cells:[[0,0],[1,0],[1,1],[2,1]] }, { id:"corner-c", cells:[[0,0],[1,0],[0,1],[0,2]] },
+      { id:"bar-c", cells:[[0,0],[1,0],[2,0]] }, { id:"dot-c", cells:[[0,0]] }
+    ] },
+    { name:"Cold Aisles", w:9, h:6, budget:6, vents:[[3,1],[3,2],[5,3],[5,4]], ports:[[0,3],[8,1],[8,5]], pieces:[
+      { id:"snake-d", cells:[[0,0],[1,0],[1,1],[2,1],[2,2]] }, { id:"tee-d", cells:[[0,0],[1,0],[2,0],[1,1]] },
+      { id:"long-d", cells:[[0,0],[1,0],[2,0],[3,0]] }, { id:"elbow-d", cells:[[0,0],[0,1],[1,1]] },
+      { id:"bar-d", cells:[[0,0],[1,0],[2,0]] }, { id:"dot-d", cells:[[0,0]] }
+    ] },
+    { name:"Final Weave", w:9, h:7, budget:7, vents:[[4,1],[4,2],[4,4],[4,5]], ports:[[0,1],[0,5],[8,3],[6,6]], pieces:[
+      { id:"cross-e", cells:[[1,0],[0,1],[1,1],[2,1],[1,2]] }, { id:"snake-e", cells:[[0,0],[1,0],[1,1],[2,1],[2,2]] },
+      { id:"tee-e", cells:[[0,0],[1,0],[2,0],[1,1]] }, { id:"long-e", cells:[[0,0],[0,1],[0,2],[0,3]] },
+      { id:"corner-e", cells:[[0,0],[1,0],[0,1],[0,2]] }, { id:"bar-e", cells:[[0,0],[1,0],[2,0]] },
+      { id:"dot-e", cells:[[0,0]] }
+    ] }
+  ];
+  const els = {
+    stage: document.getElementById("stageValue"), moves: document.getElementById("movesValue"), ports: document.getElementById("portsValue"),
+    score: document.getElementById("scoreValue"), best: document.getElementById("bestValue"), status: document.getElementById("statusLine"),
+    left: document.getElementById("rotateLeftBtn"), right: document.getElementById("rotateRightBtn"), restart: document.getElementById("restartBtn"),
+    sound: document.getElementById("soundBtn"), full: document.getElementById("fullBtn")
+  };
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const cellKey = (x, y) => x + "," + y;
+  const norm = (value) => Math.round(value * 100) / 100;
+  function store() {
+    if (window.workshopStorage) return window.workshopStorage;
+    try { return window.localStorage; } catch (_) { return null; }
+  }
+  function read(key, fallback) {
+    const s = store();
+    if (!s) return fallback;
+    try { const raw = s.getItem(key); return raw === null ? fallback : raw; } catch (_) { return fallback; }
+  }
+  function write(key, value) {
+    const s = store();
+    if (!s) return;
+    try { s.setItem(key, String(value)); } catch (_) {}
+  }
+  function readSound() {
+    return !["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase());
+  }
+  const state = {
+    mode:"playing", stage:0, score:0, best:Number(read(BEST_KEY, "0")) || 0, movesLeft:0, placed:[], selectedPiece:0,
+    cursor:{ x:0, y:0 }, hover:null, dragging:false, soundEnabled:readSound(), lastSound:"none", userGesture:false,
+    feedback:"Select a plate and bridge the first power bus.", feedbackMs:1200, complete:false, fail:false,
+    lastConnected:0, lastBlocked:0, timeMs:0
+  };
+  let boardRect = { x:52, y:66, size:52 };
+  let trayRects = [];
+  let audio = null;
+  function board() { return BOARDS[state.stage]; }
+  function stagePieces() { return board().pieces; }
+  function placedIds() { return new Set(state.placed.map((p) => p.id)); }
+  function pieceById(id) { return stagePieces().find((p) => p.id === id); }
+  function selectedBase() {
+    const ids = placedIds();
+    const open = stagePieces().filter((p) => !ids.has(p.id));
+    if (!open.length) return null;
+    state.selectedPiece = clamp(state.selectedPiece, 0, open.length - 1);
+    return open[state.selectedPiece];
+  }
+  function rotatedCells(cells, rot) {
+    let out = cells.map(([x, y]) => ({ x, y }));
+    for (let i = 0; i < ((rot % 4) + 4) % 4; i += 1) out = out.map((c) => ({ x:-c.y, y:c.x }));
+    const minX = Math.min(...out.map((c) => c.x));
+    const minY = Math.min(...out.map((c) => c.y));
+    return out.map((c) => ({ x:c.x - minX, y:c.y - minY }));
+  }
+  function cellsFor(piece, x, y, rot) {
+    return rotatedCells(piece.cells, rot).map((c) => ({ x:x + c.x, y:y + c.y }));
+  }
+  function allPlateCells() {
+    const cells = [];
+    for (const placed of state.placed) {
+      const base = pieceById(placed.id);
+      if (base) cellsFor(base, placed.x, placed.y, placed.rot).forEach((c) => cells.push({ ...c, id:placed.id }));
+    }
+    return cells;
+  }
+  function ventSet() { return new Set(board().vents.map(([x, y]) => cellKey(x, y))); }
+  function portSet() { return new Set(board().ports.map(([x, y]) => cellKey(x, y))); }
+  function placementIssue(piece, x, y, rot) {
+    const b = board();
+    const vents = ventSet();
+    const occupied = new Set(allPlateCells().map((c) => cellKey(c.x, c.y)));
+    for (const c of cellsFor(piece, x, y, rot)) {
+      const key = cellKey(c.x, c.y);
+      if (c.x < 0 || c.y < 0 || c.x >= b.w || c.y >= b.h) return "outside";
+      if (vents.has(key)) return "vent";
+      if (occupied.has(key)) return "overlap";
+    }
+    return "";
+  }
+  function connectionStats(extra = null) {
+    const b = board();
+    const conductive = new Set();
+    allPlateCells().forEach((c) => conductive.add(cellKey(c.x, c.y)));
+    if (extra) extra.forEach((c) => conductive.add(cellKey(c.x, c.y)));
+    b.ports.forEach(([x, y]) => conductive.add(cellKey(x, y)));
+    if (!b.ports.length) return { connected:0, total:0, ventsBlocked:0 };
+    const start = cellKey(b.ports[0][0], b.ports[0][1]);
+    const seen = new Set([start]);
+    const q = [b.ports[0]];
+    while (q.length) {
+      const [x, y] = q.shift();
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => {
+        const nx = x + dx, ny = y + dy, key = cellKey(nx, ny);
+        if (!seen.has(key) && conductive.has(key)) {
+          seen.add(key);
+          q.push([nx, ny]);
+        }
+      });
+    }
+    const connected = b.ports.filter(([x, y]) => seen.has(cellKey(x, y))).length;
+    const vents = ventSet();
+    let blocked = 0;
+    allPlateCells().forEach((c) => { if (vents.has(cellKey(c.x, c.y))) blocked += 1; });
+    return { connected, total:b.ports.length, ventsBlocked:blocked };
+  }
+  function setFeedback(text, ms = 900) {
+    state.feedback = text;
+    state.feedbackMs = Math.max(state.feedbackMs, ms);
+  }
+  function markGesture() {
+    state.userGesture = true;
+    canvas.focus({ preventScroll:true });
+  }
+  function ensureAudio() {
+    if (!state.soundEnabled || !state.userGesture) return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try {
+      if (!audio) audio = new AC();
+      if (audio.state === "suspended") audio.resume().catch(() => {});
+      return audio;
+    } catch (_) {
+      audio = null;
+      return null;
+    }
+  }
+  function sound(kind) {
+    state.lastSound = state.soundEnabled ? kind : "muted-" + kind;
+    const ac = ensureAudio();
+    if (!ac) return;
+    try {
+      const freq = { select:320, rotate:430, place:620, bad:130, stage:760, fail:100, done:880, restart:260, toggle:500 }[kind] || 400;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = kind === "bad" || kind === "fail" ? "sawtooth" : "triangle";
+      osc.frequency.setValueAtTime(freq, ac.currentTime);
+      if (kind === "place" || kind === "done") osc.frequency.linearRampToValueAtTime(freq + 160, ac.currentTime + .13);
+      gain.gain.setValueAtTime(.0001, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(kind === "fail" ? .07 : .04, ac.currentTime + .012);
+      gain.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + .18);
+      osc.connect(gain).connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + .2);
+    } catch (_) {}
+  }
+  function persistBest() {
+    if (state.score > state.best) {
+      state.best = state.score;
+      write(BEST_KEY, state.best);
+    }
+  }
+  function loadStage(index, keepScore = true) {
+    state.stage = index;
+    board().pieces.forEach((piece) => { piece.rot = 0; });
+    state.mode = "playing";
+    state.movesLeft = board().budget;
+    state.placed = [];
+    state.selectedPiece = 0;
+    state.cursor = { x:Math.floor(board().w / 2), y:Math.floor(board().h / 2) };
+    state.hover = null;
+    state.dragging = false;
+    state.complete = false;
+    state.fail = false;
+    if (!keepScore) state.score = 0;
+    setFeedback(board().name + ": place plates, keep vents open.", 1300);
+    sync();
+    render();
+  }
+  function restartRun() {
+    loadStage(0, false);
+    sound("restart");
+  }
+  function nextStage() {
+    if (state.stage >= BOARDS.length - 1) {
+      state.mode = "run-complete";
+      state.complete = true;
+      persistBest();
+      setFeedback("Run complete. Foundry grid fully commissioned.", 2200);
+      sound("done");
+      sync();
+      render();
+      return;
+    }
+    loadStage(state.stage + 1, true);
+    sound("stage");
+  }
+  function failStage(reason) {
+    state.mode = "fail";
+    state.fail = true;
+    setFeedback(reason, 1800);
+    sound("fail");
+  }
+  function tryPlace(x = state.cursor.x, y = state.cursor.y) {
+    if (state.complete) {
+      restartRun();
+      return;
+    }
+    if (state.fail) {
+      loadStage(state.stage, true);
+      sound("restart");
+      return;
+    }
+    const piece = selectedBase();
+    if (!piece) return;
+    const rot = piece.rot || 0;
+    const issue = placementIssue(piece, x, y, rot);
+    if (issue) {
+      setFeedback(issue === "vent" ? "Vent blocked. Leave blue grate cells open." : issue === "overlap" ? "Plate overlaps installed machinery." : "Plate hangs outside the foundry frame.", 1100);
+      sound("bad");
+      sync();
+      render();
+      return;
+    }
+    state.placed.push({ id:piece.id, x, y, rot });
+    state.movesLeft -= 1;
+    state.cursor = { x, y };
+    const stats = connectionStats();
+    const stageGain = stats.connected * 30 + state.movesLeft * 4 + state.placed.length * 3;
+    setFeedback("Plate installed. Power ports online " + stats.connected + "/" + stats.total + ".", 1000);
+    sound("place");
+    if (stats.connected === stats.total && stats.ventsBlocked === 0) {
+      state.score += stageGain + 80;
+      persistBest();
+      if (state.stage === BOARDS.length - 1) nextStage();
+      else {
+        state.mode = "stage-complete";
+        state.complete = true;
+        setFeedback(board().name + " complete. Press Enter or click board for next stage.", 1800);
+        sound("stage");
+      }
+    } else if (state.movesLeft <= 0) {
+      failStage("Move budget exhausted before all ports connected.");
+    }
+    sync();
+    render();
+  }
+  function rotateSelected(dir) {
+    const piece = selectedBase();
+    if (!piece || state.complete || state.fail) return;
+    piece.rot = ((piece.rot || 0) + dir + 4) % 4;
+    setFeedback("Rotated " + piece.id.replace(/-/g, " ") + ".", 500);
+    sound("rotate");
+    render();
+  }
+  function selectPiece(index) {
+    state.selectedPiece = index;
+    setFeedback("Selected plate " + (index + 1) + ".", 500);
+    sound("select");
+    sync();
+    render();
+  }
+  function boardCellFromPoint(px, py) {
+    const { x, y, size } = boardRect;
+    return { x:Math.floor((px - x) / size), y:Math.floor((py - y) / size) };
+  }
+  function pointFromEvent(ev) {
+    const rect = canvas.getBoundingClientRect();
+    return { x:(ev.clientX - rect.left) * W / rect.width, y:(ev.clientY - rect.top) * H / rect.height };
+  }
+  function trayHit(px, py) {
+    return trayRects.findIndex((r) => px >= r.x && py >= r.y && px <= r.x + r.w && py <= r.y + r.h);
+  }
+  function handleCanvasPointer(ev, up = false) {
+    markGesture();
+    const p = pointFromEvent(ev);
+    const hit = trayHit(p.x, p.y);
+    if (hit >= 0) {
+      selectPiece(hit);
+      state.dragging = true;
+      return;
+    }
+    const c = boardCellFromPoint(p.x, p.y);
+    const b = board();
+    if (c.x >= 0 && c.y >= 0 && c.x < b.w && c.y < b.h) {
+      state.cursor = c;
+      state.hover = c;
+      if (up || ev.type === "pointerdown") {
+        if (state.complete && state.mode === "stage-complete") nextStage();
+        else tryPlace(c.x, c.y);
+      }
+    }
+  }
+  function targetIsControl(target) {
+    return target instanceof HTMLElement && target.matches("button,input,select,textarea,[role='button']");
+  }
+  function keydown(ev) {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey || targetIsControl(ev.target)) return;
+    const key = ev.key.toLowerCase();
+    const handled = ["arrowleft","arrowright","arrowup","arrowdown","a","d","w","s","q","e","r","f","m","enter"," ","tab"].includes(key);
+    if (!handled) return;
+    ev.preventDefault();
+    markGesture();
+    if (key === "q") rotateSelected(-1);
+    else if (key === "e") rotateSelected(1);
+    else if (key === "r") restartRun();
+    else if (key === "f") toggleFullscreen();
+    else if (key === "m") toggleSound();
+    else if (key === "tab") selectPiece(state.selectedPiece + 1);
+    else if (key === "enter" || key === " ") {
+      if (state.complete && state.mode === "stage-complete") nextStage();
+      else tryPlace();
+    } else {
+      const dx = key === "arrowleft" || key === "a" ? -1 : key === "arrowright" || key === "d" ? 1 : 0;
+      const dy = key === "arrowup" || key === "w" ? -1 : key === "arrowdown" || key === "s" ? 1 : 0;
+      state.cursor.x = clamp(state.cursor.x + dx, 0, board().w - 1);
+      state.cursor.y = clamp(state.cursor.y + dy, 0, board().h - 1);
+      render();
+    }
+  }
+  function toggleSound() {
+    markGesture();
+    state.soundEnabled = !state.soundEnabled;
+    write(SOUND_KEY, state.soundEnabled ? "1" : "0");
+    sound("toggle");
+    sync();
+  }
+  async function toggleFullscreen() {
+    markGesture();
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await canvas.requestFullscreen();
+    } catch (_) {}
+    sync();
+    render();
+  }
+  function update(ms) {
+    state.timeMs += ms;
+    state.feedbackMs = Math.max(0, state.feedbackMs - ms);
+  }
+  function sync() {
+    const stats = connectionStats();
+    state.lastConnected = stats.connected;
+    state.lastBlocked = stats.ventsBlocked;
+    els.stage.textContent = (state.stage + 1) + "/" + BOARDS.length;
+    els.moves.textContent = String(state.movesLeft);
+    els.ports.textContent = stats.connected + "/" + stats.total;
+    els.score.textContent = String(state.score);
+    els.best.textContent = String(state.best);
+    els.status.textContent = state.feedbackMs > 0 || state.complete || state.fail ? state.feedback : "Patch plates between ports. Vents must stay open.";
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
+    els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+  }
+  function drawRound(x, y, w, h, r, fill, stroke = "") {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+  }
+  function drawGrid() {
+    const b = board();
+    const size = Math.min(58, Math.floor(Math.min(560 / b.w, 390 / b.h)));
+    boardRect = { x:54, y:72, size };
+    const bw = b.w * size, bh = b.h * size;
+    drawRound(boardRect.x - 14, boardRect.y - 14, bw + 28, bh + 28, 12, "rgba(5,12,22,.84)", "rgba(103,232,249,.2)");
+    ctx.lineWidth = 1;
+    for (let y = 0; y < b.h; y += 1) {
+      for (let x = 0; x < b.w; x += 1) {
+        const px = boardRect.x + x * size, py = boardRect.y + y * size;
+        drawRound(px + 2, py + 2, size - 4, size - 4, 7, "rgba(16,31,49,.88)", "rgba(103,232,249,.1)");
+      }
+    }
+    b.vents.forEach(([x, y]) => {
+      const px = boardRect.x + x * size, py = boardRect.y + y * size;
+      drawRound(px + 8, py + 8, size - 16, size - 16, 6, "#113044", "#67e8f9");
+      ctx.strokeStyle = "rgba(103,232,249,.75)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(px + 14, py + 16 + i * 9);
+        ctx.lineTo(px + size - 14, py + 16 + i * 9);
+        ctx.stroke();
+      }
+    });
+    b.ports.forEach(([x, y], i) => {
+      const px = boardRect.x + x * size, py = boardRect.y + y * size;
+      drawRound(px + 6, py + 6, size - 12, size - 12, 9, i === 0 ? "#fbbf24" : "#1dd3b0", "#fff7b8");
+      ctx.fillStyle = "#071018";
+      ctx.font = "1000 16px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(i === 0 ? "P" : String(i), px + size / 2, py + size / 2 + 6);
+    });
+    drawPlaced(size);
+    drawGhost(size);
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boardRect.x + state.cursor.x * size + 4, boardRect.y + state.cursor.y * size + 4, size - 8, size - 8);
+  }
+  function drawCell(x, y, size, color, alpha = 1) {
+    const px = boardRect.x + x * size, py = boardRect.y + y * size;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawRound(px + 5, py + 5, size - 10, size - 10, 8, color, "rgba(255,255,255,.45)");
+    ctx.fillStyle = "rgba(7,16,24,.25)";
+    ctx.fillRect(px + size * .22, py + size * .45, size * .56, size * .1);
+    ctx.restore();
+  }
+  function drawPlaced(size) {
+    state.placed.forEach((placed, index) => {
+      const p = pieceById(placed.id);
+      if (!p) return;
+      cellsFor(p, placed.x, placed.y, placed.rot).forEach((c) => drawCell(c.x, c.y, size, COLORS[index % COLORS.length], 1));
+    });
+  }
+  function drawGhost(size) {
+    const p = selectedBase();
+    if (!p || state.complete || state.fail) return;
+    const issue = placementIssue(p, state.cursor.x, state.cursor.y, p.rot || 0);
+    cellsFor(p, state.cursor.x, state.cursor.y, p.rot || 0).forEach((c) => drawCell(c.x, c.y, size, issue ? "#fb7185" : "#e2e8f0", .46));
+  }
+  function drawTray() {
+    const open = stagePieces().filter((p) => !placedIds().has(p.id));
+    trayRects = [];
+    ctx.fillStyle = "#e9f2ff";
+    ctx.font = "1000 18px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText("MACHINE PLATES", 670, 84);
+    open.forEach((piece, index) => {
+      const x = 670, y = 104 + index * 62, w = 236, h = 52;
+      trayRects.push({ x, y, w, h });
+      drawRound(x, y, w, h, 8, index === state.selectedPiece ? "rgba(251,191,36,.18)" : "rgba(15,27,43,.92)", index === state.selectedPiece ? "#fbbf24" : "rgba(103,232,249,.24)");
+      ctx.fillStyle = COLORS[index % COLORS.length];
+      ctx.font = "1000 12px system-ui";
+      ctx.fillText(String(index + 1) + " " + piece.id.toUpperCase().replace(/-/g, " "), x + 10, y + 20);
+      const cells = rotatedCells(piece.cells, piece.rot || 0);
+      const ox = x + 12, oy = y + 29;
+      cells.forEach((c) => {
+        ctx.fillStyle = COLORS[index % COLORS.length];
+        ctx.fillRect(ox + c.x * 13, oy + c.y * 13, 11, 11);
+      });
+      ctx.fillStyle = "#9fb3c7";
+      ctx.font = "800 11px system-ui";
+      ctx.textAlign = "right";
+      ctx.fillText("rot " + ((piece.rot || 0) * 90) + " deg", x + w - 10, y + 32);
+      ctx.textAlign = "left";
+    });
+    if (!open.length) {
+      drawRound(670, 104, 236, 54, 8, "rgba(15,27,43,.92)", "rgba(103,232,249,.24)");
+      ctx.fillStyle = "#9fb3c7";
+      ctx.font = "900 13px system-ui";
+      ctx.fillText("All plates installed", 684, 136);
+    }
+  }
+  function drawTraceOverlay() {
+    const stats = connectionStats();
+    ctx.fillStyle = "#9fb3c7";
+    ctx.font = "900 13px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText(board().name, 54, 38);
+    ctx.fillText("Connect all ports. Vents blocked: " + stats.ventsBlocked, 54, 56);
+    drawRound(668, 414, 238, 74, 9, "rgba(15,27,43,.88)", "rgba(103,232,249,.2)");
+    ctx.fillStyle = "#67e8f9";
+    ctx.font = "1000 14px system-ui";
+    ctx.fillText("POWER NETWORK", 684, 440);
+    ctx.fillStyle = "#e9f2ff";
+    ctx.font = "1000 24px system-ui";
+    ctx.fillText(stats.connected + "/" + stats.total, 684, 470);
+    ctx.fillStyle = "#9fb3c7";
+    ctx.font = "800 12px system-ui";
+    ctx.fillText("moves left " + state.movesLeft + "   score " + state.score, 750, 468);
+  }
+  function drawOverlay() {
+    if (!state.complete && !state.fail) return;
+    ctx.fillStyle = "rgba(4,8,15,.72)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = state.fail ? "#fb7185" : "#fbbf24";
+    ctx.font = "1000 42px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(state.fail ? "RUN FAILED" : state.mode === "run-complete" ? "RUN COMPLETE" : "STAGE COMPLETE", W / 2, H / 2 - 18);
+    ctx.fillStyle = "#e9f2ff";
+    ctx.font = "850 16px system-ui";
+    ctx.fillText(state.feedback, W / 2, H / 2 + 22);
+  }
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#08111d");
+    bg.addColorStop(1, "#101827");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(103,232,249,.06)";
+    for (let x = -120; x < W + 160; x += 42) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 120, H);
+      ctx.stroke();
+    }
+    drawGrid();
+    drawTray();
+    drawTraceOverlay();
+    drawOverlay();
+  }
+  function snapshot() {
+    const b = board();
+    const stats = connectionStats();
+    const selected = selectedBase();
+    return JSON.stringify({
+      mode: state.mode,
+      stage: state.stage + 1,
+      stageName: b.name,
+      score: state.score,
+      best: state.best,
+      board: { width:b.w, height:b.h },
+      "board size": { width:b.w, height:b.h },
+      placedPieces: state.placed.map((p) => ({ id:p.id, x:p.x, y:p.y, rotation:p.rot })),
+      "placed pieces": state.placed.length,
+      selectedPiece: selected ? { id:selected.id, rotation:selected.rot || 0, cells:rotatedCells(selected.cells, selected.rot || 0) } : null,
+      "selected piece": selected ? selected.id : null,
+      cursor: { x:state.cursor.x, y:state.cursor.y },
+      powerConnectedCount: stats.connected,
+      "power connected count": stats.connected,
+      powerPortTotal: stats.total,
+      ventsBlocked: stats.ventsBlocked,
+      "vents blocked": stats.ventsBlocked,
+      movesLeft: state.movesLeft,
+      feedback: state.feedback,
+      soundEnabled: state.soundEnabled,
+      lastSound: state.lastSound,
+      fullscreen: Boolean(document.fullscreenElement),
+      complete: state.complete || state.mode === "run-complete",
+      fail: state.fail,
+      runComplete: state.mode === "run-complete",
+      coordinateSystem: "canvas board cells, origin top-left, x right, y down"
+    });
+  }
+  canvas.addEventListener("pointerdown", (ev) => handleCanvasPointer(ev, false));
+  canvas.addEventListener("pointermove", (ev) => {
+    const p = pointFromEvent(ev);
+    const c = boardCellFromPoint(p.x, p.y);
+    if (c.x >= 0 && c.y >= 0 && c.x < board().w && c.y < board().h) {
+      state.cursor = c;
+      render();
+    }
+  });
+  canvas.addEventListener("pointerup", (ev) => {
+    if (state.dragging) {
+      state.dragging = false;
+      handleCanvasPointer(ev, true);
+    }
+  });
+  els.left.addEventListener("click", () => { markGesture(); rotateSelected(-1); });
+  els.right.addEventListener("click", () => { markGesture(); rotateSelected(1); });
+  els.restart.addEventListener("click", () => { markGesture(); restartRun(); });
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => { sync(); render(); });
+  window.addEventListener("keydown", keydown);
+  window.render_game_to_text = snapshot;
+  window.advanceTime = (ms = 0) => {
+    const safe = Math.max(0, Number(ms) || 0);
+    const frames = Math.max(1, Math.round(safe / (1000 / 60)));
+    for (let i = 0; i < frames; i += 1) update(1000 / 60);
+    sync();
+    render();
+    return snapshot();
+  };
+  loadStage(0, true);
+})();
+</script>
+</body>
+</html>

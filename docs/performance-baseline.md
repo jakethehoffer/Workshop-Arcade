@@ -21,6 +21,25 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Five mechanics + live parity (pass 78)
+
+Captured 2026-05-20 against `http://127.0.0.1:4321` after adding Inkline Courier, Cipher Rooms, Patchwork Foundry, Market Minute, and Bloomkeeper Grid; adding generated-surface and performance-baseline truth checks; and finishing fullscreen/live-status parity on the older polish set. The strict audit covered the catalog plus 54 manifest games, 55 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 316 ms | 132 ms | 🟢 138 ms | 🟢 190.6 KB | 16 | 0 |
+| Inkline Courier | 🟢 40 ms | 13 ms | 🟢 13 ms | 🟢 31.0 KB | 2 | 0 |
+| Cipher Rooms | 🟢 56 ms | 9 ms | 🟢 10 ms | 🟢 28.0 KB | 2 | 0 |
+| Patchwork Foundry | 🟢 48 ms | 31 ms | 🟢 31 ms | 🟢 32.9 KB | 2 | 0 |
+| Market Minute | 🟢 56 ms | 33 ms | 🟢 33 ms | 🟢 30.3 KB | 2 | 0 |
+| Bloomkeeper Grid | 🟢 40 ms | 15 ms | 🟢 15 ms | 🟢 33.6 KB | 2 | 0 |
+| Lexica | 🟢 44 ms | 44 ms | 🟢 45 ms | 🟢 149.9 KB | 4 | 0 |
+| Idle Tycoon | 🟢 516 ms | 14 ms | 🟢 17 ms | 🟢 190.1 KB | 2 | 0 |
+| Arcade Jump | 🟢 116 ms | 80 ms | 🟢 80 ms | 🟢 122.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 160 ms | 147 ms | 🟢 147 ms | 🟢 114.6 KB | 2 | 0 |
+
+All five new games are comfortably inside the current default 100 KB / 3 request publish budget. The catalog remains inside the 200 KB / 18 request budget at 190.6 KB / 16 requests with the same lazy cover request profile. Lexica remains below its 160 KB / 4 request exception at 149.9 KB, with `websites/words5.js` as the largest resource at 92.2 KB. No console/page errors appeared across audited URLs, every page passed strict meta/alt checks, and every named exception remains below its CI budget.
+
 ## Five mechanics + contract gates (pass 77)
 
 Captured 2026-05-20 against `http://127.0.0.1:4317` after adding Orbit Salvage, Harbor Switchboard, Relay Choir, Circuit Draft, and Switchback Rally; adding stricter cover-asset and storage/runtime contract validators; tightening per-game meta drift checks; and preserving the current CI budget table. The strict audit covered the catalog plus 49 manifest games, 50 pages total.

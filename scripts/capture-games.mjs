@@ -1313,6 +1313,114 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "inkline-courier": {
+      name: "draw and launch a courier inkline",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const canvas = document.querySelector("canvas");
+          if (!canvas) return;
+          canvas.focus();
+          const press = (key, code = key, shiftKey = false) => {
+            const event = { key, code, bubbles: true, cancelable: true, shiftKey };
+            canvas.dispatchEvent(new KeyboardEvent("keydown", event));
+            canvas.dispatchEvent(new KeyboardEvent("keyup", event));
+            window.advanceTime(60);
+          };
+          press("ArrowRight", "ArrowRight");
+          press("ArrowRight", "ArrowRight");
+          press(" ", "Space");
+          press("ArrowDown", "ArrowDown");
+          press("ArrowDown", "ArrowDown");
+          press(" ", "Space");
+          press("ArrowRight", "ArrowRight", true);
+          press("ArrowRight", "ArrowRight", true);
+          press(" ", "Space");
+          press("Enter", "Enter");
+          window.advanceTime(1450);
+        });
+      },
+    },
+    "cipher-rooms": {
+      name: "inspect room clues and open the first cipher door",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const click = (selector) => document.querySelector(selector)?.click();
+          for (let i = 0; i < 3; i += 1) {
+            click(`[data-object="${i}"]`);
+            window.advanceTime(140);
+          }
+          for (const digit of ["4", "7", "2"]) {
+            document.querySelector(`[data-key="${digit}"]`)?.click();
+            window.advanceTime(80);
+          }
+          document.querySelector("#submitBtn")?.click();
+          window.advanceTime(900);
+        });
+      },
+    },
+    "patchwork-foundry": {
+      name: "place the first foundry plate",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(90);
+          };
+          press("ArrowLeft", "ArrowLeft");
+          press("ArrowUp", "ArrowUp");
+          press("q", "KeyQ");
+          press("Enter", "Enter");
+          window.advanceTime(360);
+        });
+      },
+    },
+    "market-minute": {
+      name: "buy inventory and advance the trading desk",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          document.querySelector('[data-good="0"]')?.click();
+          document.querySelector("#buyBtn")?.click();
+          window.advanceTime(140);
+          document.querySelector('[data-good="1"]')?.click();
+          document.querySelector("#buyBtn")?.click();
+          window.advanceTime(140);
+          document.querySelector("#endBtn")?.click();
+          window.advanceTime(420);
+        });
+      },
+    },
+    "bloomkeeper-grid": {
+      name: "plant, water, and advance the first garden day",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(80);
+          };
+          press("Enter", "Enter");
+          press("ArrowRight", "ArrowRight");
+          press("2", "Digit2");
+          press("Enter", "Enter");
+          press("ArrowDown", "ArrowDown");
+          press("1", "Digit1");
+          press("Enter", "Enter");
+          press("n", "KeyN");
+          window.advanceTime(520);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;
@@ -1402,7 +1510,7 @@ function extractFeedbackActive(state) {
   const keys = [];
   if (state.feedbackActive === true) keys.push("feedbackActive");
   const roots = [];
-  if (state.feedback && typeof state.feedback === "object") roots.push(["feedback", state.feedback]);
+  if (state.feedback !== undefined) roots.push(["feedback", state.feedback]);
   for (const rootKey of ["effects", "particles", "rings", "pops", "popups", "animations", "lastMove", "moveFeedback"]) {
     if (state[rootKey] !== undefined) roots.push([rootKey, state[rootKey]]);
   }
@@ -1447,8 +1555,11 @@ function collectFeedbackSignals(value, pathKey, keys) {
 }
 
 function isGameOverLike(state) {
-  const mode = String(state.mode || state.state || state.phase || state.status || "").toLowerCase();
-  return state.gameOver === true || /game[- ]?over|crashed|dead|lost/.test(mode);
+  const lifecycle = String(state.mode || state.state || state.phase || "").toLowerCase();
+  const status = String(state.status || "").toLowerCase();
+  return state.gameOver === true ||
+    /game[- ]?over|crashed|dead|lost/.test(lifecycle) ||
+    /game[- ]?over|crashed|dead|you lost|run lost/.test(status);
 }
 
 function isStillMenuLike(state) {
@@ -1683,6 +1794,7 @@ function isSecondaryResetAction(record) {
 function isBenignTextOverflow(record, item) {
   if (!item) return false;
   const metrics = record.metrics || {};
+  if (/\bsr-only\b/.test(item.className || "")) return true;
   const tinyOverlayOverflow =
     metrics.overflowX === 0 &&
     item.scrollOverflowX > 0 &&

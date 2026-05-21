@@ -90,6 +90,17 @@
     border-color:rgba(255,255,255,0.18);
     background:rgba(4,10,24,0.5);
   }
+  .sr-only {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
   #pauseBtn { display:none; }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.75); }
   .overlay.show { display:grid; pointer-events:auto; }
@@ -118,11 +129,13 @@
 <body>
 <canvas id="game" tabindex="0" aria-label="Metro Dash game canvas"></canvas>
 <div class="hud-controls" aria-label="Game controls">
+  <button class="hud-btn hud-toggle" id="fullscreenBtn" type="button" aria-label="Toggle fullscreen" aria-pressed="false" title="Enter fullscreen (F)">&#x26F6; Fullscreen</button>
   <button class="hud-btn hud-toggle" id="soundToggle" type="button" aria-label="Toggle sound effects" aria-pressed="true" title="Sound effects">SFX On</button>
   <button class="hud-btn hud-toggle" id="musicToggle" type="button" aria-label="Toggle music" aria-pressed="true" title="Music">BGM On</button>
   <button class="hud-btn" id="pauseBtn" type="button" aria-label="Pause or resume" title="Pause (P)">&#x23F8; Pause</button>
   <button class="hud-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">? Help</button>
 </div>
+<div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Metro Dash ready. Press Space or tap to start.</div>
 
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="card">
@@ -134,6 +147,7 @@
       <div class="control-row"><span><kbd>&uarr;</kbd> <kbd>W</kbd> <kbd>Space</kbd> Swipe&nbsp;Up</span><span>Jump</span></div>
       <div class="control-row"><span><kbd>&darr;</kbd> <kbd>S</kbd> Swipe&nbsp;Down</span><span>Slide</span></div>
       <div class="control-row"><span><kbd>P</kbd> <kbd>Esc</kbd></span><span>Pause</span></div>
+      <div class="control-row"><span><kbd>F</kbd></span><span>Fullscreen</span></div>
     </div>
     <p><b>Tips:</b> Jump over barriers, slide under beams, dodge trains!</p>
     <button class="btn btn-primary" id="helpClose" type="button">Got it</button>
@@ -165,7 +179,14 @@ function resizeCanvas() {
   canvas.style.width = W + "px"; canvas.style.height = H + "px";
   canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
 }
-window.addEventListener("resize", resizeCanvas, { passive: true });
+function syncViewportRender() {
+  resizeCanvas();
+  try {
+    diagnosticFrame(1);
+    lastTime = null;
+  } catch (_) {}
+}
+window.addEventListener("resize", syncViewportRender, { passive: true });
 resizeCanvas();
 
 /* ===== PERSPECTIVE ===== */
@@ -202,7 +223,8 @@ function createFeedbackCounters() {
     crash: 0,
     newBest: 0,
     pause: 0,
-    resume: 0
+    resume: 0,
+    fullscreen: 0
   };
 }
 const feedback = {
@@ -1114,6 +1136,7 @@ function startGame() {
   spawnTimer = 0; coinSpawnTimer = 0; newBest = false;
   pauseBtn.style.display = "block";
   recordActionFeedback("start");
+  setLiveStatus(previousState === "title" ? "Run started. Stay centered, change lanes, jump, or slide." : "Run restarted. Distance and coins reset.", true);
   if (previousState === "title") {
     SFX.start();
   } else {
@@ -1127,6 +1150,7 @@ function setGameOver() {
   if (state === "gameover") return;
   state = "gameover"; stopMusic(); pauseBtn.style.display = "none";
   recordDiagnosticEvent("crash");
+  setLiveStatus(`Collision. Game over at ${Math.floor(distance)} meters with ${coins} coins. Press Space or tap to retry.`, true);
   feedback.crashFlash = 1;
   feedback.dangerCue = 0;
   triggerShake(16, 20);
@@ -1139,6 +1163,7 @@ function setGameOver() {
     highScore = Math.floor(distance); newBest = true;
     try { localStorage.setItem(HS_KEY, String(highScore)); } catch(_) {}
     recordDiagnosticEvent("new-best", "newBest");
+    setLiveStatus(`Collision. Game over with a new best: ${highScore} meters. Press Space or tap to retry.`, true);
     SFX.newHigh();
   }
 }
@@ -1147,6 +1172,7 @@ function togglePause() {
   if (state === "playing") {
     state = "paused";
     recordDiagnosticEvent("pause");
+    setLiveStatus("Paused. Press P, Escape, or Resume to continue.", true);
     SFX.pause();
     stopMusic();
     pauseOverlay.classList.add("show");
@@ -1155,6 +1181,7 @@ function togglePause() {
   else if (state === "paused") {
     state = "playing";
     recordDiagnosticEvent("resume");
+    setLiveStatus("Resumed. Keep dodging obstacles.", true);
     SFX.resume();
     deactivateDialog(pauseOverlay);
     pauseOverlay.classList.remove("show");
@@ -1168,32 +1195,42 @@ function moveLeft() {
   if (state !== "playing" || player.targetLane <= -1) return;
   player.targetLane--;
   recordActionFeedback("lane-change", { delta: -1 });
+  setLiveStatus(`Moved to ${player.targetLane === -1 ? "left" : player.targetLane === 0 ? "center" : "right"} lane.`, true);
   SFX.laneChange(-1);
 }
 function moveRight() {
   if (state !== "playing" || player.targetLane >= 1) return;
   player.targetLane++;
   recordActionFeedback("lane-change", { delta: 1 });
+  setLiveStatus(`Moved to ${player.targetLane === -1 ? "left" : player.targetLane === 0 ? "center" : "right"} lane.`, true);
   SFX.laneChange(1);
 }
 function doJump() {
   if (state !== "playing" || player.isJumping || player.isSliding) return;
   player.isJumping = true; player.vy = JUMP_VEL;
   recordActionFeedback("jump");
+  setLiveStatus("Jumping over low obstacles.", true);
   SFX.jump();
 }
 function doSlide() {
   if (state !== "playing" || player.isJumping || player.isSliding) return;
   player.isSliding = true; player.slideTimer = SLIDE_DUR;
   recordActionFeedback("slide");
+  setLiveStatus("Sliding under overhead beams.", true);
   SFX.dodge();
 }
 
 document.addEventListener("keydown", e => {
-  if (e.target && e.target.closest && e.target.closest("button, a, input, select, textarea") && e.code !== "Tab" && e.code !== "Escape") return;
+  if (e.code === "KeyF" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !isTextEntryTarget(e.target) && !activeDialog) {
+    e.preventDefault();
+    toggleFullscreen();
+    return;
+  }
+  if (e.target && e.target.closest && e.target.closest("button, a, input, select, textarea") && !["Tab", "Escape", "KeyP"].includes(e.code)) return;
   if (e.repeat) return;
   if (state === "title" && (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW")) { startGame(); return; }
   if (state === "gameover" && (e.code === "Space" || e.code === "Enter")) { startGame(); return; }
+  if (e.code === "Escape" && isFullscreenActive()) return;
   if (e.code === "KeyP" || (e.code === "Escape" && (state === "playing" || state === "paused"))) { togglePause(); return; }
   if (e.code === "KeyH") { if (helpOverlay.classList.contains("show")) closeHelp(); else openHelp(); return; }
   if (e.code === "ArrowLeft" || e.code === "KeyA") moveLeft();
@@ -1336,12 +1373,83 @@ const pauseBtn = document.getElementById("pauseBtn");
 const pauseOverlay = document.getElementById("pauseOverlay");
 const resumeBtn = document.getElementById("resumeBtn");
 const restartFromPause = document.getElementById("restartFromPause");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
 const soundToggle = document.getElementById("soundToggle");
 const musicToggle = document.getElementById("musicToggle");
+const liveStatus = document.getElementById("liveStatus");
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let activeDialog = null;
 let activeDialogTrigger = null;
 let activeDialogClose = null;
+let lastStatusMessage = liveStatus ? liveStatus.textContent : "";
+let lastFullscreenActive = false;
+
+function setLiveStatus(message, force = false) {
+  lastStatusMessage = message;
+  if (!liveStatus || (!force && liveStatus.textContent === message)) return;
+  liveStatus.textContent = message;
+}
+
+function isTextEntryTarget(target) {
+  return !!(target && target.closest && target.closest('input, select, textarea, [contenteditable="true"]'));
+}
+
+function isFullscreenActive() {
+  return !!getFullscreenElement();
+}
+
+function getFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function isFullscreenSupported() {
+  return !!(
+    document.fullscreenEnabled ||
+    document.webkitFullscreenEnabled ||
+    document.documentElement.requestFullscreen ||
+    document.documentElement.webkitRequestFullscreen
+  );
+}
+
+function updateFullscreenButton() {
+  if (!fullscreenBtn) return;
+  if (!isFullscreenSupported()) {
+    fullscreenBtn.hidden = true;
+    fullscreenBtn.setAttribute("aria-pressed", "false");
+    fullscreenBtn.title = "Fullscreen unavailable";
+    return;
+  }
+  const active = isFullscreenActive();
+  fullscreenBtn.hidden = false;
+  fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  fullscreenBtn.textContent = active ? "\u26F6 Exit Fullscreen" : "\u26F6 Fullscreen";
+  fullscreenBtn.title = active ? "Exit fullscreen (F)" : "Enter fullscreen (F)";
+  fullscreenBtn.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+}
+
+async function toggleFullscreen() {
+  if (!isFullscreenSupported()) {
+    setLiveStatus("Fullscreen is not available in this browser.", true);
+    updateFullscreenButton();
+    return;
+  }
+  try {
+    if (isFullscreenActive()) {
+      const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exitFullscreen) await exitFullscreen.call(document);
+      setLiveStatus("Exited fullscreen.", true);
+    } else {
+      const requestFullscreen = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+      if (requestFullscreen) await requestFullscreen.call(document.documentElement);
+      setLiveStatus("Entered fullscreen. Press Escape or F to exit.", true);
+    }
+  } catch (_) {
+    setLiveStatus("Fullscreen request was blocked.", true);
+  } finally {
+    updateFullscreenButton();
+    syncViewportRender();
+  }
+}
 
 function updateAudioToggleButtons() {
   soundToggle.setAttribute("aria-pressed", String(audioPrefs.soundEnabled));
@@ -1423,11 +1531,28 @@ function closeHelp() {
 helpBtn.onclick = e => { e.preventDefault(); openHelp(); };
 helpClose.onclick = e => { e.preventDefault(); closeHelp(); };
 helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) closeHelp(); });
+fullscreenBtn.onclick = e => { e.preventDefault(); toggleFullscreen(); };
 soundToggle.onclick = e => { e.preventDefault(); markAudioGesture(); setSoundEnabled(!audioPrefs.soundEnabled); };
 musicToggle.onclick = e => { e.preventDefault(); markAudioGesture(); setMusicEnabled(!audioPrefs.musicEnabled); };
 pauseBtn.onclick = e => { e.preventDefault(); togglePause(); };
 resumeBtn.onclick = e => { e.preventDefault(); togglePause(); };
 restartFromPause.onclick = e => { e.preventDefault(); deactivateDialog(pauseOverlay, false); pauseOverlay.classList.remove("show"); startGame(); };
+
+function handleFullscreenChange() {
+  const active = isFullscreenActive();
+  if (active !== lastFullscreenActive) {
+    recordDiagnosticEvent(active ? "fullscreen-enter" : "fullscreen-exit", "fullscreen");
+    lastFullscreenActive = active;
+  }
+  updateFullscreenButton();
+  syncViewportRender();
+  setTimeout(syncViewportRender, 80);
+  setLiveStatus(active ? "Fullscreen active. Press Escape or F to exit." : "Fullscreen exited.", true);
+}
+lastFullscreenActive = isFullscreenActive();
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+updateFullscreenButton();
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && state === "playing") stopMusic();
@@ -1506,7 +1631,8 @@ function renderGameToText() {
       crash: feedback.eventCounters.crash,
       newBest: feedback.eventCounters.newBest,
       pause: feedback.eventCounters.pause,
-      resume: feedback.eventCounters.resume
+      resume: feedback.eventCounters.resume,
+      fullscreen: feedback.eventCounters.fullscreen
     },
     feedback: {
       nearMissCount: feedback.nearMissCount,
@@ -1527,7 +1653,8 @@ function renderGameToText() {
         crash: feedback.eventCounters.crash,
         newBest: feedback.eventCounters.newBest,
         pause: feedback.eventCounters.pause,
-        resume: feedback.eventCounters.resume
+        resume: feedback.eventCounters.resume,
+        fullscreen: feedback.eventCounters.fullscreen
       },
       activeCueCount: feedback.activeCueCount,
       startCount: feedback.startCount,
@@ -1551,6 +1678,15 @@ function renderGameToText() {
       helpOpen: !!helpOpen,
       pauseOpen: pauseOverlay.classList.contains("show")
     },
+    fullscreen: {
+      supported: isFullscreenSupported(),
+      active: isFullscreenActive(),
+      counter: feedback.eventCounters.fullscreen,
+      elementTag: getFullscreenElement() ? getFullscreenElement().tagName.toLowerCase() : "",
+      buttonPressed: fullscreenBtn?.getAttribute("aria-pressed") === "true",
+      title: fullscreenBtn?.title || ""
+    },
+    liveStatus: lastStatusMessage,
     musicOn: !!mus.on
   });
 }
