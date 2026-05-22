@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Wordweave Grid - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Trace target words through curated letter boards while preserving your path budget." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/wordweave-grid.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Wordweave Grid — Workshop Arcade" />
+<meta property="og:description" content="Trace target words through curated letter boards while preserving your path budget." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/wordweave-grid.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/wordweave-grid.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Wordweave Grid — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Wordweave Grid — Workshop Arcade" />
+<meta name="twitter:description" content="Trace target words through curated letter boards while preserving your path budget." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/wordweave-grid.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Wordweave Grid",
+  "description": "Trace target words through curated letter boards while preserving your path budget.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/wordweave-grid.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/wordweave-grid.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Word",
+    "Puzzle",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+:root{color-scheme:dark;--bg:#061217;--panel:#0d2330;--panel2:#133749;--ink:#f2fcff;--muted:#a5c0ca;--cyan:#54dcec;--lime:#7ff0a6;--gold:#ffd166;--pink:#ff7d96;--line:rgba(111,227,240,.28)}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{min-height:100dvh;display:grid;place-items:center;overflow-x:hidden;padding:12px;background:radial-gradient(820px 510px at 8% -8%,rgba(84,220,236,.19),transparent 62%),radial-gradient(620px 420px at 96% 2%,rgba(255,209,102,.13),transparent 58%),linear-gradient(180deg,#061217,#081720 80%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.title{display:block;margin-top:4px;font-size:clamp(23px,4vw,35px);font-weight:950;letter-spacing:.035em;text-transform:uppercase}
+.pill,.btn{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 15px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06)}.pill{min-width:75px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--cyan);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
+.stage{overflow:hidden;border:1px solid rgba(111,227,240,.32);border-radius:8px;background:#07151d;box-shadow:0 26px 62px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/10;max-height:67vh;background:#07151d;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.9);outline-offset:-4px}
+.status{min-height:20px;text-align:center;color:var(--lime);font-size:12px;font-weight:900;text-transform:uppercase}.btn{min-height:37px;padding:8px 11px;color:var(--ink);font:inherit;font-size:12px;font-weight:950;text-transform:uppercase;cursor:pointer}.btn:hover,.btn:focus-visible{border-color:rgba(255,209,102,.72)}.btn:focus-visible{outline:3px solid rgba(255,209,102,.75);outline-offset:2px}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8af4fa,#34cde1);color:#05242b}.btn.good{border-color:rgba(127,240,166,.54);color:var(--lime)}.btn.warn{border-color:rgba(255,125,150,.42);color:var(--gold)}.btn:disabled{opacity:.46;cursor:not-allowed}.help{color:var(--muted);font-size:12px;line-height:1.4;text-align:center}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;padding:0 5px;border:1px solid rgba(111,227,240,.28);border-radius:6px;background:#07151d;color:var(--ink);font-weight:950}
+@media(max-width:720px){body{padding:8px 6px 12px;place-items:start center}.app{gap:7px}.title{font-size:21px}.eyebrow{font-size:9px}.pill{flex:1 1 29%;min-width:60px;padding:6px}.value{font-size:14px}.btn{flex:1 1 100px;padding:7px 8px;font-size:11px}canvas{max-height:58vh}.help{font-size:11px}.stage{border-radius:7px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Wordweave Grid</span></div>
+    <div class="hud" aria-label="Wordweave score">
+      <span class="pill"><span class="label">Board</span><span class="value" id="boardValue">1/3</span></span>
+      <span class="pill"><span class="label">Thread</span><span class="value" id="threadValue">18</span></span>
+      <span class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></span>
+      <span class="pill"><span class="label">Streak</span><span class="value" id="streakValue">0</span></span>
+      <span class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></span>
+    </div>
+  </header>
+  <main aria-label="Wordweave Grid game">
+    <div class="stage">
+      <canvas id="game" width="900" height="562" tabindex="0" aria-label="Wordweave letter board. Drag through connected letters or use arrows and Enter to trace target words within the thread budget."></canvas>
+    </div>
+  </main>
+  <div class="status" id="statusLine" aria-live="polite">Trace the target words. Linked starts earn chain bonuses.</div>
+  <div class="actions" aria-label="Wordweave controls">
+    <button class="btn primary" id="submitBtn" type="button">Submit</button>
+    <button class="btn good" id="clearBtn" type="button">Undo</button>
+    <button class="btn" id="nextBtn" type="button" disabled>Next Board</button>
+    <button class="btn warn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="fullBtn" type="button" aria-pressed="false">Fullscreen</button>
+  </div>
+  <div class="help"><span class="kbd">Drag</span> connected letters, or <span class="kbd">Arrows</span>/<span class="kbd">WASD</span> move <span class="kbd">Enter</span>/<span class="kbd">Space</span> start/submit <span class="kbd">Backspace</span> undo <span class="kbd">Esc</span> clear <span class="kbd">R</span> restart <span class="kbd">F</span> fullscreen</div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const N = 5;
+  const BOARD = { x: 42, y: 55, size: 480 };
+  const CELL = BOARD.size / N;
+  const BEST_KEY = "wordweave-grid.best.v1";
+  const SOUND_KEY = "wordweave-grid.sound.v1";
+  const STAGES = [
+    { name: "First Loom", budget: 18, rows: ["WODEC","ERLMA","AIXUR","VNPOT","ELINE"], words: ["WEAVE","LINE","TRACE"] },
+    { name: "Thread Gate", budget: 18, rows: ["GRIDL","VAPEO","NIXWO","DQKUM","AERHT"], words: ["GRID","LOOM","THREAD"] },
+    { name: "Knot Spark", budget: 17, rows: ["KOLTK","NIGER","OWYTA","TULMP","PATHS"], words: ["KNOT","PATH","SPARK"] }
+  ];
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    board: $("boardValue"), thread: $("threadValue"), score: $("scoreValue"), streak: $("streakValue"), best: $("bestValue"),
+    status: $("statusLine"), submit: $("submitBtn"), clear: $("clearBtn"), next: $("nextBtn"), restart: $("restartBtn"),
+    sound: $("soundBtn"), full: $("fullBtn")
+  };
+  function storage() { if (window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch (_) { return null; } }
+  function read(key, fallback) { const s = storage(); if (!s) return fallback; try { const value = s.getItem(key); return value == null ? fallback : value; } catch (_) { return fallback; } }
+  function write(key, value) { const s = storage(); if (!s) return; try { s.setItem(key, String(value)); } catch (_) {} }
+  const soundRaw = String(read(SOUND_KEY, "1")).toLowerCase();
+  const state = {
+    mode: "playing", stageIndex: 0, budget: 0, score: 0, streak: 0, chain: 0, best: Number(read(BEST_KEY, "0")) || 0,
+    found: [], path: [], cursor: { r: 2, c: 2 }, lastEnd: null, solvedBoards: 0, pointerId: null,
+    feedback: "Trace the target words. Linked starts earn chain bonuses.", feedbackMs: 2400, clock: 0,
+    soundEnabled: !["0","false","off","muted"].includes(soundRaw), lastSound: "none", toneCount: 0, userGesture: false
+  };
+  let audio = null, lastFrame = performance.now();
+  const stage = () => STAGES[state.stageIndex];
+  const letterAt = (r, c) => stage().rows[r][c];
+  const activeWord = () => state.path.map((cell) => letterAt(cell.r, cell.c)).join("");
+  const same = (a, b) => !!a && !!b && a.r === b.r && a.c === b.c;
+  const touching = (a, b) => !!a && !!b && Math.max(Math.abs(a.r - b.r), Math.abs(a.c - b.c)) === 1;
+  function markGesture() { state.userGesture = true; }
+  function ensureAudio() {
+    if (!state.soundEnabled || !state.userGesture) return null;
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume().catch(() => {});
+      return audio;
+    } catch (_) { audio = null; return null; }
+  }
+  function tone(name) {
+    state.lastSound = state.soundEnabled ? name : "muted-" + name;
+    if (!state.soundEnabled) return;
+    state.toneCount += 1;
+    const ac = ensureAudio(); if (!ac) return;
+    const frequencies = { start: 330, add: 430, undo: 270, accept: 620, chain: 790, reject: 135, complete: 880, restart: 220, toggle: 470 };
+    const now = ac.currentTime, osc = ac.createOscillator(), gain = ac.createGain(), freq = frequencies[name] || 380;
+    osc.type = name === "reject" ? "sawtooth" : name === "chain" ? "triangle" : "sine";
+    osc.frequency.setValueAtTime(freq, now);
+    if (name === "accept" || name === "complete" || name === "chain") osc.frequency.linearRampToValueAtTime(freq + 160, now + .15);
+    gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.045, now + .012); gain.gain.exponentialRampToValueAtTime(.0001, now + .2);
+    osc.connect(gain).connect(ac.destination); osc.start(now); osc.stop(now + .22);
+  }
+  function feedback(text, ms = 1600) { state.feedback = text; state.feedbackMs = ms; els.status.textContent = text; }
+  function persistBest() { if (state.score > state.best) { state.best = state.score; write(BEST_KEY, state.best); } }
+  function wordsFound() { return state.found.length; }
+  function currentTargets() { return stage().words.map((word) => ({ word, found: state.found.includes(word) })); }
+  function syncHud() {
+    els.board.textContent = (state.stageIndex + 1) + "/" + STAGES.length;
+    els.thread.textContent = String(state.budget);
+    els.score.textContent = String(state.score);
+    els.streak.textContent = String(state.streak);
+    els.best.textContent = String(state.best);
+    els.submit.disabled = state.path.length < 2 || state.mode !== "playing";
+    els.clear.disabled = state.path.length === 0;
+    els.next.disabled = state.mode !== "board-complete";
+    els.next.textContent = state.stageIndex === STAGES.length - 1 ? "Complete" : "Next Board";
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
+    els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+    els.full.setAttribute("aria-pressed", String(Boolean(document.fullscreenElement)));
+  }
+  function loadBoard(index, keepScore = true) {
+    state.stageIndex = Math.max(0, Math.min(STAGES.length - 1, index));
+    if (!keepScore) { state.score = 0; state.streak = 0; state.chain = 0; state.solvedBoards = 0; }
+    state.mode = "playing";
+    state.budget = stage().budget;
+    state.found = [];
+    state.path = [];
+    state.lastEnd = null;
+    state.pointerId = null;
+    state.cursor = { r: 2, c: 2 };
+    feedback(stage().name + ": trace " + stage().words.length + " target words.", 2200);
+    syncHud(); render();
+  }
+  function restart() { markGesture(); loadBoard(0, false); tone("restart"); }
+  function nextBoard() {
+    if (state.mode !== "board-complete") return;
+    markGesture();
+    if (state.stageIndex === STAGES.length - 1) {
+      state.mode = "run-complete";
+      feedback("All boards complete. Score " + state.score + ".", 4200);
+      tone("complete"); syncHud(); render(); return;
+    }
+    loadBoard(state.stageIndex + 1, true);
+  }
+  function boardComplete() {
+    const bonus = state.budget * 18 + 80 + state.chain * 20;
+    state.score += bonus;
+    state.solvedBoards += 1;
+    persistBest();
+    state.mode = state.stageIndex === STAGES.length - 1 ? "run-complete" : "board-complete";
+    feedback(stage().name + " woven. Board bonus +" + bonus + ".", 3600);
+    tone("complete");
+  }
+  function failRun() {
+    state.mode = "out-of-thread";
+    state.path = [];
+    state.streak = 0;
+    state.chain = 0;
+    feedback("Out of thread. Restart for a fresh run.", 4200);
+    tone("reject");
+  }
+  function canTrace() { return state.mode === "playing" && state.budget > 0; }
+  function beginTrace(cell) {
+    if (!canTrace()) return;
+    state.path = [{ r: cell.r, c: cell.c }];
+    state.cursor = { r: cell.r, c: cell.c };
+    feedback("Trace " + activeWord() + " through touching cells.", 900);
+    tone("start"); syncHud(); render();
+  }
+  function extendTrace(cell) {
+    if (!canTrace()) return;
+    const next = { r: cell.r, c: cell.c }, last = state.path[state.path.length - 1];
+    state.cursor = next;
+    if (!last) { beginTrace(next); return; }
+    if (same(last, next)) { render(); return; }
+    if (state.path.length > 1 && same(state.path[state.path.length - 2], next)) { undoCell(); return; }
+    if (!touching(last, next)) { render(); return; }
+    if (state.path.some((used) => same(used, next))) { feedback("A trace cannot reuse a cell.", 900); render(); return; }
+    if (state.path.length >= state.budget) { feedback("This trace already uses the remaining thread.", 1100); tone("reject"); render(); return; }
+    state.path.push(next);
+    tone("add"); syncHud(); render();
+  }
+  function undoCell() {
+    if (!state.path.length) return;
+    markGesture();
+    state.path.pop();
+    const last = state.path[state.path.length - 1];
+    if (last) state.cursor = { r: last.r, c: last.c };
+    feedback(state.path.length ? "Trace trimmed to " + activeWord() + "." : "Trace cleared.", 850);
+    tone("undo"); syncHud(); render();
+  }
+  function clearTrace() {
+    if (!state.path.length) return;
+    state.path = [];
+    feedback("Trace cleared.", 850);
+    tone("undo"); syncHud(); render();
+  }
+  function spend(length) { state.budget = Math.max(0, state.budget - length); }
+  function submitTrace() {
+    if (state.mode !== "playing" || state.path.length < 2) return;
+    markGesture();
+    const word = activeWord(), length = state.path.length, target = stage().words.find((value) => value === word);
+    if (target && state.found.includes(target)) {
+      feedback(target + " is already woven.", 1300);
+      state.path = []; syncHud(); render(); return;
+    }
+    spend(length);
+    if (!target) {
+      state.streak = 0; state.chain = 0; state.lastEnd = null; state.path = [];
+      feedback(word + " is not a target. -" + length + " thread.", 1900);
+      if (state.budget <= 0) failRun(); else tone("reject");
+      syncHud(); render(); return;
+    }
+    const start = state.path[0], end = state.path[state.path.length - 1];
+    const linked = touching(state.lastEnd, start);
+    state.streak += 1;
+    state.chain = linked ? state.chain + 1 : 0;
+    const chainBonus = linked ? state.chain * 45 : 0;
+    const points = length * 36 + state.streak * 12 + chainBonus;
+    state.score += points;
+    state.found.push(target);
+    state.lastEnd = end;
+    state.path = [];
+    persistBest();
+    feedback(target + " woven. +" + points + (linked ? " chain bonus." : "."), 2100);
+    tone(linked ? "chain" : "accept");
+    if (wordsFound() === stage().words.length) boardComplete();
+    else if (state.budget <= 0) failRun();
+    syncHud(); render();
+  }
+  function moveCursor(dr, dc) {
+    const next = { r: Math.max(0, Math.min(N - 1, state.cursor.r + dr)), c: Math.max(0, Math.min(N - 1, state.cursor.c + dc)) };
+    if (same(next, state.cursor)) return;
+    markGesture();
+    if (state.path.length) extendTrace(next);
+    else { state.cursor = next; render(); }
+  }
+  function cellFromEvent(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * W / rect.width, y = (event.clientY - rect.top) * H / rect.height;
+    if (x < BOARD.x || y < BOARD.y || x >= BOARD.x + BOARD.size || y >= BOARD.y + BOARD.size) return null;
+    return { r: Math.floor((y - BOARD.y) / CELL), c: Math.floor((x - BOARD.x) / CELL) };
+  }
+  function toggleSound() {
+    markGesture();
+    state.soundEnabled = !state.soundEnabled;
+    write(SOUND_KEY, state.soundEnabled ? "1" : "0");
+    if (state.soundEnabled) tone("toggle"); else state.lastSound = "sound-off";
+    syncHud(); render();
+  }
+  async function toggleFullscreen() {
+    markGesture();
+    try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (_) {}
+    syncHud(); render();
+  }
+  function roundRect(x, y, w, h, r, fill, stroke) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) ctx.fill(); if (stroke) ctx.stroke(); }
+  function paintBackground() {
+    const bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#0a202a"); bg.addColorStop(1, "#061118");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalAlpha = .22;
+    ctx.fillStyle = "#54dcec"; ctx.beginPath(); ctx.arc(116, 72, 170, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(814, 52, 145, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function paintGrid() {
+    ctx.fillStyle = "rgba(4,16,23,.82)"; ctx.strokeStyle = "rgba(111,227,240,.34)"; ctx.lineWidth = 2;
+    roundRect(BOARD.x - 18, BOARD.y - 18, BOARD.size + 36, BOARD.size + 36, 17, true, true);
+    for (let r = 0; r < N; r += 1) for (let c = 0; c < N; c += 1) {
+      const x = BOARD.x + c * CELL, y = BOARD.y + r * CELL, active = state.path.find((cell) => cell.r === r && cell.c === c);
+      const glow = .08 + (((r * 7 + c * 3) % 4) * .028);
+      ctx.fillStyle = active ? "rgba(127,240,166,.23)" : "rgba(84,220,236," + glow + ")";
+      ctx.strokeStyle = active ? "rgba(127,240,166,.7)" : "rgba(111,227,240,.18)";
+      ctx.lineWidth = active ? 2.2 : 1.2; roundRect(x + 5, y + 5, CELL - 10, CELL - 10, 12, true, true);
+    }
+    if (state.path.length > 1) {
+      ctx.save(); ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.shadowColor = "#ffd166"; ctx.shadowBlur = 15; ctx.beginPath();
+      state.path.forEach((cell, index) => { const x = BOARD.x + cell.c * CELL + CELL / 2, y = BOARD.y + cell.r * CELL + CELL / 2; if (index) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+      ctx.stroke(); ctx.restore();
+    }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "950 36px system-ui";
+    for (let r = 0; r < N; r += 1) for (let c = 0; c < N; c += 1) {
+      const x = BOARD.x + c * CELL + CELL / 2, y = BOARD.y + r * CELL + CELL / 2;
+      ctx.fillStyle = state.path.some((cell) => cell.r === r && cell.c === c) ? "#061217" : "#f2fcff";
+      ctx.fillText(letterAt(r, c), x, y + 1);
+    }
+    const cx = BOARD.x + state.cursor.c * CELL + 9, cy = BOARD.y + state.cursor.r * CELL + 9;
+    ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 3; ctx.setLineDash([7, 5]); roundRect(cx, cy, CELL - 18, CELL - 18, 10, false, true); ctx.setLineDash([]);
+  }
+  function paintPanel() {
+    const x = 555, y = 88, width = 302;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "rgba(4,16,23,.76)"; ctx.strokeStyle = "rgba(111,227,240,.28)"; ctx.lineWidth = 2; roundRect(x, y, width, 382, 16, true, true);
+    ctx.fillStyle = "#f2fcff"; ctx.font = "950 24px system-ui"; ctx.fillText(stage().name, x + 20, y + 42);
+    ctx.fillStyle = "rgba(165,192,202,.95)"; ctx.font = "850 13px system-ui"; ctx.fillText("Spend thread on target traces.", x + 20, y + 67);
+    currentTargets().forEach((target, index) => {
+      const yy = y + 108 + index * 58;
+      ctx.fillStyle = target.found ? "rgba(127,240,166,.18)" : "rgba(255,255,255,.045)";
+      ctx.strokeStyle = target.found ? "rgba(127,240,166,.7)" : "rgba(111,227,240,.18)";
+      roundRect(x + 18, yy - 27, width - 36, 42, 9, true, true);
+      ctx.fillStyle = target.found ? "#7ff0a6" : "#f2fcff"; ctx.font = "950 18px system-ui"; ctx.fillText(target.found ? "DONE " + target.word : target.word, x + 34, yy);
+    });
+    ctx.fillStyle = "#54dcec"; ctx.font = "950 12px system-ui"; ctx.fillText("CURRENT TRACE", x + 20, y + 300);
+    ctx.fillStyle = "#f2fcff"; ctx.font = "950 28px system-ui"; ctx.fillText(activeWord() || ".....", x + 20, y + 337);
+    ctx.fillStyle = "rgba(165,192,202,.95)"; ctx.font = "850 13px system-ui";
+    ctx.fillText("Chain " + state.chain + " - start beside the last end.", x + 20, y + 365);
+  }
+  function paintOverlay() {
+    if (state.mode === "playing") return;
+    const lost = state.mode === "out-of-thread";
+    ctx.save(); ctx.fillStyle = "rgba(2,8,12,.69)"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(5,20,28,.95)"; ctx.strokeStyle = lost ? "#ff7d96" : "#7ff0a6"; ctx.lineWidth = 2;
+    roundRect(173, 188, 554, 175, 17, true, true);
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = lost ? "#ff7d96" : state.mode === "run-complete" ? "#ffd166" : "#7ff0a6"; ctx.font = "950 35px system-ui";
+    ctx.fillText(lost ? "OUT OF THREAD" : state.mode === "run-complete" ? "RUN COMPLETE" : "BOARD COMPLETE", W / 2, 247);
+    ctx.fillStyle = "#f2fcff"; ctx.font = "900 17px system-ui"; ctx.fillText("Score " + state.score + " / Best " + state.best, W / 2, 285);
+    ctx.fillStyle = "rgba(165,192,202,.98)"; ctx.font = "850 13px system-ui";
+    ctx.fillText(lost || state.mode === "run-complete" ? "Press R or Restart." : "Press N or Next Board.", W / 2, 317);
+    ctx.restore();
+  }
+  function render() { paintBackground(); paintGrid(); paintPanel(); paintOverlay(); }
+  function tick(ms) {
+    state.clock += Math.max(0, ms);
+    state.feedbackMs = Math.max(0, state.feedbackMs - Math.max(0, ms));
+    if (state.feedbackMs === 0) {
+      const idle = state.mode === "playing" ? "Start beside the last end to raise the chain bonus." : state.feedback;
+      if (els.status.textContent !== idle) els.status.textContent = idle;
+    }
+    render();
+  }
+  function snapshot() {
+    return JSON.stringify({
+      mode: state.mode,
+      board: { index: state.stageIndex + 1, total: STAGES.length, name: stage().name, rows: stage().rows },
+      targets: currentTargets(),
+      trace: { word: activeWord(), cells: state.path.map((cell) => ({ r: cell.r, c: cell.c })), length: state.path.length },
+      cursor: { r: state.cursor.r, c: state.cursor.c, letter: letterAt(state.cursor.r, state.cursor.c) },
+      budget: { remaining: state.budget, start: stage().budget },
+      score: state.score,
+      streak: state.streak,
+      chain: state.chain,
+      best: state.best,
+      lastEnd: state.lastEnd,
+      solvedBoards: state.solvedBoards,
+      feedback: state.feedback,
+      soundEnabled: state.soundEnabled,
+      lastSound: state.lastSound,
+      toneCount: state.toneCount,
+      fullscreen: Boolean(document.fullscreenElement),
+      coordinateSystem: "5x5 letter grid; r/c are zero-based from top-left and touching cells include diagonals."
+    });
+  }
+  function isUiTarget(target) { return target instanceof HTMLElement && target !== canvas && target.matches("button,input,textarea,select,[contenteditable=true]"); }
+  canvas.addEventListener("pointerdown", (event) => {
+    const cell = cellFromEvent(event); if (!cell) return;
+    event.preventDefault(); markGesture(); canvas.focus(); state.pointerId = event.pointerId; canvas.setPointerCapture(event.pointerId); beginTrace(cell);
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (state.pointerId !== event.pointerId || !state.path.length) return;
+    const cell = cellFromEvent(event); if (cell) extendTrace(cell);
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    if (state.pointerId !== event.pointerId) return;
+    state.pointerId = null;
+    if (state.path.length > 1) submitTrace(); else clearTrace();
+  });
+  canvas.addEventListener("pointercancel", () => { state.pointerId = null; clearTrace(); });
+  els.submit.addEventListener("click", submitTrace);
+  els.clear.addEventListener("click", () => { markGesture(); if (state.path.length > 1) undoCell(); else clearTrace(); canvas.focus(); });
+  els.next.addEventListener("click", nextBoard);
+  els.restart.addEventListener("click", restart);
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => { syncHud(); render(); });
+  window.addEventListener("keydown", (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || isUiTarget(event.target)) return;
+    const key = event.key.toLowerCase();
+    const move = { arrowup: [-1,0], w: [-1,0], arrowdown: [1,0], s: [1,0], arrowleft: [0,-1], a: [0,-1], arrowright: [0,1], d: [0,1] }[key];
+    if (move) { event.preventDefault(); moveCursor(move[0], move[1]); return; }
+    if (key === "enter" || event.code === "Space") { event.preventDefault(); markGesture(); if (state.path.length) submitTrace(); else beginTrace(state.cursor); }
+    else if (key === "backspace") { event.preventDefault(); undoCell(); }
+    else if (key === "escape") { if (state.path.length) { event.preventDefault(); clearTrace(); } }
+    else if (key === "n") { event.preventDefault(); nextBoard(); }
+    else if (key === "r") { event.preventDefault(); restart(); }
+    else if (key === "m") { event.preventDefault(); toggleSound(); }
+    else if (key === "f") { event.preventDefault(); toggleFullscreen(); }
+  });
+  window.render_game_to_text = snapshot;
+  window.advanceTime = (ms = 0) => {
+    const total = Math.max(0, Number(ms) || 0), step = 1000 / 60;
+    if (total === 0) tick(0);
+    for (let left = total; left > 0; left -= step) tick(Math.min(step, left));
+    return snapshot();
+  };
+  function frame(now) { tick(Math.min(50, Math.max(0, now - lastFrame))); lastFrame = now; requestAnimationFrame(frame); }
+  loadBoard(0, false);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

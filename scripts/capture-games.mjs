@@ -1421,6 +1421,88 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "volt-sudoku": {
+      name: "request a deterministic hint",
+      expectsFeedback: false,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#hintBtn")?.click();
+          if (typeof window.advanceTime === "function") window.advanceTime(240);
+        });
+      },
+    },
+    "glyphogram-grid": {
+      name: "begin draft and mark the first glyph cell",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+          const canvas = document.querySelector("#grid");
+          canvas?.focus();
+          window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true }));
+          window.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true, cancelable: true }));
+          if (typeof window.advanceTime === "function") window.advanceTime(360);
+        });
+      },
+    },
+    "lumen-lander": {
+      name: "start descent and burn thrusters",
+      expectsStart: true,
+      expectsFeedback: false,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+          const canvas = document.querySelector("#game");
+          canvas?.focus();
+          const down = (key, code = key) => window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          const up = (key, code = key) => window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          down("ArrowLeft", "ArrowLeft");
+          down("ArrowUp", "ArrowUp");
+          if (typeof window.advanceTime === "function") window.advanceTime(620);
+          up("ArrowLeft", "ArrowLeft");
+          up("ArrowUp", "ArrowUp");
+          if (typeof window.advanceTime === "function") window.advanceTime(180);
+        });
+      },
+    },
+    "wordweave-grid": {
+      name: "trace the first target word",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          const canvas = document.querySelector("#game");
+          canvas?.focus();
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            if (typeof window.advanceTime === "function") window.advanceTime(60);
+          };
+          press("ArrowLeft", "ArrowLeft");
+          press("ArrowLeft", "ArrowLeft");
+          press("ArrowUp", "ArrowUp");
+          press("ArrowUp", "ArrowUp");
+          press("Enter", "Enter");
+          for (let i = 0; i < 4; i += 1) press("ArrowDown", "ArrowDown");
+          press("Enter", "Enter");
+          if (typeof window.advanceTime === "function") window.advanceTime(420);
+        });
+      },
+    },
+    "dice-dynamo": {
+      name: "lock a die and bank the contract",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector('[data-die="0"]')?.click();
+          if (typeof window.advanceTime === "function") window.advanceTime(120);
+          document.querySelector("#bankBtn")?.click();
+          if (typeof window.advanceTime === "function") window.advanceTime(520);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;
@@ -1786,6 +1868,11 @@ function isSecondaryResetAction(record) {
   const canvasAreaRatio = Number(record.metrics?.largestCanvas?.areaRatio) || 0;
   if (canvasAreaRatio >= 0.35 && /^(reset|restart|new game|new run)\b/i.test(text)) {
     return true;
+  }
+
+  if (record.slug === "volt-sudoku" && /^restart\b/i.test(text)) {
+    const state = parseRenderState(record);
+    if (state?.mode === "playing" && Number(state.stage?.blanks) > 0) return true;
   }
 
   return false;

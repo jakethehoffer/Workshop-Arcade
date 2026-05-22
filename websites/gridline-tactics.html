@@ -75,9 +75,11 @@
   .pill b{display:block;margin-top:2px;color:#f8fbff;font-size:16px;font-variant-numeric:tabular-nums}
   button{border:1px solid rgba(94,234,212,.35);border-radius:8px;background:linear-gradient(180deg,#155e75,#0f3b52);color:#eaffff;font-weight:900;font-size:12px;padding:9px 11px;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.22)}
   button:hover,button:focus-visible{outline:2px solid rgba(94,234,212,.45);outline-offset:2px}
+  button:active{transform:translateY(1px)}
   canvas{display:block;width:100%;max-width:900px;aspect-ratio:16/10;margin:0 auto;border:1px solid rgba(94,234,212,.26);border-radius:8px;background:#07111a;box-shadow:0 22px 70px rgba(0,0,0,.38);touch-action:none}
   .touch{display:grid;grid-template-columns:repeat(5,44px);gap:7px;justify-content:center}.touch button{height:40px;padding:0}
   .wide{grid-column:span 2}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   @media (max-width:700px){body{padding:10px 8px}.top{justify-content:center}.brand{display:none}.hint{text-align:center;font-size:11px}.pill{min-width:66px;padding:6px 7px}.pill b{font-size:14px}button{padding:8px 9px}.touch{grid-template-columns:repeat(5,40px)}}
 </style>
 </head>
@@ -95,6 +97,7 @@
     <div class="pill">Unit<b id="unit">A</b></div>
     <div class="pill">State<b id="state">Ready</b></div>
   </section>
+  <div id="live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Mission ready.</div>
   <canvas id="game" width="900" height="560" tabindex="0" aria-label="Gridline Tactics deterministic turn-based tactics game"></canvas>
   <section class="bar" aria-label="Actions">
     <button id="restart" type="button">Restart</button>
@@ -116,7 +119,7 @@
     mission: document.getElementById("mission"), score: document.getElementById("score"),
     best: document.getElementById("best"), turn: document.getElementById("turn"),
     unit: document.getElementById("unit"), state: document.getElementById("state"),
-    sound: document.getElementById("sound")
+    sound: document.getElementById("sound"), live: document.getElementById("live-status")
   };
   const W = 7, H = 6, KEY = "gridline-tactics.best.v1", SOUND = "gridline-tactics.sound.v1";
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -131,13 +134,28 @@
   const state = {
     mode:"playing", mission:0, score:0, best:loadBest(), selected:0, cursor:{x:0,y:0},
     units:[], enemies:[], cover:[], goal:{x:0,y:0}, turn:"player", action:"ready",
-    sound:loadSound(), fullscreen:false, runComplete:false, gameOver:false, feedback:[]
+    sound:loadSound(), fullscreen:false, runComplete:false, gameOver:false, feedback:[],
+    lastStatus:"Mission ready.", lastInput:"none", lastFeedback:"none"
   };
   function storage(){ try { return window.localStorage; } catch (_) { return window.workshopStorage || null; } }
   function loadBest(){ try { return Math.max(0, parseInt((storage()||{}).getItem(KEY),10)||0); } catch (_) { return 0; } }
   function saveBest(){ if (state.score > state.best) { state.best = state.score; try { (storage()||{}).setItem(KEY, String(state.best)); } catch (_) {} } }
   function loadSound(){ try { const v = (storage()||{}).getItem(SOUND); return v == null ? true : v === "true"; } catch (_) { return true; } }
   function saveSound(){ try { (storage()||{}).setItem(SOUND, String(state.sound)); } catch (_) {} }
+  function setInput(source, detail){
+    state.lastInput = detail ? source + ":" + detail : source;
+  }
+  function pulse(type){
+    state.lastFeedback = type;
+    try {
+      if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate({select:8,move:12,attack:18,damage:[18,24,18],turn:10,win:[30,30,30],loss:45,restart:16,blocked:6}[type] || 8);
+    } catch (_) {}
+  }
+  function announceStatus(message, type="status"){
+    state.lastStatus = message;
+    state.lastFeedback = type;
+    if (hud.live) hud.live.textContent = message;
+  }
   function beep(type){
     if (!state.sound) return;
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -151,7 +169,7 @@
       o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + .18);
     } catch (_) {}
   }
-  function startMission(index){
+  function startMission(index, reason="mission"){
     const m = missions[index];
     state.mode = "playing"; state.turn = "player"; state.action = "ready"; state.selected = 0;
     state.goal = {x:m.goal.x,y:m.goal.y,armed:false};
@@ -160,8 +178,10 @@
     state.enemies = m.enemies.map(([x,y,hp], i) => ({id:"E"+(i+1),x,y,hp,max:hp,acted:false}));
     state.cursor = {x:state.units[0].x,y:state.units[0].y};
     state.feedback.length = 0; updateHud(); render();
+    announceStatus((reason === "restart" ? "Restarted. " : "Mission start. ") + m.name + ". Select a unit, clear enemies, then reach the goal.", reason === "restart" ? "restart" : "mission");
+    pulse(reason === "restart" ? "restart" : "mission");
   }
-  function restart(run=false){ state.score = run ? 0 : state.score; state.mission = run ? 0 : state.mission; state.runComplete=false; state.gameOver=false; startMission(state.mission); }
+  function restart(run=false){ state.score = run ? 0 : state.score; state.mission = run ? 0 : state.mission; state.runComplete=false; state.gameOver=false; startMission(state.mission, "restart"); }
   function aliveUnits(){ return state.units.filter(u => u.hp > 0); }
   function aliveEnemies(){ return state.enemies.filter(e => e.hp > 0); }
   function selectedUnit(){ return state.units[state.selected] && state.units[state.selected].hp > 0 ? state.units[state.selected] : aliveUnits()[0]; }
@@ -178,6 +198,7 @@
     let idx = state.selected;
     for (let i=0;i<state.units.length;i++){ idx = (idx + 1) % state.units.length; if (state.units[idx].hp > 0) break; }
     state.selected = idx; const u = selectedUnit(); state.cursor = {x:u.x,y:u.y}; beep("select"); updateHud(); render();
+    announceStatus("Selected unit " + u.id + " with " + u.hp + " HP.", "select"); pulse("select");
   }
   function playerAction(){
     if (state.mode === "missionComplete") return nextMission();
@@ -189,18 +210,22 @@
       const dmg = coverBetween(u,e) ? 2 : 3;
       e.hp -= dmg; u.acted = true; state.score += e.hp <= 0 ? 90 : 20; float("-"+dmg,e.x,e.y,"#fb7185"); beep("hit");
       if (e.hp <= 0) float("down",e.x,e.y,"#facc15");
+      announceStatus("Unit " + u.id + " attacked " + e.id + " for " + dmg + " damage" + (e.hp <= 0 ? " and cleared it." : ". " + e.id + " has " + e.hp + " HP."), "attack"); pulse("attack");
       afterPlayerAction(); return;
     }
     if (!e && !u.acted && !blocked(target.x,target.y) && dist(u,target) > 0 && dist(u,target) <= 3) {
       u.x = target.x; u.y = target.y; u.acted = true; state.score += 4; float("move",u.x,u.y,"#5eead4"); beep("move");
+      announceStatus("Unit " + u.id + " moved to column " + (u.x + 1) + ", row " + (u.y + 1) + ".", "move"); pulse("move");
       afterPlayerAction(); return;
     }
     const c = isCover(target.x,target.y);
     if (c && !u.acted && dist(u,c) === 1) {
       c.hp -= 1; u.acted = true; state.score += 8; float("cover",c.x,c.y,"#f59e0b"); beep("hit");
+      announceStatus("Unit " + u.id + " damaged cover at column " + (c.x + 1) + ", row " + (c.y + 1) + ".", "damage"); pulse("damage");
       afterPlayerAction(); return;
     }
     float("no line",target.x,target.y,"#94a3b8"); beep("select"); updateHud(); render();
+    announceStatus("No valid move or attack from unit " + u.id + " to column " + (target.x + 1) + ", row " + (target.y + 1) + ".", "blocked"); pulse("blocked");
   }
   function afterPlayerAction(){
     if (checkWin()) return;
@@ -212,12 +237,14 @@
   }
   function enemyTurn(){
     state.turn = "enemy"; state.action = "enemy"; updateHud();
+    announceStatus("End turn. Enemy phase resolving.", "turn"); pulse("turn");
     for (const e of aliveEnemies()) {
       const targets = aliveUnits().sort((a,b)=>dist(e,a)-dist(e,b));
       const t = targets[0]; if (!t) break;
       if (dist(e,t) <= 1) {
         const inCover = dirs.some(([dx,dy]) => isCover(t.x+dx,t.y+dy));
         const dmg = inCover ? 1 : 2; t.hp -= dmg; float("-"+dmg,t.x,t.y,"#fb7185"); beep("hit");
+        announceStatus("Enemy " + e.id + " dealt " + dmg + " damage to unit " + t.id + ". " + Math.max(0,t.hp) + " HP remains.", "damage"); pulse("damage");
       } else {
         const options = dirs.map(([dx,dy]) => ({x:e.x+dx,y:e.y+dy})).filter(p => !blocked(p.x,p.y)).sort((a,b)=>dist(a,t)-dist(b,t));
         if (options[0] && dist(options[0],t) < dist(e,t)) { e.x = options[0].x; e.y = options[0].y; }
@@ -225,22 +252,27 @@
     }
     if (aliveUnits().length === 0) return finishLoss();
     state.turn = "player"; state.action = "ready"; state.units.forEach(u => u.acted = false); cycleUnitToReady(); updateHud(); render();
+    const u = selectedUnit();
+    announceStatus("Enemy turn ended. Unit " + (u ? u.id : "--") + " ready.", "turn"); pulse("turn");
   }
   function checkWin(){
     if (aliveEnemies().length) return false;
     state.goal.armed = true;
     const allGoal = aliveUnits().some(u => u.x === state.goal.x && u.y === state.goal.y);
-    if (!allGoal) { state.action = "reach goal"; updateHud(); render(); return false; }
+    if (!allGoal) { state.action = "reach goal"; updateHud(); render(); announceStatus("Enemies cleared. Move a unit to the cyan goal.", "status"); return false; }
     state.score += 250 + aliveUnits().reduce((n,u)=>n+u.hp,0)*12; saveBest();
     if (state.mission === missions.length - 1) { state.mode = "runComplete"; state.runComplete = true; beep("win"); }
     else { state.mode = "missionComplete"; beep("win"); }
-    state.action = state.mode; updateHud(); render(); return true;
+    state.action = state.mode; updateHud(); render();
+    announceStatus(state.mode === "runComplete" ? "Run complete. Final score " + state.score + ". Press Enter or R to restart." : "Mission complete. Score " + state.score + ". Press Enter for the next mission.", "win"); pulse("win");
+    return true;
   }
   function nextMission(){ state.mission += 1; startMission(state.mission); }
-  function finishLoss(){ state.mode = "gameOver"; state.gameOver = true; state.action = "game over"; saveBest(); beep("lose"); updateHud(); render(); }
-  function moveCursor(dx,dy){ if (state.mode !== "playing") return; state.cursor.x = Math.max(0, Math.min(W-1, state.cursor.x+dx)); state.cursor.y = Math.max(0, Math.min(H-1, state.cursor.y+dy)); updateHud(); render(); }
-  function handleKey(key){
+  function finishLoss(){ state.mode = "gameOver"; state.gameOver = true; state.action = "game over"; saveBest(); beep("lose"); updateHud(); render(); announceStatus("Game over. All units are down. Press Enter or R to restart.", "loss"); pulse("loss"); }
+  function moveCursor(dx,dy){ if (state.mode !== "playing") return; state.cursor.x = Math.max(0, Math.min(W-1, state.cursor.x+dx)); state.cursor.y = Math.max(0, Math.min(H-1, state.cursor.y+dy)); updateHud(); render(); announceStatus("Cursor at column " + (state.cursor.x + 1) + ", row " + (state.cursor.y + 1) + ".", "cursor"); }
+  function handleKey(key, source="keyboard"){
     const k = key.length === 1 ? key.toLowerCase() : key;
+    setInput(source, k === " " ? "Space" : k);
     if (k === "r") return restart(true);
     if (k === "f") return toggleFull();
     if (k === "Tab") return cycleUnit();
@@ -250,7 +282,7 @@
     if (k === "ArrowUp" || k === "w") return moveCursor(0,-1);
     if (k === "ArrowDown" || k === "s") return moveCursor(0,1);
   }
-  function toggleFull(){ try { if (!document.fullscreenElement) canvas.requestFullscreen(); else document.exitFullscreen(); } catch (_) {} }
+  function toggleFull(){ try { if (!document.fullscreenElement) canvas.requestFullscreen(); else document.exitFullscreen(); announceStatus(document.fullscreenElement ? "Exited fullscreen." : "Fullscreen requested.", "status"); } catch (_) {} }
   function updateHud(){
     const u = selectedUnit();
     hud.mission.textContent = (state.mission + 1) + "/" + missions.length;
@@ -300,16 +332,17 @@
     state.feedback = state.feedback.filter(f => f.life > 0);
   }
   function tick(ts){ if (!lastTime) lastTime = ts; if (ts-lastTime > 40) { step(); render(); lastTime = ts; } requestAnimationFrame(tick); }
-  canvas.addEventListener("keydown", e => { if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Tab"].includes(e.key)) e.preventDefault(); handleKey(e.key); });
-  window.addEventListener("keydown", e => { if (e.target === canvas || e.target.tagName === "BUTTON") return; handleKey(e.key); });
+  canvas.addEventListener("keydown", e => { if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Tab"].includes(e.key)) e.preventDefault(); handleKey(e.key, "keyboard"); });
+  window.addEventListener("keydown", e => { if (e.target === canvas || e.target.tagName === "BUTTON") return; handleKey(e.key, "keyboard"); });
   canvas.addEventListener("pointerdown", e => {
+    setInput(e.pointerType || "pointer", "canvas");
     canvas.focus(); const b=canvas.getBoundingClientRect(), px=(e.clientX-b.left)*(canvas.width/b.width), py=(e.clientY-b.top)*(canvas.height/b.height);
     for (let y=0;y<H;y++) for (let x=0;x<W;x++){ const r=cellRect(x,y); if(px>=r.x&&px<=r.x+r.s&&py>=r.y&&py<=r.y+r.s){ state.cursor={x,y}; playerAction(); return; } }
   });
-  document.getElementById("restart").addEventListener("click", () => restart(true));
-  document.getElementById("sound").addEventListener("click", () => { state.sound = !state.sound; saveSound(); updateHud(); if (state.sound) beep("select"); });
-  document.getElementById("full").addEventListener("click", toggleFull);
-  document.querySelectorAll("[data-key]").forEach(btn => btn.addEventListener("click", () => { canvas.focus(); handleKey(btn.dataset.key); }));
+  document.getElementById("restart").addEventListener("click", () => { setInput("button", "restart"); restart(true); });
+  document.getElementById("sound").addEventListener("click", () => { setInput("button", "sound"); state.sound = !state.sound; saveSound(); updateHud(); if (state.sound) beep("select"); announceStatus(state.sound ? "Sound on." : "Sound off.", "status"); });
+  document.getElementById("full").addEventListener("click", () => { setInput("button", "fullscreen"); toggleFull(); });
+  document.querySelectorAll("[data-key]").forEach(btn => btn.addEventListener("click", () => { canvas.focus(); handleKey(btn.dataset.key, "touch"); }));
   document.addEventListener("fullscreenchange", () => { updateHud(); render(); });
   window.render_game_to_text = function render_game_to_text(){
     const u = selectedUnit();
@@ -318,7 +351,8 @@
       selectedUnit:u?u.id:null, units:state.units.map(p=>({id:p.id,x:p.x,y:p.y,hp:p.hp,acted:p.acted})),
       enemies:state.enemies.filter(e=>e.hp>0).map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp})),
       cover:state.cover.filter(c=>c.hp>0).map(c=>({x:c.x,y:c.y,hp:c.hp})), goal:state.goal,
-      cursor:state.cursor, turn:state.turn, action:state.action, sound:state.sound, fullscreen:state.fullscreen,
+      cursor:state.cursor, turn:state.turn, action:state.action, selectedAction:state.action, sound:state.sound, fullscreen:state.fullscreen,
+      lastStatus:state.lastStatus, lastInput:state.lastInput, lastFeedback:state.lastFeedback,
       feedbackActive: state.feedback.length > 0,
       feedback: { effects: state.feedback.length, last: state.feedback[0]?.text || "", lastAge: state.feedback[0] ? Math.round(state.feedback[0].life / 10) / 10 : 0 },
       runComplete:state.runComplete, gameOver:state.gameOver, note:"grid origin top-left, x right, y down"

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Volt Sudoku - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Solve charged number grids with notes, hints, and clean neon feedback." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/volt-sudoku.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Volt Sudoku — Workshop Arcade" />
+<meta property="og:description" content="Solve charged number grids with notes, hints, and clean neon feedback." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/volt-sudoku.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/volt-sudoku.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Volt Sudoku — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Volt Sudoku — Workshop Arcade" />
+<meta name="twitter:description" content="Solve charged number grids with notes, hints, and clean neon feedback." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/volt-sudoku.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Volt Sudoku",
+  "description": "Solve charged number grids with notes, hints, and clean neon feedback.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/volt-sudoku.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/volt-sudoku.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Board",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+:root{color-scheme:dark;--bg:#060b13;--panel:#0d1726;--panel2:#132a35;--ink:#f3fbff;--muted:#9db7c3;--cyan:#57ecff;--volt:#c8ff4d;--gold:#ffd166;--rose:#ff6b95;--violet:#9d8cff;--line:rgba(87,236,255,.22)}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);overflow-x:hidden;background:radial-gradient(720px 460px at 8% -8%,rgba(87,236,255,.18),transparent 62%),radial-gradient(640px 440px at 100% 0,rgba(200,255,77,.12),transparent 60%),linear-gradient(180deg,#050a12,#09121b 78%)}
+button{font:inherit}.app{min-height:100dvh;width:min(1160px,100%);margin:auto;padding:14px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:11px}.top,.foot,.hud,.actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{display:grid;gap:3px;line-height:1}.eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan);font-weight:950}.title{margin:0;font-size:clamp(24px,4vw,38px);letter-spacing:.04em;text-transform:uppercase}.hud{justify-content:flex-end}.pill,.btn,.panel,.cell{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 18px 42px rgba(0,0,0,.2)}.pill{border-radius:8px;min-width:76px;padding:7px 9px;text-align:center}.label{display:block;color:var(--cyan);font-size:9px;font-weight:950;letter-spacing:.12em;text-transform:uppercase}.value{display:block;font-size:17px;line-height:1.15;font-weight:950;font-variant-numeric:tabular-nums}.desk{width:100%;display:grid;grid-template-columns:minmax(300px,628px) minmax(280px,380px);gap:13px;align-items:center;justify-content:center}.boardShell{position:relative;width:min(100%,min(72dvh,628px));justify-self:center;padding:10px;border:1px solid rgba(87,236,255,.32);border-radius:8px;background:linear-gradient(145deg,rgba(15,40,49,.95),rgba(6,11,19,.96));box-shadow:0 28px 75px rgba(0,0,0,.42),0 0 56px rgba(87,236,255,.08)}
+.board{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));width:100%;aspect-ratio:1;border:3px solid rgba(200,255,77,.66);border-radius:6px;overflow:hidden;background:#050b13}.cell{position:relative;display:grid;place-items:center;min-width:0;min-height:0;padding:0;border-width:0 1px 1px 0;border-color:rgba(87,236,255,.2);border-style:solid;border-radius:0;color:var(--ink);cursor:pointer;font-size:clamp(18px,4.2vmin,39px);font-weight:950;font-variant-numeric:tabular-nums;touch-action:manipulation}.cell.boxRight{border-right:3px solid rgba(200,255,77,.54)}.cell.boxBottom{border-bottom:3px solid rgba(200,255,77,.54)}.cell.given{color:#dfffa0;background:linear-gradient(180deg,#163029,#0c1522)}.cell.user{color:var(--cyan)}.cell.hinted{color:var(--gold)}.cell.peer{background:linear-gradient(180deg,rgba(22,52,62,.98),rgba(10,19,31,.98))}.cell.selected{z-index:1;outline:3px solid var(--gold);outline-offset:-3px;background:linear-gradient(180deg,rgba(61,75,34,.92),rgba(17,29,30,.98))}.cell.error{animation:jolt .26s linear 2;background:linear-gradient(180deg,rgba(122,32,61,.95),rgba(48,14,28,.98));color:#fff}.cell:focus-visible,.btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}.notes{position:absolute;inset:3px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);place-items:center;color:#d2def0;font-size:clamp(7px,1.3vmin,12px);font-weight:900}.side{display:grid;gap:9px;align-content:center}.panel{border-radius:8px;padding:11px}.stageName{margin:0 0 5px;color:var(--volt);font-size:20px;line-height:1.05;text-transform:uppercase;letter-spacing:.04em}.copy{margin:0;color:var(--muted);font-size:13px;line-height:1.42}.status{min-height:44px;display:grid;align-items:center;border-left:4px solid var(--cyan);color:var(--ink);font-size:13px;font-weight:850}.status.bad{border-color:var(--rose);color:#ffd6df}.status.good{border-color:var(--volt);color:#eaffb6}.selectLine{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;color:var(--muted);font-size:12px;font-weight:850}.selectLine b{color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums}.keypad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.btn{min-height:39px;border-radius:8px;color:var(--ink);padding:8px 10px;cursor:pointer;text-transform:uppercase;font-size:12px;font-weight:950;touch-action:manipulation}.digit{font-size:19px;padding:5px;color:var(--cyan);font-variant-numeric:tabular-nums}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#e4ff79,#9fe53a);color:#102009}.btn.hint{color:var(--gold);border-color:rgba(255,209,102,.48)}.btn:hover{border-color:rgba(255,209,102,.68)}.btn:disabled{opacity:.45;cursor:not-allowed}.keys{color:var(--muted);font-size:12px;line-height:1.5;text-align:right}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;padding:0 5px;border:1px solid rgba(87,236,255,.26);border-radius:6px;background:#060d17;color:var(--ink);font-weight:950}.overlay{position:absolute;inset:10px;display:none;place-items:center;padding:24px;text-align:center;background:rgba(2,7,13,.72);backdrop-filter:blur(2px)}.overlay.show{display:grid}.card{width:min(390px,100%);border:1px solid rgba(200,255,77,.55);border-radius:8px;background:linear-gradient(180deg,rgba(19,42,53,.96),rgba(8,15,26,.98));padding:18px;box-shadow:0 22px 55px rgba(0,0,0,.42)}.card h2{margin:0;color:var(--volt);font-size:clamp(23px,4vw,35px);line-height:1;text-transform:uppercase}.card p{margin:9px 0 0;color:var(--ink);font-size:14px;line-height:1.45}.foot{align-items:flex-start}.actions{justify-content:flex-start}.live{position:absolute;left:-10000px}@keyframes jolt{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media(max-width:900px){.app{padding:9px;gap:8px}.desk{grid-template-columns:1fr;gap:9px}.boardShell{width:min(100%,min(61dvh,610px));padding:7px}.overlay{inset:7px}.side{width:min(610px,100%);justify-self:center;grid-template-columns:1fr}.top{align-items:flex-start}.pill{min-width:64px;padding:6px 7px}.value{font-size:15px}.stageName{font-size:18px}.panel{padding:9px}.keys{text-align:left}.title{font-size:24px}}
+@media(max-width:540px){.app{grid-template-rows:auto auto auto;align-content:start}.eyebrow{font-size:9px}.boardShell{width:100%}.hud{justify-content:stretch}.pill{flex:1 1 28%}.pill .label{display:none}.keypad{gap:5px}.btn{min-height:36px;padding:7px 5px;font-size:11px}.digit{font-size:17px}.status{min-height:39px}.foot,.actions{gap:6px}.actions .btn{flex:1 1 92px}.keys{font-size:11px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><h1 class="title">Volt Sudoku</h1></div>
+    <div class="hud" aria-label="Volt Sudoku run status">
+      <span class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/4</span></span>
+      <span class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></span>
+      <span class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></span>
+      <span class="pill"><span class="label">Mistakes</span><span class="value" id="mistakeValue">0</span></span>
+      <span class="pill"><span class="label">Hints</span><span class="value" id="hintValue">0</span></span>
+    </div>
+  </header>
+  <main class="desk" aria-label="Volt Sudoku game">
+    <section class="boardShell" aria-label="Sudoku grid">
+      <div class="board" id="board" role="grid" aria-label="Nine by nine Volt Sudoku board"></div>
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <h2 id="overlayTitle">Grid Charged</h2>
+          <p id="overlayCopy">Stage score stored.</p>
+        </div>
+      </div>
+    </section>
+    <aside class="side">
+      <section class="panel" aria-label="Stage objective">
+        <h2 class="stageName" id="stageName">Starter Coil</h2>
+        <p class="copy" id="stageCopy">Fill each row, column, and three by three bay with digits 1 through 9.</p>
+        <div class="selectLine"><span id="cellLabel">Cell R1 C1</span><b id="cellValue">Locked</b></div>
+      </section>
+      <section class="panel status" id="statusLine" aria-live="polite">Pick a blank cell. Digits charge cells; Note Mode sketches candidates.</section>
+      <section class="panel keypad" aria-label="Digit pad">
+        <button class="btn digit" type="button" data-digit="1">1</button><button class="btn digit" type="button" data-digit="2">2</button><button class="btn digit" type="button" data-digit="3">3</button><button class="btn digit" type="button" data-digit="4">4</button><button class="btn digit" type="button" data-digit="5">5</button>
+        <button class="btn digit" type="button" data-digit="6">6</button><button class="btn digit" type="button" data-digit="7">7</button><button class="btn digit" type="button" data-digit="8">8</button><button class="btn digit" type="button" data-digit="9">9</button><button class="btn" type="button" id="eraseBtn">Erase</button>
+      </section>
+      <section class="actions" aria-label="Sudoku actions">
+        <button class="btn" type="button" id="noteBtn" aria-pressed="false">Note Mode</button>
+        <button class="btn hint" type="button" id="hintBtn">Hint</button>
+        <button class="btn" type="button" id="nextBtn" disabled>Next Grid</button>
+      </section>
+    </aside>
+  </main>
+  <footer class="foot">
+    <div class="actions">
+      <button class="btn" type="button" id="restartBtn">Restart</button>
+      <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+      <button class="btn" type="button" id="fullBtn">Fullscreen</button>
+    </div>
+    <div class="keys"><span class="kbd">Arrows</span>/<span class="kbd">WASD</span> move <span class="kbd">1-9</span> digit <span class="kbd">N</span> notes <span class="kbd">H</span> hint <span class="kbd">Del</span> erase <span class="kbd">R</span> restart <span class="kbd">F</span> fullscreen</div>
+  </footer>
+</div>
+<div class="live" id="liveLine" aria-live="polite"></div>
+<script>
+(() => {
+  "use strict";
+  const BEST_KEY = "volt-sudoku.best.v1";
+  const SOUND_KEY = "volt-sudoku.sound.v1";
+  const EASY_SOLUTION = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+  const EASY_PUZZLE = "534078902602195308108340567859061403406853701713904806901537204287019605305286109";
+  const CLASSIC_PUZZLE = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
+  const PRISM_SOLUTION = "483921657967345821251876493548132976729564138136798245372689514814253769695417382";
+  const PRISM_PUZZLE = "403901607907305801201806403508102906709504108106708205302609504804203709605407302";
+  const PRISM_HARD = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    board: $("board"), overlay: $("overlay"), overlayTitle: $("overlayTitle"), overlayCopy: $("overlayCopy"),
+    stage: $("stageValue"), score: $("scoreValue"), best: $("bestValue"), mistakes: $("mistakeValue"), hints: $("hintValue"),
+    stageName: $("stageName"), stageCopy: $("stageCopy"), cellLabel: $("cellLabel"), cellValue: $("cellValue"), status: $("statusLine"), live: $("liveLine"),
+    note: $("noteBtn"), hint: $("hintBtn"), next: $("nextBtn"), erase: $("eraseBtn"), restart: $("restartBtn"), sound: $("soundBtn"), full: $("fullBtn")
+  };
+  function rotateGrid(text, turns) {
+    let out = text;
+    for (let turn = 0; turn < turns; turn += 1) {
+      const before = out;
+      out = Array.from({ length: 81 }, (_, index) => before[(8 - index % 9) * 9 + Math.floor(index / 9)]).join("");
+    }
+    return out;
+  }
+  function remapDigits(text, map) { return [...text].map((char) => char === "0" ? "0" : map[Number(char) - 1]).join(""); }
+  function stage(name, copy, puzzle, solution, rotate = 0, map = "123456789") {
+    return { name, copy, puzzle: remapDigits(rotateGrid(puzzle, rotate), map), solution: remapDigits(rotateGrid(solution, rotate), map) };
+  }
+  const STAGES = [
+    stage("Starter Coil", "A bright warm-up grid with two missing charges in each row.", EASY_PUZZLE, EASY_SOLUTION),
+    stage("Prism Trace", "A medium relay. Notes keep crossing rows from overloading memory.", PRISM_PUZZLE, PRISM_SOLUTION),
+    stage("Arc Rotation", "The classic coil is rotated and relabeled for a denser solve.", CLASSIC_PUZZLE, EASY_SOLUTION, 1, "672914385"),
+    stage("Voltage Crown", "A final prism maze with fewer givens and no random layout.", PRISM_HARD, PRISM_SOLUTION, 3, "594287136")
+  ];
+  function storage() { if (window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch (_) { return null; } }
+  function read(key, fallback) { const s = storage(); if (!s) return fallback; try { const raw = s.getItem(key); return raw == null ? fallback : raw; } catch (_) { return fallback; } }
+  function write(key, value) { const s = storage(); if (!s) return; try { s.setItem(key, String(value)); } catch (_) {} }
+  const state = {
+    mode: "playing", stageIndex: 0, values: [], givens: [], notes: [], hinted: [], awarded: [], selected: 0,
+    noteMode: false, score: 0, best: Number(read(BEST_KEY, "0")) || 0, mistakes: 0, stageMistakes: 0, hints: 0, stageHints: 0,
+    elapsedMs: 0, stageElapsedMs: 0, status: "Pick a blank cell. Digits charge cells; Note Mode sketches candidates.", statusKind: "",
+    statusMs: 0, errorCell: -1, errorMs: 0, stageBonus: 0, completedStages: [], lastAction: "ready", lastMistake: null,
+    soundEnabled: !["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase()), userGesture: false, lastSound: "none", soundCount: 0
+  };
+  let audio = null;
+  let lastFrame = 0;
+  const activeStage = () => STAGES[state.stageIndex];
+  const row = (index) => Math.floor(index / 9);
+  const col = (index) => index % 9;
+  const box = (index) => Math.floor(row(index) / 3) * 3 + Math.floor(col(index) / 3);
+  const blankCount = () => activeStage().puzzle.replace(/[1-9]/g, "").length;
+  function peer(a, b) { return a !== b && (row(a) === row(b) || col(a) === col(b) || box(a) === box(b)); }
+  function announce(text) { els.live.textContent = ""; requestAnimationFrame(() => { els.live.textContent = text; }); }
+  function setStatus(text, kind = "", ms = 1800) { state.status = text; state.statusKind = kind; state.statusMs = ms; els.status.textContent = text; els.status.className = "panel status " + kind; }
+  function markGesture() { state.userGesture = true; }
+  function ensureAudio() {
+    if (!state.soundEnabled || !state.userGesture) return null;
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume().catch(() => {});
+      return audio;
+    } catch (_) { audio = null; return null; }
+  }
+  function sound(name) {
+    state.lastSound = state.soundEnabled ? name : "muted-" + name;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    state.soundCount += 1;
+    const freq = { move: 255, note: 355, fill: 540, erase: 210, hint: 690, wrong: 118, solve: 820, run: 980, restart: 275, toggle: 460 }[name] || 380;
+    const now = ctx.currentTime, osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = name === "wrong" ? "sawtooth" : name === "note" ? "triangle" : "sine";
+    osc.frequency.setValueAtTime(freq, now);
+    if (name === "solve" || name === "run") osc.frequency.linearRampToValueAtTime(freq + 180, now + .16);
+    gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.045, now + .012); gain.gain.exponentialRampToValueAtTime(.0001, now + .19);
+    osc.connect(gain).connect(ctx.destination); osc.start(now); osc.stop(now + .21);
+  }
+  function digitAt(index) { return Number(activeStage().solution[index]); }
+  function isSolved() { return state.values.every((value, index) => value === digitAt(index)); }
+  function persistBest() { if (state.score > state.best) { state.best = state.score; write(BEST_KEY, state.best); } }
+  function removePeerNotes(index, digit) { state.notes.forEach((set, other) => { if (peer(index, other)) set.delete(digit); }); }
+  function buildBoard() {
+    els.board.innerHTML = "";
+    for (let index = 0; index < 81; index += 1) {
+      const cell = document.createElement("button");
+      cell.type = "button"; cell.className = "cell"; cell.dataset.cell = String(index); cell.setAttribute("role", "gridcell");
+      if (col(index) === 2 || col(index) === 5) cell.classList.add("boxRight");
+      if (row(index) === 2 || row(index) === 5) cell.classList.add("boxBottom");
+      cell.addEventListener("pointerdown", () => markGesture());
+      cell.addEventListener("click", () => selectCell(index, true));
+      els.board.append(cell);
+    }
+  }
+  function loadStage(index, freshRun = false) {
+    state.stageIndex = Math.max(0, Math.min(STAGES.length - 1, index));
+    if (freshRun) {
+      state.mode = "playing"; state.score = 0; state.mistakes = 0; state.hints = 0; state.elapsedMs = 0; state.completedStages = [];
+    }
+    state.values = [...activeStage().puzzle].map(Number);
+    state.givens = state.values.map(Boolean);
+    state.notes = Array.from({ length: 81 }, () => new Set());
+    state.hinted = Array(81).fill(false);
+    state.awarded = Array(81).fill(false);
+    state.selected = Math.max(0, state.values.findIndex((value) => value === 0));
+    state.selected = state.selected < 0 ? 0 : state.selected;
+    state.noteMode = false; state.stageMistakes = 0; state.stageHints = 0; state.stageElapsedMs = 0; state.stageBonus = 0; state.errorCell = -1; state.errorMs = 0;
+    state.mode = "playing"; state.lastAction = "stage-load"; state.lastMistake = null;
+    els.overlay.classList.remove("show");
+    setStatus(activeStage().name + " online. Charge " + blankCount() + " blanks.", "good", 1800);
+    render();
+  }
+  function selectCell(index, focus) {
+    state.selected = (index + 81) % 81;
+    state.lastAction = "select";
+    if (focus) els.board.children[state.selected]?.focus();
+    sound("move");
+    render();
+  }
+  function moveSelection(dr, dc) {
+    const nr = (row(state.selected) + dr + 9) % 9, nc = (col(state.selected) + dc + 9) % 9;
+    selectCell(nr * 9 + nc, true);
+  }
+  function clearSelected() {
+    const index = state.selected;
+    if (state.givens[index] || state.mode !== "playing") { setStatus("That charge is locked into the stage.", "", 1100); render(); return; }
+    const hadMark = state.values[index] || state.notes[index].size;
+    state.values[index] = 0; state.hinted[index] = false; state.notes[index].clear(); state.lastAction = "erase";
+    if (hadMark) { setStatus("Cell cleared.", "", 900); sound("erase"); }
+    render();
+  }
+  function toggleNote(digit) {
+    if (state.values[state.selected]) { setStatus("Erase the digit before adding notes.", "", 1200); return; }
+    const set = state.notes[state.selected];
+    if (set.has(digit)) set.delete(digit); else set.add(digit);
+    state.lastAction = "note"; setStatus("Candidate note " + digit + (set.has(digit) ? " added." : " removed."), "", 900); sound("note"); render();
+  }
+  function fillDigit(digit, fromHint = false) {
+    const index = state.selected;
+    if (state.mode !== "playing" || state.givens[index]) { setStatus("Choose a blank cell before charging a digit.", "", 1200); render(); return; }
+    if (state.noteMode && !fromHint) { toggleNote(digit); return; }
+    if (!fromHint && digit !== digitAt(index)) {
+      state.mistakes += 1; state.stageMistakes += 1; state.score = Math.max(0, state.score - 28); state.errorCell = index; state.errorMs = 520;
+      state.lastAction = "mistake"; state.lastMistake = { row: row(index) + 1, col: col(index) + 1, guess: digit };
+      setStatus("Mistake feedback: " + digit + " does not charge R" + (row(index) + 1) + " C" + (col(index) + 1) + ".", "bad", 2200);
+      announce("Mistake at row " + (row(index) + 1) + " column " + (col(index) + 1) + ".");
+      sound("wrong"); render(); return;
+    }
+    const already = state.values[index] === digit;
+    state.values[index] = digit; state.notes[index].clear(); state.hinted[index] = fromHint; removePeerNotes(index, digit);
+    if (!already && !fromHint && !state.awarded[index]) { state.score += 18; state.awarded[index] = true; }
+    state.lastAction = fromHint ? "hint-fill" : "fill";
+    setStatus(fromHint ? "Hint routed to R" + (row(index) + 1) + " C" + (col(index) + 1) + "." : "Cell charged correctly.", fromHint ? "" : "good", 1200);
+    sound(fromHint ? "hint" : "fill");
+    completeIfReady();
+    render();
+  }
+  function hint() {
+    if (state.mode !== "playing") return;
+    let index = state.selected;
+    if (state.givens[index] || state.values[index]) index = state.values.findIndex((value, at) => !state.givens[at] && value !== digitAt(at));
+    if (index < 0) return;
+    state.selected = index; state.hints += 1; state.stageHints += 1; state.score = Math.max(0, state.score - 46); fillDigit(digitAt(index), true);
+  }
+  function stageBonus() {
+    const pace = Math.max(0, 130 - Math.floor(state.stageElapsedMs / 1000));
+    return Math.max(70, 230 + blankCount() * 7 + pace - state.stageMistakes * 42 - state.stageHints * 58);
+  }
+  function completeIfReady() {
+    if (!isSolved() || state.mode !== "playing") return;
+    state.stageBonus = stageBonus(); state.score += state.stageBonus; persistBest();
+    if (!state.completedStages.includes(state.stageIndex)) state.completedStages.push(state.stageIndex);
+    if (state.stageIndex === STAGES.length - 1) {
+      state.mode = "run-complete"; state.lastAction = "run-complete";
+      els.overlayTitle.textContent = "Run Complete"; els.overlayCopy.textContent = "Final score " + state.score + ". Best charge " + state.best + ". Restart for the same curated stages.";
+      setStatus("All Volt Sudoku stages charged. +" + state.stageBonus + " final bonus.", "good", 5000); sound("run"); announce("Volt Sudoku run complete.");
+    } else {
+      state.mode = "stage-complete"; state.lastAction = "stage-complete";
+      els.overlayTitle.textContent = "Grid Charged"; els.overlayCopy.textContent = activeStage().name + " bonus +" + state.stageBonus + ". Use Next Grid for the next deterministic stage.";
+      setStatus(activeStage().name + " charged. +" + state.stageBonus + " bonus.", "good", 4500); sound("solve"); announce(activeStage().name + " complete.");
+    }
+    els.overlay.classList.add("show");
+  }
+  function nextStage() {
+    if (state.mode === "stage-complete") loadStage(state.stageIndex + 1, false);
+    else if (state.mode === "run-complete") loadStage(0, true);
+  }
+  function restart() { loadStage(0, true); state.lastAction = "restart"; sound("restart"); announce("Volt Sudoku restarted."); }
+  function toggleNotes() {
+    if (state.mode !== "playing") return;
+    state.noteMode = !state.noteMode; state.lastAction = "note-mode"; setStatus(state.noteMode ? "Note Mode armed. Digits sketch candidates." : "Digit Mode armed. Digits test the solution.", "", 1400); sound("note"); render();
+  }
+  function toggleSound() {
+    state.soundEnabled = !state.soundEnabled; write(SOUND_KEY, state.soundEnabled ? "1" : "0");
+    if (state.soundEnabled) sound("toggle"); else state.lastSound = "sound-off";
+    render();
+  }
+  async function toggleFullscreen() {
+    try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (_) {}
+    render();
+  }
+  function updateCellText(cell, index) {
+    const value = state.values[index];
+    cell.replaceChildren();
+    if (value) cell.textContent = String(value);
+    else if (state.notes[index].size) {
+      const notes = document.createElement("span"); notes.className = "notes"; notes.setAttribute("aria-hidden", "true");
+      for (let digit = 1; digit <= 9; digit += 1) { const note = document.createElement("span"); note.textContent = state.notes[index].has(digit) ? String(digit) : ""; notes.append(note); }
+      cell.append(notes);
+    }
+    const stateLabel = state.givens[index] ? "given " + value : value ? (state.hinted[index] ? "hinted " : "filled ") + value : state.notes[index].size ? "notes " + [...state.notes[index]].sort().join(" ") : "blank";
+    cell.setAttribute("aria-label", "Row " + (row(index) + 1) + " column " + (col(index) + 1) + ", " + stateLabel);
+    cell.setAttribute("aria-selected", String(index === state.selected));
+    cell.classList.toggle("given", state.givens[index]); cell.classList.toggle("user", value && !state.givens[index] && !state.hinted[index]); cell.classList.toggle("hinted", value && state.hinted[index]);
+    cell.classList.toggle("selected", index === state.selected); cell.classList.toggle("peer", peer(index, state.selected)); cell.classList.toggle("error", index === state.errorCell && state.errorMs > 0);
+  }
+  function render() {
+    [...els.board.children].forEach(updateCellText);
+    els.stage.textContent = (state.stageIndex + 1) + "/" + STAGES.length; els.score.textContent = String(state.score); els.best.textContent = String(state.best); els.mistakes.textContent = String(state.mistakes); els.hints.textContent = String(state.hints);
+    els.stageName.textContent = activeStage().name; els.stageCopy.textContent = activeStage().copy;
+    els.cellLabel.textContent = "Cell R" + (row(state.selected) + 1) + " C" + (col(state.selected) + 1);
+    els.cellValue.textContent = state.givens[state.selected] ? "Locked " + state.values[state.selected] : state.values[state.selected] ? (state.hinted[state.selected] ? "Hint " : "Digit ") + state.values[state.selected] : state.notes[state.selected].size ? "Notes " + [...state.notes[state.selected]].sort().join("") : "Blank";
+    els.note.textContent = state.noteMode ? "Digit Mode" : "Note Mode"; els.note.setAttribute("aria-pressed", String(state.noteMode));
+    els.next.disabled = state.mode === "playing"; els.next.textContent = state.mode === "run-complete" ? "Fresh Run" : "Next Grid";
+    els.hint.disabled = state.mode !== "playing"; els.erase.disabled = state.mode !== "playing";
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
+    els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+  }
+  function tick(ms) {
+    const step = Math.max(0, ms);
+    state.statusMs = Math.max(0, state.statusMs - step); state.errorMs = Math.max(0, state.errorMs - step);
+    if (state.mode === "playing") { state.elapsedMs += step; state.stageElapsedMs += step; }
+    if (state.statusMs === 0 && state.mode === "playing") {
+      state.status = state.noteMode ? "Note Mode: candidates stay local until a digit is placed." : "Digit Mode: rows, columns, and bays each need 1 through 9.";
+      state.statusKind = ""; els.status.textContent = state.status; els.status.className = "panel status";
+    }
+    if (state.errorMs === 0) state.errorCell = -1;
+    render();
+  }
+  function handleKey(event) {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const key = event.key.toLowerCase();
+    const move = { arrowup: [-1,0], w: [-1,0], arrowdown: [1,0], s: [1,0], arrowleft: [0,-1], a: [0,-1], arrowright: [0,1], d: [0,1] }[key];
+    if (move) { event.preventDefault(); markGesture(); moveSelection(move[0], move[1]); return; }
+    if (/^[1-9]$/.test(key)) { event.preventDefault(); markGesture(); fillDigit(Number(key)); }
+    else if (key === "backspace" || key === "delete" || key === "0") { event.preventDefault(); markGesture(); clearSelected(); }
+    else if (key === "n") { event.preventDefault(); markGesture(); toggleNotes(); }
+    else if (key === "h") { event.preventDefault(); markGesture(); hint(); }
+    else if (key === "r") { event.preventDefault(); markGesture(); restart(); }
+    else if (key === "f") { event.preventDefault(); markGesture(); toggleFullscreen(); }
+    else if (key === "m") { event.preventDefault(); markGesture(); toggleSound(); }
+    else if (key === "enter" && state.mode !== "playing") { event.preventDefault(); markGesture(); nextStage(); }
+  }
+  function boardRows() { return Array.from({ length: 9 }, (_, r) => state.values.slice(r * 9, r * 9 + 9).map((v) => v || ".").join("")); }
+  function snapshot() {
+    return JSON.stringify({
+      mode: state.mode,
+      stage: { index: state.stageIndex + 1, total: STAGES.length, name: activeStage().name, blanks: blankCount() },
+      boardRows: boardRows(),
+      selected: { row: row(state.selected) + 1, col: col(state.selected) + 1, value: state.values[state.selected] || 0, given: !!state.givens[state.selected], hinted: !!state.hinted[state.selected], notes: [...state.notes[state.selected]].sort() },
+      filled: state.values.filter(Boolean).length,
+      score: state.score,
+      best: state.best,
+      mistakes: { run: state.mistakes, stage: state.stageMistakes, last: state.lastMistake },
+      hints: { run: state.hints, stage: state.stageHints },
+      noteMode: state.noteMode,
+      noteCells: state.notes.map((set, index) => set.size ? { row: row(index) + 1, col: col(index) + 1, digits: [...set].sort() } : null).filter(Boolean),
+      stageBonus: state.stageBonus,
+      elapsedMs: Math.round(state.elapsedMs),
+      status: state.status,
+      lastAction: state.lastAction,
+      sound: { enabled: state.soundEnabled, last: state.lastSound, count: state.soundCount },
+      fullscreen: !!document.fullscreenElement,
+      coordinateSystem: "Sudoku rows and columns are one-based from the top-left; each three by three bay also contains digits 1 through 9."
+    });
+  }
+  buildBoard();
+  document.querySelectorAll("[data-digit]").forEach((button) => button.addEventListener("click", () => { markGesture(); fillDigit(Number(button.dataset.digit)); }));
+  els.erase.addEventListener("click", () => { markGesture(); clearSelected(); });
+  els.note.addEventListener("click", () => { markGesture(); toggleNotes(); });
+  els.hint.addEventListener("click", () => { markGesture(); hint(); });
+  els.next.addEventListener("click", () => { markGesture(); nextStage(); });
+  els.restart.addEventListener("click", () => { markGesture(); restart(); });
+  els.sound.addEventListener("click", () => { markGesture(); toggleSound(); });
+  els.full.addEventListener("click", () => { markGesture(); toggleFullscreen(); });
+  document.addEventListener("fullscreenchange", render);
+  window.addEventListener("keydown", handleKey);
+  window.render_game_to_text = snapshot;
+  window.advanceTime = (ms = 0) => {
+    const total = Math.max(0, Number(ms) || 0), frame = 1000 / 60;
+    if (total === 0) tick(0);
+    for (let left = total; left > 0; left -= frame) tick(Math.min(left, frame));
+    return snapshot();
+  };
+  function loop(time) { if (!lastFrame) lastFrame = time; tick(Math.min(50, time - lastFrame)); lastFrame = time; requestAnimationFrame(loop); }
+  loadStage(0, true);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

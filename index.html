@@ -94,6 +94,7 @@
     .search input::placeholder{color:rgba(159,176,200,0.65)}
     .search input:focus{border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18), 0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)}
     .search .icon{position:absolute;right:12px;top:50%;translate:0 -50%;opacity:.7;color:rgba(94,234,212,0.7)}
+    .bar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
     .filters{max-width:var(--maxw);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 8px}
     .chip{background:linear-gradient(180deg,rgba(20,30,50,0.55),rgba(11,17,32,0.55));
@@ -118,6 +119,15 @@
     select:focus{outline:0;border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18)}
 
     main{max-width:var(--maxw);margin:8px auto 24px;padding:0 16px}
+    .discovery{display:flex;gap:14px;align-items:center;justify-content:space-between;margin:0 0 14px;
+      padding:12px 0;border-bottom:1px solid rgba(94,234,212,0.12)}
+    .discovery-copy{display:grid;gap:4px;min-width:0}
+    .discovery-copy .eyebrow{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
+      color:rgba(94,234,212,0.82);font-weight:700}
+    .discovery-copy strong{font-size:14px;line-height:1.35;letter-spacing:0.03em}
+    .discovery-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .discovery-actions .btn[aria-pressed="true"]{border-color:rgba(94,234,212,0.58);color:#e6edf3;
+      box-shadow:inset 0 0 0 1px rgba(94,234,212,0.14),0 0 14px rgba(94,234,212,0.12)}
     .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--grid-gap)}
     @media (max-width: 1100px){ .grid{grid-template-columns:repeat(3,1fr)} }
     @media (max-width: 760px){ .grid{grid-template-columns:repeat(2,1fr)} }
@@ -306,9 +316,17 @@
       .row{align-items:flex-start;flex-wrap:wrap}
       .queue-head,.queue-row{grid-template-columns:1fr;display:grid}
       .queue-actions{justify-content:flex-start}
+      .discovery{align-items:flex-start;flex-direction:column}
+      .discovery-actions{justify-content:flex-start}
     }
     @media (max-width: 560px){
-      .bar{gap:10px;padding:12px 12px}
+      .bar{gap:10px;padding:12px 12px;flex-wrap:wrap}
+      .logo{min-width:0}
+      .search{order:3;flex-basis:100%}
+      .bar-actions{margin-left:auto;max-width:100%;justify-content:flex-end}
+      .bar-actions .btn{padding-inline:10px}
+      .filters{padding-inline:12px}
+      .controls{padding-inline:12px;flex-wrap:wrap}
       .logo .eyebrow{display:none}
       .logo .name{font-size:14px;letter-spacing:0.16em}
     }
@@ -368,7 +386,7 @@
   "@type": "ItemList",
   "name": "Workshop Arcade Games",
   "description": "Browser-playable HTML5 games in the Workshop Arcade catalog.",
-  "numberOfItems": 54,
+  "numberOfItems": 59,
   "itemListElement": [
     {
       "@type": "ListItem",
@@ -693,6 +711,36 @@
       "position": 54,
       "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/bloomkeeper-grid.html",
       "name": "Bloomkeeper Grid"
+    },
+    {
+      "@type": "ListItem",
+      "position": 55,
+      "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/volt-sudoku.html",
+      "name": "Volt Sudoku"
+    },
+    {
+      "@type": "ListItem",
+      "position": 56,
+      "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/glyphogram-grid.html",
+      "name": "Glyphogram Grid"
+    },
+    {
+      "@type": "ListItem",
+      "position": 57,
+      "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/lumen-lander.html",
+      "name": "Lumen Lander"
+    },
+    {
+      "@type": "ListItem",
+      "position": 58,
+      "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/wordweave-grid.html",
+      "name": "Wordweave Grid"
+    },
+    {
+      "@type": "ListItem",
+      "position": 59,
+      "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/dice-dynamo.html",
+      "name": "Dice Dynamo"
     }
   ]
 }
@@ -747,16 +795,18 @@
         <input id="q" type="search" placeholder="Search games… (Ctrl+/)" autocomplete="off" aria-label="Search games" />
         <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-3.8-3.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
       </div>
-      <button class="btn subtle" type="button" id="randomGameBtn" aria-label="Play a random game (R)" title="Surprise me with a random game (R)">
-        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg>
-        <span>Random</span>
-      </button>
-      <button class="icon-btn help-btn" type="button" id="helpBtn" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)">?</button>
-      <button class="btn subtle install-btn" type="button" id="installAppBtn" aria-label="Install Workshop Arcade as an app" title="Install Workshop Arcade as an app" hidden>
-        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <span>Install</span>
-      </button>
-      <a class="btn primary" href="#" id="submitGameBtn">Workshop</a>
+      <div class="bar-actions">
+        <button class="btn subtle" type="button" id="randomGameBtn" aria-label="Play a random game (R)" title="Surprise me with a random game (R)">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg>
+          <span>Random</span>
+        </button>
+        <button class="icon-btn help-btn" type="button" id="helpBtn" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts (?)">?</button>
+        <button class="btn subtle install-btn" type="button" id="installAppBtn" aria-label="Install Workshop Arcade as an app" title="Install Workshop Arcade as an app" hidden>
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Install</span>
+        </button>
+        <a class="btn primary" href="#" id="submitGameBtn">Workshop</a>
+      </div>
     </div>
     <div class="filters" id="filters" aria-label="Filters">
       <!-- chips populated by JS -->
@@ -775,6 +825,17 @@
   </header>
 
   <main>
+    <section class="discovery" id="catalogDiscovery" aria-label="Browse shortcuts">
+      <div class="discovery-copy">
+        <span class="eyebrow">Browse</span>
+        <strong>Jump into the newest builds, top picks, or your recent games.</strong>
+      </div>
+      <div class="discovery-actions">
+        <button class="btn subtle" type="button" data-view="new" aria-pressed="true">Newest</button>
+        <button class="btn subtle" type="button" data-view="pop" aria-pressed="false">Popular</button>
+        <button class="btn subtle" type="button" data-view="recent" id="continueViewBtn" aria-pressed="false" hidden>Continue</button>
+      </div>
+    </section>
     <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
     <template id="cardT">
       <article class="card">
@@ -1011,7 +1072,12 @@ const FALLBACK_GAMES = [
   { id:"cipher-rooms", title:"Cipher Rooms", subtitle:"Inspect compact escape-room clues, crack keypad codes, and unlock each room.", tags:["Puzzle","Adventure"], slug:"cipher-rooms", url:"websites/cipher-rooms.html", cover:"covers/cipher-rooms.svg", addedAt:"2026-05-20", popularity:42 },
   { id:"patchwork-foundry", title:"Patchwork Foundry", subtitle:"Place polyomino plates to connect glowing ports across a compact factory grid.", tags:["Puzzle","Strategy"], slug:"patchwork-foundry", url:"websites/patchwork-foundry.html", cover:"covers/patchwork-foundry.svg", addedAt:"2026-05-20", popularity:41 },
   { id:"market-minute", title:"Market Minute", subtitle:"Trade deterministic commodities, fill contracts, and outscore the closing bell.", tags:["Simulation","Strategy","Card"], slug:"market-minute", url:"websites/market-minute.html", cover:"covers/market-minute.svg", addedAt:"2026-05-20", popularity:40 },
-  { id:"bloomkeeper-grid", title:"Bloomkeeper Grid", subtitle:"Plan seeds, water, and pollinator paths to grow a calm neon garden.", tags:["Puzzle","Simulation","Strategy"], slug:"bloomkeeper-grid", url:"websites/bloomkeeper-grid.html", cover:"covers/bloomkeeper-grid.svg", addedAt:"2026-05-20", popularity:39 }
+  { id:"bloomkeeper-grid", title:"Bloomkeeper Grid", subtitle:"Plan seeds, water, and pollinator paths to grow a calm neon garden.", tags:["Puzzle","Simulation","Strategy"], slug:"bloomkeeper-grid", url:"websites/bloomkeeper-grid.html", cover:"covers/bloomkeeper-grid.svg", addedAt:"2026-05-20", popularity:39 },
+  { id:"volt-sudoku", title:"Volt Sudoku", subtitle:"Solve charged number grids with notes, hints, and clean neon feedback.", tags:["Puzzle","Board","Strategy"], slug:"volt-sudoku", url:"websites/volt-sudoku.html", cover:"covers/volt-sudoku.svg", addedAt:"2026-05-21", popularity:38 },
+  { id:"glyphogram-grid", title:"Glyphogram Grid", subtitle:"Decode compact nonogram stages by filling glyph cells from row and column clues.", tags:["Puzzle","Board","Strategy"], slug:"glyphogram-grid", url:"websites/glyphogram-grid.html", cover:"covers/glyphogram-grid.svg", addedAt:"2026-05-21", popularity:37 },
+  { id:"lumen-lander", title:"Lumen Lander", subtitle:"Feather neon thrusters through compact landing stages without burning all your fuel.", tags:["Physics","Arcade","Action"], slug:"lumen-lander", url:"websites/lumen-lander.html", cover:"covers/lumen-lander.svg", addedAt:"2026-05-21", popularity:36 },
+  { id:"wordweave-grid", title:"Wordweave Grid", subtitle:"Trace target words through curated letter boards while preserving your path budget.", tags:["Word","Puzzle","Strategy"], slug:"wordweave-grid", url:"websites/wordweave-grid.html", cover:"covers/wordweave-grid.svg", addedAt:"2026-05-21", popularity:35 },
+  { id:"dice-dynamo", title:"Dice Dynamo", subtitle:"Lock, reroll, and bank risky dice contracts across deterministic score-chase rounds.", tags:["Simulation","Strategy","Puzzle"], slug:"dice-dynamo", url:"websites/dice-dynamo.html", cover:"covers/dice-dynamo.svg", addedAt:"2026-05-21", popularity:34 }
 ];
 
 const CATEGORY_ORDER = ["All","Arcade","Puzzle","Word","Board","Card","Strategy","Tactics","Simulation","Adventure","Stealth","Action","Shooter","Defense","Endless","Physics","Sports","Racing","Rhythm"];
@@ -1082,6 +1148,8 @@ const els = {
   workshopClose: document.getElementById('workshopClose'),
   submitGameBtn: document.getElementById('submitGameBtn'),
   randomGameBtn: document.getElementById('randomGameBtn'),
+  catalogDiscovery: document.getElementById('catalogDiscovery'),
+  continueViewBtn: document.getElementById('continueViewBtn'),
   helpBtn: document.getElementById('helpBtn'),
   installAppBtn: document.getElementById('installAppBtn'),
   helpDialog: document.getElementById('helpDialog'),
@@ -1262,6 +1330,7 @@ function buildFilters(){
     chip.addEventListener('click', ()=> setCategory(name));
     els.filters.appendChild(chip);
   }
+  syncDiscoveryActions();
 }
 
 function categoryCount(category){
@@ -1277,6 +1346,44 @@ function setCategory(category){
   state.category = category;
   syncStateToUrl();
   update();
+}
+
+function resetDiscoverySearch(){
+  state.query = '';
+  if(els.q) els.q.value = '';
+}
+
+function setDiscoveryView(view){
+  resetDiscoverySearch();
+  if(view === 'recent' && state.recentPlays.length){
+    state.category = 'Recently';
+  } else {
+    state.category = 'All';
+    state.sort = view === 'pop' ? 'pop' : 'new';
+    if(els.sort) els.sort.value = state.sort;
+  }
+  syncStateToUrl();
+  update();
+}
+
+function syncDiscoveryActions(){
+  if(!els.catalogDiscovery) return;
+  if(els.continueViewBtn) els.continueViewBtn.hidden = state.recentPlays.length === 0;
+  for(const button of els.catalogDiscovery.querySelectorAll('[data-view]')){
+    const view = button.dataset.view;
+    const active = view === 'recent'
+      ? state.category === 'Recently'
+      : state.category !== 'Recently' && state.sort === view && state.category === 'All';
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  }
+}
+
+if(els.catalogDiscovery){
+  els.catalogDiscovery.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-view]');
+    if(!button) return;
+    setDiscoveryView(button.dataset.view || 'new');
+  });
 }
 
 // Catalog URL state — bookmarkable, shareable, and restored on reload.
@@ -1426,6 +1533,7 @@ function update(){
   if(q) list = list.filter(g => `${g.title} ${g.subtitle} ${(g.tags||[]).join(' ')}`.toLowerCase().includes(q));
 
   state.filtered = list;
+  syncDiscoveryActions();
   render();
 }
 

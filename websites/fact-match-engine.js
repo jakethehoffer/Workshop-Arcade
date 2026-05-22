@@ -54,6 +54,16 @@
     cluesAdded: 0,
     resultState: null
   };
+  var status = {
+    lastStatus: "Ready.",
+    lastStatusAt: null,
+    statusCount: 0,
+    lastInput: "init",
+    lastInputAt: null,
+    inputCount: 0,
+    lastFeedback: "ready",
+    lastFeedbackAt: null
+  };
 
   var style = document.createElement("style");
   style.textContent = `
@@ -86,9 +96,12 @@
     button{border:1px solid var(--line);border-radius:12px;background:#102033;color:var(--ink);font-weight:900;padding:10px 12px;cursor:pointer}
     button.primary{background:linear-gradient(180deg,#5cf2cc,#26cbb6);color:#042524;border:0}
     button:hover{border-color:#335f82}
-      .actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+    .actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}
     .actions button{background:rgba(16,32,51,.72);color:#cfe3f3;padding:9px 10px;font-size:14px}
     .result{min-height:26px;margin-top:10px;color:var(--warn);font-weight:900}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .shell:fullscreen{width:100%;min-height:100vh;overflow:auto;background:radial-gradient(circle at 18% 0,#24476d 0,#0a1726 35%,#05080e 76%)}
+    .shell:-webkit-full-screen{width:100%;min-height:100vh;overflow:auto;background:radial-gradient(circle at 18% 0,#24476d 0,#0a1726 35%,#05080e 76%)}
     .result.feedback-pulse{animation:feedbackPulse .68s ease-out both}
     .clue.feedback-new{animation:cluePulse .7s ease-out both}
     @keyframes feedbackPulse{
@@ -129,7 +142,7 @@
       #guessBtn{min-height:44px;font-size:15px;box-shadow:0 8px 18px rgba(38,203,182,.16)}
       input{padding:10px;border-radius:11px}
       button{padding:9px 10px;border-radius:11px}
-        .actions{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:7px}
+      .actions{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:7px}
       .actions button{font-size:12px;padding:7px 6px;background:rgba(9,19,33,.76);color:#9fb8cb;border-color:rgba(80,240,200,.14)}
       .result{min-height:22px;margin-top:7px;font-size:13px}
       .bank-panel{padding:9px 10px}
@@ -147,7 +160,7 @@
       .panel{padding:9px}
       .guess{grid-template-columns:minmax(0,1fr) 92px}
       #guess{font-size:14px}
-        .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
       .actions button{font-size:11px;padding:7px 5px}
       .stats{gap:5px}
       .pill{padding:6px 7px;font-size:10px}
@@ -189,8 +202,10 @@
         <button id="newBtn" type="button">New Round</button>
         <button id="revealBtn" type="button">Reveal</button>
         <button id="soundBtn" type="button">Sound On</button>
+        <button id="fullscreenBtn" type="button" aria-pressed="false" title="Enter fullscreen (F)">Fullscreen</button>
       </div>
-          <div class="result" id="result" aria-live="polite"></div>
+          <div class="result" id="result" role="status" aria-live="polite"></div>
+          <div class="sr-only" id="statusLine" aria-live="polite">Ready.</div>
         </div>
         <aside class="panel bank-panel">
           <div class="bank-head">
@@ -213,7 +228,9 @@
     newBtn: document.getElementById("newBtn"),
     revealBtn: document.getElementById("revealBtn"),
     soundBtn: document.getElementById("soundBtn"),
+    fullscreenBtn: document.getElementById("fullscreenBtn"),
     result: document.getElementById("result"),
+    statusLine: document.getElementById("statusLine"),
     streak: document.getElementById("streak"),
     best: document.getElementById("best"),
     filter: document.getElementById("filter"),
@@ -221,6 +238,7 @@
     bankCount: document.getElementById("bankCount")
   };
   els.caseNumber = document.getElementById("caseNumber");
+  els.shell = document.querySelector(".shell");
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (char) {
@@ -236,6 +254,100 @@
     if (!els.soundBtn) return;
     els.soundBtn.textContent = audio.enabled ? "Sound On" : "Sound Off";
     els.soundBtn.setAttribute("aria-pressed", audio.enabled ? "true" : "false");
+  }
+
+  function nowMs() {
+    return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+  }
+
+  function ageSeconds(timestamp) {
+    return timestamp === null ? null : Math.max(0, (nowMs() - timestamp) / 1000);
+  }
+
+  function recordInput(input) {
+    status.lastInput = input;
+    status.lastInputAt = nowMs();
+    status.inputCount += 1;
+  }
+
+  function noteStatus(message, feedbackType) {
+    status.lastStatus = message || "";
+    status.lastStatusAt = nowMs();
+    status.statusCount += 1;
+    if (feedbackType) {
+      status.lastFeedback = feedbackType;
+      status.lastFeedbackAt = status.lastStatusAt;
+    }
+    if (els.statusLine) {
+      els.statusLine.textContent = status.lastStatus || "Ready.";
+    }
+  }
+
+  function setResult(message, feedbackType) {
+    els.result.textContent = message;
+    noteStatus(message, feedbackType);
+  }
+
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function fullscreenSupported() {
+    var target = els.shell || document.documentElement;
+    var canRequest = !!(target && (target.requestFullscreen || target.webkitRequestFullscreen));
+    var canExit = !!(document.exitFullscreen || document.webkitExitFullscreen);
+    return canRequest && canExit && document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false;
+  }
+
+  function fullscreenActive() {
+    return fullscreenElement() === (els.shell || document.documentElement);
+  }
+
+  function syncFullscreenButton() {
+    if (!els.fullscreenBtn) return;
+    var supported = fullscreenSupported();
+    var active = fullscreenActive();
+    els.fullscreenBtn.disabled = !supported;
+    els.fullscreenBtn.textContent = active ? "Exit Full" : "Fullscreen";
+    els.fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
+    els.fullscreenBtn.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+    els.fullscreenBtn.title = supported ? (active ? "Exit fullscreen (F)" : "Enter fullscreen (F)") : "Fullscreen unavailable";
+  }
+
+  function requestFullscreenChange(action, target) {
+    try {
+      var result = action.call(target);
+      if (result && typeof result.catch === "function") {
+        result.catch(syncFullscreenButton);
+      }
+    } catch (error) {
+      syncFullscreenButton();
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!fullscreenSupported()) {
+      noteStatus("Fullscreen is unavailable in this browser.", "fullscreen-unavailable");
+      return;
+    }
+    var action;
+    if (fullscreenActive()) {
+      action = document.exitFullscreen || document.webkitExitFullscreen;
+      requestFullscreenChange(action, document);
+      noteStatus("Exited fullscreen.", "fullscreen-exit");
+    } else {
+      var target = els.shell || document.documentElement;
+      action = target.requestFullscreen || target.webkitRequestFullscreen;
+      requestFullscreenChange(action, target);
+      noteStatus("Entered fullscreen.", "fullscreen-enter");
+    }
+    syncFullscreenButton();
+  }
+
+  function isTypingTarget(target) {
+    if (!target) return false;
+    var tag = String(target.tagName || "").toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
   }
 
   function ensureAudioContext() {
@@ -300,6 +412,7 @@
     renderBank();
     els.guess.focus();
     if (options.record !== false) {
+      noteStatus("New round ready.", "new-round");
       recordFeedback("new-round", { resultState: "new-round" });
     }
   }
@@ -331,6 +444,7 @@
         button.classList.add("bank-picked");
       }
       button.addEventListener("click", function () {
+        recordInput("bank:" + item.name);
         state.lastBankPick = item.name;
         Array.prototype.forEach.call(els.bank.querySelectorAll(".bank-picked"), function (picked) {
           picked.classList.remove("bank-picked");
@@ -356,7 +470,7 @@
   }
 
   function feedbackAge() {
-    return feedback.lastEventAt === null ? null : Math.max(0, (performance.now() - feedback.lastEventAt) / 1000);
+    return ageSeconds(feedback.lastEventAt);
   }
 
   function activeCueCount() {
@@ -367,9 +481,11 @@
   function recordFeedback(type, details) {
     details = details || {};
     feedback.lastEvent = type;
-    feedback.lastEventAt = performance.now();
+    feedback.lastEventAt = nowMs();
     feedback.eventCount += 1;
     feedback.resultState = details.resultState || type;
+    status.lastFeedback = details.feedback || type;
+    status.lastFeedbackAt = feedback.lastEventAt;
     playSound(type);
     if (type === "clue-reveal") {
       feedback.clueRevealCount += 1;
@@ -395,7 +511,7 @@
     if (state.revealed) return;
     var guessed = normalize(els.guess.value);
     if (!guessed) {
-      els.result.textContent = "Enter a guess first.";
+      setResult("Enter a guess first.", "empty");
       recordFeedback("empty-guess", { resultState: "empty" });
       return;
     }
@@ -405,13 +521,13 @@
         state.best = state.streak;
         safeSet(storageKey, String(state.best));
       }
-      els.result.textContent = "Correct: " + state.answer.name;
+      setResult("Correct: " + state.answer.name, "correct");
       updateStats();
       recordFeedback("correct", { resultState: "correct" });
       setTimeout(function () { pickAnswer({ record: true }); }, 900);
     } else {
       state.streak = 0;
-      els.result.textContent = "Not it. Try another clue or a bank pick.";
+      setResult("Not it. Try another clue or a bank pick.", "wrong");
       updateStats();
       recordFeedback("wrong", { resultState: "wrong" });
     }
@@ -439,6 +555,29 @@
       visibleBankCount: state.visibleBankCount,
       filterText: els.filter.value,
       lastBankPick: state.lastBankPick,
+      soundEnabled: audio.enabled,
+      lastSound: audio.lastSound,
+      lastStatus: status.lastStatus,
+      lastInput: status.lastInput,
+      lastFeedback: status.lastFeedback,
+      fullscreen: {
+        supported: fullscreenSupported(),
+        active: fullscreenActive(),
+        shortcut: "F",
+        buttonPressed: els.fullscreenBtn ? els.fullscreenBtn.getAttribute("aria-pressed") === "true" : false,
+        label: els.fullscreenBtn ? els.fullscreenBtn.textContent : null,
+        title: els.fullscreenBtn ? els.fullscreenBtn.title : null
+      },
+      status: {
+        lastStatus: status.lastStatus,
+        lastStatusAge: ageSeconds(status.lastStatusAt) === null ? null : Number(ageSeconds(status.lastStatusAt).toFixed(2)),
+        statusCount: status.statusCount,
+        lastInput: status.lastInput,
+        lastInputAge: ageSeconds(status.lastInputAt) === null ? null : Number(ageSeconds(status.lastInputAt).toFixed(2)),
+        inputCount: status.inputCount,
+        lastFeedback: status.lastFeedback,
+        lastFeedbackAge: ageSeconds(status.lastFeedbackAt) === null ? null : Number(ageSeconds(status.lastFeedbackAt).toFixed(2))
+      },
       audio: {
         soundEnabled: audio.enabled,
         lastSound: audio.lastSound,
@@ -467,43 +606,75 @@
     return window.render_game_to_text();
   };
 
-  els.guessBtn.addEventListener("click", submitGuess);
+  els.guessBtn.addEventListener("click", function () {
+    recordInput("button:guess");
+    submitGuess();
+  });
   els.guess.addEventListener("keydown", function (event) {
-    if (event.key === "Enter") submitGuess();
+    if (event.key === "Enter") {
+      recordInput("keyboard:enter");
+      submitGuess();
+    }
   });
   els.hintBtn.addEventListener("click", function () {
+    recordInput("button:hint");
     if (state.cluesShown < config.fields.length) {
       state.cluesShown += 1;
       renderClues();
-      els.result.textContent = "Clue added.";
+      setResult("Clue added.", "clue");
       recordFeedback("clue-reveal", { cluesAdded: 1, resultState: "clue" });
     } else {
-      els.result.textContent = "All clues are showing.";
+      setResult("All clues are showing.", "max-clues");
       recordFeedback("clue-reveal", { cluesAdded: 0, resultState: "max-clues" });
     }
   });
-  els.newBtn.addEventListener("click", function () { pickAnswer({ record: true }); });
+  els.newBtn.addEventListener("click", function () {
+    recordInput("button:new-round");
+    pickAnswer({ record: true });
+  });
   els.revealBtn.addEventListener("click", function () {
+    recordInput("button:reveal");
     state.revealed = true;
     state.streak = 0;
-    els.result.textContent = "Answer: " + state.answer.name;
+    setResult("Answer: " + state.answer.name, "revealed");
     updateStats();
     recordFeedback("reveal", { resultState: "revealed" });
   });
   els.soundBtn.addEventListener("click", function () {
+    recordInput("button:sound");
     audio.enabled = !audio.enabled;
     safeSet(soundStorageKey, audio.enabled ? "true" : "false");
     updateSoundButton();
     if (audio.enabled) {
+      noteStatus("Sound on.", "sound-on");
       playSound("new-round");
     } else {
       audio.lastSound = "muted";
       audio.mutedEventCount += 1;
+      noteStatus("Sound off.", "sound-off");
     }
   });
-  els.filter.addEventListener("input", renderBank);
+  els.fullscreenBtn.addEventListener("click", function () {
+    recordInput("button:fullscreen");
+    toggleFullscreen();
+  });
+  els.filter.addEventListener("input", function () {
+    recordInput("filter:bank");
+    noteStatus("Bank filtered.", "filter");
+    renderBank();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (String(event.key || "").toLowerCase() !== "f") return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || isTypingTarget(event.target)) return;
+    event.preventDefault();
+    recordInput("keyboard:f");
+    toggleFullscreen();
+  });
+  document.addEventListener("fullscreenchange", syncFullscreenButton);
+  document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
 
   updateSoundButton();
+  syncFullscreenButton();
   updateStats();
   pickAnswer({ record: false });
 })();

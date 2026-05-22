@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = resolve(process.env.WORKSHOP_ARCADE_REPO_ROOT || dirname(fileURLToPath(import.meta.url)), process.env.WORKSHOP_ARCADE_REPO_ROOT ? '.' : '..');
 const issues = [];
 
 function fail(message) {

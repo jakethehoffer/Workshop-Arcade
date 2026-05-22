@@ -65,9 +65,7 @@
         --panel: rgba(9, 14, 32, 0.9);
         --panel-border: rgba(82, 140, 255, 0.4);
         --neon: #4cc9f0;
-        --neon-soft: rgba(76, 201, 240, 0.35);
         --yellow: #ffd166;
-        --pink: #ff6fb1;
         --ink: #dbe7ff;
       }
 
@@ -89,18 +87,6 @@
         justify-content: center;
         align-items: stretch;
         padding: 16px;
-      }
-
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background-image:
-          linear-gradient(transparent 95%, rgba(76, 201, 240, 0.05) 95%),
-          linear-gradient(90deg, transparent 95%, rgba(255, 111, 177, 0.06) 95%);
-        background-size: 48px 48px;
-        opacity: 0.7;
-        pointer-events: none;
       }
 
       .page {
@@ -225,6 +211,7 @@
 
       canvas {
         display: block;
+        touch-action: none;
         background: radial-gradient(circle at 50% 50%, #0a132f, #050913 70%);
         border-radius: 12px;
         border: 2px solid rgba(76, 201, 240, 0.35);
@@ -318,10 +305,6 @@
         body {
           padding: 8px;
           align-items: flex-start;
-        }
-
-        body::before {
-          opacity: 0.35;
         }
 
         .page {
@@ -464,7 +447,7 @@
       </section>
 
       <div class="footer">
-        <div>Controls: arrows or WASD.</div>
+        <div>Controls: swipe, arrows or WASD.</div>
         <div>Pause: space or P.</div>
         <div>Power pellets slow sentries, but the clock is short.</div>
       </div>
@@ -911,6 +894,7 @@
         let tileSize = 18;
         let lastTime = 0;
         let accumulator = 0;
+        let swipeStart = null;
         const step = 1 / 60;
 
         function createGhost(name, color, home, start, housePos, scatter) {
@@ -2753,8 +2737,34 @@
           pacman.nextDir = dirIndex;
         }
 
+        function handleSwipeStart(event) {
+          if (event.pointerType !== "mouse") {
+            swipeStart = [event.clientX, event.clientY, event.pointerId];
+          }
+        }
+
+        function handleSwipeEnd(event) {
+          if (!swipeStart || swipeStart[2] !== event.pointerId) {
+            return;
+          }
+          const dx = event.clientX - swipeStart[0];
+          const dy = event.clientY - swipeStart[1];
+          swipeStart = null;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) {
+            return;
+          }
+          unlockAudio();
+          handleDirection(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+        }
+
+        const keyDirections = {
+          ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+          w: "up", a: "left", s: "down", d: "right",
+        };
+
         function handleKeydown(event) {
           const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+          const direction = keyDirections[key];
           if (
             key === "f" &&
             !event.altKey &&
@@ -2774,49 +2784,23 @@
             event.target.closest("button, a, input, select, textarea") &&
             event.key !== "Escape" &&
             event.key !== "Tab" &&
-            event.key !== "m" &&
-            event.key !== "M"
+            key !== "m"
           ) {
             return;
           }
-          if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "m", "M"].includes(event.key)) {
+          if (direction || event.key === " " || key === "m") {
             event.preventDefault();
           }
-          if (
-            [
-              "ArrowUp",
-              "ArrowDown",
-              "ArrowLeft",
-              "ArrowRight",
-              "w",
-              "W",
-              "a",
-              "A",
-              "s",
-              "S",
-              "d",
-              "D",
-              "Enter",
-              " ",
-              "p",
-              "P",
-            ].includes(event.key)
-          ) {
+          if (direction || ["Enter", " ", "p"].includes(key)) {
             unlockAudio();
           }
-          if (event.key === "m" || event.key === "M") {
+          if (key === "m") {
             toggleMute();
-          } else if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
-            handleDirection("up");
-          } else if (event.key === "ArrowDown" || event.key === "s" || event.key === "S") {
-            handleDirection("down");
-          } else if (event.key === "ArrowLeft" || event.key === "a" || event.key === "A") {
-            handleDirection("left");
-          } else if (event.key === "ArrowRight" || event.key === "d" || event.key === "D") {
-            handleDirection("right");
-          } else if (event.key === "Enter") {
+          } else if (direction) {
+            handleDirection(direction);
+          } else if (key === "Enter") {
             handleStartAction();
-          } else if (event.key === " " || event.key === "p" || event.key === "P") {
+          } else if (key === " " || key === "p") {
             togglePause();
           }
         }
@@ -2829,6 +2813,9 @@
           pauseBtn.addEventListener("click", togglePause);
           muteBtn.addEventListener("click", toggleMute);
           fullscreenBtn.addEventListener("click", toggleFullscreen);
+          canvas.addEventListener("pointerdown", handleSwipeStart);
+          canvas.addEventListener("pointerup", handleSwipeEnd);
+          canvas.addEventListener("pointercancel", () => swipeStart = null);
         }
 
         function init() {

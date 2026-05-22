@@ -142,6 +142,7 @@
   .led.on { color: var(--ok); background: var(--ok); }
   .led.off { color: #334155; background:#334155; box-shadow:none; }
   .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0f172a; border:1px solid #26334a; border-radius:6px; padding:2px 6px; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   header button .kbd { margin-left:6px; font-size:12px; }
   .custom-controls { display:inline-flex; align-items:center; gap:6px 10px; }
   .custom-controls .custom-field { display:inline-flex; align-items:center; gap:6px; }
@@ -216,7 +217,8 @@
     <span class="custom-warn" id="customWarn" role="status" aria-live="polite"></span>
   </div>
 
-  <canvas id="game" width="1200" height="780" tabindex="0" aria-label="Minesweeper board"></canvas>
+  <div id="boardStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <canvas id="game" width="1200" height="780" tabindex="0" role="application" aria-describedby="boardStatus" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown W A S D Enter Space X" aria-label="Minesweeper board. Focus the board, move with arrows or WASD, reveal with Enter or Space, and flag with X."></canvas>
 
   <footer>
     <span class="help">Controls: <span class="kbd">Left Click</span>/<span class="kbd">Tap</span> reveal • <span class="kbd">Right Click</span>/<span class="kbd">Long‑press</span> flag • Toggle <b>🚩 Flag Mode</b> on touch for easier flagging.</span>
@@ -271,6 +273,7 @@
   // ===== Canvas + DPI scaling =====
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
+  const boardStatus = document.getElementById('boardStatus');
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
   function resizeCanvasForBoard(cols, rows) {
@@ -350,6 +353,9 @@
     tile: 32 * DPR,
     pad: 32 * DPR,
     hover: { c:-1, r:-1 },
+    selected: { c:0, r:0 },
+    keyboardMode: false,
+    lastInput: 'init',
     flagMode: false,
   };
 
@@ -461,6 +467,62 @@
       x: state.pad + (c + 0.5) * state.tile,
       y: state.pad + (r + 0.5) * state.tile,
     };
+  }
+
+  function clampSelection() {
+    state.selected.c = clamp(Math.trunc(state.selected.c) || 0, 0, Math.max(0, state.cols - 1));
+    state.selected.r = clamp(Math.trunc(state.selected.r) || 0, 0, Math.max(0, state.rows - 1));
+  }
+
+  function selectedCellState() {
+    clampSelection();
+    const cell = state.grid[state.selected.r]?.[state.selected.c];
+    return {
+      c: state.selected.c,
+      r: state.selected.r,
+      revealed: !!cell?.revealed,
+      flagged: !!cell?.flagged,
+      adj: cell && cell.revealed && !cell.mine ? cell.adj : null,
+      mineShown: !!(cell?.revealed && cell.mine)
+    };
+  }
+
+  function selectedCellLabel() {
+    const info = selectedCellState();
+    let status = 'covered';
+    if (info.flagged) status = 'flagged';
+    else if (info.mineShown) status = 'mine';
+    else if (info.revealed) status = info.adj ? `${info.adj} adjacent mines` : 'clear';
+    return `row ${info.r + 1}, column ${info.c + 1}, ${status}`;
+  }
+
+  function syncBoardStatus(message) {
+    canvas.setAttribute('aria-label', `Minesweeper board. Selected ${selectedCellLabel()}. Move with arrows or WASD, reveal with Enter or Space, flag with X.`);
+    if (message && boardStatus) boardStatus.textContent = message;
+  }
+
+  function setSelectedCell(c, r, input = 'keyboard:move', announce = true) {
+    state.selected.c = clamp(c, 0, state.cols - 1);
+    state.selected.r = clamp(r, 0, state.rows - 1);
+    state.hover = { c: state.selected.c, r: state.selected.r };
+    state.keyboardMode = input.startsWith('keyboard:');
+    state.lastInput = input;
+    if (state.keyboardMode) addRing(state.selected.c, state.selected.r, '94,234,212', 0.18, 0.5);
+    syncBoardStatus(announce ? `Selected ${selectedCellLabel()}.` : '');
+  }
+
+  function setPointerCell(cell, input) {
+    state.keyboardMode = false;
+    state.lastInput = input;
+    if (cell) {
+      state.selected = { c: cell.c, r: cell.r };
+      syncBoardStatus('');
+    }
+  }
+
+  function vibrate(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); }
+    catch (_) {}
   }
 
   function addRing(c, r, color, life = 0.42, radiusScale = 0.72) {
@@ -836,10 +898,11 @@
         const cell = state.grid[r][c];
         const x = ox + c*tile, y = oy + r*tile;
         const hovered = (c===state.hover.c && r===state.hover.r && !state.over);
+        const selected = (document.activeElement === canvas && c===state.selected.c && r===state.selected.r && !state.over);
 
         if (!cell.revealed) {
           // Covered tile
-          drawRaisedTile(x, y, tile, hovered);
+          drawRaisedTile(x, y, tile, hovered || selected);
 
           if (cell.flagged) {
             drawFlag(x, y, tile);
@@ -860,6 +923,7 @@
         ctx.strokeStyle = 'rgba(20, 34, 54, .9)';
         ctx.lineWidth = 1*DPR;
         ctx.strokeRect(x+0.5*DPR, y+0.5*DPR, tile-1*DPR, tile-1*DPR);
+        if (selected) drawSelectedCell(x, y, tile);
       }
     }
 
@@ -1043,6 +1107,16 @@ function drawRaisedTile(x, y, s, hovered) {
     ctx.restore();
   }
 
+  function drawSelectedCell(x, y, s) {
+    ctx.save();
+    ctx.strokeStyle = state.keyboardMode ? '#5eead4' : 'rgba(94,234,212,.72)';
+    ctx.lineWidth = Math.max(2 * DPR, s * 0.08);
+    ctx.shadowColor = 'rgba(94,234,212,.55)';
+    ctx.shadowBlur = state.keyboardMode ? 8 * DPR : 3 * DPR;
+    ctx.strokeRect(x + 3 * DPR, y + 3 * DPR, s - 6 * DPR, s - 6 * DPR);
+    ctx.restore();
+  }
+
   // ===== Input =====
   let mouseDown = false; let mouseBtn = 0;
   let touchTimer = null; let touchFlagged = false;
@@ -1064,8 +1138,10 @@ function drawRaisedTile(x, y, s, hovered) {
 
   canvas.addEventListener('mousedown', (e)=>{
     if(helpOpen) return;
+    canvas.focus({ preventScroll: true });
     mouseDown = true; mouseBtn = e.button;
     const cell = cellFromEvent(e); if (!cell) return;
+    setPointerCell(cell, e.button === 2 ? 'mouse:flag' : 'mouse:down');
     if (e.button === 2) { // right
       toggleFlag(cell.c, cell.r); updateMinesLeft();
     }
@@ -1075,6 +1151,7 @@ function drawRaisedTile(x, y, s, hovered) {
     if (!mouseDown) return; mouseDown = false;
     const cell = cellFromEvent(e); if (!cell) return;
     if (e.button === 0) {
+      setPointerCell(cell, state.flagMode ? 'mouse:flag-mode' : 'mouse:reveal');
       if (state.flagMode) { toggleFlag(cell.c, cell.r); updateMinesLeft(); }
       else {
         const target = state.grid[cell.r][cell.c];
@@ -1089,14 +1166,18 @@ function drawRaisedTile(x, y, s, hovered) {
   // Touch: short tap reveal / long-press flag (or Flag Mode toggles behavior)
   canvas.addEventListener('touchstart', (e)=>{
     if(helpOpen) return;
+    canvas.focus({ preventScroll: true });
     const cell = cellFromEvent(e); if (!cell) return;
+    setPointerCell(cell, state.flagMode ? 'touch:flag-mode' : 'touch:start');
     touchFlagged = false;
     if (state.flagMode) {
       toggleFlag(cell.c, cell.r); updateMinesLeft();
       return;
     }
     touchTimer = setTimeout(() => {
+      setPointerCell(cell, 'touch:long-flag');
       toggleFlag(cell.c, cell.r); updateMinesLeft();
+      vibrate(20);
       touchFlagged = true;
     }, 400);
   }, {passive:true});
@@ -1105,6 +1186,7 @@ function drawRaisedTile(x, y, s, hovered) {
     if (touchTimer) { clearTimeout(touchTimer); touchTimer=null; }
     if (touchFlagged) return; // already flagged
     const cell = cellFromEvent(e.changedTouches ? {clientX:e.changedTouches[0].clientX, clientY:e.changedTouches[0].clientY} : e); if (!cell) return;
+    setPointerCell(cell, 'touch:reveal');
     const target = state.grid[cell.r][cell.c];
     if (target.revealed && target.adj>0) chordReveal(cell.c, cell.r);
     else reveal(cell.c, cell.r);
@@ -1117,9 +1199,71 @@ function drawRaisedTile(x, y, s, hovered) {
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
   }
 
+  function revealSelected() {
+    const { c, r } = selectedCellState();
+    const target = state.grid[r][c];
+    state.lastInput = 'keyboard:reveal';
+    state.keyboardMode = true;
+    if (target.revealed && target.adj>0) chordReveal(c, r);
+    else reveal(c, r);
+    vibrate(state.over ? [20, 20, 35] : 12);
+    syncBoardStatus(`Revealed ${selectedCellLabel()}.`);
+  }
+
+  function flagSelected() {
+    const { c, r } = selectedCellState();
+    state.lastInput = 'keyboard:flag';
+    state.keyboardMode = true;
+    toggleFlag(c, r);
+    updateMinesLeft();
+    vibrate(18);
+    syncBoardStatus(`Flag toggled on ${selectedCellLabel()}.`);
+  }
+
+  function handleBoardKey(e) {
+    if (helpOpen) return false;
+    const key = e.key;
+    const lower = key.toLowerCase();
+    const moves = {
+      arrowleft: [-1, 0], a: [-1, 0],
+      arrowright: [1, 0], d: [1, 0],
+      arrowup: [0, -1], w: [0, -1],
+      arrowdown: [0, 1], s: [0, 1]
+    };
+    if (moves[lower]) {
+      e.preventDefault();
+      const [dc, dr] = moves[lower];
+      setSelectedCell(state.selected.c + dc, state.selected.r + dr, `keyboard:${key}`);
+      return true;
+    }
+    if (key === 'Enter' || key === ' ') {
+      e.preventDefault();
+      revealSelected();
+      return true;
+    }
+    if (lower === 'x') {
+      e.preventDefault();
+      flagSelected();
+      return true;
+    }
+    return false;
+  }
+
+  canvas.addEventListener('focus', () => {
+    state.keyboardMode = true;
+    state.lastInput = 'keyboard:focus';
+    setSelectedCell(state.selected.c, state.selected.r, 'keyboard:focus', false);
+  });
+  canvas.addEventListener('blur', () => {
+    state.keyboardMode = false;
+    state.lastInput = 'keyboard:blur';
+    syncBoardStatus('');
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (isTypingTarget(e.target) && e.key !== 'Escape') return;
+    if ((e.target === canvas || document.activeElement === canvas) && handleBoardKey(e)) return;
 
     const key = e.key.toLowerCase();
     if (key === 'f') { toggleFlagMode(); }
@@ -1445,6 +1589,8 @@ function drawRaisedTile(x, y, s, hovered) {
     const dims = resizeCanvasForBoard(state.cols, state.rows);
     state.tile = dims.tile; state.pad = dims.pad;
     initGrid(state.cols, state.rows);
+    clampSelection();
+    syncBoardStatus('');
     updateMinesLeft();
     updateBestDisplay();
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
@@ -1625,6 +1771,9 @@ function drawRaisedTile(x, y, s, hovered) {
       timer: state.timer,
       timerActive: !!state.timerId,
       flagMode: !!state.flagMode,
+      selectedCell: selectedCellState(),
+      keyboardMode: !!state.keyboardMode,
+      lastInput: state.lastInput,
       hover: { c: state.hover.c, r: state.hover.r },
       helpOpen: !!helpOpen,
       preset: currentPreset,

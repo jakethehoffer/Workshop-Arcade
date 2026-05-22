@@ -37,19 +37,19 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 
 ## Validators (the fast gates)
 
-`npm test` invokes [`scripts/run-fast-tests.mjs`](scripts/run-fast-tests.mjs), which auto-discovers every `test:*` npm script and runs them in sequence (excluding `test:games`, which needs Playwright). Each gate locks in one concern.
+`npm test` invokes [`scripts/run-fast-tests.mjs`](scripts/run-fast-tests.mjs), which auto-discovers every fast `test:*` npm script and runs them in sequence. Browser-backed probes (`test:games`, `test:pwa-runtime`, `test:runtime-storage`) stay explicit because they need Chromium/service worker support. Each gate locks in one concern.
 
 | Concern | Validator(s) |
 |---------|--------------|
 | **Manifest contract** | `test:manifest-schema` |
 | **Catalog source of truth** | `validate-catalog.ps1` (no npm wrapper) |
 | **Generator output mirrors manifest** | `test:seo` · `test:feed` · `test:og-images` · `test:game-jsonld` · `test:generated-surfaces` |
-| **Asset/runtime contracts** | `test:cover-assets` · `test:storage-contract` |
+| **Asset/runtime contracts** | `test:cover-assets` · `test:storage-contract` · `test:runtime-storage` |
 | **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:random-game` · `test:keyboard-help` · `test:sw-update-toast` |
 | **Accessibility** | `test:a11y` · `test:a11y-polish` |
-| **PWA + fallback pages** | `test:pwa` · `test:fallback-pages` |
+| **PWA + fallback pages** | `test:pwa` · `test:pwa-runtime` · `test:fallback-pages` |
 | **OSS hygiene** | `test:meta-files` · `test:security-workflows` · `test:contributor-onboarding` |
-| **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:capture-recipes` · `test:docs` · `test:performance-baseline` |
+| **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:capture-recipes` · `test:docs` · `test:performance-baseline` · `test:validator-fixtures` |
 | **Live game smoke** | `test:games` (Playwright, slow — run via `npm run test:games` or `npm run test:all`) |
 
 The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `README.md`, `CONTRIBUTING.md`, `docs/game-contract.md`, the PR/issue templates, and the workflow YAML all naming the same publish-ready command set, so contributor-facing docs can't quietly fall behind CI.
@@ -59,7 +59,7 @@ The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `RE
 [`.github/workflows/validate-catalog.yml`](.github/workflows/validate-catalog.yml) is split into four jobs that run in parallel on every push and pull request:
 
 1. **`catalog-docs-a11y`** — all the fast structural validators above, in roughly the order generators → validators → a11y → tooling-meta. This is the job that gates merges on most catalog edits.
-2. **`game-smoke`** — Playwright spawns the catalog page and opens every manifest game on desktop and mobile viewports, asserting no console errors and that filter chips / card tags behave correctly. Runs `npm run test:games`.
+2. **`game-smoke`** — Playwright first proves the sandboxed storage fallback and service-worker offline behavior in Chromium, then spawns the catalog page and opens every manifest game on desktop and mobile viewports, asserting no console errors and that filter chips / card tags behave correctly. Runs `npm run test:runtime-storage`, `npm run test:pwa-runtime`, and `npm run test:games`.
 3. **`performance-audit`** — boots the static server on port 4173 and runs `npm run audit:perf:ci` against it. Strict mode fails if any page exceeds its publish budget (Catalog ≤ 200 KB / ≤ 18 requests; Lexica ≤ 160 KB / ≤ 4 requests; Idle Tycoon ≤ 210 KB / ≤ 4 requests; Arcade Jump ≤ 130 KB / ≤ 4 requests; Brick Breaker ≤ 120 KB / ≤ 4 requests; everything else ≤ 100 KB / ≤ 3 requests).
 4. **`render-capture`** — runs `npm run capture:games:ci` to take desktop + mobile screenshots of every game and score them against a render-quality bar. Strict mode fails if any surface scores above 0.
 

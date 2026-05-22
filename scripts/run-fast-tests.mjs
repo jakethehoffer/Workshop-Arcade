@@ -9,9 +9,9 @@
 // `npm test` invokes this script. It:
 //   1. Reads package.json.
 //   2. Picks every "test:*" entry EXCEPT the explicit slow/excluded
-//      ones (currently just "test:games" — Playwright smoke needs
-//      browsers installed and takes minutes; run it via
-//      `npm run test:games` or `npm run test:all`).
+//      ones (Playwright/browser-backed probes need browsers installed
+//      and can take minutes; run them via their explicit scripts or
+//      CI jobs).
 //   3. Runs each script sequentially with the inherited stdio so the
 //      individual checks' output streams unchanged.
 //   4. Prints a per-script PASS/FAIL summary at the end and exits
@@ -30,6 +30,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // add or remove entries deliberately.
 const EXCLUDED_SCRIPTS = new Map([
   ['test:games', 'Playwright smoke test — needs browsers installed and takes minutes. Run via `npm run test:games` or `npm run test:all`.'],
+  ['test:pwa-runtime', 'Browser-backed PWA runtime probe — needs Chromium/service worker support. Run via `npm run test:pwa-runtime`.'],
+  ['test:runtime-storage', 'Browser-backed sandboxed runtime storage probe — needs Chromium. Run via `npm run test:runtime-storage`.'],
   ['test:all', 'Composite that calls this runner + test:games; running it from inside the runner would recurse.'],
 ]);
 

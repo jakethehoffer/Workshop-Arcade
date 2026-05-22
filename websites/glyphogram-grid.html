@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Glyphogram Grid - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Decode compact nonogram stages by filling glyph cells from row and column clues." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/glyphogram-grid.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Glyphogram Grid — Workshop Arcade" />
+<meta property="og:description" content="Decode compact nonogram stages by filling glyph cells from row and column clues." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/glyphogram-grid.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/glyphogram-grid.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Glyphogram Grid — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Glyphogram Grid — Workshop Arcade" />
+<meta name="twitter:description" content="Decode compact nonogram stages by filling glyph cells from row and column clues." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/glyphogram-grid.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Glyphogram Grid",
+  "description": "Decode compact nonogram stages by filling glyph cells from row and column clues.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/glyphogram-grid.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/glyphogram-grid.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Board",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+:root{color-scheme:dark;--ink:#effbff;--muted:#94bbcd;--cyan:#4de7ee;--gold:#ffcf63;--rose:#ff7194;--lime:#7df2a6;--line:rgba(77,231,238,.25);--panel:rgba(8,24,38,.94)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}body{overflow-x:hidden;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:radial-gradient(740px 480px at 4% -10%,rgba(77,231,238,.2),transparent 62%),radial-gradient(580px 460px at 96% 2%,rgba(255,113,148,.15),transparent 63%),linear-gradient(180deg,#06131d,#050914 84%)}
+button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:14px}.top,.hud,.actions,.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.top{justify-content:space-between}.brand{display:grid;gap:2px}.eyebrow{color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.23em;text-transform:uppercase}.title{margin:0;font-size:clamp(23px,4vw,36px);line-height:1;text-transform:uppercase;letter-spacing:.04em}.pill,.btn,.readout,.board{border:1px solid var(--line);background:linear-gradient(180deg,rgba(17,48,68,.94),rgba(6,17,29,.98));box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.05)}.pill{min-width:72px;border-radius:8px;padding:7px 9px;text-align:center}.pill span{display:block;color:#8bd8ec;font-size:9px;font-weight:950;text-transform:uppercase}.pill b{display:block;font-size:17px;font-variant-numeric:tabular-nums}.desk{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:11px;align-items:stretch}.board{min-width:0;border-radius:12px;padding:10px;display:grid;place-items:center}.board canvas{display:block;width:100%;max-height:min(72dvh,720px);aspect-ratio:3/2;border-radius:9px;touch-action:none;outline:none}.board canvas:focus-visible{outline:3px solid rgba(255,207,99,.88);outline-offset:3px}.rail{display:grid;gap:9px;align-content:start}.readout{border-radius:10px;padding:11px}.readout h2{margin:0 0 6px;font-size:13px;color:#93edff;text-transform:uppercase;letter-spacing:.13em}.stage{margin:0;font-size:21px;font-weight:950;text-transform:uppercase}.copy{margin:6px 0;color:var(--muted);font-size:13px;line-height:1.42}.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}.legend span{border:1px solid rgba(255,207,99,.22);border-radius:7px;padding:6px;color:#cbe8f3;font-size:11px;font-weight:850}.swatch{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:2px;background:var(--cyan);box-shadow:0 0 11px var(--cyan)}.swatch.x{background:transparent;border:2px solid var(--rose);box-shadow:none}.btn{min-height:38px;border-radius:8px;color:var(--ink);cursor:pointer;padding:8px 10px;font-size:12px;font-weight:950;text-transform:uppercase}.btn:hover{border-color:rgba(255,207,99,.68)}.btn:focus-visible{outline:3px solid rgba(255,207,99,.88);outline-offset:2px}.btn.primary,.btn[aria-pressed=true]{color:#04232a;border-color:#89f7fb;background:linear-gradient(180deg,#7af4f5,#28cfe2)}.tools .btn{flex:1 1 98px}.feedback{min-height:48px;border-color:rgba(255,207,99,.28);color:#bee7f5;font-size:13px;font-weight:850;line-height:1.4}.feedback.good{color:var(--lime)}.feedback.bad{color:var(--rose)}.feedback.done{color:var(--gold)}.foot{justify-content:space-between}.keys{color:var(--muted);font-size:12px;line-height:1.5}.kbd{display:inline-grid;place-items:center;height:20px;min-width:21px;padding:0 5px;border:1px solid rgba(77,231,238,.25);border-radius:6px;background:#061421;color:var(--ink);font-weight:950}.sr{position:absolute;left:-10000px}@media(max-width:900px){.desk{grid-template-columns:1fr}.rail{grid-template-columns:repeat(2,minmax(0,1fr))}.feedback{grid-column:span 2}.board canvas{max-height:64dvh}}@media(max-width:620px){.app{padding:9px;gap:8px}.top{align-items:start}.hud{justify-content:center;gap:6px}.pill{min-width:60px;padding:6px}.pill b{font-size:15px}.board{padding:7px}.rail{grid-template-columns:1fr;gap:8px}.feedback{grid-column:auto}.readout{padding:9px}.keys{display:none}.actions{gap:6px}.actions .btn{flex:1 1 94px}.copy{font-size:12px}.legend{margin-top:7px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><h1 class="title">Glyphogram Grid</h1></div>
+    <div class="hud" aria-label="Draft status">
+      <div class="pill"><span>Stage</span><b id="stageValue">1/3</b></div>
+      <div class="pill"><span>Score</span><b id="scoreValue">0</b></div>
+      <div class="pill"><span>Best</span><b id="bestValue">0</b></div>
+      <div class="pill"><span>Mistakes</span><b id="mistakeValue">0</b></div>
+    </div>
+  </header>
+  <main class="desk" aria-label="Glyphogram Grid nonogram puzzle">
+    <section class="board" aria-label="Blueprint drafting board">
+      <canvas id="grid" width="960" height="640" tabindex="0" aria-label="Nonogram board. Use row and column clues to fill blueprint cells."></canvas>
+    </section>
+    <aside class="rail">
+      <section class="readout" aria-label="Current glyphogram stage">
+        <h2>Curated clue stage</h2>
+        <p class="stage" id="stageName">Beacon Dial</p>
+        <p class="copy" id="stageText">Trace every cyan run; mark gaps with X notes.</p>
+        <p class="copy"><b id="fillValue">0/0</b> blueprint cells traced. <b id="lineValue">0</b> clue lines locked.</p>
+        <div class="legend"><span><i class="swatch"></i>Fill a positive run</span><span><i class="swatch x"></i>Mark a gap</span></div>
+      </section>
+      <section class="readout" aria-label="Drawing tools">
+        <h2>Grid tools</h2>
+        <div class="tools" role="group" aria-label="Cell tool">
+          <button class="btn primary" id="fillBtn" type="button" aria-pressed="true">Fill</button>
+          <button class="btn" id="markBtn" type="button" aria-pressed="false">Mark X</button>
+        </div>
+        <p class="copy">Tap or drag on the grid. Right click marks. Arrows move the cursor; Space uses the selected tool.</p>
+      </section>
+      <section id="feedback" class="readout feedback" aria-live="polite">Press Begin Draft, then match the row and column clues.</section>
+    </aside>
+  </main>
+  <footer class="top foot">
+    <div class="actions">
+      <button class="btn primary" id="startBtn" type="button">Begin Draft</button>
+      <button class="btn" id="restartBtn" type="button">Restart</button>
+      <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+      <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+    </div>
+    <div class="keys"><span class="kbd">Arrows</span> cursor <span class="kbd">Space</span>/<span class="kbd">Enter</span> tool <span class="kbd">X</span> mark <span class="kbd">1</span>/<span class="kbd">2</span> tool <span class="kbd">R</span> restart <span class="kbd">F</span> fullscreen</div>
+  </footer>
+</div>
+<script>
+(() => {
+  "use strict";
+  const BEST_KEY = "glyphogram-grid.best.v1";
+  const SOUND_KEY = "glyphogram-grid.sound.v1";
+  const STAGES = [
+    { name: "Beacon Dial", brief: "An eight-line signal dial warms the blueprint table.", rows: [
+      "..####..", ".######.", "###..###", "##....##", "##.##.##", ".##..##.", "..####..", "...##..."
+    ]},
+    { name: "Circuit Key", brief: "Tight key teeth hide in split runs and open gaps.", rows: [
+      "...####...", "..######..", ".##....##.", "##.####.##", "##.#..#.##",
+      "##.####.##", ".##....##.", "..##..##..", "...####...", "....##...."
+    ]},
+    { name: "Arcade Cabinet", brief: "Finish the cabinet silhouette and power the reveal.", rows: [
+      "..########..", ".##########.", "##..####..##", "##........##", "##.##..##.##",
+      "##........##", "##.######.##", ".##......##.", "..########..", "...##..##..."
+    ]}
+  ].map((stage) => ({ ...stage, grid: stage.rows.map((row) => [...row].map((ch) => ch === "#")) }));
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("grid");
+  const ctx = canvas.getContext("2d");
+  const els = {
+    stage: $("stageValue"), score: $("scoreValue"), best: $("bestValue"), mistakes: $("mistakeValue"),
+    stageName: $("stageName"), stageText: $("stageText"), fill: $("fillValue"), lines: $("lineValue"),
+    feedback: $("feedback"), start: $("startBtn"), restart: $("restartBtn"), sound: $("soundBtn"),
+    full: $("fullBtn"), fillTool: $("fillBtn"), markTool: $("markBtn")
+  };
+  const safeStorage = () => { if (window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch (_) { return null; } };
+  const read = (key, fallback) => { const store = safeStorage(); if (!store) return fallback; try { const value = store.getItem(key); return value == null ? fallback : value; } catch (_) { return fallback; } };
+  const write = (key, value) => { const store = safeStorage(); if (!store) return; try { store.setItem(key, String(value)); } catch (_) {} };
+  const enabledFromStore = () => !["0", "false", "off", "muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase());
+  let audio = null;
+  let lastFrame = 0;
+  let layout = null;
+  let drag = null;
+  const state = {
+    mode: "ready", stage: 0, score: 0, best: Number(read(BEST_KEY, "0")) || 0, mistakes: 0,
+    cells: [], cursor: { x: 0, y: 0 }, tool: "fill", feedback: "Press Begin Draft, then match the row and column clues.",
+    feedbackKind: "", feedbackTimer: 0, clearTimer: 0, pulse: 0, wrong: new Map(), sound: enabledFromStore(),
+    lastSound: "none", gesture: false
+  };
+  const current = () => STAGES[state.stage];
+  const cellKey = (x, y) => x + "," + y;
+  const totalFill = (stage = current()) => stage.grid.reduce((sum, row) => sum + row.filter(Boolean).length, 0);
+  const blankCells = (stage) => stage.grid.map((row) => row.map(() => 0));
+  const clueRuns = (values) => {
+    const runs = [];
+    let run = 0;
+    values.forEach((filled) => { if (filled) run += 1; else if (run) { runs.push(run); run = 0; } });
+    if (run) runs.push(run);
+    return runs.length ? runs : [0];
+  };
+  const rowClues = () => current().grid.map(clueRuns);
+  const colClues = () => Array.from({ length: current().grid[0].length }, (_, x) => clueRuns(current().grid.map((row) => row[x])));
+  const correctCount = () => current().grid.reduce((sum, row, y) => sum + row.filter((filled, x) => filled && state.cells[y][x] === 1).length, 0);
+  const rowSolved = (y) => current().grid[y].every((filled, x) => !filled || state.cells[y][x] === 1);
+  const colSolved = (x) => current().grid.every((row, y) => !row[x] || state.cells[y][x] === 1);
+  const lineCount = () => current().grid.filter((_, y) => rowSolved(y)).length + current().grid[0].filter((_, x) => colSolved(x)).length;
+  function setFeedback(text, kind = "", ms = 1600) {
+    state.feedback = text;
+    state.feedbackKind = kind;
+    state.feedbackTimer = ms;
+  }
+  function persistBest() {
+    if (state.score > state.best) {
+      state.best = state.score;
+      write(BEST_KEY, state.best);
+    }
+  }
+  function seedStage(index) {
+    state.stage = index;
+    state.cells = blankCells(current());
+    state.cursor = { x: Math.floor(current().grid[0].length / 2), y: Math.floor(current().grid.length / 2) };
+    state.wrong.clear();
+    state.clearTimer = 0;
+  }
+  function startRun() {
+    state.mode = "playing";
+    state.score = 0;
+    state.mistakes = 0;
+    state.pulse = 0;
+    seedStage(0);
+    setFeedback("Stage 1 open. Fill positive runs and mark the gaps.", "good", 1900);
+    play("start");
+    render();
+    canvas.focus();
+  }
+  function restart() {
+    startRun();
+  }
+  function ensureAudio() {
+    if (!state.sound || !state.gesture) return null;
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume().catch(() => {});
+      return audio;
+    } catch (_) { audio = null; return null; }
+  }
+  function play(name) {
+    state.lastSound = state.sound ? name : "muted-" + name;
+    const ac = ensureAudio();
+    if (!ac) return;
+    const tones = { start: 280, fill: 520, mark: 235, bad: 120, line: 680, stage: 760, win: 880, tool: 390 };
+    const now = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = name === "bad" ? "sawtooth" : "triangle";
+    osc.frequency.setValueAtTime(tones[name] || 360, now);
+    if (name === "stage" || name === "win") osc.frequency.linearRampToValueAtTime((tones[name] || 360) + 190, now + .15);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(.052, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .19);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + .21);
+  }
+  function useTool(tool) {
+    state.tool = tool;
+    play("tool");
+    render();
+  }
+  function finishStage() {
+    const bonus = 140 + state.stage * 70 + Math.max(0, 45 - state.mistakes * 3);
+    state.score += bonus;
+    persistBest();
+    if (state.stage === STAGES.length - 1) {
+      state.mode = "complete";
+      state.clearTimer = 0;
+      setFeedback("Blueprint reveal complete. Score " + state.score + ".", "done", 6000);
+      play("win");
+    } else {
+      state.mode = "stage-clear";
+      state.clearTimer = 950;
+      setFeedback(current().name + " traced. Stage bonus " + bonus + ".", "done", 2200);
+      play("stage");
+    }
+  }
+  function fillCell(x, y) {
+    if (state.mode !== "playing") return;
+    const prior = state.cells[y][x];
+    if (prior === 1) return;
+    if (current().grid[y][x]) {
+      const solvedBefore = rowSolved(y) || colSolved(x);
+      state.cells[y][x] = 1;
+      state.score += 10 + state.stage * 2;
+      persistBest();
+      setFeedback("Cyan trace locked at row " + (y + 1) + ", column " + (x + 1) + ".", "good", 920);
+      play(solvedBefore ? "fill" : rowSolved(y) || colSolved(x) ? "line" : "fill");
+      if (correctCount() === totalFill()) finishStage();
+    } else {
+      state.cells[y][x] = -1;
+      state.mistakes += 1;
+      state.score = Math.max(0, state.score - 6);
+      state.wrong.set(cellKey(x, y), 720);
+      setFeedback("Mistake: that square is negative space. It was marked X.", "bad", 1700);
+      play("bad");
+    }
+    render();
+  }
+  function markCell(x, y) {
+    if (state.mode !== "playing" || state.cells[y][x] === 1) return;
+    state.cells[y][x] = state.cells[y][x] === -1 ? 0 : -1;
+    setFeedback(state.cells[y][x] === -1 ? "Gap note placed." : "Gap note cleared.", "", 720);
+    play("mark");
+    render();
+  }
+  function applyCell(x, y, tool = state.tool) {
+    state.cursor = { x, y };
+    if (tool === "mark") markCell(x, y);
+    else fillCell(x, y);
+  }
+  function moveCursor(dx, dy) {
+    const width = current().grid[0].length;
+    const height = current().grid.length;
+    state.cursor.x = (state.cursor.x + dx + width) % width;
+    state.cursor.y = (state.cursor.y + dy + height) % height;
+    render();
+  }
+  function nextStage() {
+    state.mode = "playing";
+    seedStage(state.stage + 1);
+    setFeedback("Stage " + (state.stage + 1) + " clue grid loaded.", "good", 1700);
+    render();
+  }
+  function update(ms) {
+    const dt = Math.max(0, Math.min(100, Number(ms) || 0));
+    state.pulse += dt;
+    state.feedbackTimer = Math.max(0, state.feedbackTimer - dt);
+    if (state.mode === "stage-clear") {
+      state.clearTimer = Math.max(0, state.clearTimer - dt);
+      if (state.clearTimer === 0) nextStage();
+    }
+    [...state.wrong.entries()].forEach(([key, time]) => {
+      const left = time - dt;
+      if (left <= 0) state.wrong.delete(key);
+      else state.wrong.set(key, left);
+    });
+  }
+  function fitLayout() {
+    const stage = current();
+    const width = stage.grid[0].length;
+    const height = stage.grid.length;
+    const left = 164;
+    const top = 128;
+    const cell = Math.floor(Math.min((canvas.width - left - 58) / width, (canvas.height - top - 56) / height));
+    const boardW = cell * width;
+    const boardH = cell * height;
+    return { x: Math.round(left + (canvas.width - left - 40 - boardW) / 2), y: Math.round(top + (canvas.height - top - 34 - boardH) / 2), cell, boardW, boardH, width, height };
+  }
+  function cellAt(event) {
+    if (!layout) return null;
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * canvas.width / rect.width;
+    const py = (event.clientY - rect.top) * canvas.height / rect.height;
+    const x = Math.floor((px - layout.x) / layout.cell);
+    const y = Math.floor((py - layout.y) / layout.cell);
+    return x >= 0 && x < layout.width && y >= 0 && y < layout.height ? { x, y } : null;
+  }
+  function rounded(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+  }
+  function drawBackdrop() {
+    const glow = .11 + (Math.sin(state.pulse / 620) + 1) * .035;
+    const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bg.addColorStop(0, "#071e2b");
+    bg.addColorStop(1, "#040812");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "rgba(77,231,238,.06)";
+    ctx.lineWidth = 1;
+    for (let x = 18; x < canvas.width; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    for (let y = 16; y < canvas.height; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+    const bloom = ctx.createRadialGradient(layout.x + layout.boardW / 2, layout.y + layout.boardH / 2, 10, layout.x + layout.boardW / 2, layout.y + layout.boardH / 2, layout.boardW * .8);
+    bloom.addColorStop(0, "rgba(77,231,238," + glow + ")");
+    bloom.addColorStop(1, "rgba(77,231,238,0)");
+    ctx.fillStyle = bloom;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  function drawClues() {
+    const rows = rowClues();
+    const cols = colClues();
+    ctx.font = "900 18px system-ui, sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "right";
+    rows.forEach((runs, y) => {
+      ctx.fillStyle = rowSolved(y) ? "#7df2a6" : "#d7f7ff";
+      ctx.fillText(runs.join(" "), layout.x - 18, layout.y + y * layout.cell + layout.cell / 2);
+    });
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    cols.forEach((runs, x) => {
+      runs.forEach((run, index) => {
+        ctx.fillStyle = colSolved(x) ? "#7df2a6" : "#d7f7ff";
+        ctx.fillText(run, layout.x + x * layout.cell + layout.cell / 2, layout.y - 15 - (runs.length - index - 1) * 21);
+      });
+    });
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#4de7ee";
+    ctx.font = "950 15px system-ui, sans-serif";
+    ctx.fillText("ROW CLUES", layout.x - 132, layout.y - 20);
+  }
+  function drawGrid() {
+    const stage = current();
+    rounded(layout.x - 8, layout.y - 8, layout.boardW + 16, layout.boardH + 16, 14);
+    ctx.fillStyle = "rgba(2,11,20,.84)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(77,231,238,.28)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    for (let y = 0; y < layout.height; y += 1) {
+      for (let x = 0; x < layout.width; x += 1) {
+        const px = layout.x + x * layout.cell;
+        const py = layout.y + y * layout.cell;
+        ctx.fillStyle = (x + y) % 2 ? "rgba(11,38,55,.72)" : "rgba(8,29,43,.72)";
+        ctx.fillRect(px, py, layout.cell, layout.cell);
+        if (state.cells[y][x] === 1) {
+          const grad = ctx.createRadialGradient(px + layout.cell * .42, py + layout.cell * .35, 2, px + layout.cell / 2, py + layout.cell / 2, layout.cell);
+          grad.addColorStop(0, "#efffff");
+          grad.addColorStop(.35, "#4de7ee");
+          grad.addColorStop(1, "#1684bd");
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = "#4de7ee";
+          ctx.fillStyle = grad;
+          rounded(px + 5, py + 5, layout.cell - 10, layout.cell - 10, Math.max(4, layout.cell * .15));
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else if (state.cells[y][x] === -1) {
+          ctx.strokeStyle = state.wrong.has(cellKey(x, y)) ? "#ff7194" : "rgba(255,113,148,.82)";
+          ctx.lineWidth = Math.max(2, layout.cell * .065);
+          ctx.beginPath();
+          ctx.moveTo(px + layout.cell * .28, py + layout.cell * .28);
+          ctx.lineTo(px + layout.cell * .72, py + layout.cell * .72);
+          ctx.moveTo(px + layout.cell * .72, py + layout.cell * .28);
+          ctx.lineTo(px + layout.cell * .28, py + layout.cell * .72);
+          ctx.stroke();
+        }
+        if (state.mode === "complete" && stage.grid[y][x]) {
+          ctx.fillStyle = "rgba(255,207,99," + (.07 + (Math.sin(state.pulse / 150 + x - y) + 1) * .05) + ")";
+          ctx.fillRect(px + 4, py + 4, layout.cell - 8, layout.cell - 8);
+        }
+      }
+    }
+    ctx.strokeStyle = "rgba(109,232,245,.22)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= layout.width; x += 1) { ctx.beginPath(); ctx.moveTo(layout.x + x * layout.cell, layout.y); ctx.lineTo(layout.x + x * layout.cell, layout.y + layout.boardH); ctx.stroke(); }
+    for (let y = 0; y <= layout.height; y += 1) { ctx.beginPath(); ctx.moveTo(layout.x, layout.y + y * layout.cell); ctx.lineTo(layout.x + layout.boardW, layout.y + y * layout.cell); ctx.stroke(); }
+    ctx.strokeStyle = "#ffcf63";
+    ctx.lineWidth = 3;
+    const cursorX = layout.x + state.cursor.x * layout.cell;
+    const cursorY = layout.y + state.cursor.y * layout.cell;
+    ctx.strokeRect(cursorX + 2, cursorY + 2, layout.cell - 4, layout.cell - 4);
+  }
+  function drawBanner() {
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#dffcff";
+    ctx.font = "950 31px system-ui, sans-serif";
+    ctx.fillText(current().name, 38, 50);
+    ctx.fillStyle = "#96c8d8";
+    ctx.font = "800 15px system-ui, sans-serif";
+    ctx.fillText("Fill exact clue runs. X marks are notes for blueprint gaps.", 40, 78);
+    if (state.mode === "ready" || state.mode === "stage-clear" || state.mode === "complete") {
+      rounded(layout.x + layout.boardW * .12, layout.y + layout.boardH * .33, layout.boardW * .76, layout.boardH * .28, 18);
+      ctx.fillStyle = "rgba(3,10,19,.86)";
+      ctx.fill();
+      ctx.strokeStyle = state.mode === "complete" ? "rgba(255,207,99,.7)" : "rgba(77,231,238,.62)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#effbff";
+      ctx.font = "950 29px system-ui, sans-serif";
+      const title = state.mode === "ready" ? "Begin Draft" : state.mode === "complete" ? "Blueprint Revealed" : "Clue Stage Locked";
+      ctx.fillText(title, layout.x + layout.boardW / 2, layout.y + layout.boardH * .45);
+      ctx.fillStyle = "#a7d9e8";
+      ctx.font = "850 16px system-ui, sans-serif";
+      const note = state.mode === "ready" ? "Use row and column clues to trace each glyph." : state.mode === "complete" ? "Restart for the same deterministic stages." : "Loading the next curated clue grid.";
+      ctx.fillText(note, layout.x + layout.boardW / 2, layout.y + layout.boardH * .51);
+      ctx.textAlign = "left";
+    }
+  }
+  function renderPanel() {
+    els.stage.textContent = (state.stage + 1) + "/" + STAGES.length;
+    els.score.textContent = state.score;
+    els.best.textContent = state.best;
+    els.mistakes.textContent = state.mistakes;
+    els.stageName.textContent = current().name;
+    els.stageText.textContent = current().brief;
+    els.fill.textContent = correctCount() + "/" + totalFill();
+    els.lines.textContent = lineCount();
+    const fallback = state.mode === "complete" ? "All glyphograms traced. Restart to draft again." : "Trace the cyan clue runs; X marks only note gaps.";
+    els.feedback.textContent = state.feedbackTimer > 0 || state.mode === "ready" || state.mode === "complete" ? state.feedback : fallback;
+    els.feedback.className = "readout feedback " + state.feedbackKind;
+    els.fillTool.setAttribute("aria-pressed", String(state.tool === "fill"));
+    els.markTool.setAttribute("aria-pressed", String(state.tool === "mark"));
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.sound));
+    els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+    els.start.textContent = state.mode === "ready" ? "Begin Draft" : state.mode === "complete" ? "New Draft" : "Drafting";
+    els.start.disabled = state.mode === "playing" || state.mode === "stage-clear";
+  }
+  function render() {
+    layout = fitLayout();
+    drawBackdrop();
+    drawClues();
+    drawGrid();
+    drawBanner();
+    renderPanel();
+  }
+  function toggleSound() {
+    state.sound = !state.sound;
+    write(SOUND_KEY, state.sound ? "1" : "0");
+    play("tool");
+    render();
+  }
+  function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    } catch (_) {}
+  }
+  function onKey(event) {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const isButton = event.target instanceof HTMLElement && event.target.matches("button,input,select,textarea");
+    const key = event.key.toLowerCase();
+    if (isButton && !["r", "f", "m"].includes(key)) return;
+    if (["arrowleft", "arrowright", "arrowup", "arrowdown", " ", "enter", "x", "1", "2", "r", "f", "m"].includes(key)) {
+      state.gesture = true;
+      event.preventDefault();
+    }
+    if (key === "r") restart();
+    else if (key === "f") toggleFullscreen();
+    else if (key === "m") toggleSound();
+    else if (state.mode === "ready" && (key === "enter" || key === " ")) startRun();
+    else if (key === "1") useTool("fill");
+    else if (key === "2") useTool("mark");
+    else if (state.mode === "playing" && key === "arrowleft") moveCursor(-1, 0);
+    else if (state.mode === "playing" && key === "arrowright") moveCursor(1, 0);
+    else if (state.mode === "playing" && key === "arrowup") moveCursor(0, -1);
+    else if (state.mode === "playing" && key === "arrowdown") moveCursor(0, 1);
+    else if (state.mode === "playing" && key === "x") applyCell(state.cursor.x, state.cursor.y, "mark");
+    else if (state.mode === "playing" && (key === "enter" || key === " ")) applyCell(state.cursor.x, state.cursor.y);
+  }
+  function diagGrid() {
+    return state.cells.map((row) => row.map((cell) => cell === 1 ? "#" : cell === -1 ? "x" : ".").join(""));
+  }
+  function diagnostic() {
+    return JSON.stringify({
+      coordinateSystem: "grid origin is top-left; x grows right; y grows down",
+      mode: state.mode,
+      stage: { index: state.stage, number: state.stage + 1, total: STAGES.length, name: current().name, size: [layout ? layout.width : current().grid[0].length, layout ? layout.height : current().grid.length] },
+      cursor: state.cursor,
+      tool: state.tool,
+      cells: diagGrid(),
+      rowClues: rowClues(),
+      columnClues: colClues(),
+      filled: { correct: correctCount(), target: totalFill() },
+      solvedLines: lineCount(),
+      score: state.score,
+      best: state.best,
+      mistakes: state.mistakes,
+      feedback: { text: state.feedback, kind: state.feedbackKind, active: state.feedbackTimer > 0 },
+      soundEnabled: state.sound,
+      lastSound: state.lastSound,
+      fullscreen: Boolean(document.fullscreenElement)
+    });
+  }
+  canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+  canvas.addEventListener("pointerdown", (event) => {
+    state.gesture = true;
+    canvas.focus();
+    if (state.mode === "ready") startRun();
+    const cell = cellAt(event);
+    if (!cell || state.mode !== "playing") return;
+    const tool = event.button === 2 ? "mark" : state.tool;
+    drag = { tool, seen: new Set() };
+    drag.seen.add(cellKey(cell.x, cell.y));
+    applyCell(cell.x, cell.y, tool);
+    canvas.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!drag || state.mode !== "playing") return;
+    const cell = cellAt(event);
+    if (!cell || drag.seen.has(cellKey(cell.x, cell.y))) return;
+    drag.seen.add(cellKey(cell.x, cell.y));
+    applyCell(cell.x, cell.y, drag.tool);
+    event.preventDefault();
+  });
+  window.addEventListener("pointerup", () => { drag = null; });
+  els.fillTool.addEventListener("click", () => { state.gesture = true; useTool("fill"); canvas.focus(); });
+  els.markTool.addEventListener("click", () => { state.gesture = true; useTool("mark"); canvas.focus(); });
+  els.start.addEventListener("click", () => { state.gesture = true; if (state.mode === "ready" || state.mode === "complete") startRun(); });
+  els.restart.addEventListener("click", () => { state.gesture = true; restart(); });
+  els.sound.addEventListener("click", () => { state.gesture = true; toggleSound(); });
+  els.full.addEventListener("click", () => { state.gesture = true; toggleFullscreen(); });
+  document.addEventListener("keydown", onKey);
+  document.addEventListener("fullscreenchange", render);
+  window.addEventListener("resize", render);
+  window.render_game_to_text = diagnostic;
+  window.advanceTime = (ms = 0) => {
+    let left = Math.max(0, Number(ms) || 0);
+    const step = 1000 / 60;
+    if (!left) update(0);
+    while (left > 0) { update(Math.min(step, left)); left -= step; }
+    render();
+    return diagnostic();
+  };
+  function frame(time) {
+    if (!lastFrame) lastFrame = time;
+    update(time - lastFrame);
+    lastFrame = time;
+    render();
+    requestAnimationFrame(frame);
+  }
+  seedStage(0);
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

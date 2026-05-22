@@ -102,6 +102,9 @@
   }
   button:hover{border-color:rgba(94,234,212,0.45)}
   button:active{transform:translateY(1px)}
+  button:disabled{opacity:.44;cursor:not-allowed;filter:saturate(.72)}
+  button:disabled:hover{border-color:var(--stroke)}
+  button:disabled:active{transform:none}
   button.primary{
     border-color:rgba(94,234,212,0.55);
     background:linear-gradient(180deg,rgba(94,234,212,0.22),rgba(94,234,212,0.06));
@@ -153,6 +156,8 @@
   .card.back{background:linear-gradient(135deg,#19304f 0%, #0b1a2f 60%);border:1px solid #1c2b44}
   .card.back::after{content:"";position:absolute;inset:8px;border-radius:9px;border:2px solid rgba(94,234,212,0.25)}
   .card.hint{outline:2px solid var(--accent);outline-offset:2px}
+  .card.selected{outline:2px solid var(--accent);outline-offset:3px;box-shadow:0 0 0 1px rgba(94,234,212,.36),0 10px 24px rgba(0,0,0,.36)}
+  .card.foundation-ready{box-shadow:0 0 0 2px rgba(34,197,94,.42),0 4px 20px rgba(0,0,0,0.25)}
   .card:active{filter:brightness(1.14) drop-shadow(0 0 10px rgba(94,234,212,.28))}
   .card.drag-hidden{opacity:0}
   .ghost{pointer-events:none;opacity:.9;filter:drop-shadow(0 10px 20px rgba(0,0,0,.35));z-index:999}
@@ -242,6 +247,7 @@
       <div class="control-group">
         <button type="button" id="undo">Undo</button>
         <button type="button" id="hint" class="good">Hint</button>
+        <button type="button" id="toFoundation" class="good" disabled title="No eligible top card for foundation">To Foundation</button>
         <button type="button" id="soundToggle" aria-pressed="true" title="Turn sound effects off">Sound On</button>
         <button type="button" id="autoComplete" class="good" title="Finish the game automatically" style="display:none">
           Auto-Complete
@@ -283,8 +289,8 @@
   </main>
 
   <footer>
-    <span class="help-full"><strong>How to play</strong>: Drag alternating colors down, put Kings on empty tableau spaces, double-click to auto-foundation, and click Stock to draw 1 or 3.</span>
-    <span class="help-short">Drag alternating colors. Kings fill empty spaces. Tap Stock to draw.</span>
+    <span class="help-full"><strong>How to play</strong>: Drag alternating colors down, put Kings on empty tableau spaces, tap a top card then To Foundation for eligible moves, and click Stock to draw 1 or 3.</span>
+    <span class="help-short">Drag alternating colors. Tap a top card, then To Foundation. Tap Stock to draw.</span>
   </footer>
 </div>
 
@@ -330,6 +336,50 @@
     lastWinAt: null,
     winActive: false
   };
+  const statusFeedback = {
+    lastStatus: 'Ready',
+    lastStatusType: 'info',
+    lastStatusAt: null,
+    lastInput: null,
+    lastInputAt: null,
+    lastFeedback: 'Ready',
+    lastFeedbackAt: null
+  };
+
+  function statusColor(type){
+    if(type === 'bad') return '#ef9a9a';
+    if(type === 'ok') return '#a7f3d0';
+    return '';
+  }
+
+  function recordInput(kind){
+    statusFeedback.lastInput = kind;
+    statusFeedback.lastInputAt = performance.now();
+  }
+
+  function announceStatus(message, type = 'info', inputKind = null){
+    if(inputKind) recordInput(inputKind);
+    const now = performance.now();
+    lastAction = message;
+    statusFeedback.lastStatus = message;
+    statusFeedback.lastStatusType = type;
+    statusFeedback.lastStatusAt = now;
+    statusFeedback.lastFeedback = message;
+    statusFeedback.lastFeedbackAt = now;
+    const st = el('#status');
+    if(st){
+      st.textContent = message;
+      st.style.color = statusColor(type);
+    }
+  }
+
+  function refreshStatusElement(fallback){
+    const st = el('#status');
+    if(!st) return;
+    const hasLiveStatus = statusFeedback.lastStatusAt !== null;
+    st.textContent = hasLiveStatus ? statusFeedback.lastStatus : fallback;
+    st.style.color = hasLiveStatus ? statusColor(statusFeedback.lastStatusType) : '';
+  }
 
   function readSoundPreference(){
     try{
@@ -454,6 +504,7 @@
     gameFeedback.winCount++;
     gameFeedback.lastWinAt = performance.now();
     playSound('win');
+    announceStatus('You win! Great finish.', 'ok', 'win');
   }
 
   // ===== Game State =====
@@ -623,6 +674,7 @@ function startAutoComplete(){
     t: [el('#t0'), el('#t1'), el('#t2'), el('#t3'), el('#t4'), el('#t5'), el('#t6')]
   };
   let lastAction = 'Ready';
+  let selectedSource = null;
   const stockFeedback = {
     lastEvent: null,
     lastEventAge: null,
@@ -670,6 +722,7 @@ function startAutoComplete(){
       elc.style.left = `${(i-(Wn-3))*16}px`;
       elc.style.top = '0px';
       elc.dataset.from = 'waste';
+      decorateCardSource(elc, 'waste', card, i === Wn - 1);
       W.appendChild(elc);
     }
 
@@ -684,6 +737,7 @@ function startAutoComplete(){
         elc.style.top='50%';
         elc.style.transform='translate(-50%,-50%)';
         elc.dataset.from = `f${si}`;
+        decorateCardSource(elc, `f${si}`, card, i === pile.length - 1);
         F.appendChild(elc);
       });
     }
@@ -703,6 +757,7 @@ function startAutoComplete(){
         elc.style.top=`${top}px`;
         elc.dataset.from = `t${i}`;
         elc.dataset.index = idx;
+        decorateCardSource(elc, `t${i}`, card, idx === up.length - 1);
         T.appendChild(elc);
       })
     }
@@ -711,8 +766,9 @@ function startAutoComplete(){
     const won = isWon();
     updateWinFeedback(won);
     el('#moves').textContent = state.moves;
-    el('#status').textContent = won? 'You win! 🎉' : recommendStatus();
-updateAutoCompleteVisibility();   // <-- add this line
+    refreshStatusElement(won ? 'You win! Great finish.' : recommendStatus());
+    updateToFoundationControl();
+    updateAutoCompleteVisibility();   // <-- add this line
     
   }
 
@@ -728,6 +784,7 @@ updateAutoCompleteVisibility();   // <-- add this line
     // ✅ CHANGED: seed ignores any DOM input; uses provided seed or random
     state.seed = (seed ?? (Math.floor(Math.random()*1e9)>>>0));
     lastAction = 'new-deal';
+    clearSelectedSource(false);
     gameFeedback.winActive = false;
     const rng = mulberry32(state.seed);
     const deck = seededShuffle(newDeck(), rng);
@@ -750,6 +807,7 @@ updateAutoCompleteVisibility();   // <-- add this line
     state.initial = snapshot();
     render();
     updateTimeHud();
+    if(options.announce !== false) announceStatus('New deal started.', 'info', 'new-deal');
     if(options.sound) playSound('new-deal');
   }
 
@@ -775,19 +833,214 @@ updateAutoCompleteVisibility();   // <-- add this line
     return card.r === pile[pile.length-1].r + 1;
   }
 
+  function sourceDisplayName(from){
+    if(from === 'waste') return 'Waste';
+    if(from && from[0] === 't') return `Tableau ${Number(from.slice(1)) + 1}`;
+    if(from && from[0] === 'f') return `${SUIT_SYM[SUITS[Number(from.slice(1))]]} foundation`;
+    return 'Pile';
+  }
+
+  function getTopCardFromSource(from){
+    if(from === 'waste') return state.piles.waste[state.piles.waste.length - 1] || null;
+    if(from && from[0] === 't'){
+      const up = state.piles.t[Number(from.slice(1))]?.up || [];
+      return up[up.length - 1] || null;
+    }
+    if(from && from[0] === 'f'){
+      const pile = state.piles.f[Number(from.slice(1))] || [];
+      return pile[pile.length - 1] || null;
+    }
+    return null;
+  }
+
+  function sourceMatchesCard(source, card){
+    return !!source && !!card && source.s === card.s && Number(source.r) === Number(card.r);
+  }
+
+  function isMovableSource(from){
+    return from === 'waste' || (from && from[0] === 't');
+  }
+
+  function clearSelectedSource(updateControl = true){
+    selectedSource = null;
+    els('.selected').forEach(card => card.classList.remove('selected'));
+    if(updateControl) updateToFoundationControl();
+  }
+
+  function getSourceFoundationEligibility(source){
+    if(!source || !isMovableSource(source.from)){
+      return {selected: !!source, eligible: false, card: null, source: source?.from || null, sourceLabel: source ? sourceDisplayName(source.from) : null, foundationIndex: null, destination: null};
+    }
+    const top = getTopCardFromSource(source.from);
+    const isTop = sourceMatchesCard(source, top);
+    const si = top ? SUIT_IDX[top.s] : null;
+    const eligible = !!top && isTop && canPlaceOnFoundation(top, si);
+    return {
+      selected: true,
+      eligible,
+      card: top && isTop ? describe(top) : null,
+      rawCard: top && isTop ? top : null,
+      source: source.from,
+      sourceLabel: sourceDisplayName(source.from),
+      foundationIndex: eligible ? si : null,
+      destination: eligible ? `${SUIT_SYM[top.s]} foundation` : null
+    };
+  }
+
+  function getSelectedFoundationEligibility(){
+    if(!selectedSource) return {selected: false, eligible: false, card: null, source: null, sourceLabel: null, foundationIndex: null, destination: null};
+    const info = getSourceFoundationEligibility(selectedSource);
+    if(!info.card){
+      selectedSource = null;
+      return {selected: false, eligible: false, card: null, source: null, sourceLabel: null, foundationIndex: null, destination: null};
+    }
+    return info;
+  }
+
+  function getTopFoundationCandidate(){
+    const sources = ['waste', ...state.piles.t.map((_, index) => `t${index}`)];
+    for(const from of sources){
+      const card = getTopCardFromSource(from);
+      if(!card) continue;
+      const source = {from, s: card.s, r: card.r};
+      const info = getSourceFoundationEligibility(source);
+      if(info.eligible) return info;
+    }
+    return {selected: false, eligible: false, card: null, source: null, sourceLabel: null, foundationIndex: null, destination: null};
+  }
+
+  function foundationEligibilityDiagnostics(){
+    const selected = getSelectedFoundationEligibility();
+    const top = getTopFoundationCandidate();
+    return {
+      selectedCard: selected.card,
+      selectedSource: selected.sourceLabel,
+      selectedFoundationEligible: !!selected.eligible,
+      selectedDestination: selected.destination,
+      topCard: top.card,
+      topSource: top.sourceLabel,
+      topFoundationEligible: !!top.eligible,
+      topDestination: top.destination
+    };
+  }
+
+  function isSelectedCard(from, card){
+    return sourceMatchesCard(selectedSource, card) && selectedSource.from === from;
+  }
+
+  function decorateCardSource(elc, from, card, isTop){
+    if(isSelectedCard(from, card)) elc.classList.add('selected');
+    if(isTop && isMovableSource(from)){
+      const info = getSourceFoundationEligibility({from, s: card.s, r: card.r});
+      if(info.eligible){
+        elc.classList.add('foundation-ready');
+        elc.title = `${describe(card)} can move to ${info.destination}`;
+      }else{
+        elc.title = `${describe(card)} in ${sourceDisplayName(from)}`;
+      }
+    }
+  }
+
+  function updateToFoundationControl(){
+    const btn = el('#toFoundation');
+    if(!btn) return;
+    const selected = getSelectedFoundationEligibility();
+    const fallback = getTopFoundationCandidate();
+    const candidate = selected.selected ? selected : fallback;
+    const enabled = !!candidate.eligible;
+    btn.disabled = !enabled;
+    btn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    if(selected.selected){
+      btn.title = enabled ? `Send ${candidate.card} from ${candidate.sourceLabel} to ${candidate.destination}` : `${selected.card} cannot move to foundation yet`;
+    }else{
+      btn.title = enabled ? `Send ${candidate.card} from ${candidate.sourceLabel} to ${candidate.destination}` : 'No eligible top card for foundation';
+    }
+  }
+
+  function selectSourceCard(source, options = {}){
+    const {announce = true} = options;
+    const info = getSourceFoundationEligibility(source);
+    if(!info.card){
+      clearSelectedSource();
+      if(announce) announceStatus('Select a top tableau or waste card first.', 'bad', 'select-card');
+      return false;
+    }
+    selectedSource = {from: source.from, s: source.s, r: source.r};
+    render();
+    const selected = getSelectedFoundationEligibility();
+    if(announce){
+      announceStatus(
+        selected.eligible ? `${selected.card} selected; foundation move is ready.` : `${selected.card} selected; not ready for foundation.`,
+        selected.eligible ? 'ok' : 'info',
+        'select-card'
+      );
+    }
+    return true;
+  }
+
+  function moveSourceToFoundation(source, label = 'to-foundation-control'){
+    const info = getSourceFoundationEligibility(source);
+    if(!info.eligible || !info.rawCard) return false;
+    pushHistory(label);
+    if(info.source === 'waste'){
+      state.piles.waste.pop();
+    }else if(info.source && info.source[0] === 't'){
+      const ti = Number(info.source.slice(1));
+      state.piles.t[ti].up.pop();
+    }else{
+      return false;
+    }
+    state.piles.f[info.foundationIndex].push(info.rawCard);
+    clearSelectedSource(false);
+    maybeFlipAfterMove();
+    recordLegalMove('foundation-move');
+    playSound('foundation-move');
+    render();
+    flashPile(pilesEls.f[info.foundationIndex]);
+    announceStatus(`Moved ${info.card} to ${info.destination}.`, 'ok', label);
+    return true;
+  }
+
+  function moveSelectedOrTopToFoundation(){
+    const selected = getSelectedFoundationEligibility();
+    const candidate = selected.selected ? selected : getTopFoundationCandidate();
+    if(!candidate.eligible){
+      announceStatus(selected.selected ? `${selected.card} cannot move to foundation yet.` : 'No top card can move to foundation.', 'bad', 'to-foundation-control');
+      updateToFoundationControl();
+      return false;
+    }
+    return moveSourceToFoundation({from: candidate.source, s: candidate.rawCard.s, r: candidate.rawCard.r}, 'to-foundation-control');
+  }
+
   // ===== Moves & Undo =====
   function snapshot(){ return deepClone({seed: state.seed, drawOne: state.drawOne, unlimited: state.unlimited, piles: state.piles, moves: state.moves, time: state.time, stockCycles: state.stockCycles}) }
   function restore(snap){ Object.assign(state, deepClone(snap)); render(); updateTimeHud() }
   function pushHistory(label){ state.history.push(snapshot()); state.future.length=0; state.moves++; lastAction = label || 'move'; }
-  function undo(){ if(state.history.length){ const cur=snapshot(); const prev=state.history.pop(); state.future.push(cur); restore(prev); lastAction = 'undo'; recordUndoFeedback(); playSound('undo'); render() } }
+  function undo(){
+    if(state.history.length){
+      const cur=snapshot();
+      const prev=state.history.pop();
+      state.future.push(cur);
+      clearSelectedSource(false);
+      restore(prev);
+      lastAction = 'undo';
+      recordUndoFeedback();
+      playSound('undo');
+      render();
+      announceStatus('Undo restored the previous move.', 'info', 'undo');
+      return;
+    }
+    announceStatus('Nothing to undo.', 'bad', 'undo');
+  }
 
   // ===== Stock/Waste actions =====
   pilesEls.stock.addEventListener('click', ()=>{
     if(state.piles.stock.length===0){
       // Recycle waste back to stock if allowed
-      if(state.piles.waste.length===0) return;
-      if(!state.unlimited && state.stockCycles>=1) return; // only one pass allowed (never hits because unlimited=true)
+      if(state.piles.waste.length===0){ announceStatus('Stock and waste are empty.', 'bad', 'stock-empty'); return; }
+      if(!state.unlimited && state.stockCycles>=1){ announceStatus('No stock passes left.', 'bad', 'stock-empty'); return; } // only one pass allowed (never hits because unlimited=true)
       pushHistory('recycle');
+      clearSelectedSource(false);
       const recycled = state.piles.waste.length;
       state.piles.stock = state.piles.waste.reverse();
       state.piles.waste = [];
@@ -797,9 +1050,11 @@ updateAutoCompleteVisibility();   // <-- add this line
       render();
       flashPile(pilesEls.stock);
       flashPile(pilesEls.waste);
+      announceStatus(`Recycled ${recycled} card${recycled === 1 ? '' : 's'} to stock.`, 'info', 'stock-recycle');
       return;
     }
     pushHistory('draw');
+    clearSelectedSource(false);
     const drawN = state.drawOne? 1 : Math.min(3, state.piles.stock.length);
     for(let i=0;i<drawN;i++) state.piles.waste.push(state.piles.stock.pop());
     recordStockFeedback('stock-draw', drawN);
@@ -807,6 +1062,7 @@ updateAutoCompleteVisibility();   // <-- add this line
     render();
     flashPile(pilesEls.stock);
     flashPile(pilesEls.waste);
+    announceStatus(`Drew ${drawN} card${drawN === 1 ? '' : 's'} from stock.`, 'info', 'stock-draw');
   })
 
   // ===== Drag & Drop =====
@@ -858,6 +1114,10 @@ updateAutoCompleteVisibility();   // <-- add this line
       ghost,
       offsetX: e.clientX - rect.left,
       offsetY: e.clientY - rect.top,
+      startX: e.clientX,
+      startY: e.clientY,
+      dragged: false,
+      moved: false,
     };
     if(from==='waste'){
       target.classList.add('drag-hidden');
@@ -869,8 +1129,17 @@ updateAutoCompleteVisibility();   // <-- add this line
     target.addEventListener('pointerup', onPointerUp, {once:true});
   }
 
-  function onPointerMove(e){ if(!drag) return; positionGhost(e.clientX, e.clientY); showDropTarget(e.clientX, e.clientY) }
-  function onPointerUp(e){ if(!drag) return; finalizeDrop(e.clientX, e.clientY); cleanupDrag(e.currentTarget, e) }
+  function onPointerMove(e){
+    if(!drag) return;
+    if(Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 9) drag.dragged = true;
+    positionGhost(e.clientX, e.clientY);
+    showDropTarget(e.clientX, e.clientY);
+  }
+  function onPointerUp(e){
+    if(!drag) return;
+    drag.moved = finalizeDrop(e.clientX, e.clientY);
+    cleanupDrag(e.currentTarget, e);
+  }
 
   function buildGhost(cards, srcEl){
     const g = document.createElement('div'); g.className='ghost'; g.style.position='fixed'; g.style.width=srcEl.style.width||'var(--card-w)'; g.style.height=srcEl.style.height||'var(--card-h)';
@@ -906,23 +1175,27 @@ updateAutoCompleteVisibility();   // <-- add this line
   function finalizeDrop(x,y){
     const elUnder = document.elementFromPoint(x,y);
     const pileEl = elUnder?.closest?.('.pile');
-    if(!pileEl){ return }
+    if(!pileEl){ return false }
 
     const topCard = drag.cards[0];
 
     if(pileEl.classList.contains('foundation')){
   const si = ['f0','f1','f2','f3'].indexOf(pileEl.id);
   // Prevent foundation→foundation moves
-  if(drag.from && drag.from[0]==='f') return;
+  if(drag.from && drag.from[0]==='f') return false;
   if(drag.cards.length===1 && canPlaceOnFoundation(topCard, si)){
     pushHistory('to-foundation');
     removeFromSource(drag);
+    clearSelectedSource(false);
     state.piles.f[si].push(topCard);
     maybeFlipAfterMove();
     recordLegalMove('foundation-move');
     playSound('foundation-move');
     render();
-updateAutoCompleteVisibility();
+    flashPile(pilesEls.f[si]);
+    announceStatus(`Moved ${describe(topCard)} to ${SUIT_SYM[topCard.s]} foundation.`, 'ok', 'foundation-drop');
+    updateAutoCompleteVisibility();
+    return true;
   }
 }
 
@@ -931,21 +1204,29 @@ updateAutoCompleteVisibility();
       if(canPlaceOnTableau(topCard, state.piles.t[ti].up)){
         pushHistory('to-tableau');
         removeFromSource(drag);
+        clearSelectedSource(false);
         state.piles.t[ti].up.push(...drag.cards);
         maybeFlipAfterMove();
         recordLegalMove('tableau-move');
         playSound('tableau-move');
         render();
+        announceStatus(`Moved ${describe(topCard)} to Tableau ${ti + 1}.`, 'info', 'tableau-drop');
+        return true;
       }
     }
+    return false;
   }
 
   function cleanupDrag(srcEl, e){
+    const tapSource = drag && !drag.moved && !drag.dragged && drag.cards.length === 1
+      ? {from: drag.from, s: drag.cards[0].s, r: drag.cards[0].r}
+      : null;
     srcEl.removeEventListener('pointermove', onPointerMove);
     try{ srcEl.releasePointerCapture?.(e?.pointerId) }catch{}
     if(drag?.hiddenEl){ drag.hiddenEl.classList.remove('drag-hidden') }
     drag?.ghost?.remove();
     drag = null;
+    if(tapSource && isMovableSource(tapSource.from)) selectSourceCard(tapSource);
   }
 
   function removeFromSource(d){
@@ -991,12 +1272,15 @@ updateAutoCompleteVisibility();
         const up = state.piles.t[ti].up;
         up.pop();
       } else { return }
+      clearSelectedSource(false);
       state.piles.f[si].push(card);
       maybeFlipAfterMove();
       recordLegalMove('foundation-move');
       playSound('foundation-move');
       render(); 
-updateAutoCompleteVisibility();
+      flashPile(pilesEls.f[si]);
+      announceStatus(`Moved ${describe(card)} to ${SUIT_SYM[card.s]} foundation.`, 'ok', 'foundation-double-click');
+      updateAutoCompleteVisibility();
     }
   }
 
@@ -1103,7 +1387,7 @@ function describe(card){ return `${RANK_TXT[card.r]}${SUIT_SYM[card.s]}`; }
 function doHint(){
   const moves = listAllMoves({forHint:true}); // 👈 use hint-safe list
   clearSuggestions();
-  if(moves.length===0){ recordHintFeedback('no-move'); playSound('no-move'); flashStatus('No moves', 'bad'); return }
+  if(moves.length===0){ recordHintFeedback('no-move'); playSound('no-move'); flashStatus('No moves', 'bad', 'hint'); return }
 
   const m = moves[0];
   let msg = '';
@@ -1147,15 +1431,13 @@ function doHint(){
 
   recordHintFeedback(m.type);
   playSound('hint');
-  flashStatus(msg);
+  flashStatus(msg, 'info', 'hint');
 }
 
 
 
-  function flashStatus(msg, type){
-    lastAction = msg;
-    const st = el('#status'); const old = st.textContent; st.textContent = msg; st.style.color = type==='bad'? '#ef9a9a' : (type==='ok'? '#a7f3d0' : '');
-    setTimeout(()=>{ st.textContent = old; st.style.color=''; }, 1200);
+  function flashStatus(msg, type, inputKind = 'feedback'){
+    announceStatus(msg, type || 'info', inputKind);
   }
 
   function renderGameToText(){
@@ -1193,6 +1475,16 @@ function doHint(){
       stuck: !isWon() && noMoves && stockEmpty && noWaste,
       status: el('#status').textContent,
       lastAction,
+      liveStatus: {
+        lastStatus: statusFeedback.lastStatus,
+        lastStatusType: statusFeedback.lastStatusType,
+        lastStatusAge: roundedAge(statusFeedback.lastStatusAt),
+        lastInput: statusFeedback.lastInput,
+        lastInputAge: roundedAge(statusFeedback.lastInputAt),
+        lastFeedback: statusFeedback.lastFeedback,
+        lastFeedbackAge: roundedAge(statusFeedback.lastFeedbackAt)
+      },
+      foundationEligibility: foundationEligibilityDiagnostics(),
       audio: {
         soundEnabled: !!audioState.enabled,
         audioReady: !!audioState.context,
@@ -1214,6 +1506,14 @@ function doHint(){
         lastEvent: stockFeedback.lastEvent,
         lastEventAge: stockFeedback.lastEventAge === null ? null : Math.round(stockFeedback.lastEventAge * 1000) / 1000,
         activeCueCount: stockFeedback.activeCueCount,
+        lastStatus: statusFeedback.lastStatus,
+        lastStatusType: statusFeedback.lastStatusType,
+        lastStatusAge: roundedAge(statusFeedback.lastStatusAt),
+        lastInput: statusFeedback.lastInput,
+        lastInputAge: roundedAge(statusFeedback.lastInputAt),
+        lastFeedback: statusFeedback.lastFeedback,
+        lastFeedbackAge: roundedAge(statusFeedback.lastFeedbackAt),
+        foundationEligibility: foundationEligibilityDiagnostics(),
         drawCount: stockFeedback.drawCount,
         recycleCount: stockFeedback.recycleCount,
         lastCardsMoved: stockFeedback.lastCardsMoved,
@@ -1246,14 +1546,24 @@ function doHint(){
 
   // ===== Controls =====
   el('#newDeal').addEventListener('click', ()=> deal(undefined, {sound:true}));
-  el('#restart').addEventListener('click', ()=>{ if(state.initial){ restore(state.initial); lastAction = 'restart'; render() } });
+  el('#restart').addEventListener('click', ()=>{
+    if(state.initial){
+      clearSelectedSource(false);
+      restore(state.initial);
+      lastAction = 'restart';
+      render();
+      announceStatus('Deal restarted.', 'info', 'restart');
+    }
+  });
   el('#undo').addEventListener('click', undo);
   el('#hint').addEventListener('click', doHint);
+  el('#toFoundation').addEventListener('click', moveSelectedOrTopToFoundation);
   el('#autoComplete').addEventListener('click', startAutoComplete);
   el('#soundToggle').addEventListener('click', ()=>{
     audioState.enabled = !audioState.enabled;
     writeSoundPreference(audioState.enabled);
     updateSoundToggle();
+    announceStatus(audioState.enabled ? 'Sound on.' : 'Sound off.', 'info', 'sound-toggle');
   });
 
   // ✂ REMOVED: Auto button listener
@@ -1261,7 +1571,7 @@ el('#drawOne').addEventListener('change', (e)=>{
   state.drawOne = e.target.checked;
   updateDrawModeLabel();
   playSound('draw-toggle');
-  flashStatus(state.drawOne ? 'Draw mode: 1' : 'Draw mode: 3');
+  flashStatus(state.drawOne ? 'Draw mode: 1' : 'Draw mode: 3', 'info', 'draw-toggle');
 });
 
   // Keyboard shortcuts
@@ -1269,7 +1579,14 @@ el('#drawOne').addEventListener('change', (e)=>{
     if(e.key==='z' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); undo() }
     if(e.key==='h'){ e.preventDefault(); doHint() }
     if(e.key==='n'){ e.preventDefault(); deal(undefined, {sound:true}) }
-    if(e.key==='r'){ e.preventDefault(); if(state.initial) restore(state.initial) }
+    if(e.key==='r'){
+      e.preventDefault();
+      if(state.initial){
+        clearSelectedSource(false);
+        restore(state.initial);
+        announceStatus('Deal restarted.', 'info', 'restart');
+      }
+    }
     // ✂ REMOVED: 'a' shortcut for auto-finish
   })
 
@@ -1278,7 +1595,7 @@ el('#drawOne').addEventListener('change', (e)=>{
 state.drawOne = el('#drawOne').checked;  // now true by default
 updateDrawModeLabel();
 updateSoundToggle();
-deal();
+deal(undefined, {announce:false});
   // ✂ REMOVED: reading unlimited from DOM (always true now)
 })();
 </script>

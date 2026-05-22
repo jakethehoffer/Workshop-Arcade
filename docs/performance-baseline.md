@@ -21,6 +21,25 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Balanced max-parallel mechanics + parity pass (pass 79)
+
+Captured 2026-05-22 against `http://127.0.0.1:4173` after adding Volt Sudoku, Glyphogram Grid, Lumen Lander, Wordweave Grid, and Dice Dynamo; adding runtime PWA/storage probes plus validator negative fixtures; trimming Brick Breaker; and finishing keyboard/live-status/fullscreen/pause parity across the older polish set. The strict audit covered the catalog plus 59 manifest games, 60 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 132 ms | 111 ms | 🟢 112 ms | 🟢 199.1 KB | 16 | 0 |
+| Volt Sudoku | 🟢 56 ms | 9 ms | 🟢 10 ms | 🟢 34.1 KB | 2 | 0 |
+| Glyphogram Grid | 🟢 52 ms | 17 ms | 🟢 17 ms | 🟢 32.7 KB | 2 | 0 |
+| Lumen Lander | 🟢 44 ms | 14 ms | 🟢 14 ms | 🟢 28.0 KB | 2 | 0 |
+| Wordweave Grid | 🟢 52 ms | 37 ms | 🟢 37 ms | 🟢 28.9 KB | 2 | 0 |
+| Dice Dynamo | 🟢 52 ms | 10 ms | 🟢 11 ms | 🟢 27.0 KB | 2 | 0 |
+| Lexica | 🟢 52 ms | 17 ms | 🟢 18 ms | 🟢 149.9 KB | 4 | 0 |
+| Idle Tycoon | 🟢 468 ms | 12 ms | 🟢 13 ms | 🟢 190.1 KB | 2 | 0 |
+| Arcade Jump | 🟢 112 ms | 78 ms | 🟢 78 ms | 🟢 122.1 KB | 2 | 0 |
+| Brick Breaker | 🟢 100 ms | 75 ms | 🟢 75 ms | 🟢 106.8 KB | 2 | 0 |
+
+All five new games are comfortably inside the current default 100 KB / 3 request publish budget. The catalog remains inside the 200 KB / 18 request budget at 199.1 KB / 16 requests, with the lazy cover pipeline still keeping first-paint cover requests bounded at 59 games. Brick Breaker dropped to 106.8 KB transfer after the whitespace/comment trim, adding headroom under its 120 KB / 4 request exception. Lexica, Idle Tycoon, and Arcade Jump remain below their named exceptions. No console/page errors appeared across audited URLs, every page passed strict meta/alt checks, and the largest resource on the catalog remains the HTML document rather than a cover asset.
+
 ## Five mechanics + live parity (pass 78)
 
 Captured 2026-05-20 against `http://127.0.0.1:4321` after adding Inkline Courier, Cipher Rooms, Patchwork Foundry, Market Minute, and Bloomkeeper Grid; adding generated-surface and performance-baseline truth checks; and finishing fullscreen/live-status parity on the older polish set. The strict audit covered the catalog plus 54 manifest games, 55 pages total.

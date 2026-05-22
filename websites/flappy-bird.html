@@ -96,6 +96,11 @@
   .help-card kbd { background:#152e42; border:1px solid rgba(125,229,237,0.4); border-bottom-width:3px; padding:4px 10px; border-radius:8px; font-weight:700; font-family:inherit; display:inline-block; color:#f8feff; }
   .help-card .btn-close { margin-top:16px; width:100%; background:#2dd4bf; color:#05202a; border:none; padding:10px; border-radius:10px; font-weight:800; cursor:pointer; }
   .help-card .btn-close:active { transform:translateY(1px); }
+  .sr-status {
+    position:fixed; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%);
+    white-space:nowrap; border:0;
+  }
 </style>
   <script src="workshop-runtime.js"></script>
 </head>
@@ -104,6 +109,7 @@
 <button class="help-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">❓ Help</button>
 <button class="help-btn sound-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Toggle sound" title="Sound">Sound On</button>
 <button class="help-btn fullscreen-btn" id="fullscreenBtn" type="button" aria-pressed="false" aria-label="Enter fullscreen" title="Enter fullscreen (F)">Fullscreen</button>
+<div id="statusAnnouncer" class="sr-status" role="status" aria-live="polite" aria-atomic="true">Ready. Tap or press Space to start.</div>
 
 <!-- Help Menu -->
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -148,6 +154,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha: false }); // better perf for full-screen
 const soundBtn = document.getElementById("soundBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
+const statusAnnouncer = document.getElementById("statusAnnouncer");
 
 /* ----- HiDPI fullscreen + virtual world ----- */
 let dpr = window.devicePixelRatio || 1;
@@ -188,6 +195,11 @@ try { soundEnabled = JSON.parse(localStorage.getItem(SOUND_KEY) ?? "true"); } ca
 let lastSound = "none";
 let newBestThisRun = false;
 let lastFullscreenAction = "none";
+const initialStatusMessage = "Ready. Tap or press Space to start.";
+let statusUpdateCount = 0;
+let lastStatus = { kind: "ready", message: initialStatusMessage, at: 0 };
+let statusHistory = [lastStatus];
+let lastInput = { type: "none", at: 0 };
 
 const feedback = {};
 function resetFeedback() {
@@ -199,11 +211,51 @@ function resetFeedback() {
   feedback.scoreEventCount = 0;
   feedback.hitCount = 0;
   feedback.gameOverCount = 0;
+  feedback.restartCount = 0;
   feedback.screenFlash = 0;
   feedback.screenShake = 0;
   feedback.cues = [];
+  feedback.lastFeedback = null;
+  feedback.lastFeedbackAt = null;
+  feedback.feedbackCount = 0;
+  feedback.vibrationCount = 0;
+  feedback.vibrationSupported = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
 }
 resetFeedback();
+
+function nowMs() {
+  return Math.round((typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()));
+}
+
+function announceStatus(kind, message) {
+  statusUpdateCount += 1;
+  lastStatus = { kind, message, at: nowMs(), count: statusUpdateCount };
+  statusHistory.push(lastStatus);
+  if (statusHistory.length > 8) statusHistory = statusHistory.slice(-8);
+  if (statusAnnouncer) statusAnnouncer.textContent = message;
+}
+
+function recordInput(type) {
+  lastInput = { type, at: nowMs() };
+}
+
+function recordTactileFeedback(type) {
+  feedback.lastFeedback = type;
+  feedback.lastFeedbackAt = nowMs();
+  feedback.feedbackCount += 1;
+  feedback.vibrationSupported = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+  if (!feedback.vibrationSupported) return;
+  const patterns = {
+    start: 12,
+    flap: 8,
+    score: [14, 24, 14],
+    hit: [50, 35, 90],
+    restart: 18
+  };
+  try {
+    if (navigator.vibrate(patterns[type] || 8)) feedback.vibrationCount += 1;
+  } catch (_) {}
+}
 
 function syncSoundButton() {
   if (!soundBtn) return;
@@ -254,7 +306,8 @@ function feedbackColor(type) {
     start: '#fef3c7',
     flap: '#facc15',
     score: '#34d399',
-    hit: '#fb7185'
+    hit: '#fb7185',
+    restart: '#7dd3fc'
   }[type] || '#ffffff';
 }
 
@@ -269,13 +322,16 @@ function recordFeedback(type, options = {}) {
     feedback.hitCount += 1;
     feedback.gameOverCount += 1;
   }
+  if (type === 'restart') feedback.restartCount += 1;
   if (type === 'start') feedback.screenFlash = Math.max(feedback.screenFlash, 0.16);
   if (type === 'score') feedback.screenFlash = Math.max(feedback.screenFlash, 0.12);
   if (type === 'hit') {
     feedback.screenFlash = Math.max(feedback.screenFlash, 0.82);
     feedback.screenShake = Math.max(feedback.screenShake, 15);
   }
-  const label = options.label || (type === 'start' ? 'GO' : type === 'flap' ? 'FLAP' : type === 'score' ? '+1' : 'HIT');
+  if (type === 'restart') feedback.screenFlash = Math.max(feedback.screenFlash, 0.1);
+  recordTactileFeedback(type);
+  const label = options.label || (type === 'start' ? 'GO' : type === 'flap' ? 'FLAP' : type === 'score' ? '+1' : type === 'restart' ? 'READY' : 'HIT');
   feedback.cues.push({
     type,
     label,
@@ -846,12 +902,41 @@ function getFeedbackDiagnostics() {
     scoreEventCount: feedback.scoreEventCount,
     hitCount: feedback.hitCount,
     gameOverCount: feedback.gameOverCount,
+    restartCount: feedback.restartCount,
+    lastFeedback: feedback.lastFeedback,
+    lastFeedbackAt: feedback.lastFeedbackAt,
+    feedbackCount: feedback.feedbackCount,
+    vibrationSupported: feedback.vibrationSupported,
+    vibrationCount: feedback.vibrationCount,
     activeCueCount: feedback.cues.length,
     screenFlash: Math.round(feedback.screenFlash * 100) / 100,
     screenShake: Math.round(feedback.screenShake * 10) / 10,
     nearestPipe: pipeInfo.nearestPipe,
     nearestGap: pipeInfo.nearestGap || null,
     dangerCue: pipeInfo.dangerCue
+  };
+}
+
+function getStatusDiagnostics() {
+  return {
+    kind: lastStatus.kind,
+    message: lastStatus.message,
+    at: lastStatus.at,
+    count: lastStatus.count || 0,
+    updateCount: statusUpdateCount,
+    announcerText: statusAnnouncer ? statusAnnouncer.textContent : null,
+    role: statusAnnouncer ? statusAnnouncer.getAttribute("role") : null,
+    ariaLive: statusAnnouncer ? statusAnnouncer.getAttribute("aria-live") : null,
+    ariaAtomic: statusAnnouncer ? statusAnnouncer.getAttribute("aria-atomic") : null,
+    hiddenClass: statusAnnouncer ? statusAnnouncer.className : null,
+    history: statusHistory.slice(-6)
+  };
+}
+
+function getInputDiagnostics() {
+  return {
+    type: lastInput.type,
+    at: lastInput.at
   };
 }
 
@@ -1277,6 +1362,7 @@ function updatePipes(step) {
       p.scored = true; score += 1; SFX.score();
       if (firstPassTime === null) firstPassTime = performance.now();
       recordFeedback('score', { x: bird.x + 26, y: bird.y - 30, label: '+1' });
+      announceStatus('score', `Score ${score}. ${score > highScore ? "New best pace." : "Keep going."}`);
     }
   }
   // prune
@@ -1315,6 +1401,7 @@ function setGameOver() {
   if (gameOver) return;
   gameOver = true;
   recordFeedback('hit', { label: 'HIT', life: 0.85 });
+  announceStatus('hit', 'Hit. Game over.');
   stopMusic();
   if (score > highScore) {
     highScore = score; newBestThisRun = true;
@@ -1323,6 +1410,7 @@ function setGameOver() {
   } else {
     SFX.hit();
   }
+  announceStatus('game-over', `Game over. Score ${score}. Best ${highScore}. Tap or press Space to restart.`);
 }
 
 function restartGame() {
@@ -1340,6 +1428,8 @@ function restartGame() {
   newBestThisRun = false;
   groundOffset = 0;
   wideBackdropOffset = 0;
+  recordFeedback('restart', { label: 'READY', life: 0.55 });
+  announceStatus('restart', 'Restarted. Keep flapping through the pipes.');
   resumeAudio();
   startMusic(false);
 }
@@ -1436,6 +1526,9 @@ function loop(now = performance.now()) {
 }
 
 function renderGameToText() {
+  const statusDiagnostics = getStatusDiagnostics();
+  const inputDiagnostics = getInputDiagnostics();
+  const feedbackDiagnostics = getFeedbackDiagnostics();
   return JSON.stringify({
     state: gameOver ? 'game-over' : (started ? 'playing' : 'title'),
     started,
@@ -1462,7 +1555,12 @@ function renderGameToText() {
       scored: !!pipe.scored
     })),
     spawnAccumulator: Math.round(spawnAccumulator),
-    feedback: getFeedbackDiagnostics(),
+    feedback: feedbackDiagnostics,
+    status: statusDiagnostics,
+    input: inputDiagnostics,
+    lastStatus: statusDiagnostics,
+    lastInput: inputDiagnostics,
+    lastFeedback: feedbackDiagnostics.lastFeedback,
     layout: getLayoutDiagnostics(),
     musicOn: !!music.isOn,
     audioReady: !!audioCtx,
@@ -1499,17 +1597,20 @@ window.advanceTime = function advanceTime(ms = 0) {
 };
 
 /* ----- Input ----- */
-function doFlapOrStart() {
+function doFlapOrStart(source = "programmatic") {
   if (helpOpen) return;
+  recordInput(source);
   resumeAudio();
   if (!started) {
     started = true;
     recordFeedback('start', { label: 'GO', life: 0.65 });
+    announceStatus('start', 'Game started. Flap through the pipes.');
     startMusic(true);
   }
   if (gameOver) { restartGame(); return; } // early return — don't flap on restart
   bird.flap();
   recordFeedback('flap');
+  announceStatus('flap', `Flap ${feedback.flapCount}. Score ${score}.`);
   SFX.flap();
 }
 // Help menu - declare first so it can be used in keydown handler
@@ -1517,6 +1618,7 @@ const helpBtn = document.getElementById('helpBtn');
 const helpOverlay = document.getElementById('helpOverlay');
 const helpClose = document.getElementById('helpClose');
 soundBtn.addEventListener('click', () => {
+  recordInput('sound-button');
   soundEnabled = !soundEnabled;
   if (!soundEnabled) stopMusic();
   try { localStorage.setItem(SOUND_KEY, JSON.stringify(soundEnabled)); } catch(_) {}
@@ -1529,6 +1631,7 @@ document.addEventListener('fullscreenchange', syncFullscreenButton);
 document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
 if (fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => {
   e.preventDefault();
+  recordInput('fullscreen-button');
   toggleFullscreen();
 });
 const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
@@ -1570,6 +1673,7 @@ function closeHelp(){
 document.addEventListener("keydown", e => { 
   if (e.code === "KeyF" && !e.repeat) {
     e.preventDefault();
+    recordInput('keyboard-fullscreen');
     toggleFullscreen();
     return;
   }
@@ -1588,6 +1692,7 @@ document.addEventListener("keydown", e => {
     }
   }
   if (e.code === "KeyH" && !e.repeat) {
+    recordInput('keyboard-help');
     if(helpOverlay) {
       if(helpOverlay.classList.contains('show')) closeHelp();
       else openHelp();
@@ -1597,13 +1702,13 @@ document.addEventListener("keydown", e => {
     if(helpOverlay && helpOverlay.classList.contains('show')) closeHelp();
   }
   if (helpOpen) return;
-  if (e.code === "Space") doFlapOrStart();
+  if (e.code === "Space") doFlapOrStart('keyboard-space');
 });
-canvas.addEventListener("mousedown", doFlapOrStart);
-canvas.addEventListener("touchstart", (e) => { e.preventDefault(); doFlapOrStart(); }, { passive: false });
+canvas.addEventListener("mousedown", () => doFlapOrStart('pointer-mouse'));
+canvas.addEventListener("touchstart", (e) => { e.preventDefault(); doFlapOrStart('pointer-touch'); }, { passive: false });
 
-if(helpBtn) helpBtn.onclick = (e) => { e.preventDefault(); openHelp(); };
-if(helpClose) helpClose.onclick = (e) => { e.preventDefault(); closeHelp(); };
+if(helpBtn) helpBtn.onclick = (e) => { e.preventDefault(); recordInput('help-button'); openHelp(); };
+if(helpClose) helpClose.onclick = (e) => { e.preventDefault(); recordInput('help-close'); closeHelp(); };
 if(helpOverlay) {
   helpOverlay.addEventListener('click', (e) => {
     if(e.target === helpOverlay) closeHelp();

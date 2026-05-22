@@ -106,7 +106,12 @@
   .lane-btn{min-height:44px;font-size:15px;font-weight:800}
   .lane-btn[data-active="true"]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
   .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
+  .fullscreen-btn[aria-pressed="true"]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
   .btn:hover,.lane-btn:hover{border-color:rgba(94,234,212,0.55)}
+  html:fullscreen body{min-height:100vh;padding:18px 12px;overflow:auto}
+  html:fullscreen .panel{max-width:820px}
+  html:-webkit-full-screen body{min-height:100vh;padding:18px 12px;overflow:auto}
+  html:-webkit-full-screen .panel{max-width:820px}
   .overlay{
     position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
     display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
@@ -129,6 +134,7 @@
     .pill{min-width:64px;padding:7px 9px}
     .pill .value{font-size:16px}
     .status{font-size:11px;letter-spacing:0}
+    .btn{padding:8px 10px;font-size:11px}
     .lane-btn{min-height:42px;padding:8px 6px}
   }
 </style>
@@ -159,6 +165,7 @@
   <div class="controls">
     <button class="btn primary" type="button" id="startBtn">Start Run</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">Sound On</button>
+    <button class="btn fullscreen-btn" type="button" id="fullscreenBtn" aria-pressed="false" aria-label="Enter fullscreen" title="Enter fullscreen">Fullscreen</button>
     <button class="btn" type="button" id="helpBtn">Help</button>
   </div>
 </main>
@@ -213,6 +220,7 @@
     status: document.getElementById("statusLine"),
     start: document.getElementById("startBtn"),
     sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn"),
     help: document.getElementById("helpBtn"),
     helpOverlay: document.getElementById("helpOverlay"),
     helpClose: document.getElementById("helpClose"),
@@ -243,6 +251,17 @@
   let audioCtx = null;
   let lastFrame = 0;
   let helpFocusReturn = null;
+  let lastUiAction = "loaded";
+  const fullscreenDiagnostics = {
+    available: false,
+    active: false,
+    element: null,
+    requests: 0,
+    changes: 0,
+    errors: 0,
+    lastError: "",
+    lastAction: "loaded"
+  };
 
   function loadBestScore(){ try { return Math.max(0, Number(localStorage.getItem(BEST_KEY) || 0)); } catch { return 0; } }
   function saveBestScore(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
@@ -257,6 +276,81 @@
     return chart.filter((note) => note.status === "pending" && note.time - state.time <= LEAD_MS + 120 && note.time - state.time >= -210);
   }
   function nextPending(){ return chart.find((note) => note.status === "pending") || null; }
+  function recordUiAction(action){
+    lastUiAction = action;
+  }
+  function fullscreenElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function fullscreenElementName(){
+    const element = fullscreenElement();
+    if (!element) return null;
+    return element.id || element.tagName.toLowerCase();
+  }
+  function fullscreenSupported(){
+    const target = document.documentElement;
+    const request = target && (target.requestFullscreen || target.webkitRequestFullscreen);
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    return !!(request && exit && document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false);
+  }
+  function syncFullscreenButton(){
+    const available = fullscreenSupported();
+    const active = !!fullscreenElement();
+    fullscreenDiagnostics.available = available;
+    fullscreenDiagnostics.active = active;
+    fullscreenDiagnostics.element = fullscreenElementName();
+    if (!els.fullscreen) return;
+    els.fullscreen.disabled = !available;
+    els.fullscreen.textContent = active ? "Exit Full" : "Fullscreen";
+    els.fullscreen.setAttribute("aria-pressed", active ? "true" : "false");
+    els.fullscreen.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+    els.fullscreen.title = available ? (active ? "Exit fullscreen" : "Enter fullscreen") : "Fullscreen unavailable";
+  }
+  async function exitFullscreen(source = "escape", countRequest = true){
+    if (!fullscreenElement()) return;
+    recordUiAction(source === "escape" ? "keyboard:escape-fullscreen" : `fullscreen:${source}`);
+    fullscreenDiagnostics.lastAction = source;
+    if (countRequest) fullscreenDiagnostics.requests += 1;
+    try {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) await exit.call(document);
+    } catch (error) {
+      fullscreenDiagnostics.errors += 1;
+      fullscreenDiagnostics.lastError = error && error.name ? error.name : "fullscreen-exit-error";
+      syncFullscreenButton();
+    }
+  }
+  async function toggleFullscreen(source = "button"){
+    recordUiAction(source === "button" ? "button:fullscreen" : `fullscreen:${source}`);
+    fullscreenDiagnostics.lastAction = source;
+    if (!fullscreenSupported()) {
+      fullscreenDiagnostics.errors += 1;
+      fullscreenDiagnostics.lastError = "fullscreen-unavailable";
+      syncFullscreenButton();
+      return;
+    }
+    fullscreenDiagnostics.requests += 1;
+    try {
+      if (fullscreenElement()) {
+        await exitFullscreen(source, false);
+      } else {
+        const target = document.documentElement;
+        const request = target.requestFullscreen || target.webkitRequestFullscreen;
+        await request.call(target);
+      }
+    } catch (error) {
+      fullscreenDiagnostics.errors += 1;
+      fullscreenDiagnostics.lastError = error && error.name ? error.name : "fullscreen-request-error";
+      syncFullscreenButton();
+    }
+  }
+  function handleFullscreenChange(){
+    const active = !!fullscreenElement();
+    fullscreenDiagnostics.changes += 1;
+    fullscreenDiagnostics.lastAction = active ? "entered" : "exited";
+    recordUiAction(active ? "fullscreen:entered" : "fullscreen:exited");
+    syncFullscreenButton();
+  }
 
   function ensureAudio(){
     if (audioCtx) return audioCtx;
@@ -548,38 +642,68 @@
     }
   }
 
-  els.start.addEventListener("click", startRun);
+  els.start.addEventListener("click", () => {
+    recordUiAction("button:start");
+    startRun();
+  });
   els.sound.addEventListener("click", () => {
+    recordUiAction("button:sound");
     soundEnabled = !soundEnabled;
     saveSoundPref(soundEnabled);
     updateSoundButton();
     if (soundEnabled) playStart();
   });
-  els.help.addEventListener("click", showHelp);
-  els.helpClose.addEventListener("click", closeHelp);
-  els.helpOverlay.addEventListener("click", (event) => { if (event.target === els.helpOverlay) closeHelp(); });
+  els.fullscreen.addEventListener("click", (event) => {
+    event.preventDefault();
+    toggleFullscreen("button");
+  });
+  els.help.addEventListener("click", () => {
+    recordUiAction("button:help");
+    showHelp();
+  });
+  els.helpClose.addEventListener("click", () => {
+    recordUiAction("button:help-close");
+    closeHelp();
+  });
+  els.helpOverlay.addEventListener("click", (event) => {
+    if (event.target === els.helpOverlay) {
+      recordUiAction("overlay:help-close");
+      closeHelp();
+    }
+  });
   els.laneButtons.forEach((button, lane) => {
     button.addEventListener("pointerdown", (event) => {
       event.preventDefault();
+      recordUiAction(`pointer:lane-${laneKeys[lane]}`);
       hitLane(lane);
       canvas.focus({ preventScroll: true });
     });
   });
   document.addEventListener("keydown", (event) => {
+    const helpWasOpen = !els.helpOverlay.hidden;
     handleHelpTrap(event);
-    if (!els.helpOverlay.hidden) return;
+    if (helpWasOpen || !els.helpOverlay.hidden) return;
     const key = event.key.toLowerCase();
     if (laneKeys.includes(key)) {
       event.preventDefault();
+      recordUiAction(`keyboard:lane-${key}`);
       hitLane(laneKeys.indexOf(key));
       canvas.focus({ preventScroll: true });
       return;
     }
+    if (key === "escape" && fullscreenElement()) {
+      event.preventDefault();
+      exitFullscreen("escape");
+      return;
+    }
     if (key === " " || key === "enter") {
       event.preventDefault();
+      recordUiAction(`keyboard:${key === " " ? "space" : "enter"}`);
       startRun();
     }
   });
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 
   window.render_game_to_text = function(){
     const visible = visibleNotes().slice(0, 8).map((note) => ({
@@ -610,6 +734,21 @@
       judgement: state.time < state.judgementUntil ? state.judgement : "",
       message: state.message,
       soundEnabled,
+      lastUiAction,
+      fullscreen: {
+        available: fullscreenDiagnostics.available,
+        active: !!fullscreenElement(),
+        element: fullscreenElementName(),
+        requests: fullscreenDiagnostics.requests,
+        changes: fullscreenDiagnostics.changes,
+        errors: fullscreenDiagnostics.errors,
+        lastError: fullscreenDiagnostics.lastError,
+        lastAction: fullscreenDiagnostics.lastAction,
+        buttonPressed: els.fullscreen ? els.fullscreen.getAttribute("aria-pressed") === "true" : false,
+        label: els.fullscreen ? els.fullscreen.textContent : null,
+        ariaLabel: els.fullscreen ? els.fullscreen.getAttribute("aria-label") : null,
+        title: els.fullscreen ? els.fullscreen.title : null
+      },
       feedback: {
         hitActive: state.now - feedback.lastHitAt < 320,
         missActive: state.now - feedback.lastMissAt < 420,
@@ -629,6 +768,7 @@
   };
 
   updateSoundButton();
+  syncFullscreenButton();
   render();
   requestAnimationFrame(frame);
 })();

@@ -171,6 +171,7 @@
   </div>
   <div class="controls">
     <button class="btn primary" type="button" id="startBtn">Start</button>
+    <button class="btn" type="button" id="fullscreenBtn" aria-pressed="false" title="Toggle fullscreen">⛶ Fullscreen</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">🔊 Sound</button>
     <button class="btn" type="button" id="helpBtn">❓ Help</button>
   </div>
@@ -185,6 +186,7 @@
       <li>Sound is part of the game — each pad has its own tone.</li>
       <li>Get one step wrong and the run ends.</li>
       <li>Keyboard: <kbd>Tab</kbd> to the pads, then <kbd>Enter</kbd>/<kbd>Space</kbd>. Or <kbd>1</kbd>-<kbd>4</kbd> for direct pad selection.</li>
+      <li>Press <kbd>F</kbd> for fullscreen when the board is focused.</li>
       <li>Press <kbd>Esc</kbd> to close this dialog.</li>
     </ul>
     <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
@@ -225,6 +227,7 @@
     grid:    document.getElementById('grid'),
     pads:    Array.from(document.querySelectorAll('.pad')),
     start:   document.getElementById('startBtn'),
+    fullscreen: document.getElementById('fullscreenBtn'),
     sound:   document.getElementById('soundBtn'),
     help:    document.getElementById('helpBtn'),
     helpOverlay: document.getElementById('helpOverlay'),
@@ -252,6 +255,10 @@
     lastCorrectAt: 0,
     lastWrongAt: 0,
     lastCommand: 'none',
+    lastStatus: '',
+    lastInput: 'none',
+    lastFeedback: 'idle',
+    fullscreen: false,
     startCount: 0,
     playbackCount: 0,
     correctCount: 0,
@@ -301,7 +308,12 @@
     els.length.textContent = String(state.sequence.length);
     els.best.textContent = state.bestRound ? String(state.bestRound) : '—';
   }
-  function setStatus(text){ els.status.textContent = text; }
+  function setStatus(text, feedback = 'status'){
+    state.lastStatus = text;
+    state.lastFeedback = feedback;
+    els.status.textContent = text;
+  }
+  function setLastInput(input){ state.lastInput = input || 'unknown'; }
   function setPadActive(idx, active){
     const pad = els.pads[idx];
     if (!pad) return;
@@ -315,10 +327,12 @@
   }
   function startRun(command){
     if (!canStartFromPhase()) return false;
+    const feedback = /restart|play-again/.test(command) ? 'restart' : 'start';
     newRun();
     state.lastCommand = command;
+    setLastInput(command);
     state.startCount += 1;
-    startRound();
+    startRound(feedback);
     return true;
   }
 
@@ -328,18 +342,19 @@
     state.playerIndex = 0;
     state.round = 0;
     state.playbackQueue = [];
-    setStatus('Tap a pad or press Start to begin.');
+    setStatus('Ready. Tap a pad or press Start to begin.', 'ready');
     setPadsDisabled(false);
     els.pads.forEach((_, i) => setPadActive(i, false));
     closeOverlay(els.goOverlay);
     updateHud();
   }
 
-  function startRound(){
+  function startRound(launchFeedback = 'watch'){
     state.round += 1;
     state.sequence.push(Math.floor(Math.random() * 4));
     state.playerIndex = 0;
-    setStatus('Watch the sequence…');
+    const lead = launchFeedback === 'restart' ? 'Restarting. ' : launchFeedback === 'start' ? 'Starting. ' : '';
+    setStatus(lead + 'Watch the sequence.', launchFeedback);
     queuePlayback();
     updateHud();
   }
@@ -378,14 +393,15 @@
   function beginMimic(){
     state.phase = 'mimic';
     state.playerIndex = 0;
-    setStatus('Now repeat the sequence.');
+    setStatus('Repeat the sequence now.', 'repeat');
     setPadsDisabled(false);
   }
 
-  function onPadActivate(idx){
+  function onPadActivate(idx, input){
+    setLastInput(input || ('pad-' + COLORS[idx]));
     if (state.phase === 'idle'){
       // First tap also starts the run — and counts as round 1's first input.
-      startRound();
+      startRound('start');
       return;
     }
     if (state.phase !== 'mimic') return;
@@ -399,9 +415,12 @@
       state.correctCount += 1;
       if (state.playerIndex >= state.sequence.length){
         // Round complete — schedule next round.
-        setStatus('Nice! Get ready…');
+        setStatus('Level complete. Get ready.', 'level-complete');
         setPadsDisabled(true);
         setTimeout(() => { if (state.phase === 'mimic') startRound(); }, 600);
+      } else {
+        const left = state.sequence.length - state.playerIndex;
+        setStatus('Correct. ' + left + ' ' + (left === 1 ? 'step' : 'steps') + ' left.', 'correct');
       }
     } else {
       state.lastWrongAt = state.now;
@@ -428,7 +447,7 @@
     const noteParts = ['Reached round ' + state.round + ' (' + state.sequence.length + ' steps).'];
     if (beat && state.round > 1) noteParts.push('New best!');
     els.goNote.textContent = noteParts.join(' ');
-    setStatus(playerStopped ? 'Stopped.' : 'Game over — wrong pad.');
+    setStatus(playerStopped ? 'Stopped.' : 'Wrong pad. Game over.', playerStopped ? 'stopped' : 'wrong');
     if (!playerStopped) playWrong();
     if (beat && state.round >= 3) playWin();
     openOverlay(els.goOverlay, els.goPlayAgain);
@@ -458,6 +477,44 @@
     if (isTextInputTarget(e.target) || isTextInputTarget(document.activeElement)) return false;
     return !isNativeShortcutTarget(e.target);
   }
+  function canUseFullscreenShortcut(e){
+    if (!e.key || e.key.toLowerCase() !== 'f' || e.repeat || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return false;
+    if (hasActiveDialogOrOverlay()) return false;
+    if (isTextInputTarget(e.target) || isTextInputTarget(document.activeElement)) return false;
+    return !isNativeShortcutTarget(e.target);
+  }
+  function updateFullscreenButton(){
+    state.fullscreen = !!document.fullscreenElement;
+    els.fullscreen.setAttribute('aria-pressed', state.fullscreen ? 'true' : 'false');
+    els.fullscreen.textContent = state.fullscreen ? '↙ Exit' : '⛶ Fullscreen';
+  }
+  async function toggleFullscreen(input){
+    setLastInput(input);
+    setStatus('Fullscreen requested.', 'fullscreen');
+    if (!document.fullscreenEnabled || !document.documentElement.requestFullscreen){
+      updateFullscreenButton();
+      setStatus('Fullscreen is not available here.', 'fullscreen');
+      return false;
+    }
+    try {
+      if (document.fullscreenElement){
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+      updateFullscreenButton();
+      setStatus(state.fullscreen ? 'Fullscreen on.' : 'Fullscreen off.', 'fullscreen');
+      return true;
+    } catch {
+      updateFullscreenButton();
+      setStatus('Fullscreen request was blocked.', 'fullscreen');
+      return false;
+    }
+  }
+  document.addEventListener('fullscreenchange', () => {
+    updateFullscreenButton();
+    setStatus(state.fullscreen ? 'Fullscreen on.' : 'Fullscreen off.', 'fullscreen');
+  });
   document.addEventListener('keydown',(e)=>{
     if(activeOverlay){
       if(e.key==='Escape'){ e.preventDefault(); closeOverlay(activeOverlay); return; }
@@ -469,6 +526,11 @@
       }
       return;
     }
+    if (canUseFullscreenShortcut(e)){
+      e.preventDefault();
+      toggleFullscreen('keyboard-f-fullscreen');
+      return;
+    }
     if (canUseStartShortcut(e)){
       const action = state.phase === 'over' ? 'restart' : 'start';
       const key = e.key === 'Enter' ? 'enter' : 'space';
@@ -478,13 +540,14 @@
     // Number key shortcuts 1-4 for pads
     if (state.phase === 'mimic'){
       const n = parseInt(e.key, 10);
-      if (n >= 1 && n <= 4){ e.preventDefault(); onPadActivate(n - 1); }
+      if (n >= 1 && n <= 4){ e.preventDefault(); onPadActivate(n - 1, 'keyboard-' + n); }
     }
   });
 
   // ----- Wire controls -----
-  els.pads.forEach((pad, idx) => pad.addEventListener('click', () => onPadActivate(idx)));
+  els.pads.forEach((pad, idx) => pad.addEventListener('click', () => onPadActivate(idx, 'pad-' + COLORS[idx])));
   els.start.addEventListener('click', () => { startRun(state.phase === 'over' ? 'button-restart' : 'button-start'); });
+  els.fullscreen.addEventListener('click', () => { toggleFullscreen('button-fullscreen'); });
   els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
   els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
   els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
@@ -521,6 +584,10 @@
       sequence: state.sequence.slice(),
       playerIndex: state.playerIndex,
       bestRound: state.bestRound,
+      fullscreen: state.fullscreen,
+      lastStatus: state.lastStatus,
+      lastInput: state.lastInput,
+      lastFeedback: state.lastFeedback,
       soundEnabled,
       lastCommand: state.lastCommand,
       startCount: state.startCount,
@@ -548,6 +615,7 @@
   state.bestRound = initialBest ? initialBest.round : null;
   soundEnabled = loadSoundPref();
   updateSoundButton();
+  updateFullscreenButton();
   newRun();
 })();
 </script>

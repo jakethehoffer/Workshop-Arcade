@@ -13,7 +13,7 @@
 // byte-for-byte so npm run test:og-images can compare committed
 // output against a fresh generation.
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -196,6 +196,15 @@ export function buildOgSvg(game) {
 
 async function writeOgImages(manifest) {
   await mkdir(OUTPUT_DIR, { recursive: true });
+  const expectedNames = new Set(manifest
+    .map((game) => (game.slug && typeof game.slug === 'string' ? `${game.slug}.svg` : null))
+    .filter(Boolean));
+  for (const entry of await readdir(OUTPUT_DIR, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith('.svg') && !expectedNames.has(entry.name)) {
+      await unlink(join(OUTPUT_DIR, entry.name));
+      console.log(`Removed orphan OG image covers/og/${entry.name}.`);
+    }
+  }
   let written = 0;
   for (const game of manifest) {
     if (!game.slug || typeof game.slug !== 'string') {

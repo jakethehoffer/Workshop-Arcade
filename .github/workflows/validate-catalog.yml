@@ -35,6 +35,9 @@ jobs:
       - name: Run generated-surface integration check
         run: npm run test:generated-surfaces
 
+      - name: Run validator fixture negative checks
+        run: npm run test:validator-fixtures
+
       - name: Run manifest schema check
         run: npm run test:manifest-schema
 
@@ -139,6 +142,12 @@ jobs:
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
+
+      - name: Run runtime storage fallback probe
+        run: npm run test:runtime-storage
+
+      - name: Run PWA runtime probe
+        run: npm run test:pwa-runtime
 
       - name: Run game smoke tests
         run: npm run test:games

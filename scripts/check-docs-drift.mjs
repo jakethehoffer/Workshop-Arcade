@@ -68,8 +68,9 @@ for (const file of generatorSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
+const fastGateExclusions = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
-  .filter((name) => name.startsWith('test:') && !['test:games', 'test:all'].includes(name))
+  .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();
 const fastGateCount = fastGateScripts.length;
 const readmeText = readText('README.md');

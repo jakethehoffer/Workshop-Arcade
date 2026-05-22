@@ -278,6 +278,49 @@ async function checkCardTagFiltering(page) {
   await assertTagFilterState(page, keyboardCategory, "catalog");
 }
 
+async function checkDiscoveryActions(page) {
+  const discovery = page.locator("#catalogDiscovery");
+  if (!(await discovery.count())) {
+    addFailure("catalog", "missing catalog discovery actions");
+    return;
+  }
+
+  const newest = page.locator('#catalogDiscovery [data-view="new"]');
+  const popular = page.locator('#catalogDiscovery [data-view="pop"]');
+  if (!(await newest.count()) || !(await popular.count())) {
+    addFailure("catalog", "catalog discovery is missing Newest or Popular quick view");
+    return;
+  }
+
+  await popular.click();
+  await page.waitForTimeout(100);
+  if (await page.locator("#sort").inputValue() !== "pop") {
+    addFailure("catalog", "Popular discovery action did not sync the sort dropdown");
+  }
+
+  await newest.click();
+  await page.waitForTimeout(100);
+  if (await page.locator("#sort").inputValue() !== "new") {
+    addFailure("catalog", "Newest discovery action did not restore newest sort");
+  }
+}
+
+async function checkCatalogMobileContainment(browser, baseUrl) {
+  setPhase("catalog mobile", "open narrow catalog", { viewport: "mobile" });
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844, isMobile: true, hasTouch: true }
+  });
+  observePage(page, baseUrl, "catalog mobile");
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
+
+  const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
+  if (overflow > 2) {
+    addFailure("catalog mobile", `horizontal overflow ${overflow}px`);
+  }
+  await page.close();
+}
+
 async function checkCatalog(browser, baseUrl) {
   setPhase("catalog", "open catalog");
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -296,6 +339,8 @@ async function checkCatalog(browser, baseUrl) {
   await checkFilterChips(page);
   setPhase("catalog", "check card tag filtering");
   await checkCardTagFiltering(page);
+  setPhase("catalog", "check discovery actions");
+  await checkDiscoveryActions(page);
 
   const sandbox = await page.locator("#playerFrame").getAttribute("sandbox");
   if (sandbox !== "allow-scripts allow-forms allow-pointer-lock") {
@@ -359,6 +404,7 @@ async function checkCatalog(browser, baseUrl) {
     await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   }
   await page.close();
+  await checkCatalogMobileContainment(browser, baseUrl);
 }
 
 async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {

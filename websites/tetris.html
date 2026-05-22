@@ -105,6 +105,10 @@
     font-size:12px; letter-spacing:0.04em;
   }
   .keynote { display:none; }
+  .sr-only {
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
 
   .btns { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; width:min(100vw - 16px, 520px); justify-content:center; z-index:45; }
   .btn {
@@ -173,6 +177,7 @@
 </head>
 <body>
   <canvas id="game" tabindex="0" aria-label="Block Drop game canvas"></canvas>
+  <div id="liveStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Press Space to start Block Drop.</div>
 
   <div class="brand">
     <span class="eyebrow">Workshop Arcade</span>
@@ -403,7 +408,7 @@
     if (helpEl) helpEl.classList.add('show');
     updateStartPanel();
     if (helpPlay) helpPlay.textContent = (mode === 'pause') ? 'Resume' : 'Play';
-    if (mode === 'pause' && statusEl) statusEl.textContent = 'Paused - Press Space/Enter or Play';
+    if (mode === 'pause') announceStatus('pause', 'Paused - Press Space/Enter or Play', { tactile: 'pause' });
     setTimeout(() => focusHelp(), 0);
   }
 
@@ -508,6 +513,7 @@
   const levelEl = document.getElementById('level');
   const bestEl  = document.getElementById('best');
   const statusEl= document.getElementById('status');
+  const liveStatusEl = document.getElementById('liveStatus');
 
   const HS_KEY = 'blockdrop_best';
   let best = 0; try { best = Number(localStorage.getItem(HS_KEY)||0); } catch(_) {}
@@ -622,12 +628,101 @@
     lastClearRows: [],
     lastClearCount: 0,
     lastClearLabel: null,
+    lastStatus: { type: 'ready', text: 'Press Space to Start' },
+    lastStatusAt: performance.now(),
+    lastInput: null,
+    lastInputAt: null,
+    lastFeedback: null,
+    lastFeedbackAt: null,
+    statusCount: 0,
+    inputCount: 0,
+    feedbackCount: 0,
+    recentStatus: [],
     counters: { move: 0, rotate: 0, drop: 0, lock: 0, clear: 0, topOut: 0 },
   };
 
   function clamp(value, min, max){ return Math.max(min, Math.min(max, value)); }
   function round(value, places = 2){ const scale = Math.pow(10, places); return Math.round(value * scale) / scale; }
   function feedbackAge(value){ return value === null ? null : round(value / 1000); }
+
+  const TACTILE_PATTERNS = {
+    spawn: 8,
+    move: 6,
+    rotate: 10,
+    drop: [18],
+    hold: 12,
+    'invalid-hold': [28, 28, 28],
+    'line-clear': [18, 24, 18],
+    'level-up': [24, 20, 24],
+    pause: 12,
+    resume: 10,
+    'game-over': [42, 24, 42],
+    restart: [14],
+    invalid: [24, 18, 24],
+    default: 8
+  };
+  const liveStatusQueue = [];
+  let liveStatusTimer = null;
+
+  function statusEntryWithAge(entry, at, now){
+    if(!entry) return null;
+    return { ...entry, age: feedbackAge(now - at) };
+  }
+
+  function queueLiveStatus(message){
+    if(!liveStatusEl) return;
+    liveStatusQueue.push(message);
+    if(liveStatusQueue.length > 8) liveStatusQueue.splice(0, liveStatusQueue.length - 8);
+    if(liveStatusTimer) return;
+    const pump = ()=>{
+      const next = liveStatusQueue.shift();
+      if(!next){ liveStatusTimer = null; return; }
+      liveStatusEl.textContent = '';
+      liveStatusTimer = setTimeout(()=>{
+        liveStatusEl.textContent = next;
+        liveStatusTimer = liveStatusQueue.length ? setTimeout(pump, 150) : null;
+      }, 20);
+    };
+    pump();
+  }
+
+  function tactilePulse(type){
+    const now = performance.now();
+    const pattern = TACTILE_PATTERNS[type] || TACTILE_PATTERNS.default;
+    const normalized = Array.isArray(pattern) ? pattern.slice() : [pattern];
+    let fired = false;
+    let supported = false;
+    try{
+      supported = !!(navigator && typeof navigator.vibrate === 'function');
+      const recentlyMoved = type === 'move' && feedback.lastFeedback && feedback.lastFeedback.type === 'move' && feedback.lastFeedbackAt !== null && now - feedback.lastFeedbackAt < 80;
+      if(supported && !recentlyMoved && hasAudioGesture()){
+        fired = !!navigator.vibrate(pattern);
+      }
+    }catch(_){}
+    feedback.lastFeedback = { type, channel: 'tactile', pattern: normalized, supported, fired };
+    feedback.lastFeedbackAt = now;
+    feedback.feedbackCount++;
+  }
+
+  function recordInput(type, source){
+    feedback.lastInput = { type, source };
+    feedback.lastInputAt = performance.now();
+    feedback.inputCount++;
+  }
+
+  function announceStatus(type, message, options = {}){
+    const text = String(message || '');
+    const now = performance.now();
+    const entry = { type, text };
+    feedback.lastStatus = entry;
+    feedback.lastStatusAt = now;
+    feedback.statusCount++;
+    feedback.recentStatus.push({ ...entry, at: now });
+    if(feedback.recentStatus.length > 8) feedback.recentStatus.splice(0, feedback.recentStatus.length - 8);
+    if(statusEl) statusEl.textContent = text;
+    queueLiveStatus(text);
+    if(options.tactile !== false) tactilePulse(options.tactile || type);
+  }
 
   function pushParticle(x, y, color, vx, vy, ttl = 420, size = 0.08){
     feedback.particles.push({ x, y, color, vx, vy, age: 0, ttl, size });
@@ -703,6 +798,7 @@
     feedback.screenFlash = Math.max(feedback.screenFlash, 0.34);
     feedback.screenShake = Math.max(feedback.screenShake, 0.18 + count * 0.08);
     pushPop(W / 2, Math.max(2, Math.min(...rows) - 0.3), label, count >= 4 ? '#facc15' : '#e0f2fe', 1050, count >= 4 ? 0.9 : 0.72);
+    announceStatus('line-clear', label + ' Cleared ' + count + ' line' + (count === 1 ? '' : 's') + '.', { tactile: 'line-clear' });
   }
 
   function recordLevelUp(nextLevel){
@@ -710,6 +806,7 @@
     pushPop(W / 2, 3.1, 'LEVEL ' + nextLevel, '#f9a857', 1000, 0.82);
     feedback.screenFlash = Math.max(feedback.screenFlash, 0.24);
     SFX.levelUp();
+    announceStatus('level-up', 'Level up to ' + nextLevel + '.', { tactile: 'level-up' });
   }
 
   function recordTopOut(piece){
@@ -751,7 +848,12 @@
 
   function spawnWithType(type){
     const piece = { x:3, y:-2, type, rot:0, shape: PIECES[type][0] };
-    if(collide(piece.x,piece.y,piece.shape)) { recordTopOut(pieceSnapshot(piece)); gameOver=true; running=false; statusEl.textContent='Game Over - Click Reset'; saveBest(); stopMusic(); updateStartPanel(); return null; }
+    if(collide(piece.x,piece.y,piece.shape)) {
+      recordTopOut(pieceSnapshot(piece));
+      gameOver=true; running=false;
+      announceStatus('game-over', 'Game Over - Click Reset', { tactile: 'game-over' });
+      saveBest(); stopMusic(); updateStartPanel(); return null;
+    }
     return piece;
   }
   function lock(){
@@ -760,7 +862,9 @@
       merge();
       recordLock(lockedPiece);
       recordTopOut(lockedPiece);
-      gameOver=true; running=false; saveBest(); stopMusic(); return;
+      gameOver=true; running=false;
+      announceStatus('game-over', 'Game Over - Click Reset', { tactile: 'game-over' });
+      saveBest(); stopMusic(); return;
     }
     const tspin = isTSpin();
     merge();
@@ -811,10 +915,15 @@
     spawn();
   }
 
-  function spawn(){
+  function spawn(options = {}){
     cur = spawnWithType(nextType());
     if(!cur) return;
     rotatedSinceMove = false; holdUsed = false; clearLock(); updateGhost(); drawHold(); drawNext();
+    const statusType = options.statusType || 'spawn';
+    const message = statusType === 'restart'
+      ? 'Restarted. ' + cur.type + ' piece spawned.'
+      : cur.type + ' piece spawned.';
+    announceStatus(statusType, message, { tactile: statusType === 'restart' ? 'restart' : 'spawn' });
   }
 
   function drawMini(ctx2, canvas2, type){
@@ -831,7 +940,11 @@
 
   function doHold(){
     if(!running||gameOver||!cur) return;
-    if(holdUsed){ SFX.invalidHold(); return; }
+    if(holdUsed){
+      SFX.invalidHold();
+      announceStatus('invalid-hold', 'Hold already used for this piece.', { tactile: 'invalid-hold' });
+      return;
+    }
     const prev = holdType;
     holdType = cur.type;
     drawHold();
@@ -840,6 +953,7 @@
     else { cur = spawnWithType(prev); }
     if(!cur) return;
     holdUsed = true; rotatedSinceMove = false; clearLock(); updateGhost(); drawNext();
+    announceStatus('hold', 'Held ' + holdType + '. ' + cur.type + ' piece active.', { tactile: 'hold' });
   }
 
   function collide(px,py,sh){
@@ -899,9 +1013,11 @@
         updateGhost();
         resetLockOnMove();
         recordRotate(cur);
+        announceStatus('rotate', 'Rotated ' + (dir > 0 ? 'clockwise.' : 'counterclockwise.'), { tactile: 'rotate' });
         return true;
       }
     }
+    announceStatus('rotate', 'Rotation blocked.', { tactile: 'invalid' });
     return false;
   }
 
@@ -919,6 +1035,7 @@
       updateGhost();
     }
     recordHardDrop(cur, fromY, cur.y, dropped);
+    announceStatus('drop', 'Hard drop ' + dropped + ' row' + (dropped === 1 ? '' : 's') + '.', { tactile: 'drop' });
     lock();
   }
 
@@ -935,7 +1052,11 @@
     return false;
   }
 
-  function softDrop(){ if(running) stepDown(true); }
+  function softDrop(){
+    if(!running) return;
+    const moved = stepDown(true);
+    announceStatus('drop', moved ? 'Soft drop.' : 'Soft drop blocked.', { tactile: moved ? 'drop' : 'invalid' });
+  }
   function move(dx){
     if(!cur) return;
     if(!collide(cur.x+dx,cur.y,cur.shape)){
@@ -945,6 +1066,9 @@
       updateGhost();
       resetLockOnMove();
       recordMove();
+      announceStatus('move', 'Moved ' + (dx < 0 ? 'left.' : 'right.'), { tactile: 'move' });
+    } else {
+      announceStatus('move', 'Move ' + (dx < 0 ? 'left' : 'right') + ' blocked.', { tactile: 'invalid' });
     }
   }
 
@@ -1205,8 +1329,9 @@
   let score=0, lines=0, level=1;
 
   function newGame(){
+    const wasRestart = running || gameOver || score > 0 || lines > 0 || occupiedCells().length > 0 || !!cur;
     for(let y=0;y<H;y++) for(let x=0;x<W;x++) board[y][x]=0;
-    score=0; lines=0; level=1; fallDelay=speedForLevel(1); dropAcc=0; running=true; gameOver=false; statusEl.textContent='Press P to Pause';
+    score=0; lines=0; level=1; fallDelay=speedForLevel(1); dropAcc=0; running=true; gameOver=false;
     combo = -1; b2b = false; clearLock(); clearMoveState();
     feedback.particles = []; feedback.pops = []; feedback.rowFlashes = []; feedback.dropTrails = [];
     feedback.screenFlash = 0; feedback.screenShake = 0; feedback.lockWarning = 0;
@@ -1214,7 +1339,7 @@
     feedback.lastClearRows = []; feedback.lastClearCount = 0; feedback.lastClearLabel = null;
     feedback.counters.move = 0; feedback.counters.rotate = 0; feedback.counters.drop = 0; feedback.counters.lock = 0; feedback.counters.clear = 0; feedback.counters.topOut = 0;
     refillBag(); holdType=null; holdUsed=false; drawHold(); drawNext();
-    spawn(); updateHUD();
+    spawn({ statusType: wasRestart ? 'restart' : 'spawn' }); updateHUD();
     updateStartPanel();
     ensureAudio(); if(!muted) startMusic(); else stopMusic();
   }
@@ -1232,7 +1357,7 @@
       if (!helpUp){
         clearMoveState();
         running = true;
-        if (statusEl) statusEl.textContent = 'Press P to Pause';
+        announceStatus('resume', 'Resumed. Press P to Pause', { tactile: 'resume' });
         updateStartPanel();
         ensureAudio(); if (!muted) startMusic();
         SFX.resume();
@@ -1276,13 +1401,17 @@
   function onKey(e){
     if (e.code === 'Key' + SOUND_SHORTCUT){
       e.preventDefault();
+      recordInput('audio', 'keyboard:' + SOUND_SHORTCUT);
       setMuted(!muted);
       return;
     }
     if (e.code === 'Key' + FULLSCREEN_SHORTCUT && !e.ctrlKey && !e.metaKey && !e.altKey){
       if (isFullscreenShortcutBlocked(e.target || document.activeElement)) return;
       e.preventDefault();
-      if (!e.repeat) toggleFullscreen();
+      if (!e.repeat) {
+        recordInput('fullscreen', 'keyboard:' + FULLSCREEN_SHORTCUT);
+        toggleFullscreen();
+      }
       return;
     }
     // HELP: while overlay is up, only Space/Enter (and P if paused) dismiss it
@@ -1308,9 +1437,11 @@
         (helpMode === 'pause' && e.code === 'KeyP') // resume with P
       ){
         e.preventDefault();
+        recordInput(helpMode === 'pause' ? 'resume' : 'start', 'keyboard:' + e.code);
         dismissHelp(helpMode === 'pause' ? 'resume' : 'start');
       } else if (e.code === 'Escape' && helpMode === 'start') {
         e.preventDefault();
+        recordInput('help-close', 'keyboard:Escape');
         hideHelp();
       }
       return;
@@ -1323,6 +1454,7 @@
       e.preventDefault();
       if (e.repeat) return;
       if (running){
+        recordInput(isLeft ? 'move-left' : 'move-right', 'keyboard:' + e.code);
         if (isLeft) leftHeld = true;
         if (isRight) rightHeld = true;
         updateMoveDir();
@@ -1330,13 +1462,22 @@
       return;
     }
 
-    if(e.code==='Space'){ if(!running||gameOver){ newGame(); } else { hardDrop(); } }
-    else if(e.code==='ArrowDown'|| e.code==='KeyS'){ e.preventDefault(); if(running) softDrop(); }
-    else if(e.code==='ArrowUp'  || e.code==='KeyW'){ e.preventDefault(); if(running) rotate(1); }
-    else if(e.code==='KeyZ'){ e.preventDefault(); if(running) rotate(-1); }
-    else if(e.code==='KeyX'){ e.preventDefault(); if(running) rotate(1); }
-    else if(e.code==='KeyC' || e.code==='ShiftLeft' || e.code==='ShiftRight'){ e.preventDefault(); if(running) doHold(); }
-    else if(e.code==='KeyP'){ togglePause(); }
+    if(e.code==='Space'){
+      e.preventDefault();
+      if(!running||gameOver){
+        recordInput(gameOver ? 'restart' : 'start', 'keyboard:Space');
+        newGame();
+      } else {
+        recordInput('drop', 'keyboard:Space');
+        hardDrop();
+      }
+    }
+    else if(e.code==='ArrowDown'|| e.code==='KeyS'){ e.preventDefault(); if(running){ recordInput('drop', 'keyboard:' + e.code); softDrop(); } }
+    else if(e.code==='ArrowUp'  || e.code==='KeyW'){ e.preventDefault(); if(running){ recordInput('rotate', 'keyboard:' + e.code); rotate(1); } }
+    else if(e.code==='KeyZ'){ e.preventDefault(); if(running){ recordInput('rotate', 'keyboard:KeyZ'); rotate(-1); } }
+    else if(e.code==='KeyX'){ e.preventDefault(); if(running){ recordInput('rotate', 'keyboard:KeyX'); rotate(1); } }
+    else if(e.code==='KeyC' || e.code==='ShiftLeft' || e.code==='ShiftRight'){ e.preventDefault(); if(running){ recordInput('hold', 'keyboard:' + e.code); doHold(); } }
+    else if(e.code==='KeyP'){ recordInput(running ? 'pause' : 'resume', 'keyboard:KeyP'); togglePause(); }
   }
 
   function onKeyUp(e){
@@ -1352,10 +1493,13 @@
   window.addEventListener('keydown', onKey, {passive:false});
   window.addEventListener('keyup', onKeyUp, {passive:false});
 
-  function bindBtn(id, fn){
+  function bindBtn(id, fn, inputType){
     const el=document.getElementById(id);
     if(!el) return;
-    el.addEventListener('click',()=>{ if(gameOver){ newGame(); } else if(!running){ togglePause(); fn(); } else { fn(); } });
+    el.addEventListener('click',()=>{
+      if(inputType) recordInput(inputType, 'button:' + id);
+      if(gameOver){ newGame(); } else if(!running){ togglePause(); fn(); } else { fn(); }
+    });
   }
 
   function bindHoldBtn(id, dir){
@@ -1363,9 +1507,11 @@
     if(!el) return;
     const setHeld = (isDown)=>{
       if(!running || gameOver){
+        if(isDown) recordInput(gameOver ? 'restart' : 'start', 'button:' + id);
         if(isDown) newGame();
         return;
       }
+      if(isDown) recordInput('move-' + dir, 'button:' + id);
       if(dir === 'left') leftHeld = isDown;
       if(dir === 'right') rightHeld = isDown;
       updateMoveDir();
@@ -1383,16 +1529,17 @@
 
   bindHoldBtn('leftBtn', 'left');
   bindHoldBtn('rightBtn', 'right');
-  bindBtn('rotLBtn', ()=>rotate(-1));
-  bindBtn('rotRBtn', ()=>rotate(1));
-  bindBtn('hardBtn', ()=>hardDrop());
+  bindBtn('rotLBtn', ()=>rotate(-1), 'rotate');
+  bindBtn('rotRBtn', ()=>rotate(1), 'rotate');
+  bindBtn('hardBtn', ()=>hardDrop(), 'drop');
 
   const resetBtn = document.getElementById('resetBtn');
-  if (resetBtn) resetBtn.addEventListener('click', () => newGame());
-  if (playBtn) playBtn.addEventListener('click', () => newGame());
-  if (openHelpBtn) openHelpBtn.addEventListener('click', () => showHelp('start'));
+  if (resetBtn) resetBtn.addEventListener('click', () => { recordInput('restart', 'button:resetBtn'); newGame(); });
+  if (playBtn) playBtn.addEventListener('click', () => { recordInput(gameOver ? 'restart' : 'start', 'button:playBtn'); newGame(); });
+  if (openHelpBtn) openHelpBtn.addEventListener('click', () => { recordInput('help', 'button:openHelpBtn'); showHelp('start'); });
   if (fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => {
     e.preventDefault();
+    recordInput('fullscreen', 'button:fullscreenBtn');
     toggleFullscreen();
   });
 
@@ -1412,7 +1559,7 @@
     muted = !!m; writeSoundPreference(!muted); updateSoundBtn();
     if(muted){ stopMusic(); } else if(running && !gameOver){ ensureAudio(); startMusic(); }
   }
-  if (soundBtn) soundBtn.addEventListener('click', ()=> setMuted(!muted));
+  if (soundBtn) soundBtn.addEventListener('click', ()=> { recordInput('audio', 'button:soundBtn'); setMuted(!muted); });
 
   // 📖 HELP wiring
   function hideHelp(){
@@ -1429,16 +1576,22 @@
     } else if (action === 'resume'){
       clearMoveState();
       running = true;
-      if (statusEl) statusEl.textContent = 'Press P to Pause';
+      announceStatus('resume', 'Resumed. Press P to Pause', { tactile: 'resume' });
       updateStartPanel();
       ensureAudio(); if (!muted) startMusic();
       SFX.resume();
     }
   }
 
-  if (helpPlay) helpPlay.addEventListener('click', ()=> dismissHelp(helpMode === 'pause' ? 'resume' : 'start'));
-  if (helpMute) helpMute.addEventListener('click', ()=> setMuted(!muted));
-  if (helpEl)   helpEl.addEventListener('click',  ()=> helpMode === 'pause' ? dismissHelp('resume') : hideHelp());
+  if (helpPlay) helpPlay.addEventListener('click', ()=> {
+    recordInput(helpMode === 'pause' ? 'resume' : 'start', 'button:helpPlay');
+    dismissHelp(helpMode === 'pause' ? 'resume' : 'start');
+  });
+  if (helpMute) helpMute.addEventListener('click', ()=> { recordInput('audio', 'button:helpMute'); setMuted(!muted); });
+  if (helpEl)   helpEl.addEventListener('click',  ()=> {
+    recordInput(helpMode === 'pause' ? 'resume' : 'help-close', 'overlay:help');
+    helpMode === 'pause' ? dismissHelp('resume') : hideHelp();
+  });
   if (helpCard) helpCard.addEventListener('click', (e)=> e.stopPropagation());
 
   updateSoundBtn();
@@ -1472,6 +1625,7 @@
   function renderGameToText(){
     const occupied = occupiedCells();
     const lastSoundAge = audioSoundAge();
+    const now = performance.now();
     return JSON.stringify({
       game: 'Block Drop',
       coordinateSystem: 'grid cells, origin top-left, x right, y down',
@@ -1503,6 +1657,14 @@
       combo,
       backToBack: !!b2b,
       feedback: {
+        lastStatus: statusEntryWithAge(feedback.lastStatus, feedback.lastStatusAt, now),
+        lastInput: statusEntryWithAge(feedback.lastInput, feedback.lastInputAt, now),
+        lastFeedback: statusEntryWithAge(feedback.lastFeedback, feedback.lastFeedbackAt, now),
+        statusCount: feedback.statusCount,
+        inputCount: feedback.inputCount,
+        feedbackCount: feedback.feedbackCount,
+        recentStatus: feedback.recentStatus.map((entry)=>({ type: entry.type, text: entry.text, age: feedbackAge(now - entry.at) })),
+        liveStatus: liveStatusEl ? liveStatusEl.textContent : null,
         lastMoveAge: feedbackAge(feedback.lastMoveAge),
         lastRotateAge: feedbackAge(feedback.lastRotateAge),
         lastDropAge: feedbackAge(feedback.lastDropAge),

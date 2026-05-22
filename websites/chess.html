@@ -107,6 +107,10 @@ canvas{
   border-radius:12px;
   border:1px solid rgba(255,255,255,0.08);
 }
+canvas:focus-visible {
+  outline: 3px solid rgba(56,189,248,0.86);
+  outline-offset: 4px;
+}
 
 .side{
   width:min(330px, 28vw);
@@ -369,7 +373,8 @@ canvas{
 <body>
   <div class="wrap">
     <div class="left">
-      <canvas id="board" width="640" height="640" tabindex="0" aria-label="Chess board"></canvas>
+      <canvas id="board" width="640" height="640" tabindex="0" aria-label="Chess board" aria-describedby="boardHelp" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D Enter Space Escape"></canvas>
+      <div class="sr-only" id="boardHelp">Use arrow keys or WASD to move board focus. Press Enter or Space to select a piece or move it. Press Escape to cancel a selection.</div>
       <div class="coords" id="coords"></div>
     </div>
     <aside class="side">
@@ -502,6 +507,7 @@ function announceStatus(message) {
 
 function setStatus(message, options = {}) {
   statusEl.textContent = message;
+  updateBoardAriaLabel();
   if (options.announce) announceStatus(message);
 }
 
@@ -730,6 +736,8 @@ const HL_SELECT  = 'rgba(255, 214, 102, 0.55)';
 const HL_MOVE    = 'rgba(92, 230, 153, 0.55)';
 const HL_CAPTURE = 'rgba(255, 99, 99, 0.55)';
 const HL_CHECK   = getComputedStyle(document.documentElement).getPropertyValue('--hl-check').trim() || 'rgba(255, 72, 72, 0.55)';
+const HL_FOCUS   = 'rgba(56, 189, 248, 0.95)';
+const HL_FOCUS_SHADOW = 'rgba(7, 12, 22, 0.9)';
 
 let flipped = false;           // false = White bottom; true = Black bottom
 let vsComputer = false;
@@ -783,6 +791,14 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 let state = null;
 let stateHistory = [];
 let selected = null;
+const keyboardState = {
+  active: false,
+  focus: null,
+  mode: 'inactive',
+  lastInput: null,
+  lastInputError: null,
+  lastInputAt: null,
+};
 let legalMovesForSelected = [];
 let moveHistory = [];
 
@@ -814,6 +830,7 @@ function newGame(options = {}) {
   state = loadFEN(START_FEN);
   selected = null;
   legalMovesForSelected = [];
+  resetKeyboardFocusForTurn();
   moveHistory = [];
   stateHistory = [];
   movesEl.innerHTML = '';
@@ -866,6 +883,103 @@ function parseAlgebraic(a) {
   const file = a.charCodeAt(0) - 'a'.charCodeAt(0);
   const rank = 8 - parseInt(a[1], 10);
   return {col: file, row: rank};
+}
+
+function describePieceAt(col, row) {
+  if (!state?.board || !isInside(col, row)) return 'empty square';
+  const piece = state.board[row][col];
+  if (!piece) return 'empty square';
+  return `${piece.color === 'w' ? 'white' : 'black'} ${pieceName(piece.type)}`;
+}
+
+function selectedSquareName() {
+  return selected ? toAlgebraic(selected.col, selected.row) : null;
+}
+
+function focusSquareName() {
+  return keyboardState.focus ? toAlgebraic(keyboardState.focus.col, keyboardState.focus.row) : null;
+}
+
+function recordKeyboardInput(input, error = null) {
+  keyboardState.lastInput = input;
+  keyboardState.lastInputError = error;
+  keyboardState.lastInputAt = Date.now();
+}
+
+function setKeyboardMode(mode) {
+  keyboardState.mode = mode;
+}
+
+function preferredFocusForTurn() {
+  if (!state?.board) return { col: 4, row: 6 };
+  if (selected) return { col: selected.col, row: selected.row };
+
+  const preferred = state.turn === 'w' ? parseAlgebraic('e2') : parseAlgebraic('e7');
+  const preferredPiece = state.board[preferred.row]?.[preferred.col];
+  if (preferredPiece && preferredPiece.color === state.turn) return preferred;
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = state.board[row][col];
+      if (piece && piece.color === state.turn && generateLegalMovesForSquare(col, row).length) {
+        return { col, row };
+      }
+    }
+  }
+  return { col: 4, row: state.turn === 'w' ? 6 : 1 };
+}
+
+function ensureKeyboardFocus(preferred = null) {
+  const next = preferred || keyboardState.focus || preferredFocusForTurn();
+  keyboardState.focus = {
+    col: Math.max(0, Math.min(7, next.col)),
+    row: Math.max(0, Math.min(7, next.row)),
+  };
+  return keyboardState.focus;
+}
+
+function resetKeyboardFocusForTurn() {
+  ensureKeyboardFocus(preferredFocusForTurn());
+  setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
+  keyboardState.lastInputError = null;
+  updateBoardAriaLabel();
+}
+
+function updateBoardAriaLabel() {
+  if (!canvas || !keyboardState) return;
+  const focus = focusSquareName();
+  const selectedName = selectedSquareName();
+  const focusText = focus ? `Focus ${focus}, ${describePieceAt(keyboardState.focus.col, keyboardState.focus.row)}.` : 'No focus square.';
+  const selectedText = selectedName ? `Selected ${selectedName}.` : 'No selected square.';
+  const turnText = statusEl?.textContent || (state?.turn === 'b' ? 'Black to move.' : 'White to move.');
+  canvas.setAttribute(
+    'aria-label',
+    `Chess board. ${turnText} ${focusText} ${selectedText} Use arrows or WASD to move focus, Enter or Space to select or move, Escape to cancel.`
+  );
+}
+
+function tactileFeedback(kind) {
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+  try {
+    navigator.vibrate(kind === 'error' ? 35 : 12);
+  } catch (_) {
+    // Ignore unsupported vibration implementations.
+  }
+}
+
+function announceKeyboardFocus(prefix = 'Focus') {
+  const focus = ensureKeyboardFocus();
+  announceStatus(`${prefix} ${toAlgebraic(focus.col, focus.row)}, ${describePieceAt(focus.col, focus.row)}.`);
+}
+
+function reportKeyboardError(message, input = 'keyboard') {
+  recordKeyboardInput(input, message);
+  setKeyboardMode(selected ? 'selection' : 'navigation');
+  announceStatus(message);
+  tactileFeedback('error');
+  updateBoardAriaLabel();
+  draw();
+  return { handled: false, error: message };
 }
 
 
@@ -1170,46 +1284,108 @@ function drawMoveFeedback() {
   ctx.restore();
 }
 
+function drawKeyboardFocus() {
+  if (!keyboardState.focus) return;
+  if (!keyboardState.active && keyboardState.mode === 'inactive') return;
+  const { col, row } = keyboardState.focus;
+  const x = (flipped ? 7 - col : col) * SQ;
+  const y = (flipped ? (7 - row) : row) * SQ;
+  const inset = Math.max(4, SQ * 0.08);
+  const line = Math.max(3, SQ * 0.045);
+  const corner = Math.max(14, SQ * 0.24);
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = line + 3;
+  ctx.strokeStyle = HL_FOCUS_SHADOW;
+  ctx.strokeRect(x + inset, y + inset, SQ - inset * 2, SQ - inset * 2);
+
+  ctx.lineWidth = line;
+  ctx.strokeStyle = HL_FOCUS;
+  ctx.strokeRect(x + inset, y + inset, SQ - inset * 2, SQ - inset * 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + inset, y + inset + corner);
+  ctx.lineTo(x + inset, y + inset);
+  ctx.lineTo(x + inset + corner, y + inset);
+  ctx.moveTo(x + SQ - inset - corner, y + inset);
+  ctx.lineTo(x + SQ - inset, y + inset);
+  ctx.lineTo(x + SQ - inset, y + inset + corner);
+  ctx.moveTo(x + SQ - inset, y + SQ - inset - corner);
+  ctx.lineTo(x + SQ - inset, y + SQ - inset);
+  ctx.lineTo(x + SQ - inset - corner, y + SQ - inset);
+  ctx.moveTo(x + inset + corner, y + SQ - inset);
+  ctx.lineTo(x + inset, y + SQ - inset);
+  ctx.lineTo(x + inset, y + SQ - inset - corner);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function draw() {
   drawBoard();
   drawCheckHighlights();
   drawHighlights();
   drawPieces();
   drawMoveFeedback();
+  drawKeyboardFocus();
   drawCoordsOverlay();
 }
 
 // ---------- Input handling ----------
-canvas.addEventListener('mousedown', (e) => {
-  if(helpOpen) return;
-  onClick(e);
-});
+function boardBusyMessage() {
+  if (helpOpen) return 'Close help before moving on the board.';
+  if (goEl.classList.contains('show')) return 'Close the game over dialog before moving on the board.';
+  if (currentAnimation) return 'Wait for the current move animation to finish.';
+  if (aiThinking) return 'Wait for the computer move to finish.';
+  if (state?.gameOver) return 'Game over. Restart or undo to continue.';
+  if (vsComputer && state?.turn === 'b') return 'Wait for the computer move to finish.';
+  return null;
+}
 
-function onClick(evt) {
-  if (state.gameOver || aiThinking || currentAnimation) return;
-  if (vsComputer && state.turn === 'b') return; // human is White only
+function selectSquare(col, row) {
+  selected = { col, row };
+  legalMovesForSelected = generateLegalMovesForSquare(col, row);
+  setKeyboardMode(keyboardState.active ? 'selection' : 'inactive');
+  updateBoardAriaLabel();
+  draw();
+}
 
-  const rect = canvas.getBoundingClientRect();
-  const cx = evt.clientX - rect.left;
-  const cy = evt.clientY - rect.top;
+function clearSelection() {
+  selected = null;
+  legalMovesForSelected = [];
+  setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
+  updateBoardAriaLabel();
+  draw();
+}
 
-  // WHITE-BOTTOM default mapping:
-  let col = Math.floor(cx / SQ);
-  let row = Math.floor(cy / SQ);
-  if (flipped) { col = 7 - col; row = 7 - row; }
+function handleSquareActivation(col, row, options = {}) {
+  const input = options.input || 'pointer';
+  const preserveSelectionOnInvalid = !!options.preserveSelectionOnInvalid;
+  const busy = boardBusyMessage();
+  if (busy) return { handled: false, error: busy };
+  if (!isInside(col, row)) return { handled: false, error: 'That square is outside the board.' };
 
   const clickedPiece = state.board[row][col];
+  const targetSquare = toAlgebraic(col, row);
 
   if (selected) {
+    const selectedName = selectedSquareName();
     const mv = legalMovesForSelected.find(m => m.toCol === col && m.toRow === row);
     if (mv) {
       stateHistory.push(cloneState(state));
       const animInfo = buildAnimationFromMove(mv);
       applyMove(mv, null);
+      ensureKeyboardFocus({ col: mv.toCol, row: mv.toRow });
+      recordKeyboardInput(input, null);
+      setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
+      updateBoardAriaLabel();
       startAnimation(animInfo, () => {
         postMoveChecks();
         selected = null;
         legalMovesForSelected = [];
+        setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
+        updateBoardAriaLabel();
         // Auto-flip board in 2-player mode if enabled (applyMove already handles this, but we need to redraw)
         if(!vsComputer && autoFlipEl && autoFlipEl.checked) {
           flipped = (state.turn === 'b'); // Flip to show black on bottom when it's black's turn
@@ -1220,25 +1396,169 @@ function onClick(evt) {
           draw();
         }
       });
-      return;
+      return { handled: true, moved: true, from: selectedName, to: targetSquare };
     }
+
     if (clickedPiece && clickedPiece.color === state.turn) {
-      selected = {col, row};
-      legalMovesForSelected = generateLegalMovesForSquare(col, row);
-      draw();
-      return;
+      selectSquare(col, row);
+      recordKeyboardInput(input, null);
+      return { handled: true, selected: true, square: targetSquare, legalCount: legalMovesForSelected.length };
     }
-    selected = null;
-    legalMovesForSelected = [];
-    draw();
-    return;
-  } else {
-    if (clickedPiece && clickedPiece.color === state.turn) {
-      selected = {col, row};
-      legalMovesForSelected = generateLegalMovesForSquare(col, row);
-      draw();
+
+    if (preserveSelectionOnInvalid) {
+      return { handled: false, error: `${targetSquare} is not a legal destination from ${selectedName}.` };
     }
+
+    clearSelection();
+    recordKeyboardInput(input, null);
+    return { handled: true, cancelled: true };
   }
+
+  if (clickedPiece && clickedPiece.color === state.turn) {
+    selectSquare(col, row);
+    recordKeyboardInput(input, null);
+    return { handled: true, selected: true, square: targetSquare, legalCount: legalMovesForSelected.length };
+  }
+
+  return { handled: false, error: `${targetSquare} has no ${state.turn === 'w' ? 'white' : 'black'} piece to select.` };
+}
+
+function moveKeyboardFocus(visualColDelta, visualRowDelta, input) {
+  const busy = boardBusyMessage();
+  if (busy) return reportKeyboardError(busy, input);
+  const focus = ensureKeyboardFocus();
+  const colDelta = flipped ? -visualColDelta : visualColDelta;
+  const rowDelta = flipped ? -visualRowDelta : visualRowDelta;
+  const nextCol = Math.max(0, Math.min(7, focus.col + colDelta));
+  const nextRow = Math.max(0, Math.min(7, focus.row + rowDelta));
+  if (nextCol === focus.col && nextRow === focus.row) {
+    return reportKeyboardError(`Edge of board at ${toAlgebraic(focus.col, focus.row)}.`, input);
+  }
+  keyboardState.active = true;
+  ensureKeyboardFocus({ col: nextCol, row: nextRow });
+  setKeyboardMode(selected ? 'selection' : 'navigation');
+  recordKeyboardInput(input, null);
+  updateBoardAriaLabel();
+  announceKeyboardFocus();
+  draw();
+  return { handled: true, focusSquare: focusSquareName() };
+}
+
+function activateFocusedSquare(input = 'keyboard') {
+  keyboardState.active = true;
+  const focus = ensureKeyboardFocus();
+  const result = handleSquareActivation(focus.col, focus.row, {
+    input,
+    preserveSelectionOnInvalid: true,
+  });
+  if (result.error) return reportKeyboardError(result.error, input);
+  if (result.selected) {
+    announceStatus(`Selected ${result.square}, ${describePieceAt(focus.col, focus.row)}. ${result.legalCount} legal moves.`);
+    tactileFeedback('select');
+  } else if (result.moved) {
+    tactileFeedback('move');
+  } else if (result.cancelled) {
+    announceStatus(`Selection canceled. Focus ${focusSquareName()}.`);
+    tactileFeedback('select');
+  }
+  updateBoardAriaLabel();
+  return result;
+}
+
+function cancelKeyboardSelection(input = 'keyboard:Escape') {
+  keyboardState.active = true;
+  recordKeyboardInput(input, null);
+  if (selected) {
+    clearSelection();
+    announceStatus(`Selection canceled. Focus ${focusSquareName()}.`);
+    tactileFeedback('select');
+  } else {
+    setKeyboardMode('navigation');
+    updateBoardAriaLabel();
+    draw();
+  }
+  return { handled: true };
+}
+
+function handleBoardKeyDown(e) {
+  const input = `keyboard:${e.code || e.key}`;
+  const key = e.key;
+  const code = e.code;
+
+  if (helpOpen || goEl.classList.contains('show')) return;
+
+  const movement = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1],
+    KeyA: [-1, 0],
+    KeyD: [1, 0],
+    KeyW: [0, -1],
+    KeyS: [0, 1],
+  }[code] || {
+    a: [-1, 0],
+    d: [1, 0],
+    w: [0, -1],
+    s: [0, 1],
+  }[key];
+
+  if (movement) {
+    e.preventDefault();
+    e.stopPropagation();
+    moveKeyboardFocus(movement[0], movement[1], input);
+    return;
+  }
+
+  if (key === 'Enter' || key === ' ') {
+    e.preventDefault();
+    e.stopPropagation();
+    activateFocusedSquare(input);
+    return;
+  }
+
+  if (key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    cancelKeyboardSelection(input);
+  }
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if(helpOpen) return;
+  onClick(e);
+});
+canvas.addEventListener('focus', () => {
+  keyboardState.active = true;
+  ensureKeyboardFocus();
+  setKeyboardMode(selected ? 'selection' : 'navigation');
+  recordKeyboardInput('focus:board', null);
+  updateBoardAriaLabel();
+  draw();
+});
+canvas.addEventListener('blur', () => {
+  keyboardState.active = false;
+  setKeyboardMode(selected ? 'selection' : 'inactive');
+  updateBoardAriaLabel();
+  draw();
+});
+canvas.addEventListener('keydown', handleBoardKeyDown);
+
+function onClick(evt) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = evt.clientX - rect.left;
+  const cy = evt.clientY - rect.top;
+
+  // WHITE-BOTTOM default mapping:
+  let col = Math.floor(cx / SQ);
+  let row = Math.floor(cy / SQ);
+  if (flipped) { col = 7 - col; row = 7 - row; }
+
+  keyboardState.focus = { col, row };
+  setKeyboardMode(selected ? 'selection' : (keyboardState.active ? 'navigation' : 'inactive'));
+  recordKeyboardInput(`pointer:${toAlgebraic(col, row)}`, null);
+  handleSquareActivation(col, row, { input: `pointer:${toAlgebraic(col, row)}` });
+  updateBoardAriaLabel();
 }
 
 newBtn.addEventListener('click', () => {
@@ -1279,6 +1599,7 @@ undoBtn.addEventListener('click', () => {
   // Clear selections and reset end-state flags
   selected = null;
   legalMovesForSelected = [];
+  resetKeyboardFocusForTurn();
   state.gameOver = false;
   state.result = null;
   feedback.lastMove = null;
@@ -1973,7 +2294,11 @@ function renderGameToText(){
     game: 'Chess',
     ready: true,
     turn: state.turn === 'w' ? 'white' : 'black',
-    selectedSquare: selected ? toAlgebraic(selected.col, selected.row) : null,
+    selectedSquare: selectedSquareName(),
+    focusSquare: focusSquareName(),
+    keyboardMode: keyboardState.mode,
+    lastInput: keyboardState.lastInput,
+    lastInputError: keyboardState.lastInputError,
     legalDestinationCount: legalMovesForSelected.length,
     legalDestinations: legalMovesForSelected.map(mv => toAlgebraic(mv.toCol, mv.toRow)),
     boardOccupancy: currentBoardOccupancy(),
@@ -2002,6 +2327,15 @@ function renderGameToText(){
       enabled: !!vsComputer,
       thinking: !!aiThinking,
       depth: Number(depthEl.value || 3)
+    },
+    keyboard: {
+      active: !!keyboardState.active,
+      selectedSquare: selectedSquareName(),
+      focusSquare: focusSquareName(),
+      mode: keyboardState.mode,
+      lastInput: keyboardState.lastInput,
+      lastInputError: keyboardState.lastInputError,
+      lastInputAt: keyboardState.lastInputAt,
     },
     feedback: {
       lastMoveAge: age(feedback.lastMoveAge),

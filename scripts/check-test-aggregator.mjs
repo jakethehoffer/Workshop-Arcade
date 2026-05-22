@@ -13,8 +13,9 @@
 //   2. scripts/run-fast-tests.mjs exists, syntax-checks via
 //      `node --check`, and reads package.json (so it picks up new
 //      gates automatically).
-//   3. The runner's exclusion list explicitly cites "test:games" and
-//      "test:all" — the only entries that should NOT recursively run.
+//   3. The runner's exclusion list explicitly cites the browser-backed
+//      slow gates and "test:all" — the entries that should NOT run from
+//      the fast aggregate path.
 //   4. For every "test:*" script in package.json that is NOT in the
 //      exclusion list, the runner will pick it up. This guards against
 //      accidentally widening the exclusion list and silently dropping
@@ -86,9 +87,10 @@ function extractExcludedScripts(runnerSrc) {
 
 async function checkCoverage(pkg, runnerSrc) {
   const excluded = extractExcludedScripts(runnerSrc);
-  for (const required of ['test:games', 'test:all']) {
+  const allowedExcluded = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:all']);
+  for (const required of allowedExcluded) {
     if (!excluded.has(required)) {
-      fail(`scripts/run-fast-tests.mjs: EXCLUDED_SCRIPTS must list "${required}" (Playwright slow / would recurse)`);
+      fail(`scripts/run-fast-tests.mjs: EXCLUDED_SCRIPTS must list "${required}" (browser-backed slow gate / would recurse)`);
     }
   }
   const candidates = Object.keys(pkg.scripts || {}).filter((name) => name.startsWith('test:'));
@@ -96,11 +98,11 @@ async function checkCoverage(pkg, runnerSrc) {
   if (willRun.length === 0) {
     fail('scripts/run-fast-tests.mjs: exclusion list swallows every test:* script — nothing would run under `npm test`');
   }
-  // Defensive: make sure no NEW exclusion sneaks in beyond the two we
+  // Defensive: make sure no NEW exclusion sneaks in beyond the gates we
   // sanctioned above. If a future change needs to exclude something
   // else, the author should update this validator too.
   for (const name of excluded) {
-    if (name !== 'test:games' && name !== 'test:all') {
+    if (!allowedExcluded.has(name)) {
       fail(`scripts/run-fast-tests.mjs: unexpected EXCLUDED_SCRIPTS entry "${name}" — add it to this validator's allowlist if intentional`);
     }
   }
@@ -120,4 +122,6 @@ if (issues.length > 0) {
 }
 
 const total = Object.keys(pkg.scripts || {}).filter((name) => name.startsWith('test:')).length;
-console.log(`Test-aggregator check passed: \`npm test\` runs ${total - 2} fast gates (excluding test:games + test:all).`);
+const excludedCount = [...extractExcludedScripts(await readFile(join(repoRoot, 'scripts/run-fast-tests.mjs'), 'utf8'))]
+  .filter((name) => (pkg.scripts || {})[name]).length;
+console.log(`Test-aggregator check passed: \`npm test\` runs ${total - excludedCount} fast gates (${excludedCount} explicit exclusions).`);

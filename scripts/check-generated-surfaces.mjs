@@ -7,11 +7,11 @@
 // feed/sitemap entries, per-game meta/JSON-LD, and capture recipe must all
 // exist before the heavier Playwright jobs run.
 
-import { readFile, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = resolve(process.env.WORKSHOP_ARCADE_REPO_ROOT || dirname(fileURLToPath(import.meta.url)), process.env.WORKSHOP_ARCADE_REPO_ROOT ? '.' : '..');
 const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade/';
 const issues = [];
 
@@ -46,6 +46,19 @@ async function loadManifest() {
   return manifest;
 }
 
+async function listFiles(relative, extension) {
+  try {
+    const entries = await readdir(join(repoRoot, relative), { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(extension))
+      .map((entry) => `${relative}/${entry.name}`.replace(/\\/g, '/'))
+      .sort();
+  } catch (error) {
+    fail(`${relative}: unable to list (${error.message})`);
+    return [];
+  }
+}
+
 function findCaptureRecipe(captureSource, game) {
   const keys = [game.slug, game.id].filter(Boolean);
   return keys.some((key) => {
@@ -71,6 +84,25 @@ function checkFeed(feedText, manifest) {
     const url = SITE + String(game.url || '').replace(/^\/+/, '');
     if (!feedUrls.has(url)) {
       fail(`feed.json: missing item for ${game.title} (${url})`);
+    }
+  }
+}
+
+async function checkManifestClosure(manifest) {
+  const manifestUrls = new Set(manifest.map((game) => String(game.url || '').replace(/\\/g, '/')));
+  const htmlFiles = await listFiles('websites', '.html');
+  for (const htmlPath of htmlFiles) {
+    if (!manifestUrls.has(htmlPath)) {
+      fail(`${htmlPath}: publishable game HTML is not listed in websites/manifest.json`);
+    }
+  }
+
+  const manifestSlugs = new Set(manifest.map((game) => game.slug).filter(Boolean));
+  const ogFiles = await listFiles('covers/og', '.svg');
+  for (const ogPath of ogFiles) {
+    const slug = ogPath.replace(/^covers\/og\//, '').replace(/\.svg$/, '');
+    if (!manifestSlugs.has(slug)) {
+      fail(`${ogPath}: orphan generated OG image has no matching manifest slug`);
     }
   }
 }
@@ -119,6 +151,7 @@ const surfaces = {
 };
 
 checkFeed(surfaces.feed, manifest);
+await checkManifestClosure(manifest);
 for (const game of manifest) {
   await checkGame(game, surfaces);
 }

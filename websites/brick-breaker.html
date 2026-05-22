@@ -151,8 +151,8 @@ button:active{transform:translateY(1px)}
   background:#0e1522e6;border:1px solid #26334a;
   padding:24px 26px;border-radius:16px;text-align:center;
   box-shadow:0 10px 30px rgba(0,0,0,.45);
-  width:min(92vw, 820px);         /* bigger legend */
-  font-size:18px;                 /* bump overall size */
+  width:min(92vw, 820px);
+  font-size:18px;
   line-height:1.6;
   max-height: calc(100vh - 150px);
   overflow: auto;
@@ -166,7 +166,6 @@ button:active{transform:translateY(1px)}
     border-color:transparent;
     box-shadow:0 12px 30px rgba(94,234,212,.22);
   }
-  /* inline keycaps and power-up tags */
 kbd{
   background:#0b1220;
   border:1px solid #26334a; border-bottom-width:3px;
@@ -177,7 +176,6 @@ kbd{
   display:inline-block; min-width:22px; text-align:center; font-weight:800;
   padding:2px 6px; border-radius:6px; color:#0b0f14
 }
-/* compact table for power-up legend */
 .powers{ margin:10px auto 0; border-collapse:separate; border-spacing:6px 4px }
 .powers td{ padding:0; vertical-align:middle }
 .powers canvas.pu-icon{
@@ -310,7 +308,6 @@ kbd{
   <p style="margin-top:10px"><em>Tip:</em> Picking the same timed effect extends its duration.</p>
 </div>
 
-
     <div id="msgNext" class="card fade" hidden>
       <h1>✨ Level Cleared!</h1>
       <p>Get ready for the next round…</p>
@@ -326,43 +323,35 @@ kbd{
 <script>
 (() => {
     let gameReady = false;
-  // ===== Canvas & Rendering =====
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
-  // logical canvas size tracks the window
   const css = { w: window.innerWidth, h: window.innerHeight };
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
   function resize(){
     const prevW = css.w, prevH = css.h;
 
-    // new logical size = window size
     css.w = Math.max(320, window.innerWidth);
     css.h = Math.max(240, window.innerHeight);
 
-    // retina-aware backing buffer & transform
     canvas.width  = css.w * dpr;
     canvas.height = css.h * dpr;
     canvas.style.width  = css.w + 'px';
     canvas.style.height = css.h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // before the game is fully set up, skip rescaling entities
     if (!gameReady) return;
 
-    // rescale positions so things stay on-screen
     const sx = css.w / prevW;
     const sy = css.h / prevH;
     const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-    // paddle
     const p = G.paddle;
     p.x *= sx;
     p.y  = css.h - 36;                 // keep near bottom
     p.w  = clamp(p.w * sx, 60, 220);   // scale width a bit with screen
 
-    // balls
     for (const b of G.balls){
       if (G.waitingLaunch || b.stuck){
         b.x = p.x; b.y = p.y - 14;
@@ -371,13 +360,11 @@ kbd{
       }
     }
 
-    // bricks (and moving-brick ranges)
     for (const br of G.bricks){
       br.x *= sx; br.y *= sy; br.w *= sx; br.h *= sy;
       if (br.moving){ br.originX *= sx; br.range *= sx; }
     }
 
-    // power-ups
     for (const pu of G.powerups){
       pu.x *= sx; pu.y *= sy; pu.w *= sx; pu.h *= sy;
     }
@@ -387,8 +374,6 @@ kbd{
   resize();
   addEventListener('resize', resize);
 
-
-  // ===== HUD =====
   const elScore = document.getElementById('score');
   const elLevel = document.getElementById('level');
   const elLives = document.getElementById('lives');
@@ -412,8 +397,6 @@ function saveHigh(v){
 highScore = loadHigh();
 if (elBest) elBest.textContent = highScore;
 
-
-  // Buttons (present in DOM)
   const btnPause   = document.getElementById('btnPause');
   const btnRestart = document.getElementById('btnRestart');
   const btnMusic   = document.getElementById('btnMusic');
@@ -471,12 +454,9 @@ if (elBest) elBest.textContent = highScore;
   document.addEventListener('fullscreenchange', syncFullscreenButton);
   syncFullscreenButton();
 
-  // Make canvas focusable and pull focus during play, so Space goes to the game.
 canvas.setAttribute('tabindex', '0');
 canvas.addEventListener('pointerdown', () => canvas.focus());
 
-// If a button happens to be focused, Space normally "clicks" it.
-// Block that so Space never triggers Pause (or any button).
 window.addEventListener('keydown', (e) => {
   if (e.key === ' '){
     const a = document.activeElement;
@@ -485,8 +465,6 @@ window.addEventListener('keydown', (e) => {
   }
 }, {capture:true});
 
-
-  // ===== Audio (WebAudio) =====
   let audioCtx = null;
   let master = null;       // Master Gain
   let sfxGain = null;      // SFX channel
@@ -580,7 +558,6 @@ window.addEventListener('keydown', (e) => {
     osc.stop(now + Math.max(attack, decay) + 0.02);
   }
   function fireGuns(){
-  // two bullets from paddle edges
   const p = G.paddle;
   const y = p.y - p.h/2 - 2;
   const off = Math.max(14, p.w*0.28);
@@ -591,10 +568,8 @@ window.addEventListener('keydown', (e) => {
 }
 
 function updateGun(dt){
-  // only auto-fire while GUN effect is active, not waiting to launch
   if (!G.effects.some(e=>e.type==='GUN')) return;
   G.gunCooldown -= dt;
-  // ~8 rounds/sec → 0.125s
   if (G.gunCooldown <= 0){
     fireGuns();
     G.gunCooldown = 1/GUN_RPS;
@@ -607,12 +582,10 @@ function updateBullets(dt){
     b.y += b.vy * dt;
     if (b.y + b.h < 0){ G.bullets.splice(i,1); continue; }
 
-    // collide with bricks
     for (let j=0; j<G.bricks.length; j++){
       const br = G.bricks[j];
       if (br.hp <= 0) continue;
       if (rectsOverlap(b.x - b.w/2, b.y - b.h/2, b.w, b.h, br.x, br.y, br.w, br.h)){
-        // mark hit point center for combo FX
         const hx = Math.max(br.x, Math.min(b.x, br.x+br.w));
         const hy = Math.max(br.y, Math.min(b.y, br.y+br.h));
 
@@ -654,7 +627,6 @@ function drawBullets(){
   ctx.restore();
 }
 
-
   function noiseBurst({attack=0.005, decay=0.2, volume=0.6}){
     if (!ensureAudio()) return;
     const now = audioCtx.currentTime;
@@ -691,13 +663,11 @@ hit(){ playSound('brick-hit', () => playBeep({freq:820, type:'triangle', decay:0
     multiball(){ playSound('multiball', () => { playBeep({freq: 740, type:'square', decay:0.12}); playBeep({freq: 920, type:'square', decay:0.12}); }); }
   };
 
-  // Simple chiptune music sequencer
   const MUSIC = {
     tempo: 110, // BPM
     step: null,
     index: 0,
     pattern: [ // notes in MIDI (0 = rest)
-      // A minor progression: Am – F – C – G
       [57, 45], [0, 0], [57, 52], [0, 0],
       [53, 41], [0, 0], [53, 48], [0, 0],
       [55, 43], [0, 0], [55, 50], [0, 0],
@@ -766,7 +736,6 @@ hit(){ playSound('brick-hit', () => playBeep({freq:820, type:'triangle', decay:0
   }
   updateAudioButtons();
 
-  // ===== Game State =====
   const G = {
     running: true,
     comboCount: 0,
@@ -875,7 +844,6 @@ function closeHelp(){
 
 function toggleHelp(){ cardStart.hidden ? openHelp() : closeHelp(); }
 
-// Close help menu when clicking outside the card
 if (overlayEl) {
   overlayEl.addEventListener('click', (e) => {
     if (!cardStart.hidden && e.target === overlayEl) {
@@ -884,13 +852,11 @@ if (overlayEl) {
   });
 }
 
-// Prevent card clicks from closing the menu
 if (cardStart) {
   cardStart.addEventListener('click', (e) => {
     e.stopPropagation();
   });
 }
-
 
 const EFFECT_DUR = { EXPAND: 10, STICKY: 8, FIRE: 8, SLOW: 8, SHIELD: 10, CURSE_SHRINK: 10, CURSE_SPEED: 8, GUN: 5 };
 const EFFECT_LABEL = {
@@ -903,16 +869,12 @@ const EFFECT_LABEL = {
   CURSE_SPEED: 'Fast',
   GUN: 'Gun',                    // ← NEW
 };
-// Gun tuning
 const GUN_RPS = 2; // rounds per second (was effectively ~8 rps)
-
-
 
 const BASE_BALL_SPEED = 480; // was 380 — tweak to taste
 const LAUNCH_MIN = -Math.PI * 0.75;  // -135°, up-left
 const LAUNCH_MAX = -Math.PI * 0.25;  //  -45°, up-right
 const randLaunch = () => LAUNCH_MIN + Math.random() * (LAUNCH_MAX - LAUNCH_MIN);
-// Power-up drop tuning
 const DROP_L1   = 0.50;  // 50% per brick on Level 1 (was 0.18)
 const DROP_DECAY= 0.01;  // -4% per level
 const DROP_MIN  = 0.20;  // don't go below 14%
@@ -922,9 +884,6 @@ const COMBO_MAX    = 10;     // cap
 const COMBO_PALETTE = ['#5eead4','#60a5fa','#a78bfa','#f472b6','#fb7185','#f59e0b','#84cc16','#22d3ee'];
 const COMBO_GRAD_MAX_STOPS = 6;  // keep it punchy & readable
 
-
-
-
   function makeBall(x, y, angle=null, speed=BASE_BALL_SPEED){
     const r = 8;
     const a = angle ?? (-Math.PI/3 + (Math.random()*0.4 - 0.2));
@@ -932,10 +891,6 @@ return { x, y, r,    px: x, py: y,                    // ← NEW: previous posit
  vx: Math.cos(a)*speed, vy: Math.sin(a)*speed, speed, fire:false, stuck:false, portalCooldown:0, lastPortalIndex: -1 };
   }
 
-  // ===== Level Generator =====
-// ===== Level Generator =====
-
-// Deterministic RNG so the same level number always looks the same
 function rng(seed){
   let s = (seed>>>0) || 1;
   return function(){
@@ -944,7 +899,6 @@ function rng(seed){
   };
 }
 
-// Optional palettes; picked per-level for extra vibe variety
 const THEMES = [
   ['#5eead4','#60a5fa','#a78bfa','#f472b6','#fbbf24','#4ade80','#f87171','#22d3ee','#c084fc','#eab308'],
   ['#34d399','#10b981','#06b6d4','#0ea5e9','#6366f1','#8b5cf6','#f43f5e','#fb923c','#fde047','#84cc16'],
@@ -996,12 +950,10 @@ const PATTERNS = [
   {name:'Windows', fn:(r,c)=> (r%3!==1 || c%4!==2)},
   {name:'Random Holes', fn:(r,c,rows,cols,rand)=> rand() > 0.18},
   {name:'Rain', fn:(r,c,rows,cols,rand)=>{
-    // top denser, bottom sparser
     const p = 0.15 + 0.6*(r/rows);
     return rand() > p;
   }},
   {name:'Invaders', fn:(r,c,rows,cols,rand)=>{
-    // simple mirrored sprite in top third
     if (r >= Math.floor(rows*0.35)) return false;
     const left = c < Math.floor(cols/2) ? c : cols-1-c;
     if (r===0) return left>=1 && left<=Math.floor(cols/4);
@@ -1012,32 +964,24 @@ const PATTERNS = [
   {name:'ZigZag', fn:(r,c)=> ((c%3)===0) ? (r%2===0) : true},
 ];
 
-
 function difficultyFor(level){
   const rows = Math.min(10, 5 + Math.floor((level-1)/2));
   const cols = Math.min(14, 10 + Math.floor((level-1)/2));
   const ballSpeedAdd = Math.min(200, (level-1)*18);
   const paddleShrink = Math.min(60, (level-1)*3);
 
-  // keep your existing drop curve
   const dropChance = Math.max(DROP_MIN, DROP_L1 - (level-1)*DROP_DECAY);
 
-  // NEW: smooth reinforcement
-  // On average this adds +1 HP every ~4 levels, spread probabilistically
   const hpFloat = (level-1) / 4;     // 0.0 → 0.75 by L4 (not a full +1 yet)
   const hpBase  = Math.floor(hpFloat);
   const hpFrac  = hpFloat - hpBase;  // 0..1 chance for one extra on *some* bricks
 
-  // Bias extra HP toward upper rows (harder shots)
-  // Also slowly widen the “reinforced share” as levels rise
   const reinforceBias = Math.min(0.65, 0.18 + 0.06*(level-1)); // max ~65% of bricks *eligible*
 
   return {rows, cols, ballSpeedAdd, paddleShrink, dropChance, hpBase, hpFrac, reinforceBias};
 }
 
-
 function addMovingToBricks(level, bricks, brickWidth){
-  // Only add movers from Level 2+
   if (level < 2) return bricks;
 
   const fraction = Math.min(0.5, 0.15 + 0.05 * (level-2)); // up to 50% movers
@@ -1049,11 +993,9 @@ function addMovingToBricks(level, bricks, brickWidth){
 
   let movedCount = 0;
 
-  // Try to tag a random subset as moving, but only if they have room
   for (const br of bricks){
     if (Math.random() >= fraction) continue;
 
-    // Clearance to nearest blockers & walls
     let leftClear  = br.x;                               // to left wall (x=0)
     let rightClear = (css.w - (br.x + br.w));            // to right wall
 
@@ -1061,11 +1003,9 @@ function addMovingToBricks(level, bricks, brickWidth){
       if (other === br || other.hp <= 0) continue;
       if (!vertOverlap(br, other)) continue;             // only same row band
 
-      // blocker on left
       if (other.x + other.w <= br.x){
         leftClear = Math.min(leftClear, br.x - (other.x + other.w));
       }
-      // blocker on right
       else if (other.x >= br.x + br.w){
         rightClear = Math.min(rightClear, other.x - (br.x + br.w));
       }
@@ -1082,7 +1022,6 @@ function addMovingToBricks(level, bricks, brickWidth){
     }
   }
 
-  // Fallback: ensure at least one mover on levels that support it (for your tests)
   if (movedCount === 0){
     let best = null, bestAllowed = 0;
     for (const br of bricks){
@@ -1108,7 +1047,6 @@ function addMovingToBricks(level, bricks, brickWidth){
   return bricks;
 }
 
-
 function makeBrick(r, c, x, y, w, dif, extra = 0){
   const rowBase = (r < 2 ? 2 : 1);
   let hp = rowBase + dif.hpBase;
@@ -1126,17 +1064,14 @@ function makeBrick(r, c, x, y, w, dif, extra = 0){
   };
 }
 
-
 function buildLevel(level){
   const dif = difficultyFor(level);
   G.brickRows = dif.rows; G.brickCols = dif.cols; G.dropChance = dif.dropChance;
 
-  // Themed variety per level (height/padding/palette)
   const rand = rng(level * 7741 + 7);
   const theme = THEMES[Math.floor(rand() * THEMES.length)];
   G.palette = theme;
 
-  // Slightly vary brick height & padding per level for feel
   const tall = rand() < 0.33, short = !tall && rand() < 0.33;
   G.brickHeight = tall ? 26 : short ? 18 : 22;
   G.brickPadding = 6 + Math.floor(rand() * 3);  // 6..8
@@ -1145,7 +1080,6 @@ function buildLevel(level){
   const totalW = css.w - 40; // side gutters
   const bw = Math.floor((totalW - (G.brickCols-1)*G.brickPadding) / G.brickCols);
 
-  // Pick 1–2 patterns and optionally combine them to explode variety
   const p1 = PATTERNS[Math.floor(rand() * PATTERNS.length)];
   const useCombo = rand() < 0.45;
   const p2 = useCombo ? PATTERNS[Math.floor(rand() * PATTERNS.length)] : null;
@@ -1172,7 +1106,6 @@ function buildLevel(level){
     }
   }
 
-  // Ensure pattern isn’t too sparse; if it is, fall back to a safe dense one
   if (bricks.length < (G.brickRows * G.brickCols * 0.22)){
     bricks.length = 0;
     for (let r=0;r<G.brickRows;r++){
@@ -1186,18 +1119,14 @@ function buildLevel(level){
     }
   }
 
-  // Make some bricks move (your improved collision-safe function handles spacing)
   return addMovingToBricks(level, bricks, bw);
 }
 
-
   function resetLevel(advance=false){
     if (advance){ G.level++; elLevel.textContent = G.level; SFX.level(); }
-    // rebuild bricks using generator
     G.bricks = buildLevel(G.level);
 G.portals = computePortals(G.bricks);
     if (advance) announce(`Level ${G.level} started. ${G.bricks.filter(br => br.hp > 0).length} bricks remain.`);
-    // reset paddle/balls with difficulty scaling
     const dif = difficultyFor(G.level);
     G.paddle.x = css.w/2;
     G.paddle.w = Math.max(80, 120 - dif.paddleShrink);
@@ -1242,7 +1171,6 @@ function rowColor(r,hp){
 function isCurse(t){ return t && t.startsWith('CURSE_'); }
 function lerp(a,b,p){ return a + (b-a)*p; }
 
-
 function addScore(points){
   const mult = (G && G.riskMult) ? G.riskMult : 1;
   G.score += Math.round(points * mult);
@@ -1255,19 +1183,15 @@ function addScore(points){
   }
 }
 function syncBallFlagsFromEffects(){
-  // Re-apply per-ball flags based on active effects (e.g., FIRE)
   const fireOn = G.effects.some(e => e.type === 'FIRE');
   for (const b of G.balls) b.fire = !!fireOn;
 }
 
-
 function onBrickHit(hitX, hitY){
-  // chain window
   if (G.comboTime > 0) G.comboCount++;
   else G.comboCount = 1;
   G.comboTime = COMBO_WINDOW;
 
-  // activate only at the SECOND hit; each growth adds a new color stop
   if (G.comboCount >= 2){
     if (!G.comboActive){
       G.comboActive = true;
@@ -1283,10 +1207,6 @@ function onBrickHit(hitX, hitY){
   }
 }
 
-
-
-
-
 function restartGame(){
   G.score=0; G.level=1; G.lives=3;
     G.riskMult = 1;                  // ← reset risk multiplier on restart
@@ -1300,10 +1220,9 @@ function restartGame(){
   announce('New run ready. Launch the ball.');
 }
 
-  // ===== Input =====
   addEventListener('pointerdown', unlockAudioOnce, {once: true, capture: true});
   addEventListener('keydown', unlockAudioOnce, {once: true, capture: true});
-  
+
   addEventListener('keydown', (e)=>{
     if (e.repeat) return;
     if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1328,13 +1247,11 @@ function restartGame(){
 if (e.key==='h' || e.key==='H') toggleHelp();
   });
 
-
   addEventListener('keyup', (e)=>{
     if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') G.keys.left=false;
     if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') G.keys.right=false;
   });
 
-  // Mouse / touch move: paddle follow (DISABLED WHILE PAUSED)
   canvas.addEventListener('pointermove', (e)=>{
     if (!G.running) return; // <-- prevent paddle movement when paused
     const rect = canvas.getBoundingClientRect();
@@ -1346,7 +1263,6 @@ canvas.addEventListener('pointerdown', ()=>{
   if (G.waitingLaunch && cardStart.hidden){ launchAllBalls(); }
 });
 
-  // Attach button handlers
   btnPause.onclick = ()=> togglePause();
   btnRestart.onclick = ()=> restartGame();
   btnMusic.onclick = ()=> toggleMusic();
@@ -1382,7 +1298,6 @@ for (const b of G.balls){
   announce(`Launch. Level ${G.level}, ${G.bricks.filter(br => br.hp > 0).length} bricks remain.`);
   }
 
-  // ===== Power-Ups =====
   const PU_TYPES = [
     {type:'MULTI', color:'#60a5fa', label:'MB', weight:2},
     {type:'EXPAND', color:'#34d399', label:'⟷', weight:2},
@@ -1397,11 +1312,8 @@ for (const b of G.balls){
 
   ];
 
-// quick lookup by type
 const PU_BY_TYPE = Object.fromEntries(PU_TYPES.map(p => [p.type, p]));
 
-
-  // Bright icon tints for the top-left effect badges
 const ICON_TINT = {
   MULTI: '#60a5fa',
   EXPAND: '#34d399',
@@ -1412,7 +1324,7 @@ const ICON_TINT = {
   SHIELD: '#fde047',
   CURSE_SHRINK: '#f97316',
   CURSE_SPEED: '#ef4444',
-  GUN:'#06b6d4'    
+  GUN:'#06b6d4'
 };
 
 function feedbackColor(type, fallback = '#5eead4'){
@@ -1583,10 +1495,8 @@ function updateFeedback(dt){
   }
 }
 
-
 function pickPowerType(){
   const cap = G.puCap ?? 2;
-  // only types still under the cap are eligible; keep weights
   const pool = PU_TYPES.filter(p => (G.puCounts[p.type] || 0) < cap);
   if (!pool.length) return null;  // all types exhausted this level
 
@@ -1598,7 +1508,6 @@ function pickPowerType(){
   }
   return pool[0]; // fallback (shouldn’t hit)
 }
-
 
   function triggerComboBanner(){
   G.comboBanner.t = 0;
@@ -1619,7 +1528,6 @@ function resetComboVisuals(){
   G.comboColorIndex = 0;
 }
 
-
 function spawnComboSparks(x, y){
   const N = 22;
   for (let i=0;i<N;i++){
@@ -1638,14 +1546,12 @@ function spawnComboSparks(x, y){
 }
 
 function updateComboFX(dt){
-  // banner timer
   if (G.comboBanner.dur > 0){
     G.comboBanner.t += dt;
     if (G.comboBanner.t >= G.comboBanner.dur){
       G.comboBanner.t = G.comboBanner.dur;
     }
   }
-  // sparks
   for (let i=G.comboSparks.length-1;i>=0;i--){
     const s = G.comboSparks[i];
     s.life -= dt;
@@ -1659,7 +1565,6 @@ function updateComboFX(dt){
 }
 
 function drawComboFX(){
-  // sparks under banner for extra “pop”
   if (!G.comboSparks.length) return;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -1674,7 +1579,6 @@ function drawComboFX(){
 function drawComboBanner(){
   if (!G.comboActive || G.combo <= 1) return;
 
-  // fade/scale animation
   const t = Math.min(G.comboBanner.t / Math.max(0.001, G.comboBanner.dur), 1);
   const scale = 1 + 0.28 * (1 - t) + 0.06 * G.combo; // bigger at higher combo
   const alpha = 0.92 * (1 - 0.7 * t);
@@ -1687,12 +1591,9 @@ function drawComboBanner(){
   ctx.textBaseline = 'middle';
   ctx.font = 'bold 32px ui-sans-serif, system-ui';
 
-  // glow
   ctx.shadowColor = '#5eead4';
   ctx.shadowBlur = 28;
 
-  // gradient fill
-// gradient fill that accumulates stops as combo grows
 let grad = ctx.createLinearGradient(-120, 0, 120, 0);
 if (G.comboStops && G.comboStops.length){
   const n = G.comboStops.length;
@@ -1705,25 +1606,21 @@ if (G.comboStops && G.comboStops.length){
     }
   }
 } else {
-  // fallback (should rarely hit)
   grad.addColorStop(0, '#5eead4');
   grad.addColorStop(1, '#60a5fa');
 }
 ctx.fillStyle = grad;
 
-
   ctx.globalAlpha = alpha;
   ctx.fillStyle = grad;
   ctx.fillText(text, 0, 0);
 
-  // crisp stroke
   ctx.globalAlpha = Math.min(1, alpha + 0.2);
   ctx.shadowBlur = 0;
   ctx.strokeStyle = 'rgba(11,15,20,.8)';
   ctx.lineWidth = 4;
   ctx.strokeText(text, 0, 0);
 
-  // time bar under text (shows remaining chain window)
   const w = 160, h = 6, y = 26;
   const pct = Math.max(0, Math.min(1, G.comboTime / COMBO_WINDOW));
   ctx.globalAlpha = 0.9;
@@ -1747,24 +1644,17 @@ function maybeDropPower(br){
   }
 }
 
-
-// Add/extend a timed effect on the top-left badges list
 function pushTimed(type, seconds){
-  // If effect already active, extend time; otherwise add new timer
   const e = G.effects.find(e => e.type === type);
   if (e) {
     e.remaining += seconds;
   } else {
     G.effects.push({ type, remaining: seconds });
   }
-  // keep any per-ball flags in sync (e.g., FIRE on existing balls)
   if (type === 'FIRE') syncBallFlagsFromEffects();
-  // re-evaluate speed/risk if these are involved
   if (type === 'SLOW' || type === 'CURSE_SPEED') recalcSpeedMod();
   if (type.startsWith('CURSE_')) recalcRiskMult();
 }
-
-
 
   function applyEffect(type){
     switch(type){
@@ -1775,7 +1665,6 @@ case 'MULTI': {
   for (const b of G.balls){
     const ang = Math.atan2(b.vy, b.vx);
 
-    // If sticky is on and the source ball is parked, create parked clones too.
     const makeStuck = stickyActive && (b.stuck || G.waitingLaunch);
 
     if (makeStuck){
@@ -1824,7 +1713,6 @@ case 'CURSE_SPEED':
   recalcRiskMult();
   break;
 
-
       case 'STICKY':
         pushTimed('STICKY', EFFECT_DUR.STICKY);
         break;
@@ -1844,23 +1732,19 @@ case 'CURSE_SPEED':
   }
 
   function recalcSpeedMod(){
-  // Highest “speed-up” wins; SLOW always forces the slowest
   let mod = 1;
   if (G.effects.some(e=>e.type==='SLOW')) mod = 0.8;
   if (G.effects.some(e=>e.type==='CURSE_SPEED')) mod = Math.max(mod, 1.35);
   G.speedMod = mod;
 }
 function recalcRiskMult(){
-  // +0.5 per active curse, capped at 3x
   let m = 1;
   if (G.effects.some(e=>e.type==='CURSE_SHRINK')) m += 0.5;
   if (G.effects.some(e=>e.type==='CURSE_SPEED'))  m += 0.5;
   G.riskMult = Math.min(3, m);
 }
 
-
   function updateEffects(clockDt){
-    // Only called while running; clockDt is unscaled by speedMod
     for (let i=G.effects.length-1;i>=0;i--){
       G.effects[i].remaining -= clockDt;
     if (G.effects[i].remaining <= 0){
@@ -1880,8 +1764,6 @@ function recalcRiskMult(){
 }
 
     }
-    // combo timer decay
-// combo chain decay (real time; pauses with game)
 if (G.comboTime > 0){
   G.comboTime -= clockDt;
   if (G.comboTime <= 0){
@@ -1893,17 +1775,14 @@ if (G.comboTime > 0){
   }
 }
 
-
   }
 
-  // ===== Moving Bricks Update =====
   function updateMovingBricks(dt){
   const EPS = 0.1; // small gap so edges don't visually overlap
 
   function leftBound(br){  return br.originX - br.range; }
   function rightBound(br){ return br.originX + br.range; }
 
-  // Returns a blocking brick (hp>0) if moving-brick placed at testX would overlap it
   function blockerAt(br, testX){
     for (const other of G.bricks){
       if (other === br || other.hp <= 0) continue;
@@ -1917,14 +1796,12 @@ if (G.comboTime > 0){
   for (const br of G.bricks){
     if (!br.moving || br.hp <= 0) continue;
 
-    // Propose new position and clamp to allowed oscillation range
     let nx = br.x + br.vx * dt;
     const L = leftBound(br), R = rightBound(br);
 
     if (nx < L){ nx = L; br.vx *= -1; }
     else if (nx > R){ nx = R; br.vx *= -1; }
 
-    // If the proposed position would overlap another brick, stop just before it and reverse
     const hit = blockerAt(br, nx);
     if (hit){
       if (br.vx > 0){
@@ -1939,15 +1816,12 @@ if (G.comboTime > 0){
   }
 }
 
-
-  // ===== Game Loop =====
   let last = performance.now();
   function loop(t){
     requestAnimationFrame(loop);
     const dtRaw = Math.min(0.033, (t - last)/1000); // clamp to 30ms (real-time delta)
     last = t;
 
-    // gameplay dt is scaled by speedMod; effect timers use real-time dtRaw
     if (G.running) {
       update(dtRaw * G.speedMod, dtRaw);
     }
@@ -1958,35 +1832,28 @@ if (G.comboTime > 0){
   function update(dt, clockDt){
     const p = G.paddle;
 
-    // Paddle move
     const dir = (G.keys.right?1:0) - (G.keys.left?1:0);
     p.x += dir * p.speed * dt;
     p.x = Math.max(p.w/2, Math.min(css.w - p.w/2, p.x));
 
-    // Balls sync while waiting
     if (G.waitingLaunch){ for (const b of G.balls){ b.x = p.x; b.y = p.y - 14; } }
 
-    // Move bricks before collisions
     updateMovingBricks(dt);
 
     for (let bi = G.balls.length-1; bi>=0; bi--){
       const b = G.balls[bi];
       if (G.waitingLaunch) continue;
       if (b.stuck) { b.x = p.x; b.y = p.y - 14; continue; }
-      
+
   b.px = b.x; b.py = b.y;          // ← NEW: remember last position
       b.x += b.vx * dt; b.y += b.vy * dt;
 
-      // Walls
       if (b.x - b.r < 0){ b.x = b.r; b.vx = Math.abs(b.vx); SFX.wall(); }
       if (b.x + b.r > css.w){ b.x = css.w - b.r; b.vx = -Math.abs(b.vx); SFX.wall(); }
       if (b.y - b.r < 0){ b.y = b.r; b.vy = Math.abs(b.vy); SFX.wall(); }
-// Portals (teleport) — run after walls, before bottom check
 tryPortalTeleport(b, dt);
 
-      // Bottom: remove this ball
 if (b.y - b.r > css.h){
-  // If shield is active, bounce instead of losing the ball
   if (G.effects.some(e=>e.type==='SHIELD')){
     b.y = css.h - b.r - 1;
     b.vy = -Math.abs(b.vy || (b.speed*0.9));
@@ -1994,7 +1861,6 @@ if (b.y - b.r > css.h){
     SFX.wall();
     continue; // ball saved; keep playing
   }
-  // otherwise: lose the ball
   G.balls.splice(bi,1);
         if (G.balls.length===0){
           G.lives--; elLives.textContent = G.lives;
@@ -2009,24 +1875,20 @@ if (G.lives <= 0){
   cardOver.hidden = false;
   return;
 }
-          // Reset a fresh ball with current difficulty speed
           const dif = difficultyFor(G.level);
           const baseSpeed = BASE_BALL_SPEED + dif.ballSpeedAdd;
           G.balls = [makeBall(p.x, p.y-14, -Math.PI/3, baseSpeed)];
           for (const bb of G.balls){ bb.vx=0; bb.vy=0; }
           G.waitingLaunch = true;
-              // Keep FIRE if its timer is still running
     syncBallFlagsFromEffects();
 
         }
         continue;
       }
-// Paddle collision (TOP FACE ONLY)
 if (b.vy > 0){
   const xL = p.x - p.w/2, xR = p.x + p.w/2;
   const yTop = p.y - p.h/2;
 
-  // Did the ball's bottom cross the paddle's top edge this frame?
   const yPrev = b.py + b.r;
   const yNow  = b.y  + b.r;
 
@@ -2054,11 +1916,9 @@ if (b.vy > 0){
     }
   }
 }
-// (Note: side/bottom overlaps are intentionally ignored so the ball won't bounce up)
 
     }
 
-    // Bricks collisions
     let remaining = 0;
     outer: for (const br of G.bricks){
       if (br.hp <= 0) continue; remaining++;
@@ -2070,14 +1930,10 @@ if (b.vy > 0){
           if (!b.fire){ // normal reflect
             if (Math.abs(nx) > Math.abs(ny)) b.vx *= -1; else b.vy *= -1;
           }
-          // damage
-      // damage
 const dmg = b.fire ? 2 : 1;
 br.hp -= dmg;
 
-// combo logic now activates at 2+ successive hits within 2s
 onBrickHit(cx, cy);
-
 
 if (br.hp<=0){
     SFX.brickBreak();
@@ -2094,13 +1950,11 @@ if (br.hp<=0){
   br.color = shade(br.color, -28);
 }
 
-
           continue outer; // one brick per frame
         }
       }
     }
 
-    // Power-ups fall
     for (let i=G.powerups.length-1;i>=0;i--){
       const pu = G.powerups[i];
       pu.y += pu.vy * dt;
@@ -2121,7 +1975,6 @@ if (br.hp<=0){
       }
     }
 
-    // Check level clear
     if (remaining===0){
       SFX.levelClear();
       G.running = false; cardNext.hidden = false;
@@ -2129,11 +1982,9 @@ if (br.hp<=0){
       setTimeout(()=>{ if(G.lives > 0) resetLevel(true); }, 900);
     }
     updateExplosions(dt); // NEW: animate explosion FX
-    // Effects tick with real-time, not speed-modified dt
     updateEffects(clockDt);
     updateComboFX(clockDt);
     updateFeedback(clockDt);
-    // ... after ball/bricks collisions and power-up falls
 updateGun(dt);
 updateBullets(dt);
 
@@ -2170,7 +2021,6 @@ updateBullets(dt);
     if (cy > css.h - 160) continue;     // keep out of paddle zone
     if (!clearOfBricks(cx, cy)) continue;
 
-    // store as rect (top-left x/y)
     portals.push({
       x: cx - PORT_W/2,
       y: cy - PORT_H/2,
@@ -2182,10 +2032,7 @@ updateBullets(dt);
   return (portals.length===2) ? portals : [];
 }
 
-
-  // ===== Rendering =====
   function render(){
-    // Clear
     ctx.clearRect(0,0,css.w,css.h);
     const shake = G.feedback.screenShake || 0;
     const ox = shake > 0 ? Math.sin(G.feedback.time * 91) * 9 * shake : 0;
@@ -2193,18 +2040,14 @@ updateBullets(dt);
     ctx.save();
     ctx.translate(ox, oy);
 
-    // Fancy background grid
     drawBackdrop();
 drawPortals();
 drawBullets();
 
-    // Bricks
     for (const br of G.bricks){ if (br.hp>0) drawBrick(br); }
 
-    // Paddle
     drawPaddle(G.paddle);
 
-    // Shield visual
 if (G.effects.some(e=>e.type==='SHIELD')){
   ctx.save();
   ctx.globalAlpha = 0.8;
@@ -2215,17 +2058,12 @@ if (G.effects.some(e=>e.type==='SHIELD')){
   ctx.restore();
 }
 
-
-    // Balls
     for (const b of G.balls) drawBall(b);
 
-    // Power-ups
     for (const pu of G.powerups) drawPower(pu);
     drawExplosions();
     drawFeedbackEffects();
 
-
-    // Effect badges
     drawEffects();
     drawComboFX();
 drawComboBanner();
@@ -2247,7 +2085,6 @@ drawComboBanner();
     ctx.ellipse(0,0, p.w*0.5, p.h*0.5, 0, 0, Math.PI*2);
     ctx.stroke();
     ctx.shadowBlur = 0;
-    // subtle inner glow
     ctx.globalAlpha = 0.12;
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.ellipse(0,0, p.w*0.45, p.h*0.45, 0, 0, Math.PI*2); ctx.fill();
@@ -2256,17 +2093,14 @@ drawComboBanner();
 }
 function tryPortalTeleport(b, dt){
   if (!G.portals || G.portals.length !== 2) return;
-  if (b.portalCooldown > 0){ 
+  if (b.portalCooldown > 0){
     b.portalCooldown = Math.max(0, b.portalCooldown - dt);
-    // Reset lastPortalIndex when cooldown expires so ball can use portals again
     if (b.portalCooldown <= 0 && b.lastPortalIndex >= 0) {
-      // Check if ball is far enough from the last portal it exited
       const lastPortal = G.portals[b.lastPortalIndex];
       if (lastPortal) {
         const dx = b.x - (lastPortal.x + lastPortal.w/2);
         const dy = b.y - (lastPortal.y + lastPortal.h/2);
         const dist = Math.hypot(dx, dy);
-        // Reset if ball is far enough away (at least 2 portal widths)
         if (dist > Math.max(lastPortal.w, lastPortal.h) * 2) {
           b.lastPortalIndex = -1;
         }
@@ -2274,47 +2108,37 @@ function tryPortalTeleport(b, dt){
         b.lastPortalIndex = -1;
       }
     }
-    return; 
+    return;
   }
 
   for (let i=0;i<2;i++){
     const P = G.portals[i];
     if (circleRectOverlap(b.x, b.y, b.r, P.x, P.y, P.w, P.h)){
-      // Prevent infinite loop: if ball just exited from the OTHER portal (which would send it here), check for deflection
       const otherIndex = 1 - i;
       const justExitedOther = (b.lastPortalIndex === otherIndex);
 
 const Q = G.portals[otherIndex];
 
-// Preserve exact direction & speed
 const speed = Math.hypot(b.vx, b.vy) || b.speed;
 const angIn = Math.atan2(b.vy, b.vx);
 
-// Calculate angle from exit portal center to entry portal center
 const exitCx = Q.x + Q.w/2;
 const exitCy = Q.y + Q.h/2;
 const entryCx = P.x + P.w/2;
 const entryCy = P.y + P.h/2;
 const angleToEntry = Math.atan2(entryCy - exitCy, entryCx - exitCx);
 
-// Check if the ball's exit angle would send it directly back to the entry portal
-// If the angle difference is small (within ~30 degrees), deflect it
-// Only apply deflection if we just exited the other portal (potential loop scenario)
 let angOut = angIn;
 if (justExitedOther) {
   const angDiff = Math.abs(angIn - angleToEntry);
   const normalizedDiff = Math.min(angDiff, Math.PI * 2 - angDiff); // handle wrap-around
-  
+
   if (normalizedDiff < Math.PI / 6) { // ~30 degrees
-    // Deflect the angle away from the entry portal to break the loop
-    // Deflect by 45 degrees in a random direction (left or right)
     const deflection = (Math.random() < 0.5 ? 1 : -1) * Math.PI / 4;
     angOut = angleToEntry + Math.PI + deflection; // opposite direction + deflection
   }
 }
 
-// Place the ball just *outside* the exit portal along its travel direction
-// push distance: just past the portal's bounding rect + ball radius
 const push = Math.max(b.r + 2, Math.max(Q.w, Q.h) * 0.55);
 
 b.x  = exitCx + Math.cos(angOut) * push;
@@ -2331,8 +2155,6 @@ return;
   }
 }
 
-
-
   function drawBackdrop(){
     const grad = ctx.createLinearGradient(0,0,0,css.h);
     grad.addColorStop(0, '#0f172a');
@@ -2340,7 +2162,6 @@ return;
     ctx.fillStyle = grad;
     ctx.fillRect(0,0,css.w,css.h);
 
-    // subtle grid
     ctx.globalAlpha = 0.06;
     ctx.strokeStyle = '#93a4b8';
     ctx.lineWidth = 1;
@@ -2351,7 +2172,6 @@ return;
     ctx.globalAlpha = 1;
   }
 
-  // --- UI helpers ---
 function roundRect(x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x+r, y);
@@ -2366,8 +2186,6 @@ function roundRect(x, y, w, h, r){
   ctx.closePath();
 }
 
-// Draw a crisp, vector icon for each power type at (cx,cy) with size s
-// Optional tintColor; pass a target 2D context `c` (defaults to main ctx).
 function drawPUIcon(type, cx, cy, s, tintColor=null, c=ctx){
   c.save();
   c.translate(cx, cy);
@@ -2526,8 +2344,6 @@ function drawPUIcon(type, cx, cy, s, tintColor=null, c=ctx){
   c.restore();
 }
 
-
-// Render the legend's <canvas class="pu-icon"> using the same icon code
 function renderLegendIcons(){
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   document.querySelectorAll('canvas.pu-icon').forEach(el=>{
@@ -2541,9 +2357,7 @@ function renderLegendIcons(){
     const type = el.dataset.type;
     const cursed = isCurse(type);
 
-    // background plate (per-item, not CSS)
     if (cursed){
-      // deep red tile w/ inner vignette
       const g = c.createLinearGradient(0,0,0,size);
       g.addColorStop(0,'#3f0d0d');
       g.addColorStop(1,'#1f0a0a');
@@ -2552,7 +2366,6 @@ function renderLegendIcons(){
       c.lineWidth = 1;
       c.beginPath(); c.roundRect?.(1,1,size-2,size-2,6) || (c.rect(1,1,size-2,size-2)); c.fill(); c.stroke();
     } else {
-      // subtle neutral
       c.fillStyle = '#0b1220';
       c.strokeStyle = '#26334a';
       c.lineWidth = 1;
@@ -2564,13 +2377,9 @@ function renderLegendIcons(){
   });
 }
 
-
-
-
 function drawPaddle(p){
   const x = p.x - p.w/2, y = p.y - p.h/2;
 
-  // Accent halo behind the paddle (adds separation from background)
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.shadowColor = '#5eead4';               // matches --accent
@@ -2594,32 +2403,27 @@ function drawPaddle(p){
     ctx.restore();
   }
 
-  // High-contrast body in accent hues
   const g = ctx.createLinearGradient(0, y, 0, y + p.h);
   g.addColorStop(0, '#5eead4');  // light accent
   g.addColorStop(1, '#0b3230');  // deep teal for contrast
   ctx.fillStyle = g;
   ctx.fillRect(x, y, p.w, p.h);
 
-  // Crisp outline to separate from background
   ctx.strokeStyle = 'rgba(94,234,212,0.9)';
   ctx.lineWidth = 2;
   ctx.strokeRect(x + 0.5, y + 0.5, p.w - 1, p.h - 1);
 
-  // Top highlight for shape definition
   ctx.globalAlpha = 0.25;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(x, y, p.w, 2);
   ctx.globalAlpha = 1;
 
-  // Bottom neon edge + subtle glow
   ctx.shadowColor = '#5eead4';
   ctx.shadowBlur = 8;
   ctx.fillStyle = '#5eead4';
   ctx.fillRect(x, y + p.h - 3, p.w, 3);
   ctx.shadowBlur = 0;
 }
-
 
   function drawBall(b){
     const speed = Math.hypot(b.vx || 0, b.vy || 0);
@@ -2689,10 +2493,8 @@ function explodeBrick(center){
     const cx = nb.x + nb.w/2, cy = nb.y + nb.h/2;
     const d2 = (cx-Cx)*(cx-Cx) + (cy-Cy)*(cy-Cy);
     if (d2 <= R*R){
-      // ✅ Count toward combo BEFORE scoring/damage
       onBrickHit(cx, cy);
 
-      // Apply blast damage
       nb.hp -= 2;
 
       if (nb.hp > 0){
@@ -2706,7 +2508,6 @@ function explodeBrick(center){
         addScore(points);
         maybeDropPower(nb);
 
-        // (Optional) chain reactions for bombs:
         if (nb.type === 'BOMB'){ explodeBrick(nb); }
       }
     }
@@ -2716,13 +2517,10 @@ function explodeBrick(center){
   spawnExplosion(Cx, Cy); // visual FX
 }
 
-
-// --- Explosion FX (ring + sparks) ---
 function spawnExplosion(x, y){
   const dur = 0.6 + Math.random()*0.15; // ring duration
   const ring = { x, y, t:0, dur, r0:10, r1:110, done:false };
 
-  // build sparks (fast little glowing shards)
   const sparks = [];
   const N = 32;
   for (let i=0;i<N;i++){
@@ -2748,11 +2546,9 @@ function updateExplosions(dt){
   for (let i=G.explosions.length-1;i>=0;i--){
     const FX = G.explosions[i];
 
-    // ring
     FX.ring.t += dt;
     if (FX.ring.t >= FX.ring.dur) FX.ring.done = true;
 
-    // sparks
     for (let j=FX.sparks.length-1;j>=0;j--){
       const s = FX.sparks[j];
       s.life -= dt;
@@ -2774,7 +2570,6 @@ function drawExplosions(){
   for (const FX of G.explosions){
     const { ring, sparks } = FX;
 
-    // central flash
     {
       const p = Math.min(1, ring.t / ring.dur);
       const flashR = 34 * (1 - p);
@@ -2787,7 +2582,6 @@ function drawExplosions(){
       }
     }
 
-    // expanding ring
     {
       const p = Math.min(1, ring.t / ring.dur);
       const rr = ring.r0 + (ring.r1 - ring.r0) * easeOutCubic(p);
@@ -2797,7 +2591,6 @@ function drawExplosions(){
       ctx.shadowColor = 'rgba(251, 191, 36, 0.8)'; // amber glow
       ctx.shadowBlur = 18;
       ctx.lineWidth = 6 * (1 - p) + 2;
-      // warm→hot stroke
       const grad = ctx.createLinearGradient(ring.x-rr, ring.y-rr, ring.x+rr, ring.y+rr);
       grad.addColorStop(0, 'rgba(251,191,36,1)');  // amber
       grad.addColorStop(1, 'rgba(251,113,133,1)'); // pink
@@ -2806,7 +2599,6 @@ function drawExplosions(){
       ctx.restore();
     }
 
-    // sparks (additive)
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (const s of sparks){
@@ -2881,8 +2673,6 @@ function drawScreenFeedback(){
   }
 }
 
-
-
   function drawBrick(br){
     const x=br.x, y=br.y, w=br.w, h=br.h;
     if (br.type === 'BOMB'){
@@ -2898,12 +2688,10 @@ function drawScreenFeedback(){
       ctx.stroke();
       ctx.restore();
     }
-    // body
     const g = ctx.createLinearGradient(x,y,x,y+h);
     g.addColorStop(0, shade(br.color, 20));
     g.addColorStop(1, shade(br.color, -15));
     ctx.fillStyle=g; ctx.fillRect(x,y,w,h);
-    // bevel
     ctx.strokeStyle='rgba(255,255,255,.09)';
     ctx.beginPath(); ctx.moveTo(x,y+h); ctx.lineTo(x,y); ctx.lineTo(x+w,y); ctx.stroke();
     ctx.strokeStyle='rgba(0,0,0,.35)';
@@ -2919,8 +2707,6 @@ function drawScreenFeedback(){
   ctx.restore();
 }
 
-
-    // moving shimmer indicator
     if (br.moving){
       ctx.globalAlpha = 0.35; ctx.fillStyle = 'rgba(255,255,255,.15)';
       ctx.fillRect(x, y+1, w, 2); ctx.globalAlpha = 1;
@@ -2939,7 +2725,6 @@ function drawScreenFeedback(){
       ctx.restore();
     }
 
-    // hp pips
     if (br.hp>1){
       ctx.fillStyle = 'rgba(255,255,255,.2)';
       const pipW = 6, spacing = 4; let px = x + w - 10;
@@ -2973,7 +2758,6 @@ function drawPower(pu){
   ctx.restore();
 
   if (!cursed){
-    // (unchanged) glossy pill for normal power-ups
     const pillBase = (pu.type === 'FIRE') ? '#2563eb' : pu.color; // FIRE = complementary blue
     const body = ctx.createLinearGradient(x-w/2, y-h/2, x-w/2, y+h/2);
     body.addColorStop(0, shade(pillBase, 20));
@@ -2993,8 +2777,6 @@ function drawPower(pu){
     return;
   }
 
-  // --- CURSED LOOK ---
-  // spiky hex silhouette, void gradient, red/magenta aura, hairline cracks
   const s = Math.min(w, h) * 0.88;
   const a = (pu.fx || 0) * 0.8; // slight rotation drift
 
@@ -3002,7 +2784,6 @@ function drawPower(pu){
   ctx.rotate(Math.sin(a) * 0.08); // tiny wobble
   const R = s * 0.58;
 
-  // Outer glow (aura)
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.shadowColor = 'rgba(239,68,68,0.9)'; // red
@@ -3013,7 +2794,6 @@ function drawPower(pu){
   ctx.fill();
   ctx.restore();
 
-  // Spiky/jagged polygon (6 points with jitter)
   function jaggyHex(rad, jitter){
     ctx.beginPath();
     for (let i=0;i<6;i++){
@@ -3025,7 +2805,6 @@ function drawPower(pu){
     ctx.closePath();
   }
 
-  // Fill: void gradient center → dark rim
   const g = ctx.createRadialGradient(0,0, R*0.1, 0,0, R);
   g.addColorStop(0.00, '#0b0d12');
   g.addColorStop(0.55, '#111827');
@@ -3033,12 +2812,10 @@ function drawPower(pu){
   ctx.fillStyle = g;
   jaggyHex(R, 1); ctx.fill();
 
-  // Stroke: angry red
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#ef4444';
   jaggyHex(R, 1); ctx.stroke();
 
-  // “Cracks”
   ctx.strokeStyle = 'rgba(239,68,68,0.55)';
   ctx.lineWidth = 1.25;
   ctx.beginPath();
@@ -3051,13 +2828,11 @@ function drawPower(pu){
   }
   ctx.stroke();
 
-  // Icon in toxic-cursed tint (cyan/teal for contrast against red shell)
   const tint = '#22d3ee';
   drawPUIcon(pu.type, 0, 0, s*0.75, tint);
 
   ctx.restore();
 
-  // tiny falling ash sparks
   if ((pu.fx||0) % 0.05 < 0.025){
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -3072,13 +2847,7 @@ function drawPower(pu){
   function CrEaTeNoise(){ return 2.4 + Math.sin((pu.fx||0)*5)*0.6; }
 }
 
-
-
-
-
-
 function drawEffects(){
-  // --- RISK badge (top-right) ---
   ctx.save();
   ctx.font = '12px ui-sans-serif, system-ui';
   ctx.textBaseline = 'top';
@@ -3095,7 +2864,6 @@ function drawEffects(){
   }
   ctx.restore();
 
-  // --- Power-up timers (top-left stack, now with icons) ---
   ctx.save();
   ctx.font = '12px ui-sans-serif, system-ui';
   ctx.textAlign = 'left';
@@ -3110,7 +2878,6 @@ for (const e of G.effects){
   const cursed = isCurse(e.type);
   const name = cursed ? ('CURSE: ' + nameRaw) : nameRaw;
 
-  // panel
   if (cursed){
     ctx.fillStyle = 'rgba(127,29,29,.85)';      // deep red
     ctx.strokeStyle = '#7f1d1d';
@@ -3121,10 +2888,8 @@ for (const e of G.effects){
   ctx.fillRect(x, y, ROW_W, ROW_H);
   ctx.strokeRect(x + 0.5, y + 0.5, ROW_W - 1, ROW_H - 1);
 
-  // icon
   drawPUIcon(e.type, x + 12, y + 10, 11, ICON_TINT[e.type] || '#e6edf3');
 
-  // text
   ctx.fillStyle = cursed ? '#fecaca' : '#e6edf3';
   ctx.fillText(name + ' ' + Math.ceil(sec) + 's', x + 24, y + 4);
 
@@ -3134,9 +2899,6 @@ for (const e of G.effects){
   ctx.restore();
 }
 
-
-
-  // ===== Diagnostics =====
   function diagNum(value){
     return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
   }
@@ -3254,7 +3016,6 @@ for (const e of G.effects){
     return renderGameToText();
   };
 
-  // ===== Tests =====
   function runTests(){
     const results=[]; const t=(name,fn)=>{ try{ fn(); results.push({name, ok:true}); } catch(e){ results.push({name, ok:false, err: String(e)});} };
 
@@ -3297,7 +3058,6 @@ for (const e of G.effects){
   }
   window.runBrickBreakerTests = runTests;
 
-  // ===== Start =====
     gameReady = true;  // allow resize() to rescale entities
   resize();          // ensure canvas matches the full window now
   restartGame();
@@ -3306,4 +3066,3 @@ for (const e of G.effects){
 </script>
 </body>
 </html>
-

@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-05-22 Codex pass 79
+
+- Implemented the balanced max-parallel bundle on `codex/max-parallel-balanced-2026-05-21`: added five compact standalone games (Volt Sudoku, Glyphogram Grid, Lumen Lander, Wordweave Grid, and Dice Dynamo) with SVG covers, manifest entries, generated fallback catalog data, per-game meta/JSON-LD, sitemap/feed entries, OG share cards, and strict render-capture recipes.
+- Added catalog/tool truth work: catalog discovery action buttons with smoke assertions, mobile catalog containment smoke coverage, browser-backed PWA runtime and sandboxed storage-runtime probes, generated-surface closure for orphan HTML/OG files, validator negative fixtures, and OG generator orphan pruning. The service worker cache key is now `wa-v7-2026-05-21`.
+- Landed worker-separated polish without gameplay rule changes: Maze Chase touch steering; Minesweeper/Chess/Checkers keyboard board control; Sky Hopper and Block Drop live status/tactile diagnostics; Solitaire touch-to-foundation/status polish; Slope Runner pause/resume; Echo Mimic fullscreen/status parity; Rhythm Circuit fullscreen button without stealing the F lane key; Gridline Tactics live status; shared fact-match fullscreen/status diagnostics; Brick Breaker trimmed 8.2 KB.
+- Local verification passed: `validate-catalog.ps1 -Fix`; `npm run inject:meta`; `npm run build:sitemap`; `npm run build:feed`; `npm run build:og-images`; `validate-catalog.ps1` for 59 games; `npm test` across 32 fast gates; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games` for 59 games; `npm run capture:games:ci` across 118 surfaces with max score 0; strict local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci` across 60 pages; `git diff --check` with existing LF-to-CRLF warnings only.
+- Suggested next pass: stop adding broad content for one cycle and do a manual play-feel/contact-sheet review of the now-59-game catalog, especially the older large-budget exceptions (Idle Tycoon and Arcade Jump) and the densest board games.
+
 ## 2026-05-20 Codex pass 78
 
 - Implemented the max-parallel quality bundle on `codex/max-parallel-quality-2026-05-20`: added five compact standalone games (Inkline Courier, Cipher Rooms, Patchwork Foundry, Market Minute, and Bloomkeeper Grid) with SVG covers, manifest entries, generated catalog fallback data, per-game meta/JSON-LD, sitemap/feed entries, OG share cards, and render-capture recipes.

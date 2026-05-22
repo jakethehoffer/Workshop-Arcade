@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Dice Dynamo - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Lock, reroll, and bank risky dice contracts across deterministic score-chase rounds." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/dice-dynamo.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Dice Dynamo — Workshop Arcade" />
+<meta property="og:description" content="Lock, reroll, and bank risky dice contracts across deterministic score-chase rounds." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/dice-dynamo.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/dice-dynamo.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Dice Dynamo — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Dice Dynamo — Workshop Arcade" />
+<meta name="twitter:description" content="Lock, reroll, and bank risky dice contracts across deterministic score-chase rounds." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/dice-dynamo.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Dice Dynamo",
+  "description": "Lock, reroll, and bank risky dice contracts across deterministic score-chase rounds.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/dice-dynamo.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/dice-dynamo.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Simulation",
+    "Strategy",
+    "Puzzle"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Lock seeded dice, risk rerolls, and bank contract combos before the dynamo cools." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+:root{color-scheme:dark;--ink:#effbff;--muted:#9ab5c7;--cyan:#4de4ee;--gold:#ffd166;--green:#62e5a4;--red:#fb7185;--panel:#0d1d2d;--line:rgba(117,235,246,.24)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}body{overflow-x:hidden;color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(760px 500px at 7% -8%,rgba(77,228,238,.19),transparent 62%),radial-gradient(650px 450px at 96% 3%,rgba(255,209,102,.13),transparent 60%),linear-gradient(180deg,#061018,#060914 86%)}button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:14px}.top,.hud,.actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.eyebrow{display:block;color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.title{display:block;margin-top:3px;color:#f8fcff;font-size:clamp(23px,4vw,35px);font-weight:950;letter-spacing:.04em;line-height:1;text-transform:uppercase}.pill,.panel,.btn,.die{border:1px solid var(--line);background:linear-gradient(180deg,rgba(18,42,61,.96),rgba(7,15,27,.98));box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 42px rgba(0,0,0,.23)}.pill{min-width:72px;border-radius:8px;padding:7px 9px;text-align:center}.pill.hot{border-color:rgba(255,209,102,.58)}.label{display:block;color:#83d9fb;font-size:9px;font-weight:950;text-transform:uppercase}.value{display:block;margin-top:2px;font-size:18px;font-weight:950;font-variant-numeric:tabular-nums}.table{width:min(1040px,100%);margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 318px;gap:10px;align-items:start}.panel{border-radius:10px;padding:11px}.board{display:grid;gap:11px;align-content:start}.contractHead{display:flex;align-items:start;justify-content:space-between;gap:8px}.contractName{font-size:clamp(20px,3vw,30px);font-weight:950;text-transform:uppercase}.contractRule{margin:4px 0 0;color:var(--muted);font-size:13px}.tag{border:1px solid rgba(255,209,102,.4);border-radius:999px;color:var(--gold);padding:5px 8px;font-size:11px;font-weight:950;text-transform:uppercase;white-space:nowrap}.dice{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.die{min-height:142px;border-radius:10px;color:var(--ink);cursor:pointer;display:grid;place-items:center;gap:3px;padding:8px;touch-action:manipulation}.die[aria-pressed=true]{border-color:rgba(255,209,102,.8);background:linear-gradient(180deg,rgba(56,45,22,.94),rgba(11,20,31,.98));transform:translateY(-2px)}.die:hover,.btn:hover{border-color:rgba(255,209,102,.68)}.die:focus-visible,.btn:focus-visible{outline:3px solid rgba(255,209,102,.88);outline-offset:2px}.face{display:grid;place-items:center;width:min(76px,100%);aspect-ratio:1;border-radius:16px;background:radial-gradient(circle at 32% 28%,#f9ffff,#bbf1f5 55%,#5aa8b8);color:#062331;font-size:clamp(34px,6vw,60px);font-weight:1000;line-height:1;text-shadow:0 1px rgba(255,255,255,.8)}.die small{color:var(--cyan);font-weight:950;text-transform:uppercase}.die[aria-pressed=true] small{color:var(--gold)}.bankRow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.btn{border-radius:8px;color:var(--ink);cursor:pointer;font-size:12px;font-weight:950;padding:10px 11px;text-transform:uppercase}.btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ef5e4,#22d3ee);color:#05262d}.btn.risk{border-color:rgba(255,209,102,.44)}.btn:disabled{cursor:not-allowed;filter:saturate(.45);opacity:.54}.quote{display:grid;gap:5px;border:1px solid rgba(117,235,246,.15);border-radius:8px;background:#07121d;padding:9px;color:var(--muted);font-size:12px}.quote b{color:var(--ink);font-size:18px;font-variant-numeric:tabular-nums}.side{display:grid;gap:10px}.side h2{margin:0 0 7px;color:#83d9fb;font-size:12px;font-weight:950;letter-spacing:.13em;text-transform:uppercase}.scoreLine{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;color:var(--muted);font-size:12px}.scoreLine strong{color:var(--ink);font-variant-numeric:tabular-nums}.scoreLine.good strong{color:var(--green)}.combos{display:flex;gap:6px;flex-wrap:wrap;min-height:28px}.combo{border:1px solid rgba(117,235,246,.22);border-radius:999px;padding:5px 7px;color:var(--cyan);font-size:11px;font-weight:950}.combo.on{border-color:rgba(98,229,164,.56);background:rgba(98,229,164,.09);color:var(--green)}.note,.keys{margin:7px 0 0;color:var(--muted);font-size:12px;line-height:1.45}.controls{justify-content:flex-start}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;border:1px solid rgba(117,235,246,.25);border-radius:6px;background:#07121d;color:var(--ink);padding:0 5px;font-weight:950}.feedback{min-height:24px;color:#83d9fb;font-size:13px;font-weight:900;text-align:center}.feedback.good{color:var(--green)}.feedback.bad{color:var(--red)}.feedback.done{color:var(--gold)}.finish{display:none;border-color:rgba(255,209,102,.58);text-align:center}.finish.show{display:block}.finish .value{font-size:36px}.sr{position:absolute;left:-10000px}@media(max-width:860px){.table{grid-template-columns:1fr}.side{grid-template-columns:repeat(3,minmax(0,1fr))}.keys{display:none}.controls .btn{flex:1 1 92px}}@media(max-width:650px){.app{gap:8px;padding:9px}.title{font-size:23px}.hud{justify-content:center}.pill{min-width:61px;padding:6px}.value{font-size:15px}.panel{padding:9px}.dice{gap:6px}.die{min-height:102px;padding:6px}.face{border-radius:12px;font-size:34px}.die small{font-size:10px}.bankRow{grid-template-columns:1fr}.side{grid-template-columns:1fr}.contractName{font-size:21px}.btn{padding:9px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div><span class="eyebrow">Workshop Arcade</span><span class="title">Dice Dynamo</span></div>
+    <div class="hud" aria-label="Run status">
+      <span class="pill"><span class="label">Round</span><span class="value" id="roundValue">1/6</span></span>
+      <span class="pill hot"><span class="label">Rerolls</span><span class="value" id="rerollValue">2</span></span>
+      <span class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></span>
+      <span class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></span>
+    </div>
+  </header>
+  <main class="table" aria-label="Dice Dynamo contract game">
+    <section class="panel board" aria-label="Dice table">
+      <div class="contractHead">
+        <div>
+          <div class="contractName" id="contractName">Charging</div>
+          <p class="contractRule" id="contractRule">Lock dice, then bank or risk.</p>
+        </div>
+        <span class="tag" id="contractPay">Contract</span>
+      </div>
+      <div class="dice" id="diceTray" aria-label="Dice left to right"></div>
+      <div class="bankRow" aria-label="Round actions">
+        <button class="btn primary" type="button" id="bankBtn">Bank Roll</button>
+        <button class="btn risk" type="button" id="riskBtn">Risk Reroll</button>
+      </div>
+      <div class="quote">
+        <span id="bankText">A qualifying contract adds its pay to combo sparks.</span>
+        <b id="bankValue">Bank 0</b>
+      </div>
+      <section class="panel finish" id="finishPanel" aria-label="Run complete">
+        <span class="label">Run Complete</span>
+        <span class="value" id="finalValue">0</span>
+        <p class="note" id="finalText">Restart to replay the same seeded contract run.</p>
+      </section>
+    </section>
+    <aside class="side">
+      <section class="panel" aria-label="Contract details">
+        <h2>Contract</h2>
+        <p class="note" id="contractDetail">Bank the current dice for the contract payout.</p>
+        <div class="scoreLine good"><span>Contract</span><strong id="contractState">Live</strong></div>
+        <div class="scoreLine"><span>Streak bonus</span><strong id="streakValue">+0</strong></div>
+      </section>
+      <section class="panel" aria-label="Combo sparks">
+        <h2>Combos</h2>
+        <div class="combos" id="comboList"></div>
+        <p class="note" id="lastBank">Pairs, runs, houses, and voltage stack into every bank.</p>
+      </section>
+      <section class="panel" aria-label="Controls">
+        <h2>Controls</h2>
+        <div class="actions controls">
+          <button class="btn" type="button" id="restartBtn">Restart</button>
+          <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+          <button class="btn" type="button" id="fullBtn">Fullscreen</button>
+        </div>
+        <p class="keys"><span class="kbd">1-5</span> lock <span class="kbd">B</span> bank <span class="kbd">X</span> risk <span class="kbd">R</span> restart <span class="kbd">M</span> sound <span class="kbd">F</span> fullscreen</p>
+      </section>
+    </aside>
+  </main>
+  <footer class="feedback" id="feedback" aria-live="polite">Round one is seeded. Lock keepers or risk a reroll.</footer>
+</div>
+<script>
+(() => {
+  "use strict";
+  const START_SEED = 0xd1ce2026;
+  const TOTAL_ROUNDS = 6;
+  const REROLLS = 2;
+  const BEST_KEY = "dice-dynamo.best.v1";
+  const SOUND_KEY = "dice-dynamo.sound.v1";
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    round: $("roundValue"), rerolls: $("rerollValue"), score: $("scoreValue"), best: $("bestValue"),
+    name: $("contractName"), rule: $("contractRule"), pay: $("contractPay"), tray: $("diceTray"),
+    bank: $("bankBtn"), risk: $("riskBtn"), bankText: $("bankText"), bankValue: $("bankValue"),
+    detail: $("contractDetail"), contractState: $("contractState"), streak: $("streakValue"),
+    combos: $("comboList"), lastBank: $("lastBank"), restart: $("restartBtn"), sound: $("soundBtn"),
+    full: $("fullBtn"), feedback: $("feedback"), finish: $("finishPanel"), finalValue: $("finalValue"), finalText: $("finalText")
+  };
+  const contracts = [
+    { id: "pair", name: "Twin Coupler", pay: 24, rule: "Bank one pair or better.", test: (f) => f.pair },
+    { id: "triple", name: "Triple Torque", pay: 42, rule: "Bank three matching dice.", test: (f) => f.triple },
+    { id: "straight", name: "Rail Run", pay: 58, rule: "Bank 1-5 or 2-6 in any order.", test: (f) => f.straight },
+    { id: "full", name: "Full Circuit", pay: 68, rule: "Bank a three-of-kind plus a pair.", test: (f) => f.full },
+    { id: "voltage", name: "High Voltage", pay: 46, rule: "Bank a dice sum of 22 or more.", test: (f) => f.voltage },
+    { id: "quad", name: "Quad Rotor", pay: 82, rule: "Bank four matching dice.", test: (f) => f.quad },
+    { id: "even", name: "Even Relay", pay: 38, rule: "Bank four even dice.", test: (f) => f.evens >= 4 }
+  ];
+  const comboDefs = [
+    { id: "pair", name: "Pair", pay: 8, test: (f) => f.pair },
+    { id: "triple", name: "Trips", pay: 18, test: (f) => f.triple },
+    { id: "straight", name: "Run", pay: 28, test: (f) => f.straight },
+    { id: "full", name: "House", pay: 34, test: (f) => f.full },
+    { id: "quad", name: "Quads", pay: 44, test: (f) => f.quad },
+    { id: "voltage", name: "Voltage", pay: 12, test: (f) => f.voltage }
+  ];
+  function storage() { if (window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch (_) { return null; } }
+  function read(key, fallback) { const s = storage(); if (!s) return fallback; try { const value = s.getItem(key); return value == null ? fallback : value; } catch (_) { return fallback; } }
+  function write(key, value) { const s = storage(); if (!s) return; try { s.setItem(key, String(value)); } catch (_) {} }
+  function soundOn() { return !["0", "false", "off", "muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase()); }
+  const state = {
+    mode: "playing", seed: START_SEED, deck: [], round: 0, dice: [1, 1, 1, 1, 1], locked: [false, false, false, false, false],
+    rerolls: REROLLS, rollCount: 0, score: 0, best: Number(read(BEST_KEY, "0")) || 0, streak: 0, banks: [],
+    feedback: "Round one is seeded. Lock keepers or risk a reroll.", feedbackKind: "", feedbackTimer: 0,
+    soundEnabled: soundOn(), lastSound: "none", gesture: false
+  };
+  let audio = null;
+  function rand() { state.seed = (Math.imul(state.seed, 1664525) + 1013904223) >>> 0; return state.seed; }
+  function die() { return rand() % 6 + 1; }
+  function shuffledContracts() {
+    const deck = contracts.map((_, index) => index);
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = rand() % (i + 1);
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck.slice(0, TOTAL_ROUNDS);
+  }
+  function activeContract() { return contracts[state.deck[Math.min(state.round, TOTAL_ROUNDS - 1)]]; }
+  function facts() {
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    state.dice.forEach((value) => { counts[value] += 1; });
+    const groups = counts.filter(Boolean).sort((a, b) => b - a);
+    const unique = state.dice.slice().sort((a, b) => a - b).join("");
+    const sum = state.dice.reduce((total, value) => total + value, 0);
+    return {
+      sum, counts, groups, pair: groups[0] >= 2, triple: groups[0] >= 3, quad: groups[0] >= 4,
+      full: groups[0] === 3 && groups[1] === 2, straight: unique === "12345" || unique === "23456",
+      voltage: sum >= 22, evens: state.dice.filter((value) => value % 2 === 0).length
+    };
+  }
+  function quote() {
+    const f = facts();
+    const contract = activeContract();
+    const hits = comboDefs.filter((combo) => combo.test(f));
+    const contractHit = contract.test(f);
+    const comboPay = hits.reduce((total, combo) => total + combo.pay, 0);
+    const streakPay = contractHit ? state.streak * 10 : 0;
+    const base = contractHit ? contract.pay : Math.ceil(f.sum / 2);
+    return { facts: f, hits, contractHit, comboPay, streakPay, base, total: base + comboPay + streakPay };
+  }
+  function message(text, kind = "", ms = 1700) { state.feedback = text; state.feedbackKind = kind; state.feedbackTimer = ms; }
+  function ensureAudio() {
+    if (!state.soundEnabled || !state.gesture) return null;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume().catch(() => {});
+      return audio;
+    } catch (_) { audio = null; return null; }
+  }
+  function tone(name) {
+    state.lastSound = state.soundEnabled ? name : "muted-" + name;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator(), gain = ctx.createGain(), now = ctx.currentTime;
+    const freq = { lock: 360, roll: 220, bank: 560, contract: 760, miss: 145, finish: 660, restart: 280, toggle: 430 }[name] || 320;
+    osc.type = name === "miss" ? "sawtooth" : "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    if (name === "roll" || name === "finish") osc.frequency.linearRampToValueAtTime(freq + 150, now + .13);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(.048, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .18);
+    osc.connect(gain).connect(ctx.destination); osc.start(now); osc.stop(now + .2);
+  }
+  function rollUnlocked(all) {
+    state.dice = state.dice.map((value, index) => all || !state.locked[index] ? die() : value);
+    state.rollCount += 1;
+  }
+  function openRound(index) {
+    state.round = index; state.rerolls = REROLLS; state.locked = [false, false, false, false, false];
+    rollUnlocked(true);
+  }
+  function newRun() {
+    state.mode = "playing"; state.seed = START_SEED; state.score = 0; state.streak = 0; state.rollCount = 0; state.banks = [];
+    state.deck = shuffledContracts();
+    openRound(0);
+    els.finish.classList.remove("show");
+    message("Round one is seeded. Lock keepers or risk a reroll.", "", 2100);
+    tone("restart");
+    render();
+  }
+  function toggleLock(index) {
+    if (state.mode !== "playing") return;
+    state.locked[index] = !state.locked[index];
+    message("Die " + (index + 1) + (state.locked[index] ? " locked." : " released."), "", 850);
+    tone("lock");
+    render();
+  }
+  function risk() {
+    if (state.mode !== "playing") return;
+    if (state.rerolls <= 0) { message("No rerolls remain. Bank this roll.", "bad"); tone("miss"); render(); return; }
+    if (state.locked.every(Boolean)) { message("Release a die before risking a reroll.", "bad"); tone("miss"); render(); return; }
+    state.rerolls -= 1;
+    rollUnlocked(false);
+    message(state.rerolls ? "Risk landed. Lock keepers or risk again." : "Last risk landed. Bank the contract.", "", 1450);
+    tone("roll");
+    render();
+  }
+  function finishRun() {
+    state.mode = "complete";
+    if (state.score > state.best) { state.best = state.score; write(BEST_KEY, state.best); }
+    els.finish.classList.add("show");
+    message("Run complete. Final dynamo score " + state.score + ".", "done", 5000);
+    tone("finish");
+  }
+  function bank() {
+    if (state.mode !== "playing") return;
+    const result = quote();
+    const contract = activeContract();
+    state.score += result.total;
+    state.streak = result.contractHit ? state.streak + 1 : 0;
+    state.banks.push({
+      round: state.round + 1, contract: contract.id, dice: state.dice.slice(), points: result.total,
+      contractHit: result.contractHit, combos: result.hits.map((combo) => combo.id)
+    });
+    tone(result.contractHit ? "contract" : "bank");
+    if (state.round === TOTAL_ROUNDS - 1) finishRun();
+    else {
+      const notice = result.contractHit ? contract.name + " banked" : contract.name + " missed";
+      openRound(state.round + 1);
+      message(notice + " for " + result.total + ". Next contract charged.", result.contractHit ? "good" : "bad", 2000);
+    }
+    render();
+  }
+  function toggleSound() {
+    state.soundEnabled = !state.soundEnabled;
+    write(SOUND_KEY, state.soundEnabled ? "1" : "0");
+    tone("toggle");
+    render();
+  }
+  async function fullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch (_) {}
+    render();
+  }
+  function renderDice() {
+    els.tray.innerHTML = state.dice.map((value, index) => `<button class="die" type="button" data-die="${index}" aria-pressed="${state.locked[index]}" aria-label="Die ${index + 1} showing ${value}, ${state.locked[index] ? "locked" : "unlocked"}"><span class="face">${value}</span><small>${state.locked[index] ? "Locked" : "Lock " + (index + 1)}</small></button>`).join("");
+  }
+  function render() {
+    const contract = activeContract();
+    const q = quote();
+    els.round.textContent = Math.min(state.round + 1, TOTAL_ROUNDS) + "/" + TOTAL_ROUNDS;
+    els.rerolls.textContent = state.mode === "complete" ? "0" : state.rerolls;
+    els.score.textContent = state.score; els.best.textContent = state.best;
+    els.name.textContent = contract.name; els.rule.textContent = contract.rule; els.pay.textContent = "+" + contract.pay + " contract";
+    els.detail.textContent = q.contractHit ? "Contract is live. Bank now or risk a stronger combo." : "Current dice miss. Bank salvage or risk unlocked dice.";
+    els.contractState.textContent = q.contractHit ? "Live +" + contract.pay : "Salvage +" + q.base;
+    els.streak.textContent = "+" + q.streakPay + " at " + state.streak + " streak";
+    els.combos.innerHTML = comboDefs.map((combo) => `<span class="combo ${q.hits.includes(combo) ? "on" : ""}">${combo.name} +${combo.pay}</span>`).join("");
+    els.bankText.textContent = (q.contractHit ? "Contract " + contract.name + " pays " + contract.pay : "Missed contract salvages half the sum") + "; combos add " + q.comboPay + ".";
+    els.bankValue.textContent = "Bank " + q.total;
+    els.lastBank.textContent = state.banks.length ? "Last bank: round " + state.banks.at(-1).round + " for " + state.banks.at(-1).points + "." : "Pairs, runs, houses, and voltage stack into every bank.";
+    els.bank.disabled = state.mode !== "playing"; els.risk.disabled = state.mode !== "playing" || state.rerolls === 0;
+    els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
+    els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+    els.feedback.textContent = state.feedback; els.feedback.className = "feedback " + state.feedbackKind;
+    els.finalValue.textContent = state.score; els.finalText.textContent = "Best " + state.best + ". Restart replays seed " + START_SEED + ".";
+    renderDice();
+  }
+  function snapshot() {
+    const contract = activeContract(), q = quote();
+    return JSON.stringify({
+      mode: state.mode,
+      view: "dice are ordered left-to-right from index 0",
+      seed: { start: START_SEED, rngState: state.seed, rolls: state.rollCount, contractOrder: state.deck.map((index) => contracts[index].id) },
+      round: { number: state.round + 1, total: TOTAL_ROUNDS, rerolls: state.rerolls },
+      score: state.score, best: state.best, streak: state.streak,
+      dice: state.dice.map((value, index) => ({ index, value, locked: state.locked[index] })),
+      contract: { id: contract.id, name: contract.name, pay: contract.pay, rule: contract.rule, qualified: q.contractHit },
+      bankQuote: { points: q.total, base: q.base, comboBonus: q.comboPay, streakBonus: q.streakPay, sum: q.facts.sum },
+      combos: q.hits.map((combo) => ({ id: combo.id, pay: combo.pay })),
+      banks: state.banks.slice(-3),
+      feedback: { text: state.feedback, kind: state.feedbackKind, active: state.feedbackTimer > 0 || state.mode === "complete" },
+      soundEnabled: state.soundEnabled, lastSound: state.lastSound, fullscreen: Boolean(document.fullscreenElement),
+      runComplete: state.mode === "complete"
+    });
+  }
+  function advance(ms) {
+    state.feedbackTimer = Math.max(0, state.feedbackTimer - Math.max(0, Number(ms) || 0));
+    if (state.feedbackTimer === 0 && state.mode === "playing") {
+      state.feedback = "Lock dice, bank this roll, or risk the unlocked dice.";
+      state.feedbackKind = "";
+    }
+    render();
+    return snapshot();
+  }
+  function key(ev) {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    const name = ev.key.toLowerCase();
+    if (ev.target instanceof HTMLElement && /^(button|input|select|textarea)$/i.test(ev.target.tagName) && (name === " " || name === "enter")) return;
+    if (!/^[1-5]$/.test(name) && !["b", "x", "r", "m", "f", "enter", " "].includes(name)) return;
+    state.gesture = true;
+    if (/^[1-5]$/.test(name)) toggleLock(Number(name) - 1);
+    else if (name === "b" || name === "enter" || name === " ") bank();
+    else if (name === "x") risk();
+    else if (name === "r") newRun();
+    else if (name === "m") toggleSound();
+    else if (name === "f") fullscreen();
+    ev.preventDefault();
+  }
+  els.tray.addEventListener("click", (ev) => { const button = ev.target.closest("[data-die]"); if (!button) return; state.gesture = true; toggleLock(Number(button.dataset.die)); });
+  els.bank.addEventListener("click", () => { state.gesture = true; bank(); });
+  els.risk.addEventListener("click", () => { state.gesture = true; risk(); });
+  els.restart.addEventListener("click", () => { state.gesture = true; newRun(); });
+  els.sound.addEventListener("click", () => { state.gesture = true; toggleSound(); });
+  els.full.addEventListener("click", () => { state.gesture = true; fullscreen(); });
+  document.addEventListener("fullscreenchange", render);
+  window.addEventListener("keydown", key);
+  window.render_game_to_text = snapshot;
+  window.advanceTime = advance;
+  newRun();
+})();
+</script>
+</body>
+</html>

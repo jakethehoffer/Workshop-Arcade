@@ -46,7 +46,7 @@ npm ci
 npm test
 ```
 
-`npm test` invokes `scripts/run-fast-tests.mjs`, which auto-discovers every `test:*` npm script and runs them in sequence with a per-gate PASS/FAIL summary. `npm run test:all` adds the slow `test:games` Playwright suite on top, and `npm run test:games` runs that one alone.
+`npm test` invokes `scripts/run-fast-tests.mjs`, which auto-discovers every fast `test:*` npm script and runs them in sequence with a per-gate PASS/FAIL summary. Browser-backed runtime probes stay explicit (`npm run test:runtime-storage`, `npm run test:pwa-runtime`) alongside the slow `npm run test:games` Playwright suite, and `npm run test:all` adds `test:games` on top of the fast runner.
 
 For a full publish-ready check (the same shape CI runs), step through individually so the per-stage CI feedback matches:
 
@@ -61,6 +61,7 @@ npm run test:security-workflows
 npm run test:tools
 npm run test:capture-recipes
 npm run test:generated-surfaces
+npm run test:validator-fixtures
 npm run test:catalog-perf
 npm run test:performance-baseline
 npm run test:cover-assets
@@ -78,6 +79,8 @@ npm run test:seo
 npm run test:feed
 npm run test:a11y
 npm run test:a11y-polish
+npm run test:runtime-storage
+npm run test:pwa-runtime
 npm run test:games
 npm run capture:games:ci
 npm run audit:perf:ci
@@ -88,12 +91,13 @@ npm run audit:perf:ci
 - `npm run test:manifest-schema` validates `websites/manifest.json` against [`schemas/manifest.schema.json`](schemas/manifest.schema.json) — the single source-of-truth contract that every generator (sitemap, feed, OG images, inject-meta) and downstream validator depends on. The same schema is wired into `.vscode/settings.json` so editors give contributors live autocomplete + inline validation while editing the manifest, catching typos like `tagss: [...]` at source instead of cascading into a wall of generator failures.
 - `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `SECURITY.md` (GitHub-native disclosure policy linking to private advisories + the RFC 9116 surface), `humans.txt` (humanstxt.org format with `/* TEAM */`), `package.json` declares `"license": "MIT"`, and the README's intro slab carries the Validate Catalog + CodeQL + License: MIT badges so visitors see repo health at a glance.
 - `npm run test:security-workflows` enforces that `.github/dependabot.yml` (npm + github-actions weekly updates) and `.github/workflows/codeql.yml` (push + PR + weekly schedule, hardened least-privilege permissions, `security-extended` query pack, javascript-typescript analysis) both stay in place so dependency drift and inline-JS security regressions surface as PR checks instead of going to production.
-- `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly `test:games` (slow) and `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
+- `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly the browser-backed slow gates plus `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
 - `npm run test:contributor-onboarding` keeps the first-time-setup story aligned: `npm run setup` exists and pins Playwright chromium, `.devcontainer/devcontainer.json` uses a Playwright image + runs `npm ci && npm run setup` on create + forwards at least one static-server port, and `README.md` mentions both `npm run setup` and Codespaces.
 - `npm run test:architecture-doc` keeps `ARCHITECTURE.md` honest: required sections (manifest, generators, validators, CI, add-a-game) are present, every generator script + every regeneration command in the add-a-game recipe is named, and the doc never references a script that no longer exists on disk.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
 - `npm run test:capture-recipes` verifies every manifest game has a strict rendered-quality interaction recipe.
 - `npm run test:generated-surfaces` verifies every manifest game is represented across generated integration surfaces: per-game OG cards, sitemap, feed, game meta/JSON-LD, and capture recipes.
+- `npm run test:validator-fixtures` runs selected validators against throwaway broken repo fixtures so stale generated-surface and performance-baseline failures are proven without mutating tracked files.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
 - `npm run test:performance-baseline` keeps `docs/performance-baseline.md` aligned with the current manifest count and the strict CI budgets defined in `scripts/audit-pagespeed.mjs`.
 - `npm run test:cover-assets` verifies every manifest cover is a small local 16:9 SVG with no scripts, remote image references, embedded raster blobs, or unsafe SVG primitives.
@@ -103,11 +107,13 @@ npm run audit:perf:ci
 - `npm run test:random-game` locks in the "🎲 Random" header button + `r` keyboard shortcut: a `pickRandomGame()` function reads from `state.filtered` (falling back to `state.games`) so the random pick respects whatever filter the user has applied, the keyboard handler skips while the focus is in an `<input>`/`<textarea>`/`contentEditable` surface, and the click + key paths both end in `openPlayer`.
 - `npm run test:keyboard-help` locks in the keyboard shortcuts help overlay: the header `?` button opens a native `<dialog>` that documents the `?`, `R`, `Ctrl`+`/`, `Esc`, and `Tab` shortcuts via `<kbd>` elements; the `?` key handler accepts both `e.key === '?'` and Shift+`/` (different keyboard layouts), skips while typing in an editable surface, and ignores modifier-key combos.
 - `npm run test:pwa` verifies `app.webmanifest`, `sw.js`, and the matching `<link rel="manifest">` / service worker registration in `index.html` so the catalog stays installable and offline-capable.
+- `npm run test:pwa-runtime` launches Chromium with service workers enabled and proves the installed worker controls the catalog, uses versioned caches, replays a visited game offline, and reaches the branded offline fallback when both network and catalog shell are unavailable.
 - `npm run test:sw-update-toast` locks in the SW update notification UI: an `aside#swUpdateToast` with `role="status"`/`aria-live="polite"` hidden by default, the registration's `updatefound` listener watches the installing worker's `statechange` and surfaces the toast only when `navigator.serviceWorker.controller` is non-null (i.e. real update, not first install), and the Reload button calls `window.location.reload()` so PWA users aren't silently stuck on stale cache after a deploy.
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
 - `npm run test:install-prompt` locks in the PWA install affordance: a hidden header "Install" button with an aria-label naming the install action + inline SVG icon, an `els.installAppBtn` mapping, a `let deferredInstallPrompt = null` cache, a `beforeinstallprompt` listener that calls `preventDefault()` + stashes the event + reveals the button, an `appinstalled` listener that hides it, and a click handler that calls `.prompt()` on the cached event then clears the reference so stale events can't be re-prompted.
 - `npm run test:player-fullscreen` locks in the player-modal Fullscreen API toggle: a `#playerFullscreenBtn` with `aria-pressed` + enter/exit icon swap + (F) shortcut hint, the iframe declares both `allow="fullscreen"` and the legacy `allowfullscreen` attribute, `togglePlayerFullscreen()` exercises both `requestFullscreen()` and `exitFullscreen()`, a `fullscreenchange` listener re-syncs the icon when the user exits via browser chrome, `closePlayer()` calls `exitFullscreen()` first when the modal is currently fullscreen so closing from fullscreen doesn't wedge the page, and an "f"/"F" key shortcut toggles fullscreen while the player modal is visible.
 - `npm run test:storage-contract` verifies every manifest game loads `workshop-runtime.js` before storage-touching game code so sandboxed play keeps the defensive storage fallback.
+- `npm run test:runtime-storage` opens a sandboxed game frame in Chromium and proves `workshop-runtime.js` still provides working storage fallback behavior when native `localStorage` is blocked.
 - `npm run test:og-images` verifies every manifest game has a matching 1200×630 share card under `covers/og/<slug>.svg`, that the SVG contains the game's title text, and that `scripts/inject-game-meta.mjs` writes `og:image` / `twitter:image` pointing at it with `og:image:width=1200` + `og:image:height=630` so Twitter, Slack, Discord, Facebook, and LinkedIn render proper full-size unfurls. Run `npm run build:og-images` after editing the manifest to regenerate.
 - `npm run test:game-jsonld` checks that every manifest game page has the JSON-LD `VideoGame` block emitted by `scripts/inject-game-meta.mjs` and that its name/url/image match the manifest. Run `npm run inject:meta` after editing the manifest to refresh.
 - `npm run test:seo` verifies `sitemap.xml`, `robots.txt`, the JSON-LD `ItemList` block in `index.html`, and a second JSON-LD `WebSite` + `SearchAction` block (drives Google's "Sitelinks Search Box" feature — searches surface a box that deep-links into the catalog at `?q={query}`, the exact URL state `test:url-filters` enforces). Run `npm run build:sitemap` after editing the manifest to regenerate them.
@@ -118,9 +124,9 @@ npm run audit:perf:ci
 - `npm run capture:games:ci` runs the rendered-quality harness in strict mode and fails if any captured surface scores above 0. For optional local review, `npm run capture:games` writes the same ranked contact sheet under `test-results/render-ranking/<timestamp>/` without CI strictness.
 - `npm run audit:perf:ci` starts from the Pagespeed-style performance audit in strict mode and fails on publish-budget regressions.
 
-CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:a11y`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review.
+CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 31 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 32 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 
