@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Gridfront Orders - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Issue move, cover, and attack orders in compact deterministic tactics missions." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/gridfront-orders.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Gridfront Orders — Workshop Arcade" />
+<meta property="og:description" content="Issue move, cover, and attack orders in compact deterministic tactics missions." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/gridfront-orders.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/gridfront-orders.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Gridfront Orders — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Gridfront Orders — Workshop Arcade" />
+<meta name="twitter:description" content="Issue move, cover, and attack orders in compact deterministic tactics missions." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/gridfront-orders.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Gridfront Orders",
+  "description": "Issue move, cover, and attack orders in compact deterministic tactics missions.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/gridfront-orders.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/gridfront-orders.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Tactics",
+    "Strategy",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="A compact turn-based tactics missions game about cover, clean orders, and decisive attacks." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eaf6ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 440px at 8% -8%,rgba(45,212,191,.17),transparent 62%),radial-gradient(680px 420px at 96% 0%,rgba(99,102,241,.16),transparent 64%),linear-gradient(180deg,#071018,#050713 88%)}
+button{font:inherit}
+.app{width:min(980px,100%);display:grid;grid-template-rows:auto auto auto auto auto;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
+.help{max-width:610px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
+.touch{display:grid;grid-template-columns:repeat(5,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
+.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,1fr))}.touch .wide{grid-column:span 1}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Gridfront Orders tactics game">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Gridfront Orders</span></div>
+    <div class="help">Arrows or WASD move cursor. Enter orders the selected unit to move or attack. Tab switches unit. E ends turn. R restarts.</div>
+  </header>
+  <section class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Mode</span><span class="value" id="modeValue">Play</span></div>
+    <div class="pill"><span class="label">Mission</span><span class="value" id="missionValue">1/4</span></div>
+    <div class="pill"><span class="label">Turn</span><span class="value" id="turnValue">P1</span></div>
+    <div class="pill"><span class="label">Orders</span><span class="value" id="ordersValue">2</span></div>
+    <div class="pill"><span class="label">Unit</span><span class="value" id="unitValue">A</span></div>
+    <div class="pill"><span class="label">Enemies</span><span class="value" id="enemyValue">2</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Gridfront Orders cover tactics grid."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Select a unit and issue two orders.</div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Mission ready.</div>
+  <section class="bar" aria-label="Orders">
+    <button class="btn primary" id="actionBtn" type="button">Order</button>
+    <button class="btn" id="unitBtn" type="button">Switch Unit</button>
+    <button class="btn" id="endBtn" type="button">End Turn</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+  </section>
+  <section class="touch" aria-label="Touch controls">
+    <button type="button" data-key="Tab">Unit</button><button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Order</button><button type="button" data-key="e">End</button>
+    <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="ArrowDown">Down</button><button type="button" data-key="ArrowRight">Right</button><button type="button" data-key="r" class="wide">Reset</button>
+  </section>
+</main>
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),W=8,H=6;
+const BEST_KEY="gridfront-orders.best.v1",SOUND_KEY="gridfront-orders.sound.v1";
+const $=id=>document.getElementById(id);
+const els={mode:$("modeValue"),mission:$("missionValue"),turn:$("turnValue"),orders:$("ordersValue"),unit:$("unitValue"),enemy:$("enemyValue"),score:$("scoreValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),action:$("actionBtn"),unitBtn:$("unitBtn"),end:$("endBtn"),restart:$("restartBtn")};
+const missions=[
+{name:"Rail Yard",goal:[7,5],cover:[[2,1],[4,2],[1,4]],units:[[0,0],[0,2]],enemies:[[6,0,4],[5,4,4]]},
+{name:"Crate Row",goal:[7,0],cover:[[2,0],[2,3],[5,2],[4,5]],units:[[0,5],[1,4]],enemies:[[6,1,5],[7,4,4],[4,3,3]]},
+{name:"Signal Split",goal:[3,0],cover:[[1,1],[3,2],[5,1],[2,4],[6,4]],units:[[0,5],[7,5]],enemies:[[1,0,4],[5,0,4],[4,3,5]]},
+{name:"Final Door",goal:[7,3],cover:[[1,2],[2,2],[4,1],[5,3],[3,4]],units:[[0,1],[0,4]],enemies:[[7,0,5],[6,2,4],[7,5,5],[3,1,4]]}
+];
+const state={mode:"play",mission:0,turn:"player",turns:1,orders:2,selected:0,cursor:{x:0,y:0},units:[],enemies:[],cover:[],goal:{x:0,y:0},score:0,best:readBest(),sound:readSound(),feedback:"Mission ready.",lastInput:"none",marks:[],time:0};
+let audio=null;
+function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
+function readBest(){try{return Math.max(0,parseInt((store()||{}).getItem(BEST_KEY),10)||0)}catch(_){return 0}}
+function saveBest(){if(state.score>state.best){state.best=state.score;try{(store()||{}).setItem(BEST_KEY,String(state.best))}catch(_){}}}
+function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
+function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+function say(text){state.feedback=text;els.status.textContent=text;els.live.textContent=text}
+function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
+function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={select:420,move:260,attack:160,win:620,loss:90,turn:310,block:120}[kind]||220;o.type=kind==="loss"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.08,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.16);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.18)}catch(_){}}
+function startMission(i,keepScore){const m=missions[i];state.mode="play";state.turn="player";state.turns=1;state.orders=2;state.selected=0;state.goal={x:m.goal[0],y:m.goal[1]};state.cover=m.cover.map(([x,y])=>({x,y}));state.units=m.units.map(([x,y],n)=>({id:n?"B":"A",x,y,hp:8,max:8,done:false}));state.enemies=m.enemies.map(([x,y,hp],n)=>({id:"E"+(n+1),x,y,hp,max:hp}));state.cursor={x:state.units[0].x,y:state.units[0].y};state.marks=[];if(!keepScore)state.score=0;say(m.name+": clear hostiles or reach the beacon.");update();draw()}
+function aliveUnits(){return state.units.filter(u=>u.hp>0)}
+function aliveEnemies(){return state.enemies.filter(e=>e.hp>0)}
+function unit(){return state.units[state.selected]&&state.units[state.selected].hp>0?state.units[state.selected]:aliveUnits()[0]}
+function at(list,x,y){return list.find(o=>o.hp!==0&&o.x===x&&o.y===y)}
+function coverAt(x,y){return state.cover.find(c=>c.x===x&&c.y===y)}
+function enemyAt(x,y){return aliveEnemies().find(e=>e.x===x&&e.y===y)}
+function unitAt(x,y){return aliveUnits().find(u=>u.x===x&&u.y===y)}
+function blocked(x,y){return x<0||y<0||x>=W||y>=H||coverAt(x,y)||enemyAt(x,y)||unitAt(x,y)}
+function dist(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)}
+function coverLine(a,b){return state.cover.some(c=>(c.x===a.x&&c.x===b.x&&c.y>Math.min(a.y,b.y)&&c.y<Math.max(a.y,b.y))||(c.y===a.y&&c.y===b.y&&c.x>Math.min(a.x,b.x)&&c.x<Math.max(a.x,b.x)))}
+function mark(text,x,y,color){state.marks.push({text,x,y,color,life:44})}
+function switchUnit(){const live=aliveUnits();if(!live.length)return;let i=state.selected;for(let n=0;n<state.units.length;n++){i=(i+1)%state.units.length;if(state.units[i].hp>0)break}state.selected=i;const u=unit();state.cursor={x:u.x,y:u.y};state.lastInput="switch";tone("select");vibe(8);say("Selected unit "+u.id+".");update();draw()}
+function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(W-1,state.cursor.x+dx));state.cursor.y=Math.max(0,Math.min(H-1,state.cursor.y+dy));state.lastInput="cursor";draw()}
+function order(){if(state.mode==="victory"||state.mode==="loss"){restart();return}if(state.mode==="mission"){nextMission();return}if(state.turn!=="player")return;const u=unit();if(!u)return lose("No units remain.");if(state.orders<=0){say("No orders remain. End turn.");tone("block");return}const t={x:state.cursor.x,y:state.cursor.y},e=enemyAt(t.x,t.y);if(e&&dist(u,e)<=2){const dmg=coverLine(u,e)?2:3;e.hp-=dmg;state.orders--;u.done=true;state.score+=e.hp<=0?100:25;mark("-"+dmg,e.x,e.y,"#fb7185");tone("attack");vibe(18);say(u.id+" attacks "+e.id+" for "+dmg+".");if(e.hp<=0)mark("down",e.x,e.y,"#facc15");afterOrder();return}if(!e&&!blocked(t.x,t.y)&&dist(u,t)>0&&dist(u,t)<=3){u.x=t.x;u.y=t.y;state.orders--;u.done=true;state.score+=6;mark("move",u.x,u.y,"#5eead4");tone("move");vibe(12);say(u.id+" moves to "+(u.x+1)+","+(u.y+1)+".");afterOrder();return}say(e?"Target out of range.":"Move blocked or too far.");tone("block");vibe(6);draw()}
+function afterOrder(){if(checkMission())return;if(state.orders<=0)endTurn();else{const live=aliveUnits();const next=state.units.findIndex(u=>u.hp>0&&!u.done);if(next>=0){state.selected=next;state.cursor={x:state.units[next].x,y:state.units[next].y}}update();draw()}}
+function checkMission(){if(!aliveEnemies().length||aliveUnits().some(u=>u.x===state.goal.x&&u.y===state.goal.y)){state.score+=180+Math.max(0,60-state.turns*8)+aliveUnits().reduce((s,u)=>s+u.hp,0)*4;saveBest();if(state.mission>=missions.length-1){state.mode="victory";say("Victory. Gridfront secured. Press Order or Restart.");tone("win");vibe([30,30,30])}else{state.mode="mission";say("Mission complete. Press Order for the next front.");tone("win");vibe([24,24,24])}update();draw();return true}return false}
+function nextMission(){state.mission++;startMission(state.mission,true)}
+function endTurn(){if(state.mode!=="play")return;state.turn="enemy";state.orders=0;state.lastInput="end-turn";say("Enemy turn.");tone("turn");enemyTurn();if(state.mode==="play"){state.turn="player";state.turns++;state.orders=2;state.units.forEach(u=>u.done=false);const i=state.units.findIndex(u=>u.hp>0);state.selected=Math.max(0,i);const u=unit();if(u)state.cursor={x:u.x,y:u.y};say("Turn "+state.turns+". Issue two orders.");}update();draw()}
+function enemyTurn(){const units=aliveUnits();for(const e of aliveEnemies()){const live=aliveUnits();if(!live.length)break;let target=live.slice().sort((a,b)=>dist(e,a)-dist(e,b))[0];if(dist(e,target)<=2){const dmg=coverLine(e,target)?1:2;target.hp-=dmg;mark("-"+dmg,target.x,target.y,"#fb7185");state.score=Math.max(0,state.score-8);if(target.hp<=0)mark("down",target.x,target.y,"#facc15")}else{const opts=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(p=>!blocked(p.x,p.y));opts.sort((a,b)=>dist(a,target)-dist(b,target)||a.y-b.y||a.x-b.x);if(opts[0]){e.x=opts[0].x;e.y=opts[0].y}}}if(!aliveUnits().length)lose("Squad down. Press Order or Restart.")}
+function lose(msg){state.mode="loss";saveBest();say(msg);tone("loss");vibe(45);update();draw()}
+function restart(){state.mission=0;startMission(0,false);tone("select");vibe(16)}
+function handleKey(k,source){state.lastInput=source+":"+k;if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Tab")switchUnit();else if(k==="Enter"||k===" ")order();else if(k==="e")endTurn();else if(k==="r")restart()}
+function pointer(ev){const r=canvas.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*canvas.width,y=(ev.clientY-r.top)/r.height*canvas.height;const g=gridRect(),c=Math.floor((x-g.x)/g.cell),row=Math.floor((y-g.y)/g.cell);if(c>=0&&row>=0&&c<W&&row<H){state.cursor={x:c,y:row};state.lastInput="pointer:grid";draw();if(ev.detail>1)order()}}
+function gridRect(){const cell=Math.min(canvas.width/(W+1.8),canvas.height/(H+1.15));return{x:(canvas.width-cell*W)/2,y:76,cell}}
+function update(){els.mode.textContent=state.mode;els.mission.textContent=(state.mission+1)+"/"+missions.length;els.turn.textContent=state.turn==="player"?"P"+state.turns:"Enemy";els.orders.textContent=String(state.orders);els.unit.textContent=(unit()||{id:"-"}).id;els.enemy.textContent=String(aliveEnemies().length);els.score.textContent=String(state.score);els.best.textContent=String(state.best);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const g=gridRect(),cell=g.cell;const grd=ctx.createLinearGradient(0,0,0,canvas.height);grd.addColorStop(0,"#081827");grd.addColorStop(1,"#050814");ctx.fillStyle=grd;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#5eead4";ctx.font="900 19px system-ui";ctx.fillText(missions[state.mission].name,34,38);ctx.fillStyle="#9fb3c8";ctx.font="700 13px system-ui";ctx.fillText("Cover halves straight-line fire. Move up to 3. Attack range 2. Reach beacon or clear enemies.",34,61);ctx.save();ctx.translate(g.x,g.y);for(let y=0;y<H;y++)for(let x=0;x<W;x++){ctx.fillStyle=(x+y)%2?"#0b1b2a":"#0d2233";ctx.fillRect(x*cell,y*cell,cell-3,cell-3);ctx.strokeStyle="rgba(94,234,212,.16)";ctx.strokeRect(x*cell+.5,y*cell+.5,cell-4,cell-4)}ctx.fillStyle="rgba(250,204,21,.2)";ctx.strokeStyle="#facc15";ctx.lineWidth=3;roundRect(state.goal.x*cell+8,state.goal.y*cell+8,cell-19,cell-19,8,true,true);for(const c of state.cover){ctx.fillStyle="#334155";ctx.strokeStyle="#94a3b8";roundRect(c.x*cell+12,c.y*cell+12,cell-27,cell-27,6,true,true);ctx.fillStyle="#cbd5e1";ctx.font="900 12px system-ui";ctx.fillText("C",c.x*cell+cell/2-4,c.y*cell+cell/2+4)}for(const e of aliveEnemies())drawToken(e,"#fb7185","#7f1d1d");for(const u of aliveUnits())drawToken(u,u.id==="A"?"#5eead4":"#60a5fa","#073642");ctx.strokeStyle="#f8fafc";ctx.lineWidth=4;ctx.strokeRect(state.cursor.x*cell+5,state.cursor.y*cell+5,cell-13,cell-13);for(const m of state.marks){ctx.globalAlpha=Math.max(0,m.life/44);ctx.fillStyle=m.color;ctx.font="900 15px system-ui";ctx.fillText(m.text,m.x*cell+cell*.24,m.y*cell+16)}ctx.globalAlpha=1;ctx.restore();if(state.mode==="mission"||state.mode==="victory"||state.mode==="loss"){ctx.fillStyle="rgba(2,6,23,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=state.mode==="loss"?"#fb7185":"#5eead4";ctx.font="950 42px system-ui";ctx.textAlign="center";ctx.fillText(state.mode==="loss"?"MISSION LOST":state.mode==="victory"?"VICTORY":"MISSION CLEAR",canvas.width/2,canvas.height/2-10);ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+28);ctx.textAlign="left"}}
+function drawToken(o,fill,stroke){const g=gridRect(),cell=g.cell,x=o.x*cell+cell/2,y=o.y*cell+cell/2;ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y,cell*.24,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle="#041018";ctx.font="950 15px system-ui";ctx.textAlign="center";ctx.fillText(o.id,x,y+5);ctx.textAlign="left";ctx.fillStyle="#e5f6ff";ctx.font="900 11px system-ui";ctx.fillText(o.hp+"/"+o.max,o.x*cell+8,o.y*cell+cell-10)}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function tick(ms){state.time+=ms;for(const m of state.marks)m.life-=ms/16.7;state.marks=state.marks.filter(m=>m.life>0);draw()}
+window.advanceTime=ms=>{const steps=Math.max(1,Math.ceil(ms/50));for(let i=0;i<steps;i++)tick(ms/steps);return render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,mission:{index:state.mission+1,total:missions.length,name:missions[state.mission].name},turn:state.turn,units:state.units.map(u=>({id:u.id,x:u.x,y:u.y,hp:u.hp,done:u.done})),enemies:state.enemies.filter(e=>e.hp>0).map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp})),cursor:state.cursor,selected:(unit()||{}).id||null,orders:state.orders,score:state.score,best:state.best,sound:state.sound,feedback:state.feedback,coordinateSystem:"grid origin top-left, x right, y down"})};
+document.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Tab"].includes(e.key))e.preventDefault();handleKey(e.key,e.repeat?"key-repeat":"key")});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();pointer(e)});
+els.action.addEventListener("click",()=>{state.lastInput="button:order";order()});
+els.unitBtn.addEventListener("click",()=>{state.lastInput="button:unit";switchUnit()});
+els.end.addEventListener("click",()=>{state.lastInput="button:end";endTurn()});
+els.restart.addEventListener("click",()=>{state.lastInput="button:restart";restart()});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("select")});
+document.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>{canvas.focus();handleKey(b.dataset.key,"touch")}));
+startMission(0,false);
+})();
+</script>
+</body>
+</html>

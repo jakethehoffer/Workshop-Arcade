@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Skyline Sentry - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Defend three skyline lanes with charged sentry fire and shield pulses." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/skyline-sentry.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Skyline Sentry — Workshop Arcade" />
+<meta property="og:description" content="Defend three skyline lanes with charged sentry fire and shield pulses." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/skyline-sentry.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/skyline-sentry.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Skyline Sentry — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Skyline Sentry — Workshop Arcade" />
+<meta name="twitter:description" content="Defend three skyline lanes with charged sentry fire and shield pulses." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/skyline-sentry.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Skyline Sentry",
+  "description": "Defend three skyline lanes with charged sentry fire and shield pulses.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/skyline-sentry.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/skyline-sentry.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Defense",
+    "Shooter",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Hold three neon skyline lanes with sentry shots, shield pulses, and precise wave defense." />
+<meta name="theme-color" content="#061018" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#edf7ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(780px 480px at 8% -10%,rgba(34,211,238,.19),transparent 62%),radial-gradient(720px 440px at 94% 2%,rgba(45,212,191,.11),transparent 60%),linear-gradient(180deg,#07111d,#040711 88%);display:flex;justify-content:center}
+button{font:inherit}
+.app{width:min(1040px,100%);display:grid;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(23px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(103,232,249,.22)}
+.help{max-width:650px;color:#b8c8dc;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button,dialog{border:1px solid rgba(103,232,249,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 6px;text-align:center}.label{display:block;color:#67e8f9;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:18px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}.warn{color:#facc15}.bad{color:#fb7185}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(250,204,21,.86);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#7df9ff,#22d3ee);color:#06272e}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,255,255,.17)}
+.touch{display:grid;grid-template-columns:repeat(3,minmax(0,150px));justify-content:center;gap:8px}
+.touch button{min-height:50px;user-select:none;-webkit-user-select:none}.touch button[data-active="true"]{transform:translateY(1px);border-color:#facc15;box-shadow:0 0 20px rgba(250,204,21,.18),inset 0 2px 10px rgba(0,0,0,.32)}
+.sr{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;padding:18px}dialog::backdrop{background:rgba(1,5,14,.72)}dialog h2{margin:0 0 10px;font-size:21px}dialog p{margin:8px 0;color:#b8c8dc;font-size:14px;line-height:1.4}dialog ul{margin:10px 0 14px;padding-left:20px;color:#d8f6ff;font-size:14px;line-height:1.55}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+@media(max-width:720px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 104px;min-height:38px;padding:8px}.touch button{min-height:48px;padding:8px}}
+@media(max-width:420px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{gap:6px}.touch button{font-size:11px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<noscript><p style="color:#edf7ff;background:#06101d;margin:0;padding:12px;text-align:center">Skyline Sentry needs JavaScript enabled to run.</p></noscript>
+<main class="app" aria-label="Skyline Sentry lane defense game">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Skyline Sentry</span></div>
+    <div class="help">Arrows or W/S choose a lane. Space fires. Shift or E sends a shield pulse. Tap a lane to aim and shoot.</div>
+  </header>
+  <section class="hud" aria-label="Sentry status">
+    <div class="pill"><span class="label">Wave</span><span class="value" id="waveValue">1/5</span></div>
+    <div class="pill"><span class="label">Core</span><span class="value" id="coreValue">100</span></div>
+    <div class="pill"><span class="label">Shield</span><span class="value" id="shieldValue">100</span></div>
+    <div class="pill"><span class="label">Drones</span><span class="value" id="droneValue">0</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage">
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Skyline Sentry playfield. Three horizontal lanes lead incoming drones toward the core."></canvas>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start. Defend the skyline core through five waves.</div>
+  <div class="sr" id="liveLine" aria-live="polite"></div>
+  <section class="bar" aria-label="Run controls">
+    <button class="btn primary" id="startBtn" type="button">Start</button>
+    <button class="btn" id="pulseBtn" type="button">Pulse Shield</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="helpBtn" type="button" aria-keyshortcuts="?">Help</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </section>
+  <section class="touch" aria-label="Touch lane controls">
+    <button id="lane0Btn" type="button">Top Lane</button>
+    <button id="lane1Btn" type="button">Mid Lane</button>
+    <button id="lane2Btn" type="button">Low Lane</button>
+  </section>
+</main>
+<dialog id="helpDialog" aria-modal="true" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">Skyline Sentry Controls</h2>
+  <p>Defend three lanes until all five waves are clear. Core hits end the run; shield pulses buy space near the core.</p>
+  <ul>
+    <li>Arrow Up/Down or W/S: choose lane</li>
+    <li>Space or Enter: fire sentry shot</li>
+    <li>Shift or E: pulse shield</li>
+    <li>R: restart, F: fullscreen, ?: help</li>
+  </ul>
+  <button class="btn primary" id="closeHelpBtn" type="button">Close</button>
+</dialog>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const STEP = 1 / 60;
+  const BEST_KEY = "skyline-sentry.best.v1";
+  const SOUND_KEY = "skyline-sentry.sound.v1";
+  const laneY = [155, 270, 385];
+  const laneNames = ["top", "middle", "low"];
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const round = (n) => Math.round(n * 10) / 10;
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    wave: $("waveValue"), core: $("coreValue"), shield: $("shieldValue"), drone: $("droneValue"),
+    score: $("scoreValue"), best: $("bestValue"), status: $("statusLine"), live: $("liveLine"),
+    start: $("startBtn"), pulse: $("pulseBtn"), restart: $("restartBtn"), sound: $("soundBtn"), help: $("helpBtn"), closeHelp: $("closeHelpBtn"), dialog: $("helpDialog"), full: $("fullBtn"),
+    lane: [$("lane0Btn"), $("lane1Btn"), $("lane2Btn")]
+  };
+  const stars = Array.from({ length: 72 }, (_, i) => ({ x: (i * 157 + i * i * 17) % W, y: 24 + (i * 91 + i * i * 7) % 424, r: i % 10 === 0 ? 1.5 : .6 + (i % 3) * .3 }));
+  const waves = [
+    [{ t: .4, l: 1, hp: 1, v: 68 }, { t: 1.5, l: 0, hp: 1, v: 72 }, { t: 2.6, l: 2, hp: 1, v: 76 }, { t: 3.8, l: 1, hp: 2, v: 64 }],
+    [{ t: .3, l: 0, hp: 1, v: 78 }, { t: 1.0, l: 2, hp: 1, v: 82 }, { t: 1.9, l: 1, hp: 2, v: 72 }, { t: 3.0, l: 0, hp: 2, v: 74 }, { t: 4.0, l: 2, hp: 2, v: 76 }],
+    [{ t: .2, l: 1, hp: 2, v: 88 }, { t: .9, l: 0, hp: 1, v: 96 }, { t: 1.6, l: 2, hp: 1, v: 96 }, { t: 2.4, l: 1, hp: 3, v: 74 }, { t: 3.4, l: 0, hp: 2, v: 92 }, { t: 4.2, l: 2, hp: 2, v: 92 }],
+    [{ t: .2, l: 2, hp: 2, v: 102 }, { t: .8, l: 1, hp: 2, v: 100 }, { t: 1.4, l: 0, hp: 2, v: 104 }, { t: 2.1, l: 2, hp: 3, v: 82 }, { t: 3.0, l: 1, hp: 3, v: 86 }, { t: 3.9, l: 0, hp: 3, v: 88 }],
+    [{ t: .2, l: 0, hp: 2, v: 116 }, { t: .7, l: 1, hp: 2, v: 112 }, { t: 1.2, l: 2, hp: 2, v: 116 }, { t: 2.0, l: 0, hp: 3, v: 96 }, { t: 2.6, l: 1, hp: 3, v: 100 }, { t: 3.2, l: 2, hp: 3, v: 104 }, { t: 4.4, l: 1, hp: 4, v: 86 }]
+  ];
+
+  function storage() {
+    if (window.workshopStorage) return window.workshopStorage;
+    try { return window.localStorage; } catch (_) { return null; }
+  }
+  function readStore(key, fallback) {
+    const source = storage();
+    if (!source) return fallback;
+    try {
+      const value = source.getItem(key);
+      return value === null ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    const source = storage();
+    if (!source) return;
+    try { source.setItem(key, String(value)); } catch (_) {}
+  }
+  function readSound() {
+    return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
+  }
+
+  const state = {
+    mode: "ready",
+    wave: 0,
+    time: 0,
+    selectedLane: 1,
+    nextSpawn: 0,
+    core: 100,
+    shield: 100,
+    score: 0,
+    best: Number(readStore(BEST_KEY, "0")) || 0,
+    sound: readSound(),
+    feedback: "Press Start. Defend the skyline core through five waves.",
+    lastInput: "none",
+    lastSound: "none",
+    cooldown: 0,
+    pulseCooldown: 0,
+    shake: 0,
+    enemies: [],
+    projectiles: [],
+    bursts: []
+  };
+  let audio = null;
+  let stamp = 0;
+
+  function makeEnemy(spec) {
+    return { id: `${state.wave + 1}-${state.nextSpawn}`, lane: spec.l, x: 912, y: laneY[spec.l], hp: spec.hp, maxHp: spec.hp, speed: spec.v, hit: 0 };
+  }
+  function setFeedback(text) {
+    state.feedback = text;
+    els.status.textContent = text;
+    els.live.textContent = text;
+  }
+  function ensureAudio() {
+    if (audio || !state.sound) return audio;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audio = new AC();
+    return audio;
+  }
+  function beep(kind) {
+    state.lastSound = kind;
+    const ac = ensureAudio();
+    if (!ac || !state.sound) return;
+    if (ac.state === "suspended") ac.resume().catch(() => {});
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const now = ac.currentTime;
+    const table = { shot: [420, .035, .05], hit: [180, .045, .06], pulse: [120, .12, .09], win: [660, .16, .08], lose: [72, .22, .11], start: [300, .08, .05] };
+    const cfg = table[kind] || table.shot;
+    osc.type = kind === "pulse" ? "sawtooth" : "square";
+    osc.frequency.setValueAtTime(cfg[0], now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(50, cfg[0] * 1.7), now + cfg[1]);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(cfg[2], now + .008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + cfg[1]);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + cfg[1] + .02);
+  }
+  function vibrate(ms) {
+    if (navigator.vibrate) navigator.vibrate(ms);
+  }
+  function resetGame(mode) {
+    state.mode = mode || "ready";
+    state.wave = 0;
+    state.time = 0;
+    state.selectedLane = 1;
+    state.nextSpawn = 0;
+    state.core = 100;
+    state.shield = 100;
+    state.score = 0;
+    state.cooldown = 0;
+    state.pulseCooldown = 0;
+    state.shake = 0;
+    state.enemies.length = 0;
+    state.projectiles.length = 0;
+    state.bursts.length = 0;
+    setFeedback(state.mode === "playing" ? "Wave 1 online. Hold the skyline." : "Press Start. Defend the skyline core through five waves.");
+    syncHud();
+  }
+  function startGame() {
+    resetGame("playing");
+    beep("start");
+    canvas.focus({ preventScroll: true });
+  }
+  function gameOver(text) {
+    state.mode = "gameover";
+    state.shake = .45;
+    setFeedback(text || "Core collapsed. Restart the sentry grid.");
+    beep("lose");
+    saveBest();
+  }
+  function winGame() {
+    state.mode = "win";
+    const bonus = Math.round(state.core * 6 + state.shield * 2);
+    state.score += bonus;
+    setFeedback(`Skyline secured. Integrity bonus ${bonus}.`);
+    beep("win");
+    saveBest();
+  }
+  function saveBest() {
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+  }
+  function shoot(source) {
+    if (state.mode === "ready") startGame();
+    if (state.mode !== "playing" || state.cooldown > 0) return;
+    state.projectiles.push({ lane: state.selectedLane, x: 116, y: laneY[state.selectedLane], vx: 640, r: 5, life: 1.2 });
+    state.cooldown = .18;
+    state.lastInput = source || "shoot";
+    setFeedback(`Sentry firing ${laneNames[state.selectedLane]} lane.`);
+    beep("shot");
+  }
+  function pulseShield(source) {
+    if (state.mode === "ready") startGame();
+    if (state.mode !== "playing" || state.pulseCooldown > 0 || state.shield < 28) return;
+    state.shield = Math.max(0, state.shield - 28);
+    state.pulseCooldown = 3.2;
+    state.lastInput = source || "pulse";
+    state.shake = .18;
+    let hits = 0;
+    state.enemies.forEach((enemy) => {
+      if (enemy.x < 430) {
+        enemy.hp -= 2;
+        enemy.hit = .2;
+        hits += 1;
+        state.bursts.push({ x: enemy.x, y: enemy.y, r: 10, life: .28, color: "#67e8f9" });
+      }
+    });
+    setFeedback(hits ? `Shield pulse hit ${hits} drone${hits === 1 ? "" : "s"}.` : "Shield pulse armed the skyline barrier.");
+    beep("pulse");
+    vibrate(25);
+  }
+  function setLane(lane, source, fire) {
+    state.selectedLane = clamp(lane, 0, 2);
+    state.lastInput = source || "lane";
+    setFeedback(`${laneNames[state.selectedLane]} lane selected.`);
+    if (fire) shoot(source || "pointer");
+  }
+  function spawnDue() {
+    const list = waves[state.wave] || [];
+    while (state.nextSpawn < list.length && state.time >= list[state.nextSpawn].t) {
+      state.enemies.push(makeEnemy(list[state.nextSpawn]));
+      state.nextSpawn += 1;
+    }
+  }
+  function nextWaveOrWin() {
+    if (state.wave >= waves.length - 1) {
+      winGame();
+      return;
+    }
+    state.wave += 1;
+    state.time = 0;
+    state.nextSpawn = 0;
+    state.shield = clamp(state.shield + 22, 0, 100);
+    state.cooldown = .12;
+    setFeedback(`Wave ${state.wave + 1} incoming. Shield recovered.`);
+  }
+  function update(dt) {
+    state.cooldown = Math.max(0, state.cooldown - dt);
+    state.pulseCooldown = Math.max(0, state.pulseCooldown - dt);
+    state.shake = Math.max(0, state.shake - dt);
+    state.bursts.forEach((b) => { b.life -= dt; b.r += 60 * dt; });
+    state.bursts = state.bursts.filter((b) => b.life > 0);
+    if (state.mode !== "playing") return;
+    state.time += dt;
+    state.shield = clamp(state.shield + dt * 4.5, 0, 100);
+    spawnDue();
+    state.projectiles.forEach((p) => { p.x += p.vx * dt; p.life -= dt; });
+    state.enemies.forEach((enemy) => {
+      enemy.x -= enemy.speed * dt;
+      enemy.hit = Math.max(0, enemy.hit - dt);
+    });
+    for (const p of state.projectiles) {
+      if (p.life <= 0) continue;
+      for (const enemy of state.enemies) {
+        if (enemy.lane !== p.lane || enemy.hp <= 0) continue;
+        if (Math.abs(enemy.x - p.x) < 23) {
+          enemy.hp -= 1;
+          enemy.hit = .16;
+          p.life = 0;
+          state.score += 12;
+          state.bursts.push({ x: enemy.x, y: enemy.y, r: 8, life: .22, color: "#facc15" });
+          beep("hit");
+          break;
+        }
+      }
+    }
+    for (const enemy of state.enemies) {
+      if (enemy.hp <= 0) {
+        state.score += 38 + enemy.maxHp * 7;
+        state.bursts.push({ x: enemy.x, y: enemy.y, r: 14, life: .34, color: "#22d3ee" });
+      } else if (enemy.x <= 88) {
+        const block = Math.min(state.shield, 18 + enemy.hp * 6);
+        state.shield -= block;
+        const leak = Math.max(8, 24 + enemy.hp * 7 - block);
+        state.core = clamp(state.core - leak, 0, 100);
+        state.shake = .3;
+        state.bursts.push({ x: 84, y: enemy.y, r: 18, life: .4, color: "#fb7185" });
+        setFeedback(`Core impact on ${laneNames[enemy.lane]} lane. Integrity ${Math.round(state.core)}.`);
+        enemy.hp = 0;
+        beep("hit");
+      }
+    }
+    state.enemies = state.enemies.filter((e) => e.hp > 0 && e.x > 70);
+    state.projectiles = state.projectiles.filter((p) => p.life > 0 && p.x < W + 24);
+    if (state.core <= 0) {
+      gameOver("Core collapsed. Restart the sentry grid.");
+      return;
+    }
+    if (state.nextSpawn >= waves[state.wave].length && state.enemies.length === 0) {
+      nextWaveOrWin();
+    }
+    saveBest();
+  }
+  function syncHud() {
+    els.wave.textContent = `${Math.min(state.wave + 1, waves.length)}/${waves.length}`;
+    els.core.textContent = Math.round(state.core);
+    els.shield.textContent = Math.round(state.shield);
+    els.drone.textContent = state.enemies.length;
+    els.score.textContent = state.score;
+    els.best.textContent = state.best;
+    els.core.className = `value ${state.core < 30 ? "bad" : state.core < 60 ? "warn" : ""}`;
+    els.shield.className = `value ${state.shield < 30 ? "bad" : state.shield < 55 ? "warn" : ""}`;
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.sound));
+    els.start.textContent = state.mode === "playing" ? "Running" : state.mode === "win" || state.mode === "gameover" ? "Start" : "Start";
+    els.lane.forEach((button, i) => button.dataset.active = String(i === state.selectedLane));
+  }
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#07192b");
+    g.addColorStop(.58, "#06111f");
+    g.addColorStop(1, "#040812");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(198,246,255,.72)";
+    stars.forEach((s) => {
+      const pulse = .35 + .65 * Math.abs(Math.sin(state.time * .8 + s.x));
+      ctx.globalAlpha = .35 + pulse * .45;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#07101b";
+    ctx.fillRect(0, 432, W, 108);
+    for (let x = 0; x < W; x += 38) {
+      const h = 22 + ((x * 13) % 66);
+      ctx.fillStyle = x % 76 === 0 ? "#0f2236" : "#0b1a2b";
+      ctx.fillRect(x, 432 - h, 31, h);
+      ctx.fillStyle = "rgba(103,232,249,.32)";
+      if (x % 114 === 0) ctx.fillRect(x + 9, 422 - h, 4, 10);
+    }
+    ctx.strokeStyle = "rgba(103,232,249,.17)";
+    ctx.lineWidth = 2;
+    laneY.forEach((y, i) => {
+      ctx.beginPath();
+      ctx.moveTo(86, y);
+      ctx.lineTo(915, y);
+      ctx.stroke();
+      ctx.fillStyle = i === state.selectedLane ? "rgba(250,204,21,.16)" : "rgba(103,232,249,.045)";
+      ctx.fillRect(84, y - 36, 832, 72);
+    });
+  }
+  function drawCore() {
+    ctx.save();
+    ctx.translate(76, 270);
+    ctx.fillStyle = "rgba(103,232,249,.12)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 62 + Math.sin(state.time * 5) * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = state.shield > 8 ? "rgba(103,232,249,.68)" : "rgba(251,113,133,.8)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 54, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * state.shield / 100);
+    ctx.stroke();
+    ctx.fillStyle = "#0f2b3d";
+    ctx.strokeStyle = "#67e8f9";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-34, -72); ctx.lineTo(32, -48); ctx.lineTo(34, 48); ctx.lineTo(-34, 72); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#f8fbff";
+    ctx.font = "900 22px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(Math.round(state.core), 0, 8);
+    ctx.restore();
+  }
+  function drawTurret() {
+    const y = laneY[state.selectedLane];
+    ctx.save();
+    ctx.translate(112, y);
+    ctx.fillStyle = "#112b3f";
+    ctx.strokeStyle = "#7df9ff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#facc15";
+    ctx.fillRect(8, -6, 38, 12);
+    ctx.fillStyle = "#7df9ff";
+    ctx.beginPath();
+    ctx.arc(0, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawEntities() {
+    state.projectiles.forEach((p) => {
+      ctx.fillStyle = "#facc15";
+      ctx.shadowColor = "#facc15";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+    state.enemies.forEach((e) => {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.fillStyle = e.hit > 0 ? "#fef3c7" : "#172842";
+      ctx.strokeStyle = e.hp > 2 ? "#fb7185" : "#22d3ee";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-20, 0); ctx.lineTo(-8, -14); ctx.lineTo(16, -12); ctx.lineTo(25, 0); ctx.lineTo(16, 12); ctx.lineTo(-8, 14); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#67e8f9";
+      ctx.fillRect(-8, -4, 18, 8);
+      ctx.fillStyle = "#f8fbff";
+      ctx.font = "900 13px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(e.hp, 1, 5);
+      ctx.restore();
+    });
+    state.bursts.forEach((b) => {
+      ctx.globalAlpha = clamp(b.life * 3, 0, 1);
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+  }
+  function drawOverlay() {
+    if (state.mode === "playing") return;
+    ctx.fillStyle = "rgba(3,7,18,.68)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f8fbff";
+    ctx.font = "950 42px system-ui";
+    const title = state.mode === "win" ? "SKYLINE SECURED" : state.mode === "gameover" ? "CORE OFFLINE" : "SKYLINE SENTRY";
+    ctx.fillText(title, W / 2, 205);
+    ctx.fillStyle = "#7dd3fc";
+    ctx.font = "800 19px system-ui";
+    ctx.fillText(state.feedback, W / 2, 246);
+    ctx.fillStyle = "#b8c8dc";
+    ctx.font = "700 16px system-ui";
+    ctx.fillText("3 lanes. Space fires. Shift pulses shield. Survive five waves.", W / 2, 286);
+  }
+  function render() {
+    syncHud();
+    ctx.save();
+    if (state.shake > 0) ctx.translate(Math.sin(state.time * 70) * state.shake * 8, Math.cos(state.time * 55) * state.shake * 5);
+    drawBackground();
+    drawCore();
+    drawTurret();
+    drawEntities();
+    ctx.restore();
+    drawOverlay();
+  }
+  function frame(now) {
+    if (!stamp) stamp = now;
+    const dt = clamp((now - stamp) / 1000, 0, .05);
+    stamp = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  function step(ms) {
+    const steps = Math.max(1, Math.round(ms / (STEP * 1000)));
+    for (let i = 0; i < steps; i += 1) update(STEP);
+    render();
+  }
+  function renderGameToText() {
+    return JSON.stringify({
+      mode: state.mode,
+      wave: { current: state.wave + 1, total: waves.length, time: round(state.time), spawned: state.nextSpawn, remainingInSchedule: Math.max(0, waves[state.wave].length - state.nextSpawn) },
+      lanes: laneY.map((y, i) => ({ id: i, name: laneNames[i], y, selected: i === state.selectedLane, enemies: state.enemies.filter((e) => e.lane === i).length })),
+      enemies: state.enemies.map((e) => ({ lane: e.lane, x: round(e.x), hp: e.hp, speed: e.speed })),
+      projectiles: state.projectiles.map((p) => ({ lane: p.lane, x: round(p.x) })),
+      core: { integrity: Math.round(state.core), shield: Math.round(state.shield), pulseCooldown: round(state.pulseCooldown) },
+      score: state.score,
+      best: state.best,
+      sound: state.sound ? "on" : "off",
+      feedback: state.feedback,
+      lastInput: state.lastInput,
+      coordinates: "canvas 960x540, origin top-left, x right, y down"
+    });
+  }
+  window.render_game_to_text = renderGameToText;
+  window.advanceTime = (ms) => step(Number(ms) || 0);
+
+  window.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    if (["arrowup", "arrowdown", "w", "s", " ", "enter", "shift", "e", "r", "f", "?"].includes(key)) event.preventDefault();
+    if (key === "arrowup" || key === "w") setLane(state.selectedLane - 1, "keyboard");
+    else if (key === "arrowdown" || key === "s") setLane(state.selectedLane + 1, "keyboard");
+    else if (key === " " || key === "enter") shoot("keyboard");
+    else if (key === "shift" || key === "e") pulseShield("keyboard");
+    else if (key === "r") resetGame("playing");
+    else if (key === "f") toggleFullscreen();
+    else if (key === "?") openHelp();
+  });
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const y = (event.clientY - rect.top) * canvas.height / rect.height;
+    let lane = 0;
+    if (y > (laneY[0] + laneY[1]) / 2) lane = 1;
+    if (y > (laneY[1] + laneY[2]) / 2) lane = 2;
+    setLane(lane, "pointer", true);
+    canvas.focus({ preventScroll: true });
+  });
+  els.lane.forEach((button, i) => button.addEventListener("click", () => setLane(i, "touch", true)));
+  els.start.addEventListener("click", startGame);
+  els.restart.addEventListener("click", () => resetGame("playing"));
+  els.pulse.addEventListener("click", () => pulseShield("button"));
+  els.sound.addEventListener("click", () => {
+    state.sound = !state.sound;
+    writeStore(SOUND_KEY, state.sound ? "1" : "0");
+    setFeedback(state.sound ? "Sound armed." : "Sound muted.");
+    if (state.sound) beep("start");
+  });
+  function openHelp() {
+    if (els.dialog.open) return;
+    els.dialog.showModal();
+    els.closeHelp.focus();
+  }
+  function closeHelp() {
+    els.dialog.close();
+    els.help.focus();
+  }
+  els.help.addEventListener("click", openHelp);
+  els.closeHelp.addEventListener("click", closeHelp);
+  els.dialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeHelp();
+  });
+  async function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (_) {}
+  }
+  els.full.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => setFeedback(document.fullscreenElement ? "Fullscreen sentry view active." : "Fullscreen closed."));
+
+  resetGame("ready");
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

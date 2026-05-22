@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Shadow Vault - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Slip past guard cones, collect keys, and escape compact neon vault rooms." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-vault.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Shadow Vault — Workshop Arcade" />
+<meta property="og:description" content="Slip past guard cones, collect keys, and escape compact neon vault rooms." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-vault.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/shadow-vault.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Shadow Vault — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Shadow Vault — Workshop Arcade" />
+<meta name="twitter:description" content="Slip past guard cones, collect keys, and escape compact neon vault rooms." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/shadow-vault.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Shadow Vault",
+  "description": "Slip past guard cones, collect keys, and escape compact neon vault rooms.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-vault.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/shadow-vault.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Stealth",
+    "Puzzle",
+    "Adventure"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Slip through compact vault rooms, dodge guard cones, collect keys, and escape before the alert peaks." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#edf7ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(780px 480px at 8% -12%,rgba(34,211,238,.2),transparent 60%),radial-gradient(690px 460px at 96% 0,rgba(16,185,129,.14),transparent 58%),linear-gradient(180deg,#071018,#050712 88%);display:flex;justify-content:center}
+button{font:inherit}
+.app{width:min(1040px,100%);display:grid;gap:9px;align-content:start}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(23px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(103,232,249,.22)}
+.help{max-width:650px;color:#b1c2d7;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.pad button{border:1px solid rgba(103,232,249,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 6px;text-align:center}.label{display:block;color:#67e8f9;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:18px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}.warn{color:#facc15}.bad{color:#fb7185}.good{color:#86efac}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px solid rgba(250,204,21,.86);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.pad button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#7df9ff,#22d3ee);color:#06272e}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,255,255,.17)}
+.pad{display:grid;grid-template-columns:repeat(3,minmax(0,76px));grid-template-areas:". up ." "left wait right" ". down .";justify-content:center;gap:7px}
+.pad button{min-height:44px;padding:8px}.pad [data-dir="up"]{grid-area:up}.pad [data-dir="left"]{grid-area:left}.pad [data-dir="right"]{grid-area:right}.pad [data-dir="down"]{grid-area:down}.pad [data-dir="wait"]{grid-area:wait;border-color:rgba(250,204,21,.45);color:#fef3c7}
+@media(max-width:720px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 104px;min-height:38px;padding:8px}.pad button{min-height:42px}}
+@media(max-width:420px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.pad{gap:6px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Shadow Vault stealth escape puzzle">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Shadow Vault</span></div>
+    <div class="help">Arrows or WASD move one tile. Space waits. Collect every key, open the vault door, and step into the exit while staying out of guard cones.</div>
+  </header>
+  <section class="hud" aria-label="Vault status">
+    <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/4</span></div>
+    <div class="pill"><span class="label">Keys</span><span class="value" id="keyValue">0/0</span></div>
+    <div class="pill"><span class="label">Alert</span><span class="value" id="alertValue">0</span></div>
+    <div class="pill"><span class="label">Moves</span><span class="value" id="moveValue">0</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage">
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Shadow Vault playfield. Move through a tiled vault while avoiding guard vision cones."></canvas>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start. Blue shadows hide you; amber cones raise alert.</div>
+  <section class="bar" aria-label="Game controls">
+    <button class="btn primary" id="startBtn" type="button">Start</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </section>
+  <section class="pad" aria-label="Touch movement controls">
+    <button type="button" data-dir="up" aria-label="Move up">Up</button>
+    <button type="button" data-dir="left" aria-label="Move left">Left</button>
+    <button type="button" data-dir="wait" aria-label="Wait one turn">Wait</button>
+    <button type="button" data-dir="right" aria-label="Move right">Right</button>
+    <button type="button" data-dir="down" aria-label="Move down">Down</button>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const STEP = 1000 / 60;
+  const BEST_KEY = "shadow-vault.best.v1";
+  const SOUND_KEY = "shadow-vault.sound.v1";
+  const dirs = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0], wait: [0, 0] };
+  const dirVec = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
+  const dirOrder = ["N", "E", "S", "W"];
+  const $ = (id) => document.getElementById(id);
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  const levels = [
+    {
+      name: "Service Duct", size: [10, 7], start: [1, 5], exit: [8, 1],
+      walls: [[0,0,10,1],[0,6,10,1],[0,0,1,7],[9,0,1,7],[3,1,1,4],[6,2,1,4]],
+      keys: [[2,1]], doors: [[8,2]],
+      guards: [{ x: 7, y: 4, dir: "W", route: [[7,4],[8,4]], speed: 1.0 }]
+    },
+    {
+      name: "Cipher Hall", size: [12, 8], start: [1, 6], exit: [10, 1],
+      walls: [[0,0,12,1],[0,7,12,1],[0,0,1,8],[11,0,1,8],[2,2,4,1],[7,1,1,5],[3,4,1,3],[5,5,5,1]],
+      keys: [[10,6],[1,1]], doors: [[10,2],[6,6]],
+      guards: [{ x: 5, y: 6, dir: "W", route: [[5,6],[1,6]], speed: 1.15 }, { x: 9, y: 3, dir: "S", route: [[9,3],[9,6]], speed: 1.05 }]
+    },
+    {
+      name: "Mirror Lock", size: [13, 8], start: [1, 1], exit: [11, 6],
+      walls: [[0,0,13,1],[0,7,13,1],[0,0,1,8],[12,0,1,8],[2,3,4,1],[7,2,1,5],[9,1,1,4],[3,5,3,1]],
+      keys: [[6,1],[10,5]], doors: [[11,5],[8,6]],
+      guards: [{ x: 4, y: 6, dir: "E", route: [[4,6],[10,6]], speed: 1.35 }, { x: 11, y: 2, dir: "W", route: [[11,2],[10,2]], speed: .95 }]
+    },
+    {
+      name: "Black Safe", size: [14, 9], start: [1, 7], exit: [12, 1],
+      walls: [[0,0,14,1],[0,8,14,1],[0,0,1,9],[13,0,1,9],[2,2,4,1],[2,4,1,3],[5,4,5,1],[8,1,1,3],[10,2,1,5],[4,6,4,1]],
+      keys: [[1,1],[7,5],[12,7]], doors: [[12,2],[9,7],[6,3]],
+      guards: [{ x: 6, y: 7, dir: "E", route: [[6,7],[12,7]], speed: 1.25 }, { x: 4, y: 1, dir: "S", route: [[4,1],[4,5]], speed: 1.1 }, { x: 11, y: 3, dir: "S", route: [[11,3],[11,6]], speed: .95 }]
+    }
+  ];
+  const els = {
+    stage: $("stageValue"), keys: $("keyValue"), alert: $("alertValue"), moves: $("moveValue"),
+    score: $("scoreValue"), best: $("bestValue"), status: $("statusLine"), start: $("startBtn"),
+    restart: $("restartBtn"), sound: $("soundBtn"), full: $("fullBtn"), app: $("app")
+  };
+  const storage = () => window.workshopStorage || (() => { try { return window.localStorage; } catch (_) { return null; } })();
+  function readStore(key, fallback) {
+    const s = storage();
+    try { const v = s && s.getItem(key); return v === null || v === undefined ? fallback : v; } catch (_) { return fallback; }
+  }
+  function writeStore(key, value) {
+    const s = storage();
+    try { if (s) s.setItem(key, String(value)); } catch (_) {}
+  }
+  let audio = null;
+  function readSound() {
+    return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
+  }
+  const state = {
+    mode: "ready", stage: 0, score: 0, best: Number(readStore(BEST_KEY, "0")) || 0,
+    alert: 0, moves: 0, keysHeld: 0, feedback: "Press Start. Blue shadows hide you; amber cones raise alert.",
+    sound: readSound(), lastSound: "none", accumulator: 0, pulse: 0, player: null, keys: [], doors: [], guards: []
+  };
+  function ensureAudio() {
+    if (!state.sound || audio) return audio;
+    try { const AC = window.AudioContext || window.webkitAudioContext; audio = AC ? new AC() : null; } catch (_) { audio = null; }
+    return audio;
+  }
+  function sfx(kind) {
+    state.lastSound = state.sound ? kind : "muted-" + kind;
+    if (!state.sound) return;
+    const ac = ensureAudio();
+    if (!ac) return;
+    const map = { start:[220,.07,"triangle"], step:[140,.035,"square"], key:[620,.09,"sine"], door:[360,.08,"triangle"], alert:[92,.12,"sawtooth"], win:[760,.16,"sine"], fail:[70,.24,"sawtooth"] };
+    const t = map[kind] || map.step;
+    const now = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = t[2];
+    osc.frequency.setValueAtTime(t[0], now);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(kind === "alert" ? .075 : .045, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + t[1]);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + t[1] + .03);
+  }
+  function level() { return levels[state.stage]; }
+  function resetStage(mode) {
+    const l = level();
+    state.mode = mode || "ready";
+    state.alert = 0; state.moves = 0; state.keysHeld = 0; state.accumulator = 0; state.pulse = 0;
+    state.player = { x: l.start[0], y: l.start[1] };
+    state.keys = l.keys.map((p, i) => ({ id: i, x: p[0], y: p[1], taken: false }));
+    state.doors = l.doors.map((p, i) => ({ id: i, x: p[0], y: p[1], open: false }));
+    state.guards = l.guards.map((g, i) => ({ id: i, x: g.x, y: g.y, dir: g.dir, route: clone(g.route), routeIndex: 0, speed: g.speed, turn: 0 }));
+  }
+  function saveBest() {
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+  }
+  function cellBlocked(x, y) {
+    if (x < 0 || y < 0 || x >= level().size[0] || y >= level().size[1]) return true;
+    if (level().walls.some((r) => x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3])) return true;
+    return state.doors.some((d) => !d.open && d.x === x && d.y === y);
+  }
+  function wallBlocks(x, y) {
+    if (x < 0 || y < 0 || x >= level().size[0] || y >= level().size[1]) return true;
+    if (level().walls.some((r) => x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3])) return true;
+    return state.doors.some((d) => !d.open && d.x === x && d.y === y);
+  }
+  function openDoorAt(x, y) {
+    const door = state.doors.find((d) => !d.open && d.x === x && d.y === y);
+    if (!door) return false;
+    if (state.keysHeld <= 0) {
+      state.feedback = "A key is required for that door.";
+      sfx("alert");
+      return true;
+    }
+    state.keysHeld -= 1;
+    door.open = true;
+    state.feedback = "Vault door opened.";
+    sfx("door");
+    return true;
+  }
+  function begin() {
+    if (state.mode === "ready" || state.mode === "lost" || state.mode === "won" || state.mode === "complete") {
+      if (state.mode !== "ready") restartRun();
+      state.mode = "playing";
+      state.feedback = level().name + ": move between guard sweeps.";
+      sfx("start");
+    }
+    canvas.focus();
+    draw();
+  }
+  function restartRun() {
+    state.stage = 0; state.score = 0;
+    resetStage("ready");
+    state.feedback = "Run reset. Press Start to enter Service Duct.";
+    sfx("start");
+    draw();
+  }
+  function nextStage() {
+    state.stage += 1;
+    if (state.stage >= levels.length) {
+      state.mode = "complete";
+      saveBest();
+      state.feedback = "Vault escaped. Final score " + state.score + ".";
+      sfx("win");
+      return;
+    }
+    resetStage("ready");
+    state.feedback = "Stage " + (state.stage + 1) + ": " + level().name + ". Press Start.";
+  }
+  function tryMove(name) {
+    if (state.mode === "ready") begin();
+    if (state.mode !== "playing") return;
+    const d = dirs[name] || dirs.wait;
+    const nx = state.player.x + d[0];
+    const ny = state.player.y + d[1];
+    state.moves += 1;
+    if (name !== "wait") {
+      if (openDoorAt(nx, ny)) {
+        if (cellBlocked(nx, ny)) {
+          tickTurn();
+          return;
+        }
+      }
+      if (!cellBlocked(nx, ny)) {
+        state.player.x = nx; state.player.y = ny;
+        state.feedback = "Shadow step.";
+        sfx("step");
+      } else {
+        state.feedback = "Blocked by vault steel.";
+        state.alert = Math.min(100, state.alert + 5);
+        sfx("alert");
+      }
+    } else {
+      state.feedback = "Waited for a guard beat.";
+      sfx("step");
+    }
+    collectKeys();
+    checkExit();
+    tickTurn();
+  }
+  function collectKeys() {
+    state.keys.forEach((k) => {
+      if (!k.taken && k.x === state.player.x && k.y === state.player.y) {
+        k.taken = true;
+        state.keysHeld += 1;
+        state.feedback = "Key lifted from the dark.";
+        sfx("key");
+      }
+    });
+  }
+  function checkExit() {
+    const e = level().exit;
+    if (state.player.x === e[0] && state.player.y === e[1]) {
+      const allKeys = state.keys.every((k) => k.taken);
+      const allDoors = state.doors.every((d) => d.open);
+      if (allKeys && allDoors) {
+        const award = Math.max(80, 520 - state.moves * 8 - state.alert * 3 + state.stage * 120);
+        state.score += award;
+        saveBest();
+        state.feedback = "Stage clear for " + award + ".";
+        state.mode = "won";
+        sfx("win");
+        window.setTimeout(nextStage, 420);
+      } else {
+        state.feedback = "Exit remains sealed. Clear keys and doors.";
+      }
+    }
+  }
+  function tickTurn() {
+    state.guards.forEach((g) => {
+      g.turn += g.speed;
+      if (g.turn < 1) return;
+      g.turn -= 1;
+      const target = g.route[(g.routeIndex + 1) % g.route.length];
+      const dx = Math.sign(target[0] - g.x);
+      const dy = Math.sign(target[1] - g.y);
+      if (dx || dy) {
+        g.x += dx; g.y += dy;
+        g.dir = dx > 0 ? "E" : dx < 0 ? "W" : dy > 0 ? "S" : "N";
+      }
+      if (g.x === target[0] && g.y === target[1]) {
+        g.routeIndex = (g.routeIndex + 1) % g.route.length;
+        const next = g.route[(g.routeIndex + 1) % g.route.length];
+        const ndx = Math.sign(next[0] - g.x);
+        const ndy = Math.sign(next[1] - g.y);
+        if (ndx || ndy) g.dir = ndx > 0 ? "E" : ndx < 0 ? "W" : ndy > 0 ? "S" : "N";
+      }
+    });
+    resolveVision();
+  }
+  function visibleCells(guard) {
+    const [dx, dy] = dirVec[guard.dir];
+    const left = dirOrder[(dirOrder.indexOf(guard.dir) + 3) % 4];
+    const side = dirVec[left];
+    const cells = [];
+    for (let r = 1; r <= 3; r++) {
+      const width = r === 1 ? 0 : 1;
+      for (let off = -width; off <= width; off++) {
+        const x = guard.x + dx * r + side[0] * off;
+        const y = guard.y + dy * r + side[1] * off;
+        if (wallBlocks(x, y)) {
+          if (off === 0) break;
+          continue;
+        }
+        cells.push([x, y]);
+      }
+    }
+    return cells;
+  }
+  function resolveVision() {
+    let spotted = false;
+    state.guards.forEach((g) => {
+      if (g.x === state.player.x && g.y === state.player.y) spotted = true;
+      if (visibleCells(g).some((c) => c[0] === state.player.x && c[1] === state.player.y)) spotted = true;
+    });
+    if (spotted) {
+      state.alert = Math.min(100, state.alert + 28);
+      state.pulse = .6;
+      state.feedback = "Spotted. Alert climbing.";
+      sfx("alert");
+      if (state.alert >= 100) {
+        state.mode = "lost";
+        state.feedback = "Vault lockdown. Press Restart.";
+        sfx("fail");
+      }
+    } else {
+      state.alert = Math.max(0, state.alert - 3);
+    }
+  }
+  function stepFrame() {
+    if (state.pulse > 0) state.pulse = Math.max(0, state.pulse - 1 / 60);
+  }
+  function syncHud() {
+    const totalKeys = state.keys.length;
+    const found = state.keys.filter((k) => k.taken).length;
+    els.stage.textContent = (state.stage + 1) + "/" + levels.length;
+    els.keys.textContent = found + "/" + totalKeys;
+    els.alert.textContent = Math.round(state.alert);
+    els.moves.textContent = state.moves;
+    els.score.textContent = state.score;
+    els.best.textContent = state.best;
+    els.status.textContent = state.feedback;
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.sound));
+    els.alert.className = "value" + (state.alert >= 70 ? " bad" : state.alert >= 35 ? " warn" : " good");
+  }
+  function fullActive() { return Boolean(document.fullscreenElement || document.webkitFullscreenElement); }
+  function syncFull() { els.full.textContent = fullActive() ? "Exit Fullscreen" : "Fullscreen"; }
+  function toggleFull() {
+    try {
+      if (fullActive()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      else (els.app.requestFullscreen || els.app.webkitRequestFullscreen)?.call(els.app);
+    } catch (_) {}
+  }
+  function toggleSound() {
+    state.sound = !state.sound;
+    writeStore(SOUND_KEY, state.sound ? "1" : "0");
+    syncHud();
+    if (state.sound) sfx("key");
+  }
+  function layout() {
+    const [cols, rows] = level().size;
+    const size = Math.floor(Math.min((W - 88) / cols, (H - 64) / rows));
+    const ox = Math.floor((W - size * cols) / 2);
+    const oy = Math.floor((H - size * rows) / 2 + 8);
+    return { cols, rows, size, ox, oy };
+  }
+  function cellRect(x, y) {
+    const l = layout();
+    return { x: l.ox + x * l.size, y: l.oy + y * l.size, s: l.size };
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#071827"); bg.addColorStop(.68, "#070b18"); bg.addColorStop(1, "#040711");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(103,232,249,.08)";
+    for (let i = 0; i < 42; i++) ctx.fillRect((i * 181) % W, 18 + (i * 59) % 430, 1 + i % 3, 1 + i % 2);
+    const l = layout();
+    ctx.save();
+    ctx.translate(l.ox, l.oy);
+    for (let y = 0; y < l.rows; y++) {
+      for (let x = 0; x < l.cols; x++) {
+        ctx.fillStyle = (x + y) % 2 ? "#0a1726" : "#0d1d30";
+        ctx.fillRect(x * l.size, y * l.size, l.size, l.size);
+        ctx.strokeStyle = "rgba(103,232,249,.08)";
+        ctx.strokeRect(x * l.size, y * l.size, l.size, l.size);
+      }
+    }
+    level().walls.forEach((r) => {
+      ctx.fillStyle = "#152941";
+      ctx.fillRect(r[0] * l.size, r[1] * l.size, r[2] * l.size, r[3] * l.size);
+      ctx.strokeStyle = "rgba(125,249,255,.18)";
+      ctx.strokeRect(r[0] * l.size + 1, r[1] * l.size + 1, r[2] * l.size - 2, r[3] * l.size - 2);
+    });
+    ctx.restore();
+    state.guards.forEach((g) => drawVision(g, l));
+    state.doors.forEach((d) => drawDoor(d, l));
+    state.keys.forEach((k) => { if (!k.taken) drawKey(k, l); });
+    drawExit(l);
+    state.guards.forEach((g) => drawGuard(g, l));
+    drawPlayer(l);
+    ctx.fillStyle = "rgba(237,247,255,.82)";
+    ctx.font = "900 15px system-ui,Segoe UI,sans-serif";
+    ctx.fillText(level().name, 22, 31);
+    ctx.fillStyle = "rgba(125,211,252,.82)";
+    ctx.font = "800 12px system-ui,Segoe UI,sans-serif";
+    ctx.fillText("Origin top-left. Avoid cones, unlock doors, reach exit.", 22, 51);
+    if (state.pulse > 0) {
+      ctx.fillStyle = "rgba(251,113,133," + (.09 + state.pulse * .28) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (state.mode === "ready") overlay("SHADOW VAULT", "Start, then move tile by tile through the dark.");
+    if (state.mode === "lost") overlay("LOCKDOWN", "Alert reached 100. Restart the route.");
+    if (state.mode === "complete") overlay("VAULT ESCAPED", "Final score " + state.score + ". Restart to run again.");
+    syncHud();
+  }
+  function drawVision(g, l) {
+    ctx.fillStyle = "rgba(250,204,21,.18)";
+    visibleCells(g).forEach((c) => {
+      ctx.fillRect(l.ox + c[0] * l.size + 3, l.oy + c[1] * l.size + 3, l.size - 6, l.size - 6);
+    });
+  }
+  function drawDoor(d, l) {
+    const r = cellRect(d.x, d.y);
+    ctx.fillStyle = d.open ? "rgba(34,197,94,.24)" : "#462016";
+    ctx.fillRect(r.x + 8, r.y + 5, r.s - 16, r.s - 10);
+    ctx.strokeStyle = d.open ? "#86efac" : "#f97316";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(r.x + 8, r.y + 5, r.s - 16, r.s - 10);
+  }
+  function drawKey(k, l) {
+    const r = cellRect(k.x, k.y);
+    ctx.strokeStyle = "#facc15"; ctx.lineWidth = 4; ctx.shadowBlur = 14; ctx.shadowColor = "#facc15";
+    ctx.beginPath(); ctx.arc(r.x + r.s * .42, r.y + r.s * .46, r.s * .12, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r.x + r.s * .52, r.y + r.s * .46); ctx.lineTo(r.x + r.s * .76, r.y + r.s * .46); ctx.lineTo(r.x + r.s * .76, r.y + r.s * .58); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  function drawExit(l) {
+    const e = level().exit;
+    const r = cellRect(e[0], e[1]);
+    ctx.fillStyle = "rgba(34,211,238,.18)";
+    ctx.fillRect(r.x + 5, r.y + 5, r.s - 10, r.s - 10);
+    ctx.strokeStyle = "#67e8f9"; ctx.lineWidth = 4; ctx.shadowBlur = 18; ctx.shadowColor = "#22d3ee";
+    ctx.strokeRect(r.x + 9, r.y + 9, r.s - 18, r.s - 18);
+    ctx.shadowBlur = 0;
+  }
+  function drawGuard(g, l) {
+    const r = cellRect(g.x, g.y);
+    ctx.fillStyle = "#fb7185";
+    ctx.beginPath(); ctx.arc(r.x + r.s / 2, r.y + r.s / 2, r.s * .24, 0, Math.PI * 2); ctx.fill();
+    const v = dirVec[g.dir];
+    ctx.strokeStyle = "#fecdd3"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(r.x + r.s / 2, r.y + r.s / 2); ctx.lineTo(r.x + r.s / 2 + v[0] * r.s * .28, r.y + r.s / 2 + v[1] * r.s * .28); ctx.stroke();
+  }
+  function drawPlayer(l) {
+    const r = cellRect(state.player.x, state.player.y);
+    ctx.fillStyle = "#7df9ff"; ctx.shadowBlur = 18; ctx.shadowColor = "#22d3ee";
+    ctx.beginPath();
+    ctx.moveTo(r.x + r.s / 2, r.y + r.s * .18);
+    ctx.lineTo(r.x + r.s * .74, r.y + r.s * .76);
+    ctx.lineTo(r.x + r.s * .26, r.y + r.s * .76);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  function overlay(title, copy) {
+    ctx.fillStyle = "rgba(3,7,18,.66)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#f8fbff"; ctx.textAlign = "center";
+    ctx.font = "950 42px system-ui,Segoe UI,sans-serif"; ctx.fillText(title, W / 2, H / 2 - 30);
+    ctx.fillStyle = "#9fdceb"; ctx.font = "850 18px system-ui,Segoe UI,sans-serif"; ctx.fillText(copy, W / 2, H / 2 + 8);
+    ctx.textAlign = "left";
+  }
+  function clickMove(event) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (event.clientY - rect.top) * (canvas.height / rect.height);
+    const l = layout();
+    const cx = Math.floor((px - l.ox) / l.size);
+    const cy = Math.floor((py - l.oy) / l.size);
+    const dx = cx - state.player.x;
+    const dy = cy - state.player.y;
+    if (Math.abs(dx) + Math.abs(dy) !== 1) return;
+    tryMove(dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up");
+  }
+  canvas.addEventListener("pointerdown", (event) => { event.preventDefault(); canvas.focus(); if (state.mode === "ready") begin(); else clickMove(event); });
+  document.querySelectorAll(".pad button").forEach((button) => button.addEventListener("click", () => { canvas.focus(); tryMove(button.dataset.dir); }));
+  els.start.addEventListener("click", begin);
+  els.restart.addEventListener("click", restartRun);
+  els.sound.addEventListener("click", toggleSound);
+  els.full.addEventListener("click", toggleFull);
+  document.addEventListener("fullscreenchange", syncFull);
+  document.addEventListener("webkitfullscreenchange", syncFull);
+  document.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    const map = { arrowup:"up", w:"up", arrowdown:"down", s:"down", arrowleft:"left", a:"left", arrowright:"right", d:"right", " ":"wait" };
+    if (map[key]) { event.preventDefault(); tryMove(map[key]); }
+    if (key === "enter") { event.preventDefault(); begin(); }
+    if (key === "r") restartRun();
+    if (key === "m") toggleSound();
+    if (key === "f") toggleFull();
+  });
+  function snapshot() {
+    return {
+      coordinates: "origin top-left tile grid; x right; y down",
+      mode: state.mode,
+      stage: { index: state.stage + 1, total: levels.length, name: level().name },
+      player: { x: state.player.x, y: state.player.y },
+      guards: state.guards.map((g) => ({ id: g.id, x: g.x, y: g.y, dir: g.dir, vision: visibleCells(g) })),
+      keys: { held: state.keysHeld, total: state.keys.length, items: state.keys.map((k) => ({ id: k.id, x: k.x, y: k.y, taken: k.taken })) },
+      doors: state.doors.map((d) => ({ id: d.id, x: d.x, y: d.y, open: d.open })),
+      exit: { x: level().exit[0], y: level().exit[1] },
+      alert: Math.round(state.alert),
+      moves: state.moves,
+      score: state.score,
+      best: state.best,
+      sound: state.sound,
+      feedback: state.feedback
+    };
+  }
+  window.render_game_to_text = () => JSON.stringify(snapshot());
+  window.advanceTime = (ms) => {
+    const frames = Math.max(1, Math.min(1200, Math.round((Number(ms) || 0) / STEP)));
+    for (let i = 0; i < frames; i++) stepFrame();
+    draw();
+    return window.render_game_to_text();
+  };
+  function frame() {
+    stepFrame();
+    draw();
+    requestAnimationFrame(frame);
+  }
+  resetStage("ready");
+  syncFull();
+  draw();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

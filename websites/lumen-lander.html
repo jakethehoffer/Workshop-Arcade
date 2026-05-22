@@ -65,7 +65,7 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;color:#edf7ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-body{min-height:100vh;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 480px at 8% -10%,rgba(34,211,238,.2),transparent 62%),radial-gradient(690px 460px at 96% 2%,rgba(250,204,21,.12),transparent 60%),linear-gradient(180deg,#071018,#050713 88%);display:flex;justify-content:center}
+body{min-height:100vh;overflow-x:hidden;overscroll-behavior:none;padding:14px 10px 18px;background:radial-gradient(760px 480px at 8% -10%,rgba(34,211,238,.2),transparent 62%),radial-gradient(690px 460px at 96% 2%,rgba(250,204,21,.12),transparent 60%),linear-gradient(180deg,#071018,#050713 88%);display:flex;justify-content:center}
 button{font:inherit}
 .app{width:min(1040px,100%);display:grid;grid-template-rows:auto auto auto auto auto;align-content:start;gap:9px}
 .top{display:flex;align-items:end;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -204,7 +204,10 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     time: 0,
     flashes: 0,
     thrusting: false,
-    lander: null
+    lander: null,
+    lastInput: "none",
+    lastAction: "ready",
+    touchActive: false
   };
 
   function stageData() {
@@ -254,6 +257,14 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   }
   function status(text) {
     state.message = text;
+  }
+  function noteInput(source, action) {
+    state.lastInput = source;
+    state.lastAction = action;
+    state.touchActive = source === "touch" || source === "pen";
+    if (state.touchActive && navigator.vibrate) {
+      try { navigator.vibrate(8); } catch (_) {}
+    }
   }
 
   function ensureAudio() {
@@ -397,6 +408,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   function bindHold(button, name) {
     const hold = (event) => {
       event.preventDefault();
+      noteInput(event.pointerType || "pointer", name + "-hold");
       input[name] = true;
       setHeld(button, true);
       canvas.focus();
@@ -405,6 +417,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     };
     const release = (event) => {
       event.preventDefault();
+      noteInput(event.pointerType || "pointer", name + "-release");
       input[name] = false;
       setHeld(button, false);
     };
@@ -439,17 +452,18 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     } catch (_) {}
   }
 
-  els.start.addEventListener("click", beginRun);
-  els.next.addEventListener("click", nextStage);
-  els.restart.addEventListener("click", restartRun);
-  els.sound.addEventListener("click", toggleSound);
-  els.full.addEventListener("click", toggleFull);
+  els.start.addEventListener("click", () => { noteInput("button", "start"); beginRun(); });
+  els.next.addEventListener("click", () => { noteInput("button", "next"); nextStage(); });
+  els.restart.addEventListener("click", () => { noteInput("button", "restart"); restartRun(); });
+  els.sound.addEventListener("click", () => { noteInput("button", "sound"); toggleSound(); });
+  els.full.addEventListener("click", () => { noteInput("button", "fullscreen"); toggleFull(); });
   document.addEventListener("fullscreenchange", syncFull);
   document.addEventListener("webkitfullscreenchange", syncFull);
   window.addEventListener("blur", clearInput);
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
     if (["arrowleft", "arrowright", "arrowup", "a", "d", "w", " ", "enter"].includes(key)) event.preventDefault();
+    if (["arrowleft", "arrowright", "arrowup", "a", "d", "w", " ", "enter", "r", "m", "f"].includes(key)) noteInput("keyboard", key === " " ? "space" : key);
     if (key === "arrowleft" || key === "a") input.left = true;
     if (key === "arrowright" || key === "d") input.right = true;
     if (key === "arrowup" || key === "w" || key === " ") input.thrust = true;
@@ -625,6 +639,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
       best: state.best,
       sound: state.sound,
       lastSound: state.lastSound,
+      input: { left: input.left, right: input.right, thrust: input.thrust, last: state.lastInput, action: state.lastAction, touchActive: state.touchActive },
       fullscreen: fullActive(),
       message: state.message
     };

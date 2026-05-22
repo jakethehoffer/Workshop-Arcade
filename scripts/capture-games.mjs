@@ -1503,6 +1503,102 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "shadow-vault": {
+      name: "start the vault route and slip to the first key",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          const press = (key, code = key) => {
+            const down = new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
+            const up = new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true });
+            document.dispatchEvent(down);
+            document.dispatchEvent(up);
+            if (typeof window.advanceTime === "function") window.advanceTime(120);
+          };
+          document.querySelector("#startBtn")?.click();
+          for (const key of ["ArrowRight", "ArrowRight", "ArrowDown", "ArrowDown"]) press(key, key);
+          if (typeof window.advanceTime === "function") window.advanceTime(420);
+        });
+      },
+    },
+    "rail-yard-relay": {
+      name: "start the yard clock and flip the selected switch",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            if (typeof window.advanceTime === "function") window.advanceTime(120);
+          };
+          press(" ", "Space");
+          if (typeof window.advanceTime === "function") window.advanceTime(820);
+        });
+      },
+    },
+    "skyline-sentry": {
+      name: "start the sentry and fire into the first lane",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          document.querySelector("#startBtn")?.click();
+          const press = (key, code = key) => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            if (typeof window.advanceTime === "function") window.advanceTime(120);
+          };
+          press(" ", "Space");
+          press("ArrowDown", "ArrowDown");
+          press(" ", "Space");
+          if (typeof window.advanceTime === "function") window.advanceTime(900);
+        });
+      },
+    },
+    "tempo-forge": {
+      name: "toggle a forge step and check the loop",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          const press = (key, code = key) => {
+            const down = new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
+            const up = new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true });
+            document.dispatchEvent(down);
+            document.dispatchEvent(up);
+            if (typeof window.advanceTime === "function") window.advanceTime(100);
+          };
+          press(" ", "Space");
+          press("ArrowRight", "ArrowRight");
+          press("2", "Digit2");
+          document.querySelector("#playBtn")?.click();
+          if (typeof window.advanceTime === "function") window.advanceTime(620);
+        });
+      },
+    },
+    "gridfront-orders": {
+      name: "move the cursor and issue the first grid order",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          const press = (key, code = key) => {
+            const down = new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
+            const up = new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true });
+            document.dispatchEvent(down);
+            window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(up);
+            window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            if (typeof window.advanceTime === "function") window.advanceTime(110);
+          };
+          press("ArrowRight", "ArrowRight");
+          press("ArrowRight", "ArrowRight");
+          press("Enter", "Enter");
+          if (typeof window.advanceTime === "function") window.advanceTime(520);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

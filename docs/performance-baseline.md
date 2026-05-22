@@ -21,6 +21,25 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Sparse genres + catalog headroom pass (pass 80)
+
+Captured 2026-05-22 against `http://127.0.0.1:4173` after adding Shadow Vault, Rail Yard Relay, Skyline Sentry, Tempo Forge, and Gridfront Orders; polishing the five newest games from pass 79; and replacing the generated fallback catalog with compact rows that derive default slug/url/cover values at runtime. The strict audit covered the catalog plus 64 manifest games, 65 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 92 ms | 70 ms | 🟢 70 ms | 🟢 187.9 KB | 16 | 0 |
+| Shadow Vault | 🟢 68 ms | 45 ms | 🟢 45 ms | 🟢 29.6 KB | 2 | 0 |
+| Rail Yard Relay | 🟢 60 ms | 41 ms | 🟢 41 ms | 🟢 26.2 KB | 2 | 0 |
+| Skyline Sentry | 🟢 64 ms | 13 ms | 🟢 14 ms | 🟢 30.2 KB | 2 | 0 |
+| Tempo Forge | 🟢 56 ms | 39 ms | 🟢 39 ms | 🟢 20.6 KB | 2 | 0 |
+| Gridfront Orders | 🟢 60 ms | 41 ms | 🟢 41 ms | 🟢 23.5 KB | 2 | 0 |
+| Lexica | 🟢 72 ms | 55 ms | 🟢 55 ms | 🟢 149.9 KB | 4 | 0 |
+| Idle Tycoon | 🟢 516 ms | 18 ms | 🟢 20 ms | 🟢 190.1 KB | 2 | 0 |
+| Arcade Jump | 🟢 92 ms | 63 ms | 🟢 63 ms | 🟢 122.1 KB | 2 | 0 |
+| Brick Breaker | 🟢 116 ms | 92 ms | 🟢 92 ms | 🟢 106.8 KB | 2 | 0 |
+
+All five new games are comfortably inside the current default 100 KB / 3 request publish budget. The catalog is back under the requested 190 KB headroom target at 187.9 KB / 16 requests, while still preserving the offline fallback catalog, manifest fetch path, filter counts, discovery controls, SEO ItemList/WebSite JSON-LD, and `validate-catalog.ps1 -Fix` regeneration. The catalog's largest resource remains the HTML document itself at 108.6 KB; no cover asset appears as a largest-resource item. No console/page errors appeared across audited URLs, every page passed strict meta/alt checks, and every named exception remains below its CI budget.
+
 ## Balanced max-parallel mechanics + parity pass (pass 79)
 
 Captured 2026-05-22 against `http://127.0.0.1:4173` after adding Volt Sudoku, Glyphogram Grid, Lumen Lander, Wordweave Grid, and Dice Dynamo; adding runtime PWA/storage probes plus validator negative fixtures; trimming Brick Breaker; and finishing keyboard/live-status/fullscreen/pause parity across the older polish set. The strict audit covered the catalog plus 59 manifest games, 60 pages total.

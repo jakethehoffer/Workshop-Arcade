@@ -132,7 +132,7 @@ function escapeForScriptBlock(json) {
 }
 
 export function renderItemListBlock(manifest) {
-  const json = JSON.stringify(buildItemList(manifest), null, 2);
+  const json = JSON.stringify(buildItemList(manifest));
   return [
     JSONLD_MARK_START,
     '<script type="application/ld+json">',
@@ -175,7 +175,7 @@ export function buildWebSite() {
 }
 
 export function renderWebSiteBlock() {
-  const json = JSON.stringify(buildWebSite(), null, 2);
+  const json = JSON.stringify(buildWebSite());
   return [
     WEBSITE_MARK_START,
     '<script type="application/ld+json">',

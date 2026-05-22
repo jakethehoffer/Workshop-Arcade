@@ -40,26 +40,47 @@ function Get-JsArray($Values) {
   return "[" + ($items -join ",") + "]"
 }
 
-function Get-FallbackLine($Game) {
-  $tags = if ($Game.PSObject.Properties["tags"] -and $Game.tags) { Get-JsArray $Game.tags } else { "[]" }
-  $parts = @(
-    "id:$(Get-JsString (Get-JsonValue $Game "id"))",
-    "title:$(Get-JsString (Get-JsonValue $Game "title"))",
-    "subtitle:$(Get-JsString (Get-JsonValue $Game "subtitle"))",
-    "tags:$tags",
-    "slug:$(Get-JsString (Get-JsonValue $Game "slug"))",
-    "url:$(Get-JsString (Get-JsonValue $Game "url"))",
-    "cover:$(Get-JsString (Get-JsonValue $Game "cover"))",
-    "addedAt:$(Get-JsString (Get-JsonValue $Game "addedAt"))",
-    "popularity:$([int]$Game.popularity)"
-  )
-  return "  { " + ($parts -join ", ") + " }"
+function Get-FallbackJson($Games) {
+  $rows = New-Object System.Collections.Generic.List[string]
+  foreach ($game in $Games) {
+    $id = Get-JsonValue $game "id"
+    $defaultUrl = "websites/$id.html"
+    $defaultCover = "covers/$id.svg"
+    $url = Get-JsonValue $game "url"
+    $cover = Get-JsonValue $game "cover"
+    $coverId = if ($cover -match '^covers/([^/]+)\.svg$') { $Matches[1] } else { $cover }
+    $items = @(
+      (ConvertTo-Json -InputObject $id -Compress),
+      (ConvertTo-Json -InputObject (Get-JsonValue $game "title") -Compress),
+      (ConvertTo-Json -InputObject (Get-JsonValue $game "subtitle") -Compress),
+      (ConvertTo-Json -InputObject ([object[]]@($game.tags)) -Compress),
+      (ConvertTo-Json -InputObject (Get-JsonValue $game "addedAt") -Compress),
+      ([string][int]$game.popularity)
+    )
+    if ($url -ne $defaultUrl -or $cover -ne $defaultCover) {
+      if ($url -ne $defaultUrl) {
+        $items += (ConvertTo-Json -InputObject $url -Compress)
+      } else {
+        $items += "null"
+      }
+      if ($cover -ne $defaultCover) {
+        $items += (ConvertTo-Json -InputObject $coverId -Compress)
+      }
+    }
+    $rows.Add("[" + ($items -join ",") + "]") | Out-Null
+  }
+  return "[" + ($rows -join ",") + "]"
+}
+
+function Get-JsSingleQuotedString([string]$Value) {
+  return "'" + (($Value -replace "\\", "\\") -replace "'", "\'") + "'"
 }
 
 function Update-FallbackCatalog($Games, [string]$IndexPath) {
   $indexText = Get-Content -Raw -LiteralPath $IndexPath
-  $fallback = "const FALLBACK_GAMES = [`r`n" + (($Games | ForEach-Object { Get-FallbackLine $_ }) -join ",`r`n") + "`r`n];"
-  $pattern = '(?s)const FALLBACK_GAMES = \[.*?\];'
+  $fallbackJson = Get-FallbackJson $Games
+  $fallback = "const FALLBACK_GAMES = JSON.parse($(Get-JsSingleQuotedString $fallbackJson)).map(r=>({id:r[0],title:r[1],subtitle:r[2],tags:r[3],slug:r[0],url:r[6]||'websites/'+r[0]+'.html',cover:'covers/'+(r[7]||r[0])+'.svg',addedAt:r[4],popularity:r[5]}));"
+  $pattern = '(?s)const FALLBACK_GAMES = (?:JSON\.parse\(''.*?''\)(?:\.map\([^;]+?\))?|\[.*?\]);'
   if ($indexText -notmatch $pattern) {
     Add-Error "Could not find FALLBACK_GAMES block in index.html."
     return
@@ -208,16 +229,38 @@ foreach ($game in $games) {
 
 if (Test-Path -LiteralPath $indexPath) {
   $fallbackRows = @()
-  foreach ($line in Get-Content -LiteralPath $indexPath) {
-    $match = [regex]::Match($line, 'id:"([^"]+)".*url:"([^"]+)".*cover:"([^"]*)"')
-    if (-not $match.Success) {
-      $match = [regex]::Match($line, 'id:"([^"]+)".*url:"([^"]+)".*cover:"([^"]*)"')
+  $indexText = Get-Content -Raw -LiteralPath $indexPath
+  $compactMatch = [regex]::Match($indexText, "const FALLBACK_GAMES = JSON\.parse\('(?<json>.*?)'\)(?:\.map\([^;]+?\))?;", [System.Text.RegularExpressions.RegexOptions]::Singleline)
+  if ($compactMatch.Success) {
+    try {
+      $parsedFallback = (ConvertFrom-Json -InputObject ('{"rows":' + $compactMatch.Groups["json"].Value + '}')).rows
+      $fallbackRows = @()
+      foreach ($row in $parsedFallback) {
+        if ($row -is [System.Array]) {
+          $rowId = [string]$row[0]
+          $rowUrl = if ($row.Count -gt 6 -and $null -ne $row[6] -and [string]$row[6] -ne "") { [string]$row[6] } else { "websites/$rowId.html" }
+          $rowCoverId = if ($row.Count -gt 7 -and $null -ne $row[7] -and [string]$row[7] -ne "") { [string]$row[7] } else { $rowId }
+          $fallbackRows += [pscustomobject]@{
+            id = $rowId
+            url = $rowUrl
+            cover = "covers/$rowCoverId.svg"
+          }
+        } else {
+          $fallbackRows += $row
+        }
+      }
+    } catch {
+      Add-Error "FALLBACK_GAMES compact JSON could not be parsed. Run scripts/validate-catalog.ps1 -Fix."
     }
-    if ($match.Success) {
-      $fallbackRows += [pscustomobject]@{
-        id = $match.Groups[1].Value
-        url = $match.Groups[2].Value
-        cover = $match.Groups[3].Value
+  } else {
+    foreach ($line in Get-Content -LiteralPath $indexPath) {
+      $match = [regex]::Match($line, 'id:"([^"]+)".*url:"([^"]+)".*cover:"([^"]*)"')
+      if ($match.Success) {
+        $fallbackRows += [pscustomobject]@{
+          id = $match.Groups[1].Value
+          url = $match.Groups[2].Value
+          cover = $match.Groups[3].Value
+        }
       }
     }
   }

@@ -62,7 +62,7 @@
 <link rel="icon" href="data:," />
 <style>
 :root{color-scheme:dark;--ink:#effbff;--muted:#94bbcd;--cyan:#4de7ee;--gold:#ffcf63;--rose:#ff7194;--lime:#7df2a6;--line:rgba(77,231,238,.25);--panel:rgba(8,24,38,.94)}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}body{overflow-x:hidden;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:radial-gradient(740px 480px at 4% -10%,rgba(77,231,238,.2),transparent 62%),radial-gradient(580px 460px at 96% 2%,rgba(255,113,148,.15),transparent 63%),linear-gradient(180deg,#06131d,#050914 84%)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}body{overflow-x:hidden;overscroll-behavior:none;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:radial-gradient(740px 480px at 4% -10%,rgba(77,231,238,.2),transparent 62%),radial-gradient(580px 460px at 96% 2%,rgba(255,113,148,.15),transparent 63%),linear-gradient(180deg,#06131d,#050914 84%)}
 button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:14px}.top,.hud,.actions,.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.top{justify-content:space-between}.brand{display:grid;gap:2px}.eyebrow{color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.23em;text-transform:uppercase}.title{margin:0;font-size:clamp(23px,4vw,36px);line-height:1;text-transform:uppercase;letter-spacing:.04em}.pill,.btn,.readout,.board{border:1px solid var(--line);background:linear-gradient(180deg,rgba(17,48,68,.94),rgba(6,17,29,.98));box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.05)}.pill{min-width:72px;border-radius:8px;padding:7px 9px;text-align:center}.pill span{display:block;color:#8bd8ec;font-size:9px;font-weight:950;text-transform:uppercase}.pill b{display:block;font-size:17px;font-variant-numeric:tabular-nums}.desk{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:11px;align-items:stretch}.board{min-width:0;border-radius:12px;padding:10px;display:grid;place-items:center}.board canvas{display:block;width:100%;max-height:min(72dvh,720px);aspect-ratio:3/2;border-radius:9px;touch-action:none;outline:none}.board canvas:focus-visible{outline:3px solid rgba(255,207,99,.88);outline-offset:3px}.rail{display:grid;gap:9px;align-content:start}.readout{border-radius:10px;padding:11px}.readout h2{margin:0 0 6px;font-size:13px;color:#93edff;text-transform:uppercase;letter-spacing:.13em}.stage{margin:0;font-size:21px;font-weight:950;text-transform:uppercase}.copy{margin:6px 0;color:var(--muted);font-size:13px;line-height:1.42}.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}.legend span{border:1px solid rgba(255,207,99,.22);border-radius:7px;padding:6px;color:#cbe8f3;font-size:11px;font-weight:850}.swatch{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:2px;background:var(--cyan);box-shadow:0 0 11px var(--cyan)}.swatch.x{background:transparent;border:2px solid var(--rose);box-shadow:none}.btn{min-height:38px;border-radius:8px;color:var(--ink);cursor:pointer;padding:8px 10px;font-size:12px;font-weight:950;text-transform:uppercase}.btn:hover{border-color:rgba(255,207,99,.68)}.btn:focus-visible{outline:3px solid rgba(255,207,99,.88);outline-offset:2px}.btn.primary,.btn[aria-pressed=true]{color:#04232a;border-color:#89f7fb;background:linear-gradient(180deg,#7af4f5,#28cfe2)}.tools .btn{flex:1 1 98px}.feedback{min-height:48px;border-color:rgba(255,207,99,.28);color:#bee7f5;font-size:13px;font-weight:850;line-height:1.4}.feedback.good{color:var(--lime)}.feedback.bad{color:var(--rose)}.feedback.done{color:var(--gold)}.foot{justify-content:space-between}.keys{color:var(--muted);font-size:12px;line-height:1.5}.kbd{display:inline-grid;place-items:center;height:20px;min-width:21px;padding:0 5px;border:1px solid rgba(77,231,238,.25);border-radius:6px;background:#061421;color:var(--ink);font-weight:950}.sr{position:absolute;left:-10000px}@media(max-width:900px){.desk{grid-template-columns:1fr}.rail{grid-template-columns:repeat(2,minmax(0,1fr))}.feedback{grid-column:span 2}.board canvas{max-height:64dvh}}@media(max-width:620px){.app{padding:9px;gap:8px}.top{align-items:start}.hud{justify-content:center;gap:6px}.pill{min-width:60px;padding:6px}.pill b{font-size:15px}.board{padding:7px}.rail{grid-template-columns:1fr;gap:8px}.feedback{grid-column:auto}.readout{padding:9px}.keys{display:none}.actions{gap:6px}.actions .btn{flex:1 1 94px}.copy{font-size:12px}.legend{margin-top:7px}}
 </style>
 <script src="workshop-runtime.js"></script>
@@ -150,7 +150,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
     mode: "ready", stage: 0, score: 0, best: Number(read(BEST_KEY, "0")) || 0, mistakes: 0,
     cells: [], cursor: { x: 0, y: 0 }, tool: "fill", feedback: "Press Begin Draft, then match the row and column clues.",
     feedbackKind: "", feedbackTimer: 0, clearTimer: 0, pulse: 0, wrong: new Map(), sound: enabledFromStore(),
-    lastSound: "none", gesture: false
+    lastSound: "none", gesture: false, lastInput: "none", lastAction: "ready", touchActive: false
   };
   const current = () => STAGES[state.stage];
   const cellKey = (x, y) => x + "," + y;
@@ -173,6 +173,14 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
     state.feedback = text;
     state.feedbackKind = kind;
     state.feedbackTimer = ms;
+  }
+  function noteInput(source, action) {
+    state.lastInput = source;
+    state.lastAction = action;
+    state.touchActive = source === "touch" || source === "pen";
+    if (state.touchActive && navigator.vibrate) {
+      try { navigator.vibrate(8); } catch (_) {}
+    }
   }
   function persistBest() {
     if (state.score > state.best) {
@@ -229,6 +237,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
   }
   function useTool(tool) {
     state.tool = tool;
+    noteInput("button", "tool-" + tool);
     play("tool");
     render();
   }
@@ -279,6 +288,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
   }
   function applyCell(x, y, tool = state.tool) {
     state.cursor = { x, y };
+    state.lastAction = tool + "-cell";
     if (tool === "mark") markCell(x, y);
     else fillCell(x, y);
   }
@@ -287,6 +297,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
     const height = current().grid.length;
     state.cursor.x = (state.cursor.x + dx + width) % width;
     state.cursor.y = (state.cursor.y + dy + height) % height;
+    state.lastAction = "cursor";
     render();
   }
   function nextStage() {
@@ -499,6 +510,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
     if (isButton && !["r", "f", "m"].includes(key)) return;
     if (["arrowleft", "arrowright", "arrowup", "arrowdown", " ", "enter", "x", "1", "2", "r", "f", "m"].includes(key)) {
       state.gesture = true;
+      noteInput("keyboard", key === " " ? "space" : key);
       event.preventDefault();
     }
     if (key === "r") restart();
@@ -533,6 +545,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
       best: state.best,
       mistakes: state.mistakes,
       feedback: { text: state.feedback, kind: state.feedbackKind, active: state.feedbackTimer > 0 },
+      input: { last: state.lastInput, action: state.lastAction, touchActive: state.touchActive },
       soundEnabled: state.sound,
       lastSound: state.lastSound,
       fullscreen: Boolean(document.fullscreenElement)
@@ -541,6 +554,7 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
   canvas.addEventListener("pointerdown", (event) => {
     state.gesture = true;
+    noteInput(event.pointerType || "pointer", "grid-down");
     canvas.focus();
     if (state.mode === "ready") startRun();
     const cell = cellAt(event);
@@ -557,16 +571,17 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
     const cell = cellAt(event);
     if (!cell || drag.seen.has(cellKey(cell.x, cell.y))) return;
     drag.seen.add(cellKey(cell.x, cell.y));
+    noteInput(event.pointerType || "pointer", "grid-drag");
     applyCell(cell.x, cell.y, drag.tool);
     event.preventDefault();
   });
   window.addEventListener("pointerup", () => { drag = null; });
-  els.fillTool.addEventListener("click", () => { state.gesture = true; useTool("fill"); canvas.focus(); });
-  els.markTool.addEventListener("click", () => { state.gesture = true; useTool("mark"); canvas.focus(); });
-  els.start.addEventListener("click", () => { state.gesture = true; if (state.mode === "ready" || state.mode === "complete") startRun(); });
-  els.restart.addEventListener("click", () => { state.gesture = true; restart(); });
-  els.sound.addEventListener("click", () => { state.gesture = true; toggleSound(); });
-  els.full.addEventListener("click", () => { state.gesture = true; toggleFullscreen(); });
+  els.fillTool.addEventListener("click", () => { state.gesture = true; noteInput("button", "tool-fill"); useTool("fill"); canvas.focus(); });
+  els.markTool.addEventListener("click", () => { state.gesture = true; noteInput("button", "tool-mark"); useTool("mark"); canvas.focus(); });
+  els.start.addEventListener("click", () => { state.gesture = true; noteInput("button", "start"); if (state.mode === "ready" || state.mode === "complete") startRun(); });
+  els.restart.addEventListener("click", () => { state.gesture = true; noteInput("button", "restart"); restart(); });
+  els.sound.addEventListener("click", () => { state.gesture = true; noteInput("button", "sound"); toggleSound(); });
+  els.full.addEventListener("click", () => { state.gesture = true; noteInput("button", "fullscreen"); toggleFullscreen(); });
   document.addEventListener("keydown", onKey);
   document.addEventListener("fullscreenchange", render);
   window.addEventListener("resize", render);

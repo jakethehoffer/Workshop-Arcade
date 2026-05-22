@@ -62,7 +62,7 @@
 <link rel="icon" href="data:," />
 <style>
 :root{color-scheme:dark;--bg:#061217;--panel:#0d2330;--panel2:#133749;--ink:#f2fcff;--muted:#a5c0ca;--cyan:#54dcec;--lime:#7ff0a6;--gold:#ffd166;--pink:#ff7d96;--line:rgba(111,227,240,.28)}
-*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{min-height:100dvh;display:grid;place-items:center;overflow-x:hidden;padding:12px;background:radial-gradient(820px 510px at 8% -8%,rgba(84,220,236,.19),transparent 62%),radial-gradient(620px 420px at 96% 2%,rgba(255,209,102,.13),transparent 58%),linear-gradient(180deg,#061217,#081720 80%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{min-height:100dvh;display:grid;place-items:center;overflow-x:hidden;overscroll-behavior:none;padding:12px;background:radial-gradient(820px 510px at 8% -8%,rgba(84,220,236,.19),transparent 62%),radial-gradient(620px 420px at 96% 2%,rgba(255,209,102,.13),transparent 58%),linear-gradient(180deg,#061217,#081720 80%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 .app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.title{display:block;margin-top:4px;font-size:clamp(23px,4vw,35px);font-weight:950;letter-spacing:.035em;text-transform:uppercase}
 .pill,.btn{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 15px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06)}.pill{min-width:75px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--cyan);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
 .stage{overflow:hidden;border:1px solid rgba(111,227,240,.32);border-radius:8px;background:#07151d;box-shadow:0 26px 62px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/10;max-height:67vh;background:#07151d;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.9);outline-offset:-4px}
@@ -129,7 +129,8 @@
     mode: "playing", stageIndex: 0, budget: 0, score: 0, streak: 0, chain: 0, best: Number(read(BEST_KEY, "0")) || 0,
     found: [], path: [], cursor: { r: 2, c: 2 }, lastEnd: null, solvedBoards: 0, pointerId: null,
     feedback: "Trace the target words. Linked starts earn chain bonuses.", feedbackMs: 2400, clock: 0,
-    soundEnabled: !["0","false","off","muted"].includes(soundRaw), lastSound: "none", toneCount: 0, userGesture: false
+    soundEnabled: !["0","false","off","muted"].includes(soundRaw), lastSound: "none", toneCount: 0, userGesture: false,
+    lastInput: "none", lastAction: "ready", touchActive: false
   };
   let audio = null, lastFrame = performance.now();
   const stage = () => STAGES[state.stageIndex];
@@ -137,7 +138,15 @@
   const activeWord = () => state.path.map((cell) => letterAt(cell.r, cell.c)).join("");
   const same = (a, b) => !!a && !!b && a.r === b.r && a.c === b.c;
   const touching = (a, b) => !!a && !!b && Math.max(Math.abs(a.r - b.r), Math.abs(a.c - b.c)) === 1;
-  function markGesture() { state.userGesture = true; }
+  function markGesture(source = "ui", action = "gesture") {
+    state.userGesture = true;
+    state.lastInput = source;
+    state.lastAction = action;
+    state.touchActive = source === "touch" || source === "pen";
+    if (state.touchActive && navigator.vibrate) {
+      try { navigator.vibrate(8); } catch (_) {}
+    }
+  }
   function ensureAudio() {
     if (!state.soundEnabled || !state.userGesture) return null;
     try {
@@ -402,6 +411,7 @@
       lastEnd: state.lastEnd,
       solvedBoards: state.solvedBoards,
       feedback: state.feedback,
+      input: { last: state.lastInput, action: state.lastAction, touchActive: state.touchActive },
       soundEnabled: state.soundEnabled,
       lastSound: state.lastSound,
       toneCount: state.toneCount,
@@ -412,11 +422,11 @@
   function isUiTarget(target) { return target instanceof HTMLElement && target !== canvas && target.matches("button,input,textarea,select,[contenteditable=true]"); }
   canvas.addEventListener("pointerdown", (event) => {
     const cell = cellFromEvent(event); if (!cell) return;
-    event.preventDefault(); markGesture(); canvas.focus(); state.pointerId = event.pointerId; canvas.setPointerCapture(event.pointerId); beginTrace(cell);
+    event.preventDefault(); markGesture(event.pointerType || "pointer", "trace-start"); canvas.focus(); state.pointerId = event.pointerId; canvas.setPointerCapture(event.pointerId); beginTrace(cell);
   });
   canvas.addEventListener("pointermove", (event) => {
     if (state.pointerId !== event.pointerId || !state.path.length) return;
-    const cell = cellFromEvent(event); if (cell) extendTrace(cell);
+    const cell = cellFromEvent(event); if (cell) { markGesture(event.pointerType || "pointer", "trace-drag"); extendTrace(cell); }
   });
   canvas.addEventListener("pointerup", (event) => {
     if (state.pointerId !== event.pointerId) return;
@@ -424,19 +434,19 @@
     if (state.path.length > 1) submitTrace(); else clearTrace();
   });
   canvas.addEventListener("pointercancel", () => { state.pointerId = null; clearTrace(); });
-  els.submit.addEventListener("click", submitTrace);
-  els.clear.addEventListener("click", () => { markGesture(); if (state.path.length > 1) undoCell(); else clearTrace(); canvas.focus(); });
-  els.next.addEventListener("click", nextBoard);
-  els.restart.addEventListener("click", restart);
-  els.sound.addEventListener("click", toggleSound);
-  els.full.addEventListener("click", toggleFullscreen);
+  els.submit.addEventListener("click", () => { markGesture("button", "submit"); submitTrace(); });
+  els.clear.addEventListener("click", () => { markGesture("button", "undo"); if (state.path.length > 1) undoCell(); else clearTrace(); canvas.focus(); });
+  els.next.addEventListener("click", () => { markGesture("button", "next"); nextBoard(); });
+  els.restart.addEventListener("click", () => { markGesture("button", "restart"); restart(); });
+  els.sound.addEventListener("click", () => { markGesture("button", "sound"); toggleSound(); });
+  els.full.addEventListener("click", () => { markGesture("button", "fullscreen"); toggleFullscreen(); });
   document.addEventListener("fullscreenchange", () => { syncHud(); render(); });
   window.addEventListener("keydown", (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || isUiTarget(event.target)) return;
     const key = event.key.toLowerCase();
     const move = { arrowup: [-1,0], w: [-1,0], arrowdown: [1,0], s: [1,0], arrowleft: [0,-1], a: [0,-1], arrowright: [0,1], d: [0,1] }[key];
-    if (move) { event.preventDefault(); moveCursor(move[0], move[1]); return; }
-    if (key === "enter" || event.code === "Space") { event.preventDefault(); markGesture(); if (state.path.length) submitTrace(); else beginTrace(state.cursor); }
+    if (move) { event.preventDefault(); markGesture("keyboard", key); moveCursor(move[0], move[1]); return; }
+    if (key === "enter" || event.code === "Space") { event.preventDefault(); markGesture("keyboard", key === "enter" ? "enter" : "space"); if (state.path.length) submitTrace(); else beginTrace(state.cursor); }
     else if (key === "backspace") { event.preventDefault(); undoCell(); }
     else if (key === "escape") { if (state.path.length) { event.preventDefault(); clearTrace(); } }
     else if (key === "n") { event.preventDefault(); nextBoard(); }
