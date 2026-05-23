@@ -66,6 +66,8 @@
     overscroll-behavior:none;
     touch-action:none;
     -webkit-user-select:none; user-select:none;
+    color:#e9fbff;
+    font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;
   }
   canvas#game {
     position:fixed; inset:0;
@@ -77,14 +79,22 @@
     position:fixed; top:12px; right:12px; z-index:50;
     display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px;
     max-width:calc(100vw - 24px);
+    padding:6px;
+    border:1px solid rgba(125,211,252,0.22);
+    border-radius:12px;
+    background:linear-gradient(135deg,rgba(3,8,22,0.74),rgba(7,20,42,0.48));
+    box-shadow:0 12px 34px rgba(0,0,0,0.35);
+    backdrop-filter:blur(12px);
   }
   .hud-btn {
-    background:rgba(4,10,24,0.66); border:1px solid rgba(79,195,247,0.35);
-    color:#e9fbff; padding:8px 12px; border-radius:9px; font-weight:800;
+    background:rgba(4,10,24,0.74); border:1px solid rgba(79,195,247,0.4);
+    color:#e9fbff; padding:8px 12px; border-radius:8px; font-weight:800;
     cursor:pointer; font-size:14px; line-height:1; white-space:nowrap; backdrop-filter:blur(8px);
-    transition: background 0.15s;
+    min-height:34px;
+    transition: background 0.15s, transform 0.12s, border-color 0.15s;
   }
   .hud-btn:hover { background:rgba(0,0,0,0.8); }
+  .hud-btn:active { transform:translateY(1px); }
   .hud-toggle[aria-pressed="false"] {
     color:#b7c3ce;
     border-color:rgba(255,255,255,0.18);
@@ -102,9 +112,50 @@
     border:0;
   }
   #pauseBtn { display:none; }
+  .touch-controls {
+    position:fixed;
+    left:max(12px, env(safe-area-inset-left));
+    right:max(12px, env(safe-area-inset-right));
+    bottom:max(12px, env(safe-area-inset-bottom));
+    z-index:55;
+    display:none;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    max-width:420px;
+    margin:0 auto;
+    padding:8px;
+    border:1px solid rgba(125,211,252,0.24);
+    border-radius:12px;
+    background:linear-gradient(135deg,rgba(2,6,18,0.76),rgba(7,22,40,0.58));
+    box-shadow:0 16px 42px rgba(0,0,0,0.4);
+    backdrop-filter:blur(12px);
+  }
+  .touch-btn {
+    min-height:50px;
+    border:1px solid rgba(125,211,252,0.45);
+    border-radius:10px;
+    background:linear-gradient(180deg,rgba(14,45,72,0.9),rgba(4,13,30,0.9));
+    color:#effcff;
+    font:800 13px/1 system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+    letter-spacing:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.16);
+  }
+  .touch-btn span:first-child { font-size:21px; line-height:1; }
+  .touch-btn:active {
+    transform:translateY(1px);
+    border-color:rgba(255,224,102,0.8);
+    background:linear-gradient(180deg,rgba(20,82,111,0.96),rgba(8,27,48,0.96));
+  }
+  .touch-label { font-size:10px; color:#c7f3ff; }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.75); }
   .overlay.show { display:grid; pointer-events:auto; }
-  .card { background:linear-gradient(135deg,#1e1e2f,#16162a); border:1px solid rgba(255,255,255,0.1); padding:28px 30px; border-radius:18px; max-width:min(92vw,460px); box-shadow:0 20px 60px rgba(0,0,0,.7); pointer-events:auto; color:#c8c8d8; }
+  .card { background:linear-gradient(135deg,#1e1e2f,#16162a); border:1px solid rgba(255,255,255,0.1); padding:28px 30px; border-radius:12px; max-width:min(92vw,460px); max-height:calc(100vh - 28px); overflow:auto; box-sizing:border-box; box-shadow:0 20px 60px rgba(0,0,0,.7); pointer-events:auto; color:#c8c8d8; }
   .card h2 { margin:0 0 16px; font-size:22px; color:#4fc3f7; }
   .card p  { margin:8px 0; line-height:1.6; font-size:14px; }
   .card .controls-grid { display:grid; grid-template-columns:1fr; gap:8px; margin:14px 0; }
@@ -114,14 +165,21 @@
   .card .btn:active { transform:translateY(1px); }
   .btn-primary { background:linear-gradient(135deg,#4fc3f7,#0288d1); color:#fff; }
   .btn-warn { background:linear-gradient(135deg,#ff9800,#e65100); color:#fff; }
+  @media (max-width: 720px), (pointer: coarse) {
+    .touch-controls { display:grid; }
+  }
   @media (max-width: 640px) {
-    .hud-controls { top:8px; right:8px; gap:6px; max-width:calc(100vw - 16px); }
+    .hud-controls { top:8px; left:8px; right:8px; gap:6px; max-width:none; justify-content:flex-end; padding:5px; border-radius:10px; }
     .hud-btn { padding:7px 8px; font-size:12px; border-radius:8px; }
-    .card { padding:20px; border-radius:14px; }
+    .card { padding:20px; border-radius:10px; }
     .card h2 { font-size:20px; }
+    .card .control-row { justify-content:space-between; gap:10px; }
   }
   @media (max-width: 380px) {
     .hud-btn { padding:6px 7px; font-size:11px; }
+    .touch-controls { gap:6px; padding:6px; }
+    .touch-btn { min-height:46px; font-size:12px; }
+    .touch-btn span:first-child { font-size:19px; }
   }
 </style>
   <script src="workshop-runtime.js"></script>
@@ -136,6 +194,12 @@
   <button class="hud-btn" id="helpBtn" type="button" aria-label="How to play" title="Help (H)">? Help</button>
 </div>
 <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Metro Dash ready. Press Space or tap to start.</div>
+<div class="touch-controls" id="touchControls" role="group" aria-label="Touch controls">
+  <button class="touch-btn" id="touchLeft" type="button" aria-label="Move left"><span aria-hidden="true">&larr;</span><span class="touch-label">Left</span></button>
+  <button class="touch-btn" id="touchJump" type="button" aria-label="Jump"><span aria-hidden="true">&uarr;</span><span class="touch-label">Jump</span></button>
+  <button class="touch-btn" id="touchSlide" type="button" aria-label="Slide"><span aria-hidden="true">&darr;</span><span class="touch-label">Slide</span></button>
+  <button class="touch-btn" id="touchRight" type="button" aria-label="Move right"><span aria-hidden="true">&rarr;</span><span class="touch-label">Right</span></button>
+</div>
 
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="card">
@@ -199,6 +263,9 @@ const PLAYER_Z = 0.08;
 function vanishY() { return H * VAN_Y; }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function laneLabel(lane) {
+  return lane === -1 ? "left" : lane === 1 ? "right" : "center";
+}
 
 function projX(lane, z) {
   const tw = lerp(W * TRACK_BOT, W * TRACK_TOP, z);
@@ -369,6 +436,74 @@ function drawFeedback() {
     ctx.strokeText(p.text, p.x, p.y);
     ctx.fillStyle = p.color;
     ctx.fillText(p.text, p.x, p.y);
+    ctx.restore();
+  }
+  if (state === "playing" && feedback.lastEventAge !== null && feedback.lastEventAge <= 34) {
+    const a = clamp(1 - feedback.lastEventAge / 34, 0, 1);
+    const px = projX(player.laneX, PLAYER_Z);
+    const py = projY(PLAYER_Z) - 76 * projS(PLAYER_Z);
+    ctx.save();
+    ctx.globalAlpha = a;
+    if (feedback.lastEvent === "lane-change") {
+      const dir = feedback.lastLaneDelta || 0;
+      const fromLane = player.targetLane - dir;
+      const fromX = projX(fromLane, PLAYER_Z);
+      const toX = projX(player.targetLane, PLAYER_Z);
+      const arrowY = projY(PLAYER_Z) - 26 * projS(PLAYER_Z);
+      ctx.strokeStyle = "#65e6ff";
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.shadowColor = "#65e6ff";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(fromX, arrowY);
+      ctx.lineTo(toX, arrowY);
+      ctx.stroke();
+      ctx.fillStyle = "#e9fbff";
+      ctx.beginPath();
+      ctx.moveTo(toX, arrowY);
+      ctx.lineTo(toX - dir * 18, arrowY - 10);
+      ctx.lineTo(toX - dir * 18, arrowY + 10);
+      ctx.closePath();
+      ctx.fill();
+    } else if (feedback.lastEvent === "jump" || feedback.lastEvent === "slide") {
+      const label = feedback.lastEvent === "jump" ? "JUMP CLEAR" : "LOW SLIDE";
+      const w = feedback.lastEvent === "jump" ? 116 : 108;
+      ctx.fillStyle = feedback.lastEvent === "jump" ? "rgba(255,226,109,0.24)" : "rgba(255,174,114,0.24)";
+      ctx.strokeStyle = feedback.lastEvent === "jump" ? "#ffe26d" : "#ffae72";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.roundRect(px - w / 2, py - 24, w, 30, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "bold 13px system-ui, -apple-system, Segoe UI, Arial";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fff7df";
+      ctx.fillText(label, px, py - 4);
+    }
+    ctx.restore();
+  }
+  if (state === "playing" && feedback.lastNearMissAge <= 34) {
+    const a = clamp(1 - feedback.lastNearMissAge / 34, 0, 1);
+    const x = W / 2;
+    const y = Math.max(W < 640 ? 154 : 118, H * 0.2);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "rgba(9,25,46,0.72)";
+    ctx.strokeStyle = "#7dd3fc";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#7dd3fc";
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.roundRect(x - 74, y - 18, 148, 34, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.font = "bold 14px system-ui, -apple-system, Segoe UI, Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#effcff";
+    ctx.fillText("CLEAN DODGE", x, y + 5);
     ctx.restore();
   }
   if (feedback.crashFlash > 0) {
@@ -545,16 +680,47 @@ function drawScene(dt60, speed) {
   if (feedback.dangerCue > 0 && state === "playing") {
     const pulse = 0.5 + Math.sin(performance.now() / 75) * 0.35;
     const lane = feedback.dangerLane || 0;
+    const leftLane = lane - 0.5;
+    const rightLane = lane + 0.5;
     ctx.save();
     ctx.globalAlpha = Math.min(0.38, feedback.dangerCue * (0.18 + pulse * 0.16));
     ctx.fillStyle = "#fb3f5c";
     ctx.beginPath();
-    ctx.moveTo(projX(lane - 0.5, 0), H);
-    ctx.lineTo(projX(lane - 0.5, 1), vy);
-    ctx.lineTo(projX(lane + 0.5, 1), vy);
-    ctx.lineTo(projX(lane + 0.5, 0), H);
+    ctx.moveTo(projX(leftLane, 0), H);
+    ctx.lineTo(projX(leftLane, 1), vy);
+    ctx.lineTo(projX(rightLane, 1), vy);
+    ctx.lineTo(projX(rightLane, 0), H);
     ctx.closePath();
     ctx.fill();
+    ctx.globalAlpha = Math.min(0.9, feedback.dangerCue * (0.42 + pulse * 0.28));
+    ctx.strokeStyle = "#ff8fa3";
+    ctx.lineWidth = 3;
+    ctx.shadowColor = "#fb3f5c";
+    ctx.shadowBlur = 18;
+    for (const side of [leftLane, rightLane]) {
+      ctx.beginPath();
+      for (let z = 0; z <= 1; z += 0.02) {
+        const x = projX(side, z);
+        const y = projY(z);
+        z === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#ffd1da";
+    for (let i = 0; i < 3; i++) {
+      const z = 0.1 + i * 0.12;
+      const s = projS(z);
+      const x = projX(lane, z);
+      const y = projY(z) - 16 * s;
+      const w = 30 * s;
+      const h = 18 * s;
+      ctx.beginPath();
+      ctx.moveTo(x - w, y - h);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x + w, y - h);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -1109,9 +1275,18 @@ const HS_KEY = "metrodash_highscore";
 let highScore = 0;
 try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
 
+function syncGameShellState() {
+  document.body.classList.toggle("game-title", state === "title");
+  document.body.classList.toggle("game-playing", state === "playing");
+  document.body.classList.toggle("game-paused", state === "paused");
+  document.body.classList.toggle("game-over", state === "gameover");
+}
+syncGameShellState();
+
 function startGame() {
   const previousState = state;
   state = "playing"; distance = 0; coins = 0; gameSpeed = 3;
+  syncGameShellState();
   Object.assign(player, { lane:0, targetLane:0, laneX:0, y:0, vy:0, isJumping:false, isSliding:false, slideTimer:0, height:1, runPhase:0 });
   obstacles.length = 0; coinObjects.length = 0; particles.length = 0; scorePops.length = 0; pickupRings.length = 0;
   Object.assign(feedback, {
@@ -1149,6 +1324,7 @@ function startGame() {
 function setGameOver() {
   if (state === "gameover") return;
   state = "gameover"; stopMusic(); pauseBtn.style.display = "none";
+  syncGameShellState();
   recordDiagnosticEvent("crash");
   setLiveStatus(`Collision. Game over at ${Math.floor(distance)} meters with ${coins} coins. Press Space or tap to retry.`, true);
   feedback.crashFlash = 1;
@@ -1171,6 +1347,7 @@ function setGameOver() {
 function togglePause() {
   if (state === "playing") {
     state = "paused";
+    syncGameShellState();
     recordDiagnosticEvent("pause");
     setLiveStatus("Paused. Press P, Escape, or Resume to continue.", true);
     SFX.pause();
@@ -1180,6 +1357,7 @@ function togglePause() {
   }
   else if (state === "paused") {
     state = "playing";
+    syncGameShellState();
     recordDiagnosticEvent("resume");
     setLiveStatus("Resumed. Keep dodging obstacles.", true);
     SFX.resume();
@@ -1195,14 +1373,14 @@ function moveLeft() {
   if (state !== "playing" || player.targetLane <= -1) return;
   player.targetLane--;
   recordActionFeedback("lane-change", { delta: -1 });
-  setLiveStatus(`Moved to ${player.targetLane === -1 ? "left" : player.targetLane === 0 ? "center" : "right"} lane.`, true);
+  setLiveStatus(`Moved to ${laneLabel(player.targetLane)} lane.`, true);
   SFX.laneChange(-1);
 }
 function moveRight() {
   if (state !== "playing" || player.targetLane >= 1) return;
   player.targetLane++;
   recordActionFeedback("lane-change", { delta: 1 });
-  setLiveStatus(`Moved to ${player.targetLane === -1 ? "left" : player.targetLane === 0 ? "center" : "right"} lane.`, true);
+  setLiveStatus(`Moved to ${laneLabel(player.targetLane)} lane.`, true);
   SFX.laneChange(1);
 }
 function doJump() {
@@ -1257,21 +1435,75 @@ function drawText(txt, x, y, size, align, color, outline) {
 /* ===== HUD ===== */
 function drawHUD() {
   if (state !== "playing") return;
-  // Distance
-  drawText(Math.floor(distance) + "m", W/2, 38, 30, "center", "#fff", true);
-  // Speed indicator
+  const compact = W < 640;
+  const metricW = compact ? Math.min(W - 24, 274) : 224;
+  const metricX = compact ? 12 : W / 2 - metricW / 2;
+  const metricY = compact ? 74 : 18;
+  ctx.save();
+  ctx.fillStyle = "rgba(2,7,18,0.6)";
+  ctx.strokeStyle = "rgba(125,211,252,0.22)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(metricX, metricY, metricW, compact ? 58 : 54, 10);
+  ctx.fill();
+  ctx.stroke();
+  drawText(Math.floor(distance) + "m", metricX + metricW / 2, metricY + 30, compact ? 24 : 28, "center", "#fff", true);
   const speedPct = clamp((gameSpeed - 3) / 7, 0, 1);
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.beginPath(); ctx.roundRect(W/2 - 50, 48, 100, 6, 3); ctx.fill();
+  const barW = metricW - 74;
+  const barX = metricX + 52;
+  const barY = metricY + (compact ? 40 : 38);
+  ctx.fillStyle = "rgba(0,0,0,0.38)";
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW, 7, 4); ctx.fill();
   const speedColor = speedPct < 0.5 ? "#4caf50" : speedPct < 0.8 ? "#ff9800" : "#f44336";
   ctx.fillStyle = speedColor;
-  ctx.beginPath(); ctx.roundRect(W/2 - 50, 48, 100 * speedPct, 6, 3); ctx.fill();
-  // Coins
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW * speedPct, 7, 4); ctx.fill();
   ctx.fillStyle = "#ffc107";
-  ctx.beginPath(); ctx.arc(28, 34, 10, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(metricX + 24, metricY + 28, 10, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = "#ffecb3";
-  ctx.beginPath(); ctx.arc(28, 34, 6, 0, Math.PI*2); ctx.fill();
-  drawText(String(coins), 46, 40, 20, "left", "#ffd700", true);
+  ctx.beginPath(); ctx.arc(metricX + 24, metricY + 28, 6, 0, Math.PI*2); ctx.fill();
+  drawText(String(coins), metricX + 40, metricY + 34, 19, "left", "#ffd700", true);
+  ctx.restore();
+
+  const laneY = compact ? H - 118 : H - 34;
+  if (laneY > metricY + 78) {
+    const laneW = compact ? Math.min(W - 28, 230) : 260;
+    const laneX = W / 2 - laneW / 2;
+    ctx.save();
+    ctx.fillStyle = "rgba(2,7,18,0.54)";
+    ctx.strokeStyle = "rgba(125,211,252,0.2)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(laneX, laneY - 24, laneW, 44, 10);
+    ctx.fill();
+    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const lane = i - 1;
+      const x = laneX + 34 + i * ((laneW - 68) / 2);
+      const active = lane === player.targetLane;
+      ctx.fillStyle = active ? "rgba(79,195,247,0.9)" : "rgba(255,255,255,0.12)";
+      ctx.strokeStyle = active ? "#c8f6ff" : "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      ctx.roundRect(x - 21, laneY - 15, 42, 28, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "bold 13px system-ui, -apple-system, Segoe UI, Arial";
+      ctx.textAlign = "center";
+      ctx.fillStyle = active ? "#03111b" : "#c8d8e6";
+      ctx.fillText(["L", "C", "R"][i], x, laneY + 4);
+    }
+    const badge = feedback.dangerCue > 0.18
+      ? "DANGER"
+      : feedback.lastEvent === "jump" && feedback.lastEventAge !== null && feedback.lastEventAge < 40
+        ? "JUMP"
+        : feedback.lastEvent === "slide" && feedback.lastEventAge !== null && feedback.lastEventAge < 40
+          ? "SLIDE"
+          : laneLabel(player.targetLane).toUpperCase();
+    ctx.fillStyle = feedback.dangerCue > 0.18 ? "#ff8fa3" : "#7dd3fc";
+    ctx.font = "bold 11px system-ui, -apple-system, Segoe UI, Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(badge, W / 2, laneY - 28);
+    ctx.restore();
+  }
 }
 
 function drawTitleRunwayPreview() {
@@ -1299,43 +1531,65 @@ function drawTitleRunwayPreview() {
 
 /* ===== SCREENS ===== */
 function drawTitleScreen() {
-  ctx.fillStyle = "rgba(1,4,14,0.3)";
+  ctx.fillStyle = "rgba(1,4,14,0.22)";
   ctx.fillRect(0, 0, W, H);
-  const panelW = Math.min(W - 40, 420);
-  const panelH = W < 520 ? 176 : 190;
+  const compact = W < 520;
+  const panelW = Math.min(W - 32, 456);
+  const panelH = compact ? 224 : 232;
   const panelX = W / 2 - panelW / 2;
-  const panelY = Math.max(76, H * 0.18);
+  const panelY = compact ? Math.max(96, H * 0.14) : Math.max(88, H * 0.16);
   const pg = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
-  pg.addColorStop(0, "rgba(6,18,38,0.86)");
-  pg.addColorStop(1, "rgba(2,5,16,0.68)");
+  pg.addColorStop(0, "rgba(7,22,46,0.92)");
+  pg.addColorStop(1, "rgba(2,5,16,0.76)");
   ctx.fillStyle = pg;
-  ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 18); ctx.fill();
-  ctx.strokeStyle = "rgba(79,195,247,0.42)";
-  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 12); ctx.fill();
+  ctx.strokeStyle = "rgba(125,211,252,0.5)";
+  ctx.lineWidth = 1.5;
   ctx.stroke();
+  ctx.fillStyle = "rgba(79,195,247,0.16)";
+  ctx.fillRect(panelX + 18, panelY + 10, panelW - 36, 2);
 
-  const titleSize = Math.max(36, Math.min(60, W * 0.1));
-  drawText("METRO DASH", W/2, panelY + 56, titleSize, "center", "#5ad7ff", true);
-  drawText("Swipe lanes. Jump beams. Chase coins.", W/2, panelY + 90, W < 520 ? 14 : 17, "center", "#b9d6e8");
+  const titleSize = Math.max(32, Math.min(58, W * 0.092));
+  drawText("METRO DASH", W/2, panelY + 54, titleSize, "center", "#66ddff", true);
+  drawText("Three tracks. One clean run.", W/2, panelY + 84, compact ? 14 : 16, "center", "#d7ecf8");
+
+  const chipY = panelY + 114;
+  const chips = ["Lanes", "Jump", "Slide"];
+  const chipW = Math.min(102, (panelW - 62) / 3);
+  ctx.save();
+  ctx.font = `bold ${compact ? 11 : 12}px system-ui, -apple-system, Segoe UI, Arial`;
+  ctx.textAlign = "center";
+  for (let i = 0; i < chips.length; i++) {
+    const x = W / 2 + (i - 1) * (chipW + 10);
+    ctx.fillStyle = i === 0 ? "rgba(79,195,247,0.2)" : i === 1 ? "rgba(255,226,109,0.2)" : "rgba(255,174,114,0.2)";
+    ctx.strokeStyle = i === 0 ? "rgba(79,195,247,0.55)" : i === 1 ? "rgba(255,226,109,0.55)" : "rgba(255,174,114,0.55)";
+    ctx.beginPath();
+    ctx.roundRect(x - chipW / 2, chipY - 15, chipW, 28, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#effcff";
+    ctx.fillText(chips[i], x, chipY + 4);
+  }
+  ctx.restore();
 
   // Pulsing start text
   const pulse = 0.7 + Math.sin(performance.now() / 400) * 0.3;
   ctx.globalAlpha = pulse;
-  const btnW = Math.min(250, panelW - 72);
+  const btnW = Math.min(258, panelW - 70);
   const btnH = 44;
   const btnX = W / 2 - btnW / 2;
-  const btnY = panelY + panelH - 66;
+  const btnY = panelY + panelH - 76;
   const bg = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
   bg.addColorStop(0, "#4fc3f7");
   bg.addColorStop(1, "#19e2a4");
   ctx.fillStyle = bg;
-  ctx.beginPath(); ctx.roundRect(btnX, btnY, btnW, btnH, 14); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(btnX, btnY, btnW, btnH, 10); ctx.fill();
   drawText("START RUN", W/2, btnY + 29, 18, "center", "#06111c");
   ctx.globalAlpha = 1;
-  drawText("Tap or press SPACE", W/2, btnY + 66, 14, "center", "#e5f7ff");
+  drawText("Tap, swipe, or press SPACE", W/2, btnY + 64, 14, "center", "#e5f7ff");
 
   if (highScore > 0) {
-    drawText("Best: " + highScore + "m", W/2, btnY + 90, 16, "center", "#ffd700");
+    drawText("Best: " + highScore + "m", W/2, btnY + 88, 16, "center", "#ffd700");
   }
 }
 
@@ -1377,6 +1631,12 @@ const fullscreenBtn = document.getElementById("fullscreenBtn");
 const soundToggle = document.getElementById("soundToggle");
 const musicToggle = document.getElementById("musicToggle");
 const liveStatus = document.getElementById("liveStatus");
+const touchButtons = [
+  [document.getElementById("touchLeft"), "left"],
+  [document.getElementById("touchJump"), "jump"],
+  [document.getElementById("touchSlide"), "slide"],
+  [document.getElementById("touchRight"), "right"]
+];
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let activeDialog = null;
 let activeDialogTrigger = null;
@@ -1537,6 +1797,25 @@ musicToggle.onclick = e => { e.preventDefault(); markAudioGesture(); setMusicEna
 pauseBtn.onclick = e => { e.preventDefault(); togglePause(); };
 resumeBtn.onclick = e => { e.preventDefault(); togglePause(); };
 restartFromPause.onclick = e => { e.preventDefault(); deactivateDialog(pauseOverlay, false); pauseOverlay.classList.remove("show"); startGame(); };
+
+function runTouchCommand(action) {
+  markAudioGesture();
+  if (state === "title" || state === "gameover") {
+    startGame();
+    return;
+  }
+  if (action === "left") moveLeft();
+  else if (action === "right") moveRight();
+  else if (action === "jump") doJump();
+  else if (action === "slide") doSlide();
+}
+for (const [button, action] of touchButtons) {
+  if (!button) continue;
+  button.addEventListener("click", e => {
+    e.preventDefault();
+    runTouchCommand(action);
+  });
+}
 
 function handleFullscreenChange() {
   const active = isFullscreenActive();

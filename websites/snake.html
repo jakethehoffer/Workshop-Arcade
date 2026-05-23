@@ -66,7 +66,7 @@
       radial-gradient(700px 500px at 92% 8%,rgba(124,158,255,0.10),transparent 60%),
       linear-gradient(180deg,#0b0f14,#070b12 80%);
   }
-  canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-radius:14px; border:1px solid rgba(94,234,212,0.14); }
+  canvas { display:block; background:#0e1522; box-shadow: 0 20px 60px rgba(0,0,0,.35); border-radius:14px; border:1px solid rgba(94,234,212,0.14); touch-action:none; }
   canvas:focus-visible { outline:3px solid #5eead4; outline-offset:4px; }
   .brand {
     position:fixed; top:10px; left:14px;
@@ -82,7 +82,9 @@
     font-size:20px; letter-spacing:0.16em; font-weight:800; color:#e6edf3;
     text-shadow:0 0 18px rgba(94,234,212,0.2);
   }
-  .hud { position:fixed; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:8px; align-items:stretch; user-select:none; z-index:11; }
+  .hud { position:fixed; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:8px; align-items:stretch; justify-content:center; flex-wrap:wrap; max-width:calc(100vw - 28px); user-select:none; z-index:11; }
+  .hud,
+  .hud * { box-sizing:border-box; }
   .pill {
     background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
     border:1px solid rgba(94,234,212,0.22);
@@ -101,26 +103,38 @@
     color:rgba(94,234,212,0.95);
     font-size:12px; letter-spacing:0.04em;
     font-weight:700;
+    min-width:172px;
+    justify-content:center;
+    text-align:center;
+    transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
+  .pill#status[data-kind="active"] { color:#bfdbfe; border-color:rgba(96,165,250,0.5); }
+  .pill#status[data-kind="food"] { color:#fde68a; border-color:rgba(245,158,11,0.7); background:linear-gradient(180deg,rgba(64,44,14,0.96),rgba(24,20,18,0.94)); }
+  .pill#status[data-kind="danger"] { color:#fecdd3; border-color:rgba(251,113,133,0.72); background:linear-gradient(180deg,rgba(65,20,34,0.96),rgba(24,14,24,0.94)); }
+  .pill#status[data-kind="paused"] { color:#ddd6fe; border-color:rgba(167,139,250,0.55); }
+  .pill#status[data-kind="win"] { color:#dcfce7; border-color:rgba(74,222,128,0.72); }
   .pill.button { cursor:pointer; user-select:none; transition:border-color 0.15s ease,transform 0.12s ease; }
   .pill.button:hover { border-color:rgba(94,234,212,0.55); }
   .pill.button:active { transform:translateY(1px); }
   button.pill { color:#e6edf3; font:inherit; }
   .primary-start {
-    display:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     border-color:rgba(94,234,212,0.7);
     color:#06242a;
     background:linear-gradient(180deg,#6cf0d8,#22d3ee);
     font-weight:800;
     text-transform:uppercase; letter-spacing:0.14em; font-size:11px;
     padding:6px 12px;
+    min-width:88px;
     box-shadow:0 8px 18px rgba(34,211,238,0.32);
   }
   .has-hotkey { display:inline-flex; align-items:center; gap:8px; }
-  .utility-pill { width:38px; height:34px; padding:0; justify-content:center; position:relative; }
+  .utility-pill { width:auto; min-width:38px; height:34px; padding:0 10px; justify-content:center; position:relative; gap:7px; }
   .utility-pill .icon { font-size:16px; line-height:1; color:#e6edf3; }
-  .utility-pill .label,
-  .utility-pill .hotkey { display:none; }
+  .utility-pill .label { display:inline; font-size:12px; }
+  .utility-pill .hotkey { display:inline-grid; place-items:center; }
   .hotkey { background:#0b1120; border:1px solid #26334a; padding:2px 6px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:0.04em; line-height:1; }
   .btns { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
   .btn { background:#111827aa; border:1px solid #2a344a; color:#e6edf3; padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; }
@@ -132,14 +146,28 @@
     .brand { display:none; }
     .hud { left:8px; right:8px; transform:none; flex-wrap:wrap; justify-content:center; gap:6px; top:8px; }
     .pill { padding:6px 8px; font-size:12px; }
-    #status { max-width:78px; white-space:normal; text-align:center; font-size:11px; }
-    .primary-start { display:inline-flex; align-items:center; justify-content:center; min-width:74px; }
+    #status { order:-2; flex:1 0 100%; max-width:none; min-width:0; min-height:31px; white-space:normal; text-align:center; font-size:11px; }
+    #score, #best { min-width:72px; justify-content:center; }
+    .primary-start { min-width:76px; }
     .has-hotkey { gap:6px; }
-    .utility-pill { width:34px; height:32px; }
+    .utility-pill { width:34px; min-width:34px; height:32px; padding:0; }
+    .utility-pill .label,
+    .utility-pill .hotkey { display:none; }
     .hotkey { padding:2px 5px; font-size:11px; }
-    .btns { left:8px; right:8px; transform:none; bottom:8px; flex-wrap:wrap; justify-content:center; gap:6px; }
-    .btn { flex:0 0 auto; padding:9px 11px; font-size:12px; }
+    .btns {
+      left:8px; right:8px; transform:none; bottom:8px;
+      display:grid; grid-template-columns:repeat(3, minmax(58px, 74px));
+      grid-template-areas: ". up restart" "left down right";
+      justify-content:center; align-items:center; gap:6px;
+    }
+    .btn { min-height:38px; padding:8px 10px; font-size:12px; }
+    #upBtn { grid-area:up; }
+    #leftBtn { grid-area:left; }
+    #rightBtn { grid-area:right; }
+    #downBtn { grid-area:down; }
+    #restartBtn { grid-area:restart; }
     #musicToggle,
+    #soundToggle,
     #helpBtnMobile { display:none; }
   }
   .overlay { position:fixed; inset:0; display:none; place-items:center; pointer-events:none; z-index:100; background:rgba(0,0,0,0.7); }
@@ -166,8 +194,8 @@
     <div class="pill" id="status" role="status" aria-live="polite" aria-atomic="true">Press Space to start</div>
     <button class="pill button primary-start" id="startMobileBtn" type="button">Start</button>
     <button class="pill button utility-pill has-hotkey" id="fullscreenPill" type="button" title="Enter fullscreen (F)" aria-label="Enter fullscreen" aria-pressed="false"><span class="icon" aria-hidden="true">⛶</span><span class="label">Fullscreen</span><span class="hotkey">F</span></button>
-    <button class="pill button utility-pill has-hotkey" id="musicPill" type="button" title="Toggle music (M)" aria-label="Toggle music"><span class="icon" aria-hidden="true">♪</span><span class="label">Music: On</span><span class="hotkey">M</span></button>
-    <button class="pill button utility-pill has-hotkey" id="soundPill" type="button" title="Toggle sound (N)" aria-label="Toggle sound"><span class="icon" aria-hidden="true">◉</span><span class="label">Sound: On</span><span class="hotkey">N</span></button>
+    <button class="pill button utility-pill has-hotkey" id="musicPill" type="button" title="Toggle music (M)" aria-label="Toggle music"><span class="icon" aria-hidden="true">♪</span><span class="label">Music On</span><span class="hotkey">M</span></button>
+    <button class="pill button utility-pill has-hotkey" id="soundPill" type="button" title="Toggle sound (N)" aria-label="Toggle sound"><span class="icon" aria-hidden="true">◉</span><span class="label">Sound On</span><span class="hotkey">N</span></button>
     <button class="pill button utility-pill has-hotkey" id="helpBtn" type="button" title="How to Play (H)" aria-label="How to Play"><span class="icon" aria-hidden="true">?</span><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
   <div class="btns">
@@ -176,8 +204,8 @@
     <button class="btn" id="rightBtn" type="button" aria-label="Move right">➡︎</button>
     <button class="btn" id="downBtn" type="button" aria-label="Move down">⬇︎</button>
     <button class="btn" id="restartBtn" type="button">Restart</button>
-    <button class="btn has-hotkey" id="musicToggle" type="button" aria-label="Toggle music"><span class="label">Music: On</span><span class="hotkey">M</span></button>
-    <button class="btn has-hotkey" id="soundToggle" type="button" aria-label="Toggle sound"><span class="label">Sound: On</span><span class="hotkey">N</span></button>
+    <button class="btn has-hotkey" id="musicToggle" type="button" aria-label="Toggle music"><span class="label">Music On</span><span class="hotkey">M</span></button>
+    <button class="btn has-hotkey" id="soundToggle" type="button" aria-label="Toggle sound"><span class="label">Sound On</span><span class="hotkey">N</span></button>
     <button class="btn has-hotkey" id="helpBtnMobile" type="button" aria-label="How to play"><span class="label">How to Play</span><span class="hotkey">H</span></button>
   </div>
 
@@ -240,6 +268,7 @@
   const soundPill=document.getElementById('soundPill');
   const musicToggleLabel=musicToggleBtn ? musicToggleBtn.querySelector('.label') : null;
   const soundToggleLabel=soundToggleBtn ? soundToggleBtn.querySelector('.label') : null;
+  const fullscreenPillLabel=fullscreenPill ? fullscreenPill.querySelector('.label') : null;
   const musicPillLabel=musicPill ? musicPill.querySelector('.label') : null;
   const soundPillLabel=soundPill ? soundPill.querySelector('.label') : null;
   const helpBtn=document.getElementById('helpBtn');
@@ -406,13 +435,15 @@
       updateLabels();
     }
     function updateLabels(){
-      const label = enabled ? "Music: On" : "Music: Off";
+      const label = enabled ? "Music On" : "Music Off";
       if(musicToggleLabel) musicToggleLabel.textContent=label;
       if(musicPillLabel) musicPillLabel.textContent=label;
       if(musicPill) {
         musicPill.setAttribute('aria-label', `Toggle music, currently ${enabled ? 'on' : 'off'}`);
         musicPill.title = `Toggle music (${enabled ? 'on' : 'off'}) (M)`;
+        musicPill.setAttribute('aria-pressed', String(enabled));
       }
+      if(musicToggleBtn) musicToggleBtn.setAttribute('aria-pressed', String(enabled));
     }
     function start(){
       const ac=ensureAC(); if(!ac || !enabled) { updateLabels(); return; }
@@ -491,8 +522,19 @@
   resize();
   window.addEventListener('resize', resize);
 
-  function setStatus(message){
+  function inferStatusKind(message){
+    if(/game over|crash|wall|tail/i.test(message)) return 'danger';
+    if(/food|score:/i.test(message)) return 'food';
+    if(/win/i.test(message)) return 'win';
+    if(/paused/i.test(message)) return 'paused';
+    if(/pause/i.test(message)) return 'active';
+    if(/start/i.test(message)) return 'ready';
+    return 'active';
+  }
+
+  function setStatus(message, kind){
     statusEl.textContent = message;
+    statusEl.dataset.kind = kind || inferStatusKind(message);
   }
 
   function canToggleFullscreen(){
@@ -505,6 +547,7 @@
     fullscreenPill.setAttribute('aria-pressed', String(active));
     fullscreenPill.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
     fullscreenPill.title = active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+    if(fullscreenPillLabel) fullscreenPillLabel.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
     fullscreenPill.disabled = !canToggleFullscreen();
   }
 
@@ -545,7 +588,7 @@
       lastQueuedDirection: null,
       lastAcceptedDirection: null
     });
-    setStatus('Press Space to start');
+    setStatus('Press Space to start', 'ready');
     spawnFood();
     updateHUD();
     syncStartMobileButton();
@@ -573,7 +616,7 @@
 
   function triggerWin(){
     gameWon=true; running=false;
-    setStatus('You Win! - Press Space');
+    setStatus('You Win! - Press Space', 'win');
     SFX.eat(); Music.stop();
     syncStartMobileButton();
     draw();
@@ -601,12 +644,12 @@
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
     if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
       recordSnakeFeedback('death');
-      gameOver=true; running=false; setStatus('Game Over - Press Space'); SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
+      gameOver=true; running=false; setStatus('Game Over - Press Space', 'danger'); SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
     }
     snake.unshift(head);
     if(food && head.x===food.x && head.y===food.y){
       recordSnakeFeedback('food');
-      score+=1; updateHUD(); setStatus('Score: '+score+' - food collected'); spawnFood(); SFX.eat();
+      score+=1; updateHUD(); setStatus('Score: '+score+' - food collected', 'food'); spawnFood(); SFX.eat();
     } else {
       snake.pop(); SFX.move();
     }
@@ -662,6 +705,52 @@
     ctx.arcTo(x,y+h, x,y, rr);
     ctx.arcTo(x,y, x+w,y, rr);
     ctx.closePath();
+  }
+
+  function titleCase(value){
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+  }
+
+  function feedbackCue(includeInactive=false){
+    if(!feedback.lastEvent || (!includeInactive && !feedback.activeCueCount)) return null;
+    if(feedback.lastEvent === 'turn-queued') {
+      return { text: 'Queue ' + titleCase(feedback.lastQueuedDirection), fg: '#fde68a', bg: 'rgba(61, 45, 13, 0.9)', ring: 'rgba(250, 204, 21, 0.94)' };
+    }
+    if(feedback.lastEvent === 'turn-accepted') {
+      return { text: 'Turn ' + titleCase(feedback.lastAcceptedDirection), fg: '#bfdbfe', bg: 'rgba(21, 41, 72, 0.9)', ring: 'rgba(96, 165, 250, 0.92)' };
+    }
+    if(feedback.lastEvent === 'food') {
+      return { text: '+1 Food', fg: '#fde68a', bg: 'rgba(80, 45, 12, 0.92)', ring: 'rgba(245, 158, 11, 0.95)' };
+    }
+    if(feedback.lastEvent === 'death') {
+      return { text: 'Crash - wall or tail', fg: '#fecdd3', bg: 'rgba(76, 18, 34, 0.94)', ring: 'rgba(251, 113, 133, 0.96)' };
+    }
+    if(feedback.lastEvent === 'resume') {
+      return { text: 'Resume', fg: '#ddd6fe', bg: 'rgba(46, 32, 84, 0.9)', ring: 'rgba(167, 139, 250, 0.9)' };
+    }
+    return { text: 'Start', fg: '#ccfbf1', bg: 'rgba(15, 76, 75, 0.88)', ring: 'rgba(94, 234, 212, 0.9)' };
+  }
+
+  function drawFeedbackPill(cx, cy, cue){
+    const fontPx=Math.max(11, Math.min(15, canvas.width/34));
+    ctx.save();
+    ctx.font=`800 ${fontPx}px system-ui, sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    const padX=7;
+    const h=fontPx + 11;
+    const w=Math.min(canvas.width - 14, ctx.measureText(cue.text).width + padX*2);
+    const x=Math.max(7, Math.min(canvas.width - w - 7, cx - w/2));
+    const y=Math.max(7, Math.min(canvas.height - h - 7, cy - h));
+    roundRect(x,y,w,h,8);
+    ctx.fillStyle=cue.bg;
+    ctx.fill();
+    ctx.strokeStyle=cue.ring;
+    ctx.lineWidth=1;
+    ctx.stroke();
+    ctx.fillStyle=cue.fg;
+    ctx.fillText(cue.text, x+w/2, y+h/2, w - padX*2);
+    ctx.restore();
   }
 
   function drawSegment(x,y,cw,ch,baseColor,glowColor,rad){
@@ -743,14 +832,16 @@
       else if(look.x===0&&look.y===1){ ex1=hx+cw*0.35; ey1=hy+ch*0.62; ex2=hx+cw*0.65; ey2=hy+ch*0.62; }
       else { ex1=hx+cw*0.35; ey1=hy+ch*0.38; ex2=hx+cw*0.65; ey2=hy+ch*0.38; }
       drawEye(ex1,ey1,eyeR); drawEye(ex2,ey2,eyeR);
-      if(feedback.activeCueCount){
+      const cue = feedbackCue();
+      if(cue){
         ctx.save();
-        ctx.strokeStyle='rgba(255, 226, 109, 0.9)';
+        ctx.strokeStyle=cue.ring;
         ctx.lineWidth=Math.max(2, Math.min(cw,ch)*0.08);
         ctx.beginPath();
         ctx.arc(hx+cw/2, hy+ch/2, Math.min(cw,ch)*0.52, 0, Math.PI*2);
         ctx.stroke();
         ctx.restore();
+        drawFeedbackPill(hx+cw/2, hy - ch*0.12, cue);
       }
     }
 
@@ -762,12 +853,18 @@
       ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
       ctx.fillText('Press Space', canvas.width/2, canvas.height/2 + 36);
     } else if(gameOver){
+      const cue = feedbackCue(true);
       ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='32px system-ui, sans-serif';
       ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 16);
       ctx.font='18px system-ui, sans-serif';
       ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
       ctx.fillText('Press Space', canvas.width/2, canvas.height/2 + 36);
+      if(cue){
+        ctx.fillStyle=cue.fg;
+        ctx.font='14px system-ui, sans-serif';
+        ctx.fillText(cue.text, canvas.width/2, canvas.height/2 + 60);
+      }
     } else if(!running){
       ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='24px system-ui, sans-serif';
@@ -785,16 +882,19 @@
   function syncStartMobileButton(){
     if(!startMobileBtn) return;
     const paused = !running && !gameOver && !gameWon && /^Paused/.test(statusEl.textContent || '');
-    startMobileBtn.textContent = gameOver || gameWon ? 'Restart' : running ? 'Pause' : paused ? 'Resume' : 'Start';
+    const label = gameOver || gameWon ? 'Restart' : running ? 'Pause' : paused ? 'Resume' : 'Start';
+    startMobileBtn.textContent = label;
+    startMobileBtn.setAttribute('aria-label', label + ' Neon Snake');
+    startMobileBtn.setAttribute('aria-pressed', String(running));
   }
   function activateStartMobile(){
     if(gameOver||gameWon) restart();
     else if(running) pause();
     else start();
   }
-  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; setStatus('Press Space to pause'); recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); }
+  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; setStatus('Press Space to pause', 'active'); recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); }
   function restart(){ newGame(); }
-  function pause(){ if(!running||gameOver||gameWon) return; running=false; setStatus('Paused - Press Space'); SFX.pause(); Music.stop(); syncStartMobileButton(); }
+  function pause(){ if(!running||gameOver||gameWon) return; running=false; setStatus('Paused - Press Space', 'paused'); SFX.pause(); Music.stop(); syncStartMobileButton(); }
 
   function onKey(e){
     const c=e.code;
@@ -835,7 +935,7 @@
     Music.setEnabled(!currentlyOn);
   }
   function updateSoundLabels(){
-    const label = soundEnabled ? 'Sound: On' : 'Sound: Off';
+    const label = soundEnabled ? 'Sound On' : 'Sound Off';
     if(soundToggleLabel) soundToggleLabel.textContent = label;
     if(soundPillLabel) soundPillLabel.textContent = label;
     if(soundPill) {

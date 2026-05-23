@@ -480,6 +480,7 @@
         </div>
         <div class="queue-actions">
           <button class="btn subtle" type="button" id="newQueueRequestBtn">New Request</button>
+          <button class="btn subtle" type="button" id="refreshQueueBtn">Refresh Queue</button>
           <a class="btn" id="openQueueLink" href="https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request" target="_blank" rel="noopener">Open Queue</a>
         </div>
       </div>
@@ -493,6 +494,7 @@
           <div class="queue-state" id="updatesStatus" aria-live="polite"></div>
         </div>
         <div class="queue-actions">
+          <button class="btn subtle" type="button" id="loadUpdatesBtn">Load Updates</button>
           <a class="btn" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main" target="_blank" rel="noopener">All Commits</a>
         </div>
       </div>
@@ -687,6 +689,8 @@ const els = {
   updatesStatus: document.getElementById('updatesStatus'),
   updatesList: document.getElementById('updatesList'),
   newQueueRequestBtn: document.getElementById('newQueueRequestBtn'),
+  refreshQueueBtn: document.getElementById('refreshQueueBtn'),
+  loadUpdatesBtn: document.getElementById('loadUpdatesBtn'),
   workshopModal: document.getElementById('workshopModal'),
   workshopCard: document.querySelector('.workshop-card'),
   workshopForm: document.getElementById('workshopForm'),
@@ -835,8 +839,8 @@ function trapModalFocus(e){
   buildFilters();
   populateWorkshopGames();
   update();
-  loadIssueQueue();
-  loadRecentUpdates();
+  primeIssueQueue();
+  primeRecentUpdates();
   // If the URL has #play=slug, auto-open in the sandboxed player.
   syncHash();
 })();
@@ -1310,11 +1314,11 @@ function renderQueueEmpty(){
 
 function renderQueueFallback(){
   els.queueList.innerHTML = '';
-  els.queueStatus.textContent = 'Tracked in GitHub issues';
+  els.queueStatus.textContent = 'Refresh on demand';
   els.queueList.appendChild(makeQueueRow(
     ISSUE_QUEUE_HTML,
     'Open workshop-request issues',
-    'Review and prioritize game improvement requests on GitHub.',
+    'Use Refresh Queue for a live count without slowing catalog startup.',
     'View →'
   ));
 }
@@ -1329,14 +1333,24 @@ async function fetchIssueQueue(){
     .map(it => ({ number: it.number, title: it.title, html_url: it.html_url, created_at: it.created_at }));
 }
 
-async function loadIssueQueue(){
+function primeIssueQueue(){
   const cached = readIssueQueueCache();
+  if(cached){
+    if(cached.length) renderQueueIssues(cached); else renderQueueEmpty();
+    return;
+  }
+  renderQueueFallback();
+}
+
+async function loadIssueQueue({ force = false } = {}){
+  const cached = force ? null : readIssueQueueCache();
   if(cached){
     if(cached.length) renderQueueIssues(cached); else renderQueueEmpty();
     return;
   }
   els.queueStatus.textContent = 'Loading queue…';
   els.queueList.innerHTML = '';
+  if(els.refreshQueueBtn) els.refreshQueueBtn.disabled = true;
   try {
     const issues = await fetchIssueQueue();
     writeIssueQueueCache(issues);
@@ -1344,6 +1358,8 @@ async function loadIssueQueue(){
   } catch (err) {
     console.warn('Issue queue fetch failed:', err);
     renderQueueFallback();
+  } finally {
+    if(els.refreshQueueBtn) els.refreshQueueBtn.disabled = false;
   }
 }
 
@@ -1393,6 +1409,18 @@ function renderUpdates(commits){
   els.updatesSection.hidden = false;
 }
 
+function renderUpdatesFallback(){
+  els.updatesList.innerHTML = '';
+  els.updatesStatus.textContent = 'Load on demand';
+  els.updatesSection.hidden = false;
+  els.updatesList.appendChild(makeQueueRow(
+    'https://github.com/jakethehoffer/Workshop-Arcade/commits/main',
+    'Recent commits stay on GitHub',
+    'Use Load Updates for a live list without slowing catalog startup.',
+    'Open →'
+  ));
+}
+
 async function fetchRecentUpdates(){
   const res = await fetch(UPDATES_API, { headers: { 'Accept': 'application/vnd.github+json' } });
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1406,20 +1434,38 @@ async function fetchRecentUpdates(){
   })).filter(c => c.sha && c.title && c.date);
 }
 
-async function loadRecentUpdates(){
+function primeRecentUpdates(){
   const cached = readUpdatesCache();
   if(cached && cached.length){
     renderUpdates(cached);
     return;
   }
+  renderUpdatesFallback();
+}
+
+async function loadRecentUpdates({ force = false } = {}){
+  const cached = force ? null : readUpdatesCache();
+  if(cached && cached.length){
+    renderUpdates(cached);
+    return;
+  }
+  els.updatesStatus.textContent = 'Loading updates…';
+  els.updatesList.innerHTML = '';
+  els.updatesSection.hidden = false;
+  if(els.loadUpdatesBtn) els.loadUpdatesBtn.disabled = true;
   try {
     const commits = await fetchRecentUpdates();
-    if(!commits.length) return; // leave section hidden
+    if(!commits.length){
+      renderUpdatesFallback();
+      return;
+    }
     writeUpdatesCache(commits);
     renderUpdates(commits);
   } catch (err) {
     console.warn('Recent updates fetch failed:', err);
-    // Leave the section hidden — it's informational, not core.
+    renderUpdatesFallback();
+  } finally {
+    if(els.loadUpdatesBtn) els.loadUpdatesBtn.disabled = false;
   }
 }
 
@@ -1864,6 +1910,8 @@ els.copyBriefBtn.addEventListener('click', copyBrief);
 els.downloadBriefBtn.addEventListener('click', downloadBrief);
 els.openIssueBtn.addEventListener('click', openGitHubIssue);
 els.newQueueRequestBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
+if(els.refreshQueueBtn) els.refreshQueueBtn.addEventListener('click', () => loadIssueQueue({ force: true }));
+if(els.loadUpdatesBtn) els.loadUpdatesBtn.addEventListener('click', () => loadRecentUpdates({ force: true }));
 els.openSelectedGameBtn.addEventListener('click', () => {
   const game = selectedWorkshopGame();
   if(game) openPlayer(game, els.submitGameBtn);

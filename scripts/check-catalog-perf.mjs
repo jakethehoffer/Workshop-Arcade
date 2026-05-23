@@ -118,6 +118,41 @@ async function checkCatalog() {
   if (!/COVER_LAZY_PLACEHOLDER|data:image\/svg\+xml[^"']*width=['"]?640/.test(src)) {
     fail(`${indexPath}: render() must set a placeholder src (e.g. COVER_LAZY_PLACEHOLDER) on below-the-fold cards so the layout box is reserved without a broken-image flash before the observer swaps the real cover in`);
   }
+
+  // GitHub issue/commit widgets are useful secondary data, but they must not
+  // cost first paint or consume the catalog's request budget. The catalog can
+  // hydrate from sessionStorage immediately, and live GitHub API calls must be
+  // behind explicit controls.
+  const startupMatch = src.match(/\(async function load\(\)\{([\s\S]*?)\}\)\(\);/);
+  if (!startupMatch) {
+    fail(`${indexPath}: unable to locate startup load() block for GitHub fetch deferral check`);
+  } else {
+    const startupSrc = startupMatch[1];
+    if (/loadIssueQueue\s*\(/.test(startupSrc)) {
+      fail(`${indexPath}: startup load() must not call loadIssueQueue(); GitHub issue fetches must be user-triggered or cached`);
+    }
+    if (/loadRecentUpdates\s*\(/.test(startupSrc)) {
+      fail(`${indexPath}: startup load() must not call loadRecentUpdates(); GitHub commit fetches must be user-triggered or cached`);
+    }
+    if (!/primeIssueQueue\s*\(\s*\)/.test(startupSrc)) {
+      fail(`${indexPath}: startup load() should call primeIssueQueue() so cached/fallback queue content renders without a network request`);
+    }
+    if (!/primeRecentUpdates\s*\(\s*\)/.test(startupSrc)) {
+      fail(`${indexPath}: startup load() should call primeRecentUpdates() so cached/fallback update content renders without a network request`);
+    }
+  }
+  if (!/id=["']refreshQueueBtn["']/.test(src)) {
+    fail(`${indexPath}: missing explicit Refresh Queue control for user-triggered GitHub issue loading`);
+  }
+  if (!/id=["']loadUpdatesBtn["']/.test(src)) {
+    fail(`${indexPath}: missing explicit Load Updates control for user-triggered GitHub commit loading`);
+  }
+  if (!/refreshQueueBtn[\s\S]*loadIssueQueue\s*\(\s*\{\s*force:\s*true\s*\}\s*\)/.test(src)) {
+    fail(`${indexPath}: Refresh Queue control must call loadIssueQueue({ force: true })`);
+  }
+  if (!/loadUpdatesBtn[\s\S]*loadRecentUpdates\s*\(\s*\{\s*force:\s*true\s*\}\s*\)/.test(src)) {
+    fail(`${indexPath}: Load Updates control must call loadRecentUpdates({ force: true })`);
+  }
 }
 
 await checkCatalog();

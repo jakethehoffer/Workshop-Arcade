@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-05-23 Codex pass 82
+
+- Implemented the non-conflicting quality bundle on `codex/nonconflicting-next-moves-2026-05-23`: one coordinator-owned catalog startup deferral plus isolated polish for Brick Breaker, Metro Dash, and Neon Snake.
+- Catalog startup now hydrates fresh GitHub issue/commit widgets from session cache when available, otherwise shows local fallback links with explicit `Refresh Queue` and `Load Updates` controls. A new `test:catalog-perf` assertion keeps live GitHub issue/commit API calls out of the startup load path.
+- Polished the three legacy game surfaces without changing rules, scoring, storage keys, generated surfaces, manifest entries, or capture recipes: Brick Breaker HUD/utility density and mobile containment; Metro Dash menu chrome, lane/dodge feedback, and touch controls; Neon Snake start chrome, sound/fullscreen controls, mobile controls, and active feedback readability.
+- Focused verification passed for the touched games: game contract, accessibility, a11y polish, keyboard help, and Playwright desktop/mobile smoke with no console/page errors or mobile horizontal overflow. Strict local `audit:perf:ci` covered 64 manifest games / 65 pages with catalog startup at 169.7 KB / 14 requests and zero audited errors.
+- Suggested next pass: keep the same non-conflicting lane model and choose either one catalog/tooling improvement or a small set of older-game subjective polish targets after reviewing the current capture sheet.
+
 ## 2026-05-22 Codex pass 79
 
 - Implemented the balanced max-parallel bundle on `codex/max-parallel-balanced-2026-05-21`: added five compact standalone games (Volt Sudoku, Glyphogram Grid, Lumen Lander, Wordweave Grid, and Dice Dynamo) with SVG covers, manifest entries, generated fallback catalog data, per-game meta/JSON-LD, sitemap/feed entries, OG share cards, and strict render-capture recipes.

@@ -21,6 +21,22 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Catalog deferral + legacy polish pass (pass 82)
+
+Captured 2026-05-23 against `http://127.0.0.1:4173` after moving the catalog's GitHub issue queue and recent-commit widgets behind explicit `Refresh Queue` / `Load Updates` controls, while preserving fresh session-cache hydration and local fallback links on first load. The same pass polished Brick Breaker, Metro Dash, and Neon Snake UI density without changing gameplay rules or manifest/generated surfaces. The strict audit covered the catalog plus 64 manifest games, 65 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 104 ms | 80 ms | 🟢 81 ms | 🟢 169.7 KB | 14 | 0 |
+| Brick Breaker | 🟢 88 ms | 73 ms | 🟢 73 ms | 🟢 109.5 KB | 2 | 0 |
+| Metro Dash | 🟢 28 ms | 21 ms | 🟢 22 ms | 🟢 79.7 KB | 2 | 0 |
+| Neon Snake | 🟢 44 ms | 34 ms | 🟢 34 ms | 🟢 48.5 KB | 2 | 0 |
+| Lexica | 🟢 52 ms | 16 ms | 🟢 17 ms | 🟢 149.9 KB | 4 | 0 |
+| Idle Tycoon | 🟢 444 ms | 11 ms | 🟢 13 ms | 🟢 154.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 92 ms | 63 ms | 🟢 63 ms | 🟢 98.0 KB | 2 | 0 |
+
+Focused browser verification confirmed catalog startup made zero GitHub API requests, then requested the issue and commit APIs only after activating the explicit controls. The catalog now audits at 169.7 KB / 14 requests, down from 188.0 KB / 16 requests in pass 81, with no console/page errors and no mobile horizontal overflow in the touched game pages. Every named exception remains below its CI budget, and the three polished legacy games keep their existing storage keys, diagnostics, scoring, and capture expectations.
+
 ## Page-weight headroom pass (pass 81)
 
 Captured 2026-05-23 against `http://127.0.0.1:4173` after adding the static `npm run test:page-weight` gate and mechanically trimming readable CSS/script whitespace in Idle Tycoon, Arcade Jump, and Maze Chase. The strict audit covered the catalog plus 64 manifest games, 65 pages total.
