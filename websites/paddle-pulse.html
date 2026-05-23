@@ -79,22 +79,45 @@
     background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
     border:1px solid rgba(94,234,212,0.22);padding:8px 13px;border-radius:12px;line-height:1.05;min-width:72px;
     box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms ease;
   }
   .pill[data-hot="true"]{border-color:rgba(94,234,212,0.65);box-shadow:0 0 20px rgba(94,234,212,0.18),0 6px 14px rgba(0,0,0,0.28)}
+  .pill[data-active="true"]{transform:translateY(-1px)}
+  #playerPill[data-active="true"]{border-color:rgba(94,234,212,0.86);box-shadow:0 0 26px rgba(94,234,212,0.24),0 8px 18px rgba(0,0,0,0.32)}
+  #aiPill[data-active="true"]{border-color:rgba(124,158,255,0.78);box-shadow:0 0 24px rgba(124,158,255,0.24),0 8px 18px rgba(0,0,0,0.32)}
   .pill .label{font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
   .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
   .arena-wrap{
+    position:relative;
     border:1px solid rgba(94,234,212,0.28);border-radius:18px;overflow:hidden;
     background:linear-gradient(180deg,rgba(13,20,35,0.92),rgba(8,13,23,0.95));
     box-shadow:0 18px 38px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   canvas{display:block;width:100%;aspect-ratio:16/9;max-height:68vh;background:#07101a;touch-action:none}
   canvas:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:-4px}
-  .status{
-    text-align:center;min-height:20px;font-size:12px;letter-spacing:0.13em;text-transform:uppercase;
-    color:rgba(94,234,212,0.86);font-weight:800;
+  .drag-cue{
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:999px;
+    background:rgba(3,7,18,0.68);border:1px solid rgba(94,234,212,0.34);
+    color:rgba(230,237,243,0.9);font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;
+    pointer-events:none;box-shadow:0 8px 22px rgba(0,0,0,0.34);transition:opacity 160ms ease,border-color 160ms ease,transform 160ms ease;
   }
+  .drag-cue .rail{width:8px;height:46px;border-radius:999px;background:linear-gradient(180deg,rgba(94,234,212,0.2),rgba(124,158,255,0.16));border:1px solid rgba(94,234,212,0.26);position:relative}
+  .drag-cue .rail::after{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:999px;background:#e6edf3;box-shadow:0 0 18px rgba(94,234,212,0.58);transform:translate(-50%,-50%)}
+  .arena-wrap[data-started="true"] .drag-cue{opacity:0.62}
+  .arena-wrap[data-dragging="true"] .drag-cue{opacity:1;border-color:rgba(94,234,212,0.82);transform:translateY(-50%) scale(1.03)}
+  .status{
+    display:flex;align-items:center;justify-content:center;text-align:center;min-height:34px;padding:8px 10px;border-radius:11px;
+    border:1px solid rgba(94,234,212,0.20);background:rgba(3,7,18,0.35);
+    font-size:12px;letter-spacing:0.13em;text-transform:uppercase;
+    color:rgba(94,234,212,0.9);font-weight:800;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .status[data-tone="control"]{border-color:rgba(94,234,212,0.62);box-shadow:0 0 20px rgba(94,234,212,0.14),inset 0 1px 0 rgba(255,255,255,0.04)}
+  .status[data-tone="ai"]{border-color:rgba(124,158,255,0.56);color:rgba(190,205,255,0.92)}
+  .status[data-tone="score"]{border-color:rgba(251,191,36,0.56);color:rgba(253,230,138,0.92)}
   .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .controls[data-compact="true"]{gap:6px}
   .btn{
     background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
     border:1px solid rgba(94,234,212,0.22);color:#e6edf3;font:inherit;
@@ -102,8 +125,10 @@
     letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
     box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
   }
+  .controls[data-compact="true"] .btn{padding:7px 9px;font-size:11px;min-width:44px}
   .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
   .btn:hover{border-color:rgba(94,234,212,0.55)}
+  .btn[aria-pressed="true"]:not(.primary){border-color:rgba(94,234,212,0.58);box-shadow:0 0 18px rgba(94,234,212,0.16),0 6px 14px rgba(0,0,0,0.22)}
   .overlay{
     position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
     display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
@@ -126,6 +151,8 @@
     .pill{min-width:64px;padding:7px 9px}
     .pill .value{font-size:16px}
     .status{font-size:11px;letter-spacing:0.09em}
+    .drag-cue{left:9px;padding:6px 8px;font-size:10px}
+    .drag-cue .rail{height:38px}
   }
 </style>
 </head>
@@ -137,19 +164,21 @@
 </div>
 <main class="panel" aria-label="Paddle Pulse game">
   <div class="hud" aria-label="Score and match status">
-    <div class="pill"><span class="label">You</span><span class="value" id="playerScore">0</span></div>
-    <div class="pill"><span class="label">AI</span><span class="value" id="aiScore">0</span></div>
+    <div class="pill" id="playerPill"><span class="label">You</span><span class="value" id="playerScore">0</span></div>
+    <div class="pill" id="aiPill"><span class="label">AI</span><span class="value" id="aiScore">0</span></div>
     <div class="pill"><span class="label">Rally</span><span class="value" id="rallyValue">0</span></div>
     <div class="pill" id="pulsePill"><span class="label">Pulse</span><span class="value" id="pulseValue">0%</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
   </div>
   <div class="arena-wrap">
     <canvas id="game" width="960" height="540" tabindex="0" aria-label="Paddle Pulse playfield. Move the left paddle with W, S, Arrow Up, Arrow Down, or drag on touch screens. First to seven wins."></canvas>
+    <div class="drag-cue" id="dragCue" aria-hidden="true"><span class="rail"></span><span>Drag</span></div>
   </div>
   <div class="status" id="statusLine" aria-live="polite">Press Start to serve.</div>
-  <div class="controls">
+  <div class="controls" id="controls">
     <button class="btn primary" type="button" id="startBtn">Start Match</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true" title="Toggle sound effects">Sound On</button>
+    <button class="btn" type="button" id="fullscreenBtn" aria-pressed="false" title="Toggle fullscreen">Full Screen</button>
     <button class="btn" type="button" id="helpBtn">Help</button>
   </div>
 </main>
@@ -183,13 +212,19 @@
   const els = {
     playerScore: document.getElementById("playerScore"),
     aiScore: document.getElementById("aiScore"),
+    playerPill: document.getElementById("playerPill"),
+    aiPill: document.getElementById("aiPill"),
     rally: document.getElementById("rallyValue"),
     pulse: document.getElementById("pulseValue"),
     pulsePill: document.getElementById("pulsePill"),
     best: document.getElementById("bestValue"),
     status: document.getElementById("statusLine"),
+    controls: document.getElementById("controls"),
+    arena: document.querySelector(".arena-wrap"),
+    dragCue: document.getElementById("dragCue"),
     start: document.getElementById("startBtn"),
     sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn"),
     help: document.getElementById("helpBtn"),
     helpOverlay: document.getElementById("helpOverlay"),
     helpClose: document.getElementById("helpClose")
@@ -200,7 +235,20 @@
   const ai = { x: W - 72, y: H / 2 - paddle.h / 2, vy: 0, target: H / 2 };
   const ball = { x: W / 2, y: H / 2, vx: -330, vy: 80, r: 10, trail: [] };
   const keys = new Set();
-  const feedback = { lastHitAt: -9999, lastWallAt: -9999, lastScoreAt: -9999, lastPulseAt: -9999, hitCount: 0, wallCount: 0, scoreCount: 0 };
+  const feedback = {
+    lastHitAt: -9999,
+    lastWallAt: -9999,
+    lastScoreAt: -9999,
+    lastPulseAt: -9999,
+    lastControlAt: -9999,
+    lastDragAt: -9999,
+    lastPlayerHitAt: -9999,
+    lastAiHitAt: -9999,
+    activePaddle: "none",
+    hitCount: 0,
+    wallCount: 0,
+    scoreCount: 0
+  };
   const state = {
     mode: "ready",
     playerScore: 0,
@@ -264,8 +312,22 @@
   function playWin(){ [523,659,784,1047].forEach((f,i) => tone(f, 150, 0.045, "sine", i * 85)); }
 
   function updateSoundButton(){
-    els.sound.textContent = soundEnabled ? "Sound On" : "Muted";
+    const compact = els.controls.dataset.compact === "true";
+    els.sound.textContent = soundEnabled ? (compact ? "Sound" : "Sound On") : "Muted";
     els.sound.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+    els.sound.setAttribute("aria-label", soundEnabled ? "Turn sound off" : "Turn sound on");
+  }
+
+  function updateFullscreenButton(){
+    const isFullscreen = Boolean(document.fullscreenElement);
+    const compact = els.controls.dataset.compact === "true";
+    els.fullscreen.textContent = isFullscreen ? (compact ? "Exit" : "Exit Full") : (compact ? "Full" : "Full Screen");
+    els.fullscreen.setAttribute("aria-pressed", isFullscreen ? "true" : "false");
+    els.fullscreen.setAttribute("aria-label", isFullscreen ? "Exit fullscreen" : "Enter fullscreen");
+    if (!document.fullscreenEnabled && !document.documentElement.requestFullscreen) {
+      els.fullscreen.disabled = true;
+      els.fullscreen.title = "Fullscreen is unavailable";
+    }
   }
 
   function centerPaddles(){
@@ -357,6 +419,15 @@
     }
     feedback.lastHitAt = state.now;
     feedback.hitCount += 1;
+    if (p === player) {
+      feedback.lastPlayerHitAt = state.now;
+      feedback.activePaddle = "player";
+      state.message = state.pulse >= 100 ? "Pulse maxed. Keep control." : `You returned. Rally ${state.rally}.`;
+    } else {
+      feedback.lastAiHitAt = state.now;
+      feedback.activePaddle = "ai";
+      state.message = `AI returned. Rally ${state.rally}.`;
+    }
     if (state.pulse >= 100) feedback.lastPulseAt = state.now;
     playHit();
   }
@@ -368,6 +439,10 @@
     let input = 0;
     if (keys.has("arrowup") || keys.has("w")) input -= 1;
     if (keys.has("arrowdown") || keys.has("s")) input += 1;
+    if (input !== 0) {
+      feedback.lastControlAt = state.now;
+      feedback.activePaddle = "player";
+    }
     player.vy = input * paddle.speed;
     player.y = clamp(player.y + player.vy * dt, 22, H - paddle.h - 22);
 
@@ -459,8 +534,20 @@
     });
 
     const paddleFill = "rgba(230,237,243,0.92)";
-    drawRoundedRect(player.x,player.y,paddle.w,paddle.h,9,paddleFill,"rgba(94,234,212,0.75)");
-    drawRoundedRect(ai.x,ai.y,paddle.w,paddle.h,9,"rgba(160,179,211,0.86)","rgba(124,158,255,0.55)");
+    const playerActive = state.now - feedback.lastControlAt < 520 || state.now - feedback.lastPlayerHitAt < 620;
+    const aiActive = state.now - feedback.lastAiHitAt < 620;
+    if (playerActive) {
+      ctx.shadowColor = "rgba(94,234,212,0.78)";
+      ctx.shadowBlur = 22;
+    }
+    drawRoundedRect(player.x,player.y,paddle.w,paddle.h,9,paddleFill,playerActive ? "rgba(94,234,212,0.96)" : "rgba(94,234,212,0.75)");
+    ctx.shadowBlur = 0;
+    if (aiActive) {
+      ctx.shadowColor = "rgba(124,158,255,0.68)";
+      ctx.shadowBlur = 18;
+    }
+    drawRoundedRect(ai.x,ai.y,paddle.w,paddle.h,9,"rgba(160,179,211,0.86)",aiActive ? "rgba(124,158,255,0.9)" : "rgba(124,158,255,0.55)");
+    ctx.shadowBlur = 0;
     ctx.shadowColor = pulseAlpha > 0.65 ? "rgba(94,234,212,0.75)" : "rgba(94,234,212,0.35)";
     ctx.shadowBlur = 18 + pulseAlpha * 16;
     ctx.beginPath();
@@ -492,14 +579,41 @@
   }
 
   function syncHud(){
+    const compact = state.mode !== "ready";
+    const playerActive = state.now - feedback.lastControlAt < 650 || state.now - feedback.lastPlayerHitAt < 850;
+    const aiActive = state.now - feedback.lastAiHitAt < 850;
     els.playerScore.textContent = String(state.playerScore);
     els.aiScore.textContent = String(state.aiScore);
     els.rally.textContent = String(state.rally);
     els.pulse.textContent = `${state.pulse}%`;
     els.best.textContent = String(state.bestRally);
     els.pulsePill.dataset.hot = state.pulse >= 75 ? "true" : "false";
-    els.status.textContent = state.mode === "playing" ? "Keep the rally alive." : state.message;
+    els.playerPill.dataset.active = playerActive ? "true" : "false";
+    els.aiPill.dataset.active = aiActive ? "true" : "false";
+    els.arena.dataset.started = compact ? "true" : "false";
+    els.controls.dataset.compact = compact ? "true" : "false";
+    if (state.mode !== "playing") {
+      els.status.textContent = state.message;
+      els.status.dataset.tone = state.mode === "point" || state.mode === "over" ? "score" : "idle";
+    } else if (playerActive) {
+      els.status.textContent = state.now - feedback.lastDragAt < 700 ? "Drag control active." : state.message;
+      els.status.dataset.tone = "control";
+    } else if (aiActive) {
+      els.status.textContent = state.message;
+      els.status.dataset.tone = "ai";
+    } else if (state.pulse >= 100) {
+      els.status.textContent = "Pulse maxed. Keep control.";
+      els.status.dataset.tone = "control";
+    } else if (state.rally > 0) {
+      els.status.textContent = `Rally ${state.rally}. Keep it alive.`;
+      els.status.dataset.tone = "control";
+    } else {
+      els.status.textContent = "Return the serve.";
+      els.status.dataset.tone = "idle";
+    }
     els.start.textContent = state.mode === "ready" ? "Start Match" : state.mode === "over" ? "New Match" : state.mode === "point" ? "Serve" : "Restart";
+    updateSoundButton();
+    updateFullscreenButton();
   }
 
   function frame(ts){
@@ -516,6 +630,9 @@
     const y = (clientY - rect.top) * H / rect.height;
     player.y = clamp(y - paddle.h / 2, 22, H - paddle.h - 22);
     player.vy = 0;
+    feedback.lastControlAt = state.now;
+    feedback.lastDragAt = state.now;
+    feedback.activePaddle = "player";
     canvas.focus({ preventScroll: true });
   }
 
@@ -559,6 +676,9 @@
       document.exitFullscreen().catch(() => {});
     }
   }
+  function setDragging(isDragging){
+    els.arena.dataset.dragging = isDragging ? "true" : "false";
+  }
 
   els.start.addEventListener("click", () => {
     if (state.mode === "ready" || state.mode === "over") startMatch();
@@ -571,6 +691,7 @@
     updateSoundButton();
     if (soundEnabled) playHit();
   });
+  els.fullscreen.addEventListener("click", toggleFullscreen);
   els.help.addEventListener("click", showHelp);
   els.helpClose.addEventListener("click", closeHelp);
   els.helpOverlay.addEventListener("click", (event) => {
@@ -596,11 +717,18 @@
   document.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
   canvas.addEventListener("pointerdown", (event) => {
     canvas.setPointerCapture(event.pointerId);
+    setDragging(true);
     setPaddleFromClientY(event.clientY);
     if (state.mode === "ready" || state.mode === "over") startMatch();
   });
   canvas.addEventListener("pointermove", (event) => {
     if (event.buttons || event.pointerType === "touch") setPaddleFromClientY(event.clientY);
+  });
+  canvas.addEventListener("pointerup", () => setDragging(false));
+  canvas.addEventListener("pointercancel", () => setDragging(false));
+  document.addEventListener("fullscreenchange", () => {
+    updateFullscreenButton();
+    canvas.focus({ preventScroll: true });
   });
 
   window.render_game_to_text = function(){
@@ -617,11 +745,20 @@
       ai: { x: Math.round(ai.x), y: Math.round(ai.y), centerY: Math.round(paddleCenter(ai)), targetY: Math.round(ai.target), vy: Math.round(ai.vy), w: paddle.w, h: paddle.h },
       ball: { x: Math.round(ball.x), y: Math.round(ball.y), vx: Math.round(ball.vx), vy: Math.round(ball.vy), r: ball.r },
       soundEnabled,
+      fullscreen: Boolean(document.fullscreenElement),
+      ui: {
+        compactControls: els.controls.dataset.compact === "true",
+        activePaddle: feedback.activePaddle,
+        dragCueVisible: window.getComputedStyle(els.dragCue).display !== "none"
+      },
       feedback: {
         hitActive: state.now - feedback.lastHitAt < 260,
         wallActive: state.now - feedback.lastWallAt < 180,
         scoreActive: state.now - feedback.lastScoreAt < 500,
         pulseActive: state.now - feedback.lastPulseAt < 500,
+        controlActive: state.now - feedback.lastControlAt < 650,
+        playerPaddleActive: state.now - feedback.lastPlayerHitAt < 850,
+        aiPaddleActive: state.now - feedback.lastAiHitAt < 850,
         hitCount: feedback.hitCount,
         wallCount: feedback.wallCount,
         scoreCount: feedback.scoreCount

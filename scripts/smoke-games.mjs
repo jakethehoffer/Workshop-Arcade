@@ -305,6 +305,73 @@ async function checkDiscoveryActions(page) {
   }
 }
 
+async function installCatalogGithubApiStub(page, githubRequests) {
+  await page.route("https://api.github.com/**", async (route) => {
+    const url = route.request().url();
+    githubRequests.push(url);
+    let body = [];
+    if (/\/issues\?/i.test(url)) {
+      body = [{
+        number: 901,
+        title: "Mock workshop request",
+        html_url: "https://github.com/jakethehoffer/Workshop-Arcade/issues/901",
+        created_at: "2026-05-23T00:00:00Z"
+      }];
+    } else if (/\/commits\?/i.test(url)) {
+      body = [{
+        sha: "abcdef1234567890",
+        html_url: "https://github.com/jakethehoffer/Workshop-Arcade/commit/abcdef1234567890",
+        commit: {
+          message: "Mock catalog update\n\nBody",
+          author: { date: "2026-05-23T00:00:00Z" },
+          committer: { date: "2026-05-23T00:00:00Z" }
+        }
+      }];
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "access-control-allow-origin": "*",
+        "content-type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify(body)
+    });
+  });
+}
+
+async function checkCatalogGithubDeferral(page, githubRequests) {
+  await page.waitForTimeout(300);
+  if (githubRequests.length) {
+    addFailure("catalog", `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
+  }
+
+  const refreshQueue = page.locator("#refreshQueueBtn");
+  const loadUpdates = page.locator("#loadUpdatesBtn");
+  if (!(await refreshQueue.count())) {
+    addFailure("catalog", "missing Refresh Queue control for user-triggered issue loading");
+    return;
+  }
+  if (!(await loadUpdates.count())) {
+    addFailure("catalog", "missing Load Updates control for user-triggered commit loading");
+    return;
+  }
+
+  await refreshQueue.click();
+  await page.waitForFunction(() => (document.getElementById("queueStatus")?.textContent || "").includes("open request"));
+  const issueRequests = githubRequests.filter((url) => /\/issues\?/i.test(url));
+  if (issueRequests.length !== 1) {
+    addFailure("catalog", `Refresh Queue should make exactly one issue API request, found ${issueRequests.length}`);
+  }
+
+  const beforeUpdates = githubRequests.length;
+  await loadUpdates.click();
+  await page.waitForFunction(() => (document.getElementById("updatesStatus")?.textContent || "").includes("recent update"));
+  const updateRequests = githubRequests.slice(beforeUpdates).filter((url) => /\/commits\?/i.test(url));
+  if (updateRequests.length !== 1) {
+    addFailure("catalog", `Load Updates should make exactly one commit API request, found ${updateRequests.length}`);
+  }
+}
+
 async function checkCatalogMobileContainment(browser, baseUrl) {
   setPhase("catalog mobile", "open narrow catalog", { viewport: "mobile" });
   const page = await browser.newPage({
@@ -325,6 +392,8 @@ async function checkCatalog(browser, baseUrl) {
   setPhase("catalog", "open catalog");
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   observePage(page, baseUrl, "catalog");
+  const githubRequests = [];
+  await installCatalogGithubApiStub(page, githubRequests);
   setPhase("catalog", "navigate catalog");
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   setPhase("catalog", "wait for cards");
@@ -341,6 +410,8 @@ async function checkCatalog(browser, baseUrl) {
   await checkCardTagFiltering(page);
   setPhase("catalog", "check discovery actions");
   await checkDiscoveryActions(page);
+  setPhase("catalog", "check GitHub API deferral");
+  await checkCatalogGithubDeferral(page, githubRequests);
 
   const sandbox = await page.locator("#playerFrame").getAttribute("sandbox");
   if (sandbox !== "allow-scripts allow-forms allow-pointer-lock") {

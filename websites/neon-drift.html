@@ -75,14 +75,28 @@
   .panel{width:100%;max-width:760px;display:flex;flex-direction:column;gap:12px}
   .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
   .pill{
+    position:relative;overflow:hidden;
     display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:78px;
     background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.94));
     border:1px solid rgba(94,234,212,0.23);padding:8px 12px;border-radius:12px;line-height:1.05;
     box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .pill[data-hot="true"]{border-color:rgba(94,234,212,0.68);box-shadow:0 0 20px rgba(94,234,212,0.16),0 6px 14px rgba(0,0,0,0.28)}
+  .pill[data-flash="true"]{animation:pill-flash 420ms ease-out}
   .pill .label{font-size:9px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.84);font-weight:700}
   .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+  #boostPill::after{
+    content:"";position:absolute;left:0;bottom:0;height:3px;width:var(--boost-level,100%);
+    background:linear-gradient(90deg,#6cf0d8,#7c9eff);box-shadow:0 0 12px rgba(124,158,255,0.7);
+  }
+  #boostPill[data-boosting="true"]{border-color:rgba(124,158,255,0.78);box-shadow:0 0 22px rgba(124,158,255,0.22),0 6px 14px rgba(0,0,0,0.28)}
+  #boostPill[data-depleted="true"]{border-color:rgba(251,113,133,0.56)}
+  #checkpointPill[data-flash="true"]{border-color:rgba(230,255,249,0.84);box-shadow:0 0 24px rgba(94,234,212,0.26),0 6px 14px rgba(0,0,0,0.28)}
+  @keyframes pill-flash{
+    0%{transform:translateY(0);filter:brightness(1)}
+    38%{transform:translateY(-2px);filter:brightness(1.45)}
+    100%{transform:translateY(0);filter:brightness(1)}
+  }
   .stage-wrap{
     border:1px solid rgba(94,234,212,0.28);border-radius:18px;overflow:hidden;
     background:linear-gradient(180deg,rgba(13,20,35,0.92),rgba(8,13,23,0.96));
@@ -94,7 +108,10 @@
     text-align:center;min-height:20px;font-size:12px;letter-spacing:0;text-transform:uppercase;
     color:rgba(94,234,212,0.86);font-weight:800;
   }
-  .touch-controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .status[data-event="checkpoint"]{color:#e6fff9;text-shadow:0 0 14px rgba(94,234,212,0.5)}
+  .status[data-event="boost"]{color:#dbe4ff;text-shadow:0 0 14px rgba(124,158,255,0.5)}
+  .status[data-event="collision"]{color:#fecdd3;text-shadow:0 0 14px rgba(251,113,133,0.45)}
+  .touch-controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;touch-action:none}
   .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
   .btn,.touch-btn{
     background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
@@ -106,6 +123,13 @@
   .touch-btn{min-height:44px;font-size:13px}
   .touch-btn[data-active="true"],.btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
   .btn:hover,.touch-btn:hover{border-color:rgba(94,234,212,0.55)}
+  .btn[hidden],.touch-btn[hidden]{display:none}
+  .panel:fullscreen{
+    max-width:none;width:100%;min-height:100vh;padding:16px;background:linear-gradient(180deg,#07101a,#040912);
+    justify-content:center;
+  }
+  .panel:fullscreen .stage-wrap{width:min(1180px,100%);align-self:center}
+  .panel:fullscreen canvas{max-height:72vh}
   .overlay{
     position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
     display:none;align-items:center;justify-content:center;padding:18px;z-index:50;
@@ -128,8 +152,20 @@
     .pill{min-width:62px;padding:7px 8px}
     .pill .value{font-size:16px}
     .status{font-size:11px;letter-spacing:0}
-    .touch-controls{gap:7px}
-    .touch-btn,.btn{padding:8px 8px}
+    .touch-controls{
+      grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;
+      grid-template-areas:
+        "left go go right boost boost"
+        "brake brake brake brake boost boost";
+    }
+    .touch-btn{min-height:40px;font-size:11px;padding:7px 6px}
+    .touch-btn[data-drive="left"]{grid-area:left}
+    .touch-btn[data-drive="up"]{grid-area:go}
+    .touch-btn[data-drive="right"]{grid-area:right}
+    .touch-btn[data-drive="down"]{grid-area:brake}
+    .touch-btn[data-drive="boost"]{grid-area:boost;min-height:86px}
+    .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .btn{width:100%;padding:8px 7px}
   }
 </style>
 </head>
@@ -143,7 +179,7 @@
   <div class="hud" aria-label="Neon Drift race status">
     <div class="pill"><span class="label">Lap</span><span class="value" id="lapValue">1/3</span></div>
     <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0.00</span></div>
-    <div class="pill"><span class="label">Check</span><span class="value" id="checkValue">1/8</span></div>
+    <div class="pill" id="checkpointPill"><span class="label">Check</span><span class="value" id="checkValue">1/8</span></div>
     <div class="pill" id="boostPill"><span class="label">Boost</span><span class="value" id="boostValue">100</span></div>
     <div class="pill" id="bestPill"><span class="label">Best</span><span class="value" id="bestValue">-</span></div>
   </div>
@@ -160,8 +196,9 @@
   <div class="status" id="statusLine" aria-live="polite">Press Start to stage at the line.</div>
   <div class="controls">
     <button class="btn primary" type="button" id="startBtn">Start Race</button>
-    <button class="btn" type="button" id="restartBtn">Restart</button>
+    <button class="btn" type="button" id="restartBtn" hidden>Restart Race</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
+    <button class="btn" type="button" id="fullscreenBtn" aria-pressed="false">Full Screen</button>
     <button class="btn" type="button" id="helpBtn">Help</button>
   </div>
 </main>
@@ -173,6 +210,7 @@
     <ul>
       <li>Arrow keys or W/A/S/D steer and drive.</li>
       <li>Space spends boost while accelerating.</li>
+      <li>F toggles fullscreen.</li>
       <li>R restarts the race.</li>
       <li>The highlighted gate is always the next checkpoint.</li>
     </ul>
@@ -193,6 +231,7 @@
     lap: document.getElementById("lapValue"),
     time: document.getElementById("timeValue"),
     check: document.getElementById("checkValue"),
+    checkPill: document.getElementById("checkpointPill"),
     boost: document.getElementById("boostValue"),
     boostPill: document.getElementById("boostPill"),
     best: document.getElementById("bestValue"),
@@ -201,10 +240,12 @@
     start: document.getElementById("startBtn"),
     restart: document.getElementById("restartBtn"),
     sound: document.getElementById("soundBtn"),
+    fullscreen: document.getElementById("fullscreenBtn"),
     help: document.getElementById("helpBtn"),
     overlay: document.getElementById("helpOverlay"),
     closeHelp: document.getElementById("closeHelpBtn")
   };
+  const fullscreenTarget = document.querySelector(".panel");
 
   const storage = {
     get(key, fallback){
@@ -258,7 +299,8 @@
     offTrackCount: 0,
     checkpointCount: 0,
     boostCount: 0,
-    lastEvent: "none"
+    lastEvent: "none",
+    checkpointPoint: null
   };
   const state = {
     mode: "ready",
@@ -336,7 +378,7 @@
     return best;
   }
 
-  function setFeedback(name){
+  function setFeedback(name, point){
     feedback.lastEvent = name;
     if (name === "collision") {
       feedback.collision = 0.35;
@@ -347,6 +389,7 @@
     } else if (name === "checkpoint") {
       feedback.checkpoint = 0.58;
       feedback.checkpointCount += 1;
+      feedback.checkpointPoint = point ? { x: point.x, y: point.y } : null;
     } else if (name === "boost") {
       feedback.boost = 0.18;
       feedback.boostCount += 1;
@@ -400,7 +443,12 @@
     state.trail = [];
   }
 
-  function startRace(){
+  function clearInput(){
+    for (const key of Object.keys(input)) input[key] = false;
+  }
+
+  function startRace(options = {}){
+    if (!options.keepInput) clearInput();
     state.mode = "racing";
     state.lap = 1;
     state.checkpointIndex = 1;
@@ -432,9 +480,9 @@
   }
 
   function advanceCheckpoint(){
-    setFeedback("checkpoint");
-    beep("checkpoint");
     const oldIndex = state.checkpointIndex;
+    setFeedback("checkpoint", track[oldIndex]);
+    beep("checkpoint");
     state.checkpointIndex = (state.checkpointIndex + 1) % track.length;
     if (oldIndex === 0) {
       state.lastLap = state.elapsed - state.lapStart;
@@ -631,6 +679,46 @@
     }
   }
 
+  function drawFeedbackBursts(){
+    if (feedback.checkpoint > 0 && feedback.checkpointPoint) {
+      const t = feedback.checkpoint / 0.58;
+      const pulse = 1 - t;
+      const p = feedback.checkpointPoint;
+      ctx.save();
+      ctx.globalAlpha = clamp(t, 0, 1);
+      ctx.strokeStyle = "#e6fff9";
+      ctx.lineWidth = 3 + pulse * 3;
+      ctx.shadowColor = "rgba(94,234,212,0.78)";
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, gateRadius + pulse * 34, 0, Math.PI * 2);
+      ctx.stroke();
+      drawTextCenter("CHECKPOINT", p.x, p.y - 48, 13, "rgba(230,255,249,0.92)");
+      ctx.restore();
+    }
+
+    if (feedback.boost > 0 && state.mode === "racing") {
+      const car = state.car;
+      const t = feedback.boost / 0.18;
+      ctx.save();
+      ctx.translate(car.x, car.y);
+      ctx.rotate(car.angle);
+      ctx.globalAlpha = clamp(t, 0, 1);
+      ctx.strokeStyle = "rgba(124,158,255,0.78)";
+      ctx.lineWidth = 4;
+      ctx.shadowColor = "rgba(124,158,255,0.86)";
+      ctx.shadowBlur = 18;
+      for (let i = 0; i < 3; i += 1) {
+        const y = (i - 1) * 7;
+        ctx.beginPath();
+        ctx.moveTo(-car.w / 2 - 8, y);
+        ctx.lineTo(-car.w / 2 - 28 - i * 7, y * 0.65);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   function drawCar(){
     const car = state.car;
     ctx.save();
@@ -706,6 +794,7 @@
     drawBackdrop();
     drawTrack();
     drawGates();
+    drawFeedbackBursts();
     drawLabels();
     drawCar();
     drawOverlay();
@@ -718,14 +807,48 @@
     els.boost.textContent = String(Math.round(state.boost * 100));
     els.best.textContent = state.bestTime ? formatTime(state.bestTime) : "-";
     els.status.textContent = state.message;
-    els.start.textContent = state.mode === "complete" ? "Restart" : state.mode === "ready" ? "Start Race" : "Restart Race";
+    els.status.dataset.event = feedback.checkpoint > 0 ? "checkpoint" : feedback.boost > 0 ? "boost" : feedback.collision > 0 ? "collision" : "idle";
+    els.start.hidden = state.mode === "racing";
+    els.start.disabled = false;
+    els.start.textContent = state.mode === "complete" ? "Race Again" : "Start Race";
+    els.start.classList.toggle("primary", state.mode !== "racing");
+    els.start.setAttribute("aria-label", state.mode === "complete" ? "Race again" : "Start Neon Drift race");
+    els.restart.hidden = state.mode !== "racing";
+    els.restart.disabled = state.mode !== "racing";
+    els.restart.textContent = "Restart Race";
+    els.restart.classList.toggle("primary", state.mode === "racing");
+    els.restart.setAttribute("aria-label", "Restart current Neon Drift race");
+    els.checkPill.dataset.hot = feedback.checkpoint > 0 ? "true" : "false";
+    els.checkPill.dataset.flash = feedback.checkpoint > 0 ? "true" : "false";
+    els.boostPill.style.setProperty("--boost-level", `${Math.round(state.boost * 100)}%`);
     els.boostPill.dataset.hot = feedback.boost > 0 || state.boost >= 0.95 ? "true" : "false";
+    els.boostPill.dataset.boosting = feedback.boost > 0 ? "true" : "false";
+    els.boostPill.dataset.depleted = state.boost <= 0.18 ? "true" : "false";
     els.bestPill.dataset.hot = state.mode === "complete" && state.bestTime === state.elapsed ? "true" : "false";
     els.sound.textContent = soundOn ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", soundOn ? "true" : "false");
     for (const button of document.querySelectorAll(".touch-btn")) {
       const key = button.dataset.drive;
       button.dataset.active = input[key] ? "true" : "false";
+    }
+  }
+
+  function syncFullscreenButton(){
+    const active = !!document.fullscreenElement;
+    els.fullscreen.textContent = active ? "Exit Full" : "Full Screen";
+    els.fullscreen.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+
+  function toggleFullscreen(){
+    if (!document.fullscreenElement) {
+      const target = fullscreenTarget || canvas;
+      const request = target.requestFullscreen?.();
+      if (request && typeof request.then === "function") request.then(syncFullscreenButton).catch(syncFullscreenButton);
+      else syncFullscreenButton();
+    } else {
+      const exit = document.exitFullscreen?.();
+      if (exit && typeof exit.then === "function") exit.then(syncFullscreenButton).catch(syncFullscreenButton);
+      else syncFullscreenButton();
     }
   }
 
@@ -759,11 +882,7 @@
       els.overlay.classList.remove("show");
     } else if (key === "f") {
       event.preventDefault();
-      if (!document.fullscreenElement) {
-        canvas.requestFullscreen?.().catch(() => {});
-      } else {
-        document.exitFullscreen?.().catch(() => {});
-      }
+      toggleFullscreen();
     }
   });
 
@@ -782,7 +901,7 @@
       event.preventDefault();
       input[key] = true;
       updateUi();
-      if (state.mode !== "racing") startRace();
+      if (state.mode !== "racing") startRace({ keepInput: true });
       try { button.setPointerCapture(event.pointerId); } catch (_) {}
     };
     const up = (event) => {
@@ -793,11 +912,15 @@
     button.addEventListener("pointerdown", down);
     button.addEventListener("pointerup", up);
     button.addEventListener("pointercancel", up);
-    button.addEventListener("pointerleave", up);
+    button.addEventListener("pointerleave", (event) => {
+      if (event.pointerType === "mouse") up(event);
+    });
   }
 
   els.start.addEventListener("click", startRace);
   els.restart.addEventListener("click", startRace);
+  els.fullscreen.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", syncFullscreenButton);
   els.sound.addEventListener("click", () => {
     soundOn = !soundOn;
     storage.set(keys.sound, soundOn ? "1" : "0");
@@ -878,6 +1001,7 @@
         checkpointActive: feedback.checkpoint > 0,
         boostActive: feedback.boost > 0,
         restartActive: feedback.restart > 0,
+        checkpointPoint: feedback.checkpointPoint,
         collisionCount: feedback.collisionCount,
         offTrackCount: feedback.offTrackCount,
         checkpointCount: feedback.checkpointCount,
@@ -885,6 +1009,7 @@
       },
       raceComplete: state.mode === "complete",
       message: state.message,
+      fullscreen: !!document.fullscreenElement,
       soundOn
     };
   }
@@ -899,6 +1024,7 @@
   };
 
   resetCar();
+  syncFullscreenButton();
   updateUi();
   render();
   requestAnimationFrame(loop);
