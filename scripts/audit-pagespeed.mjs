@@ -31,15 +31,15 @@ const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jaketh
 // games fit comfortably under 70 KB / 2 requests. The previous 150 KB / 8 req
 // default let a game silently grow 4x or sprout extra remote scripts before
 // tripping. Named exceptions cover the two large legacy single-file games
-// whose size is intrinsic to the gameplay (Brick Breaker = 113 KB of level
-// designs and power-up sprites; Arcade Jump = 135 KB of platformer engine
+// whose size is intrinsic to the gameplay (Brick Breaker = 107 KB of level
+// designs and power-up sprites; Arcade Jump = 97 KB of platformer engine
 // + procedural-level data), plus the two pre-existing wide-cap games
-// (Idle Tycoon = save-file complexity; Lexica = 156 KB 5-letter wordlist).
+// (Idle Tycoon = 151 KB save-file complexity; Lexica = 150 KB 5-letter wordlist).
 const BUDGETS = {
   Catalog: { transferKb: 200, requests: 18 },
   "Brick Breaker": { transferKb: 120, requests: 4 },
-  "Arcade Jump": { transferKb: 130, requests: 4 },
-  "Idle Tycoon": { transferKb: 210, requests: 4 },
+  "Arcade Jump": { transferKb: 110, requests: 4 },
+  "Idle Tycoon": { transferKb: 170, requests: 4 },
   Lexica: { transferKb: 160, requests: 4 },
   default: { transferKb: 100, requests: 3 },
 };

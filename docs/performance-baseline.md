@@ -16,10 +16,25 @@ CI budgets:
 |------------|----------|----------|
 | Catalog | 200 KB | 18 |
 | Lexica | 160 KB | 4 |
-| Idle Tycoon | 210 KB | 4 |
-| Arcade Jump | 130 KB | 4 |
+| Idle Tycoon | 170 KB | 4 |
+| Arcade Jump | 110 KB | 4 |
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
+
+## Page-weight headroom pass (pass 81)
+
+Captured 2026-05-23 against `http://127.0.0.1:4173` after adding the static `npm run test:page-weight` gate and mechanically trimming readable CSS/script whitespace in Idle Tycoon, Arcade Jump, and Maze Chase. The strict audit covered the catalog plus 64 manifest games, 65 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 88 ms | 68 ms | 🟢 68 ms | 🟢 188.0 KB | 16 | 0 |
+| Idle Tycoon | 🟢 476 ms | 13 ms | 🟢 14 ms | 🟢 151.1 KB | 2 | 0 |
+| Arcade Jump | 🟢 80 ms | 54 ms | 🟢 54 ms | 🟢 96.5 KB | 2 | 0 |
+| Maze Chase | 🟢 68 ms | 28 ms | 🟢 28 ms | 🟢 66.0 KB | 2 | 0 |
+| Lexica | 🟢 56 ms | 38 ms | 🟢 38 ms | 🟢 149.9 KB | 4 | 0 |
+| Brick Breaker | 🟢 96 ms | 74 ms | 🟢 74 ms | 🟢 106.8 KB | 2 | 0 |
+
+The new fast page-weight gate statically sums the catalog local shell and each game's HTML plus same-origin script dependencies against the same CI budgets used by `audit:perf:ci`. Idle Tycoon dropped from 190.1 KB to 151.1 KB, Arcade Jump from 122.1 KB to 96.5 KB, and Maze Chase from 99.3 KB to 66.0 KB while preserving generated meta/JSON-LD and game diagnostics. With the measured headroom, the named budgets tightened to Idle Tycoon 170 KB and Arcade Jump 110 KB; Maze Chase now clears the default 100 KB budget with wide margin. No console/page errors appeared across audited URLs.
 
 ## Sparse genres + catalog headroom pass (pass 80)
 

@@ -59,7 +59,7 @@
 </script>
 <!-- workshop-jsonld:end -->
     <style>
-      :root {
+:root {
         --bg-1: #0a0f1f;
         --bg-2: #121c3a;
         --panel: rgba(9, 14, 32, 0.9);
@@ -68,11 +68,9 @@
         --yellow: #ffd166;
         --ink: #dbe7ff;
       }
-
       * {
         box-sizing: border-box;
       }
-
       body {
         margin: 0;
         min-height: 100vh;
@@ -88,7 +86,6 @@
         align-items: stretch;
         padding: 16px;
       }
-
       .page {
         width: min(1100px, 100%);
         display: grid;
@@ -96,7 +93,6 @@
         position: relative;
         z-index: 1;
       }
-
       header {
         display: flex;
         align-items: end;
@@ -104,7 +100,6 @@
         gap: 16px;
         text-align: left;
       }
-
       .title {
         font-family: Impact, "Arial Black", ui-sans-serif, system-ui, sans-serif;
         font-size: clamp(22px, 3vw, 32px);
@@ -113,14 +108,12 @@
         color: var(--yellow);
         text-shadow: 0 0 18px rgba(255, 209, 102, 0.45);
       }
-
       .subtitle {
         max-width: 540px;
         color: rgba(219, 231, 255, 0.7);
         font-size: 0.82rem;
         text-align: right;
       }
-
       .panel {
         background: var(--panel);
         border: 1px solid var(--panel-border);
@@ -129,7 +122,6 @@
         box-shadow: 0 24px 50px rgba(4, 8, 20, 0.55);
         backdrop-filter: blur(12px);
       }
-
       .hud {
         display: grid;
         grid-template-columns: repeat(4, minmax(150px, 1fr)) auto auto auto;
@@ -137,7 +129,6 @@
         align-items: stretch;
         margin-bottom: 10px;
       }
-
       .stat {
         border-radius: 10px;
         padding: 8px 10px;
@@ -147,19 +138,16 @@
         flex-direction: column;
         gap: 4px;
       }
-
       .stat span {
         font-size: 0.75rem;
         letter-spacing: 1px;
         text-transform: uppercase;
         color: rgba(219, 231, 255, 0.6);
       }
-
       .stat strong {
         font-size: 1rem;
         color: var(--yellow);
       }
-
       .hud-action {
         border-radius: 10px;
         border: 1px solid rgba(255, 209, 102, 0.4);
@@ -177,19 +165,16 @@
         min-width: 104px;
         transition: transform 0.1s ease, box-shadow 0.2s ease;
       }
-
       .hud-action:active {
         transform: translateY(1px) scale(0.98);
         box-shadow: 0 0 10px rgba(255, 209, 102, 0.3);
       }
-
       .hud-action.is-muted {
         color: rgba(219, 231, 255, 0.75);
         border-color: rgba(219, 231, 255, 0.35);
         background: rgba(8, 14, 30, 0.8);
         box-shadow: none;
       }
-
       .sr-only {
         position: absolute;
         width: 1px;
@@ -201,14 +186,12 @@
         white-space: nowrap;
         border: 0;
       }
-
       .game-wrap {
         position: relative;
         display: grid;
         place-items: center;
         margin: 0 auto;
       }
-
       canvas {
         display: block;
         touch-action: none;
@@ -219,12 +202,10 @@
           0 0 30px rgba(76, 201, 240, 0.25),
           inset 0 0 25px rgba(76, 201, 240, 0.1);
       }
-
       canvas:focus-visible {
         outline: 3px solid #4cc9f0;
         outline-offset: 4px;
       }
-
       .overlay {
         position: absolute;
         inset: 0;
@@ -236,12 +217,10 @@
         pointer-events: none;
         transition: opacity 0.25s ease;
       }
-
       .overlay.show {
         opacity: 1;
         pointer-events: all;
       }
-
       .overlay-card {
         background: rgba(7, 12, 28, 0.9);
         border: 1px solid rgba(76, 201, 240, 0.4);
@@ -251,7 +230,6 @@
         max-width: 270px;
         box-shadow: 0 18px 40px rgba(4, 8, 20, 0.6);
       }
-
       .overlay-card h2 {
         font-family: Impact, "Arial Black", ui-sans-serif, system-ui, sans-serif;
         font-size: 0.9rem;
@@ -259,20 +237,17 @@
         margin: 0 0 8px;
         text-transform: uppercase;
       }
-
       .overlay-card p {
         margin: 0 0 12px;
         color: rgba(219, 231, 255, 0.7);
         font-size: 0.8rem;
       }
-
       .overlay-actions {
         display: flex;
         gap: 12px;
         justify-content: center;
         flex-wrap: wrap;
       }
-
       .btn {
         font-family: Impact, "Arial Black", ui-sans-serif, system-ui, sans-serif;
         font-size: 0.65rem;
@@ -286,13 +261,10 @@
         box-shadow: 0 0 16px rgba(76, 201, 240, 0.25);
         transition: transform 0.12s ease, box-shadow 0.2s ease;
       }
-
       .btn:hover {
         transform: translateY(-1px);
         box-shadow: 0 0 18px rgba(76, 201, 240, 0.45);
       }
-
-
       .footer {
         display: flex;
         flex-wrap: wrap;
@@ -300,58 +272,47 @@
         color: rgba(219, 231, 255, 0.6);
         font-size: 0.78rem;
       }
-
       @media (max-width: 720px) {
         body {
           padding: 8px;
           align-items: flex-start;
         }
-
         .page {
           gap: 8px;
         }
-
         header {
           display: block;
         }
-
         .title {
           font-size: 20px;
           letter-spacing: 1px;
           line-height: 1;
           text-align: center;
         }
-
         .subtitle {
           display: none;
         }
-
         .panel {
           padding: 8px;
           border-radius: 12px;
         }
-
         .hud {
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 6px;
           margin-bottom: 8px;
         }
-
         .stat {
           padding: 6px 5px;
           gap: 2px;
           text-align: center;
         }
-
         .stat span {
           font-size: 0.58rem;
           letter-spacing: 0.5px;
         }
-
         .stat strong {
           font-size: 0.86rem;
         }
-
         .hud-action {
           grid-column: span 2;
           padding: 8px 6px;
@@ -360,21 +321,17 @@
           justify-self: stretch;
           min-width: 0;
         }
-
         .overlay-card {
           max-width: min(220px, 78%);
           padding: 10px 12px;
         }
-
         .overlay-card p {
           margin-bottom: 8px;
           font-size: 0.72rem;
         }
-
         .btn {
           padding: 7px 10px;
         }
-
         .footer {
           justify-content: center;
           text-align: center;
@@ -382,12 +339,11 @@
           font-size: 0.68rem;
           line-height: 1.2;
         }
-
         .footer div:nth-child(3) {
           display: none;
         }
       }
-    </style>
+</style>
     <script src="workshop-runtime.js"></script>
 </head>
   <body>
@@ -454,2382 +410,642 @@
     </main>
 
     <script>
-      (() => {
-        const canvas = document.getElementById("game");
-        const ctx = canvas.getContext("2d");
-        const scoreEl = document.getElementById("score");
-        const highScoreEl = document.getElementById("high-score");
-        const levelEl = document.getElementById("level");
-        const livesEl = document.getElementById("lives");
-        const overlay = document.getElementById("overlay");
-        const overlayTitle = document.getElementById("overlay-title");
-        const overlayMessage = document.getElementById("overlay-message");
-        const startBtn = document.getElementById("start-btn");
-        const resetBtn = document.getElementById("reset-btn");
-        const pauseBtn = document.getElementById("pause-btn");
-        const muteBtn = document.getElementById("mute-btn");
-        const fullscreenBtn = document.getElementById("fullscreen-btn");
-        const liveStatus = document.getElementById("live-status");
-        const FOCUSABLE_SELECTOR = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-        let activeDialog = null;
-        let activeDialogTrigger = null;
-
-        function dialogFocusables(dialog) {
-          return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(el => el.getClientRects().length > 0);
-        }
-
-        function activateDialog(dialog, trigger, preferred) {
-          activeDialog = dialog;
-          activeDialogTrigger = trigger && typeof trigger.focus === "function" ? trigger : document.activeElement;
-          setTimeout(() => {
-            const target = preferred && preferred.getClientRects().length > 0 ? preferred : (dialogFocusables(dialog)[0] || dialog);
-            target.focus({ preventScroll: true });
-          }, 0);
-        }
-
-        function deactivateDialog(dialog, restoreFocus = true) {
-          if (activeDialog !== dialog) return;
-          const target = activeDialogTrigger;
-          activeDialog = null;
-          activeDialogTrigger = null;
-          if (restoreFocus && target && target.isConnected && target.getClientRects().length > 0) {
-            setTimeout(() => target.focus({ preventScroll: true }), 0);
-          }
-        }
-
-        document.addEventListener("keydown", (event) => {
-          if (!activeDialog || !activeDialog.classList.contains("show") || event.key !== "Tab") return;
-          const focusables = dialogFocusables(activeDialog);
-          if (!focusables.length) return;
-          const first = focusables[0];
-          const last = focusables[focusables.length - 1];
-          if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last.focus({ preventScroll: true });
-          } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first.focus({ preventScroll: true });
-          }
-        }, true);
-
-        const rawMap = [
-          "############################",
-          "#............##............#",
-          "#.####.#####.##.#####.####.#",
-          "#o####.#####.##.#####.####o#",
-          "#.####.#####.##.#####.####.#",
-          "#..........................#",
-          "#.####.##.########.##.####.#",
-          "#.####.##.########.##.####.#",
-          "#......##....##....##......#",
-          "######.##### ## #####.######",
-          "     #.##### ## #####.#     ",
-          "######.##          ##.######",
-          "######.## ###==### ##.######",
-          "######.## #HHHHHH# ##.######",
-          "      .   #HHHHHH#   .      ",
-          "######.## #HHHHHH# ##.######",
-          "######.## ######## ##.######",
-          "######.##          ##.######",
-          "######.## ######## ##.######",
-          "#............##............#",
-          "#.####.#####.##.#####.####.#",
-          "#o..##................##..o#",
-          "###.##.##.########.##.##.###",
-          "#......##....##....##......#",
-          "#.##########.##.##########.#",
-          "#.##########.##.##########.#",
-          "#..........................#",
-          "############################",
-        ];
-
-        const map = rawMap.map((row) => row.split(""));
-        const width = map[0].length;
-        const height = map.length;
-
-        const DIRS = [
-          { x: 0, y: -1, name: "up" },
-          { x: 1, y: 0, name: "right" },
-          { x: 0, y: 1, name: "down" },
-          { x: -1, y: 0, name: "left" },
-        ];
-        const TURN_PRIORITY = [0, 3, 2, 1];
-
-        const basePellets = [];
-        const basePower = [];
-        for (let row = 0; row < height; row += 1) {
-          for (let col = 0; col < width; col += 1) {
-            const tile = map[row][col];
-            const index = row * width + col;
-            if (tile === ".") {
-              basePellets.push(index);
-            } else if (tile === "o") {
-              basePower.push(index);
-            }
-          }
-        }
-        const totalPellets = basePellets.length + basePower.length;
-
-        const state = {
-          phase: "ready",
-          score: 0,
-          highScore: Number(localStorage.getItem("mazeChaseHigh") || 0),
-          level: 1,
-          lives: 3,
-          frightenedTimer: 0,
-          eatStreak: 0,
-          pendingNextLevel: false,
-        };
-
-        const house = {
-          timer: 0,
-          exitCooldown: 0,
-          dotTimer: 0,
-          globalCounter: 0,
-          globalCounterActive: false,
-          pendingRelease: null,
-          disableGlobalAfterRelease: false,
-        };
-
-        const dotReleaseOrder = ["Rosewire", "Bluewire", "Amberline"];
-        const globalDotThresholds = { Rosewire: 7, Bluewire: 17, Amberline: 32 };
-
-        const modeSchedule = [7, 20, 7, 20, 5, 20, 5, Infinity];
-        const modeState = { index: 0, timer: modeSchedule[0] };
-        const speedLevelCap = 12;
-        const pacmanSpeedBase = 7;
-        const ghostSpeedBase = 6.2;
-        const pacmanSpeedStep = 0.035;
-        const ghostSpeedStep = 0.045;
-        const powerDurationBase = 8;
-        const powerDurationMin = 3.5;
-        const powerDurationStep = 0.4;
-        const frightenedBlinkStartRatio = 0.32;
-        const frightenedBlinkFastStartRatio = 0.12;
-        const frightenedBlinkSlowRate = 4;
-        const frightenedBlinkFastRate = 10;
-        const fruitSpawnFractions = [0.7, 0.35];
-        const fruitDurationBase = 9;
-        const fruitDurationMin = 6.5;
-        const fruitDurationStep = 0.2;
-        const fruitTypes = [
-          { name: "Cherry", color: "#ff4d6d", points: 150 },
-          { name: "Strawberry", color: "#ff6fb1", points: 300 },
-          { name: "Orange", color: "#ffb347", points: 500 },
-          { name: "Apple", color: "#ff4d4d", points: 700 },
-          { name: "Melon", color: "#6ee7b7", points: 1000 },
-          { name: "Galaxian", color: "#4cc9f0", points: 1500 },
-          { name: "Bell", color: "#ffd166", points: 2000 },
-          { name: "Key", color: "#dbe7ff", points: 3000 },
-        ];
-        const houseExitCooldown = 0.85;
-        const houseRespawnDelay = 1.4;
-        const housePaceSpeed = 2.8;
-        const tileCenter = (col, row) => ({ x: col + 0.5, y: row + 0.5 });
-
-        const pacStart = tileCenter(13, 23);
-        const gateRow = 12;
-        const gateCols = [13, 14];
-        const exitTile = tileCenter(13, gateRow - 1);
-        const fruitSpawn = tileCenter(13, 17);
-        const houseCenter = tileCenter(13, 14);
-        const houseLeft = tileCenter(11, 14);
-        const houseRight = tileCenter(15, 14);
-        const blinkyStart = exitTile;
-
-        const ghosts = [
-          createGhost("Redshift", "#ff4d6d", houseCenter, blinkyStart, houseCenter, tileCenter(width - 2, 1)),
-          createGhost("Rosewire", "#ff9ff3", houseCenter, houseCenter, houseCenter, tileCenter(1, 1)),
-          createGhost("Bluewire", "#4dd0ff", houseCenter, houseLeft, houseLeft, tileCenter(width - 2, height - 2)),
-          createGhost("Amberline", "#ffb347", houseCenter, houseRight, houseRight, tileCenter(1, height - 2)),
-        ];
-
-        let pellets = new Set();
-        let powerPellets = new Set();
-        let pelletsRemaining = 0;
-
-        const pacman = {
-          pos: { ...pacStart },
-          dir: -1,
-          nextDir: -1,
-        };
-
-        const fruitState = {
-          active: false,
-          timer: 0,
-          kindIndex: 0,
-          spawned: 0,
-          thresholds: [],
-        };
-
-        const feedback = {
-          time: 0,
-          particles: [],
-          rings: [],
-          pops: [],
-          screenFlash: 0,
-          screenShake: 0,
-          dangerCue: 0,
-          nearestGhost: null,
-          powerPulse: 0,
-          lastPelletAge: null,
-          lastPowerAge: null,
-          lastFruitAge: null,
-          lastGhostEatAge: null,
-          lastHitAge: null,
-          counters: {
-            pellet: 0,
-            power: 0,
-            fruit: 0,
-            ghostEat: 0,
-            hit: 0,
-          },
-        };
-
-        const audioLevels = {
-          master: 0.6,
-          music: 0.24,
-          sfx: 0.38,
-        };
-
-        const SOUND_STORAGE_KEY = "maze-chase.sound.v1";
-        const LEGACY_MUTED_STORAGE_KEY = "mazeChaseMuted";
-        const soundCounterKeys = {
-          start: "start",
-          restart: "restart",
-          pellet: "pellet",
-          "power-pellet": "powerPellet",
-          fruit: "fruit",
-          "ghost-eat": "ghostEat",
-          "player-death": "playerDeath",
-          "level-clear": "levelClear",
-          "game-over": "gameOver",
-          "audio-unavailable": "unavailableAction",
-          "action-unavailable": "unavailableAction",
-        };
-
-        function readStorageValue(key) {
-          try {
-            return localStorage.getItem(key);
-          } catch (error) {
-            return null;
-          }
-        }
-
-        function writeStorageValue(key, value) {
-          try {
-            localStorage.setItem(key, value);
-          } catch (error) {
-            // Storage can be unavailable in privacy-restricted contexts.
-          }
-        }
-
-        function persistedSoundValueToMuted(value) {
-          if (value === null) {
-            return null;
-          }
-          const normalized = String(value).toLowerCase();
-          if (["1", "true", "on", "enabled"].includes(normalized)) {
-            return false;
-          }
-          if (["0", "false", "off", "disabled"].includes(normalized)) {
-            return true;
-          }
-          return null;
-        }
-
-        function persistedMutedValueToMuted(value) {
-          if (value === null) {
-            return null;
-          }
-          const normalized = String(value).toLowerCase();
-          if (["1", "true", "muted"].includes(normalized)) {
-            return true;
-          }
-          if (["0", "false", "unmuted"].includes(normalized)) {
-            return false;
-          }
-          return null;
-        }
-
-        function persistSoundPreference(isMuted) {
-          writeStorageValue(SOUND_STORAGE_KEY, isMuted ? "0" : "1");
-          writeStorageValue(LEGACY_MUTED_STORAGE_KEY, isMuted ? "1" : "0");
-        }
-
-        function getPersistedMuted() {
-          const storedSound = persistedSoundValueToMuted(readStorageValue(SOUND_STORAGE_KEY));
-          if (storedSound !== null) {
-            return storedSound;
-          }
-          const legacyMuted = persistedMutedValueToMuted(readStorageValue(LEGACY_MUTED_STORAGE_KEY));
-          if (legacyMuted !== null) {
-            persistSoundPreference(legacyMuted);
-            return legacyMuted;
-          }
-          return false;
-        }
-
-        const savedMuted = getPersistedMuted();
-
-        const audio = {
-          ctx: null,
-          master: null,
-          musicGain: null,
-          sfxGain: null,
-          unlocked: false,
-          musicTimer: null,
-          musicOn: false,
-          lastPelletSound: 0,
-          muted: savedMuted,
-          lastSound: null,
-          lastSoundStatus: "none",
-          soundCount: 0,
-          soundCounts: {
-            start: 0,
-            restart: 0,
-            pellet: 0,
-            powerPellet: 0,
-            fruit: 0,
-            ghostEat: 0,
-            playerDeath: 0,
-            levelClear: 0,
-            gameOver: 0,
-            unavailableAction: 0,
-          },
-          unavailableNotified: false,
-        };
-
-        const fullscreenDiagnostics = {
-          available: !!document.fullscreenEnabled,
-          active: false,
-          element: null,
-          requests: 0,
-          changes: 0,
-          errors: 0,
-          lastError: null,
-        };
-
-        function announceStatus(message) {
-          liveStatus.textContent = "";
-          requestAnimationFrame(() => {
-            liveStatus.textContent = message;
-          });
-        }
-
-        function fullscreenElementName() {
-          const element = document.fullscreenElement;
-          if (!element) {
-            return null;
-          }
-          return element.id || element.tagName.toLowerCase();
-        }
-
-        function syncFullscreenButton() {
-          fullscreenDiagnostics.available = !!document.fullscreenEnabled;
-          fullscreenDiagnostics.active = !!document.fullscreenElement;
-          fullscreenDiagnostics.element = fullscreenElementName();
-          const active = fullscreenDiagnostics.active;
-          fullscreenBtn.setAttribute("aria-pressed", active ? "true" : "false");
-          fullscreenBtn.textContent = active ? "Exit" : "Full";
-          fullscreenBtn.title = active ? "Exit fullscreen" : "Enter fullscreen";
-          fullscreenBtn.disabled = !fullscreenDiagnostics.available;
-        }
-
-        async function toggleFullscreen() {
-          if (!document.fullscreenEnabled) {
-            fullscreenDiagnostics.available = false;
-            fullscreenDiagnostics.errors += 1;
-            fullscreenDiagnostics.lastError = "fullscreen-unavailable";
-            syncFullscreenButton();
-            return;
-          }
-          fullscreenDiagnostics.requests += 1;
-          try {
-            if (document.fullscreenElement) {
-              await document.exitFullscreen();
-            } else {
-              await document.documentElement.requestFullscreen();
-            }
-          } catch (error) {
-            fullscreenDiagnostics.errors += 1;
-            fullscreenDiagnostics.lastError = error && error.name ? error.name : "fullscreen-error";
-            syncFullscreenButton();
-          }
-        }
-
-        function handleFullscreenChange() {
-          fullscreenDiagnostics.changes += 1;
-          syncFullscreenButton();
-          resizeCanvas();
-        }
-
-        function isEditableTarget(target) {
-          return !!(
-            target &&
-            target.closest &&
-            target.closest("button, a, input, select, textarea, [contenteditable='true']")
-          );
-        }
-
-        const musicPattern = [
-          { freq: 523.25, dur: 0.16 },
-          { freq: 659.25, dur: 0.16 },
-          { freq: 783.99, dur: 0.16 },
-          { freq: 659.25, dur: 0.16 },
-          { freq: 523.25, dur: 0.16 },
-          { freq: 392.0, dur: 0.16 },
-          { freq: 523.25, dur: 0.32 },
-          { freq: 0, dur: 0.16 },
-          { freq: 392.0, dur: 0.16 },
-          { freq: 523.25, dur: 0.16 },
-          { freq: 659.25, dur: 0.16 },
-          { freq: 783.99, dur: 0.16 },
-          { freq: 880.0, dur: 0.16 },
-          { freq: 783.99, dur: 0.16 },
-          { freq: 659.25, dur: 0.16 },
-          { freq: 523.25, dur: 0.32 },
-        ];
-
-        let tileSize = 18;
-        let lastTime = 0;
-        let accumulator = 0;
-        let swipeStart = null;
-        const step = 1 / 60;
-
-        function createGhost(name, color, home, start, housePos, scatter) {
-          const houseCol = Math.floor(housePos.x);
-          const houseRow = Math.floor(housePos.y);
-          return {
-            name,
-            color,
-            home,
-            start,
-            housePos,
-            scatter,
-            pos: { ...start },
-            dir: -1,
-            state: "waiting",
-            inHouse: true,
-            dotCounter: 0,
-            dotLimit: 0,
-            respawnTimer: 0,
-            houseTop: tileCenter(houseCol, houseRow - 1),
-            houseBottom: tileCenter(houseCol, houseRow + 1),
-            houseTarget: null,
-          };
-        }
-
-        function resizeCanvas() {
-          const wrapper = canvas.parentElement;
-          const compact = window.innerWidth <= 720;
-          const heightLimit = window.innerHeight * (compact ? 0.74 : 0.76);
-          const size = Math.min(wrapper.clientWidth, heightLimit, 720);
-          const dpr = window.devicePixelRatio || 1;
-          canvas.style.width = `${size}px`;
-          canvas.style.height = `${size}px`;
-          canvas.width = Math.floor(size * dpr);
-          canvas.height = Math.floor(size * dpr);
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          tileSize = size / width;
-        }
-
-        function recordSoundDiagnostic(name, status = "scheduled") {
-          audio.lastSound = name;
-          audio.lastSoundStatus = status;
-          audio.soundCount += 1;
-          const counterKey = soundCounterKeys[name] || "unavailableAction";
-          audio.soundCounts[counterKey] = (audio.soundCounts[counterKey] || 0) + 1;
-        }
-
-        function audioBlockStatus() {
-          if (audio.muted) {
-            return "muted";
-          }
-          if (!audio.ctx || !audio.sfxGain) {
-            return "not-ready";
-          }
-          return null;
-        }
-
-        function canScheduleNamedSound(name) {
-          const status = audioBlockStatus();
-          if (status) {
-            recordSoundDiagnostic(name, status);
-            return false;
-          }
-          recordSoundDiagnostic(name);
-          return true;
-        }
-
-        function initAudio() {
-          if (audio.ctx) {
-            return true;
-          }
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (!AudioCtx) {
-            if (!audio.unavailableNotified) {
-              audio.unavailableNotified = true;
-              recordSoundDiagnostic("audio-unavailable", "unavailable");
-            }
-            return false;
-          }
-          audio.ctx = new AudioCtx();
-          audio.master = audio.ctx.createGain();
-          audio.master.gain.value = audio.muted ? 0 : audioLevels.master;
-          audio.master.connect(audio.ctx.destination);
-
-          audio.musicGain = audio.ctx.createGain();
-          audio.musicGain.gain.value = audioLevels.music;
-          audio.musicGain.connect(audio.master);
-
-          audio.sfxGain = audio.ctx.createGain();
-          audio.sfxGain.gain.value = audioLevels.sfx;
-          audio.sfxGain.connect(audio.master);
-          return true;
-        }
-
-        function unlockAudio(options = {}) {
-          if (audio.muted && !options.force) {
-            return false;
-          }
-          initAudio();
-          if (!audio.ctx) {
-            return false;
-          }
-          if (audio.ctx.state === "suspended") {
-            audio.ctx.resume();
-          }
-          if (!audio.unlocked) {
-            audio.unlocked = true;
-            setMusicState(state.phase);
-          }
-          return true;
-        }
-
-        function playTone(freq, duration, type, volume, when, endFreq, bus) {
-          if (!audio.ctx || freq <= 0 || audio.muted) {
-            return;
-          }
-          const osc = audio.ctx.createOscillator();
-          const gain = audio.ctx.createGain();
-          const startTime = when ?? audio.ctx.currentTime;
-          const targetBus = bus || audio.sfxGain;
-
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, startTime);
-          if (endFreq) {
-            osc.frequency.exponentialRampToValueAtTime(endFreq, startTime + duration);
-          }
-
-          gain.gain.setValueAtTime(0.0001, startTime);
-          gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-
-          osc.connect(gain);
-          gain.connect(targetBus);
-          osc.start(startTime);
-          osc.stop(startTime + duration + 0.05);
-        }
-
-        function playStartSound(name = "start") {
-          if (!canScheduleNamedSound(name)) {
-            return;
-          }
-          const now = audio.ctx.currentTime;
-          const base = name === "restart" ? 293.66 : 329.63;
-          playTone(base, 0.1, "triangle", 0.14, now, base * 1.25);
-          playTone(base * 1.5, 0.12, "sine", 0.1, now + 0.08, base * 1.75);
-        }
-
-        function playPelletSound() {
-          if (audioBlockStatus()) {
-            canScheduleNamedSound("pellet");
-            return;
-          }
-          const now = audio.ctx.currentTime;
-          if (now - audio.lastPelletSound < 0.05) {
-            recordSoundDiagnostic("pellet", "throttled");
-            return;
-          }
-          audio.lastPelletSound = now;
-          recordSoundDiagnostic("pellet");
-          playTone(420, 0.04, "sine", 0.11, null, 320);
-        }
-
-        function playPowerSound() {
-          if (!canScheduleNamedSound("power-pellet")) {
-            return;
-          }
-          const now = audio.ctx.currentTime;
-          playTone(329.63, 0.16, "triangle", 0.16, now, 260);
-          playTone(392.0, 0.18, "triangle", 0.14, now + 0.08, 310);
-        }
-
-        function playGhostEatSound() {
-          if (!canScheduleNamedSound("ghost-eat")) {
-            return;
-          }
-          playTone(196, 0.2, "triangle", 0.24, null, 130);
-        }
-
-        function playDeathSound() {
-          if (!canScheduleNamedSound("player-death")) {
-            return;
-          }
-          const now = audio.ctx.currentTime;
-          playTone(360, 0.32, "sine", 0.26, now, 160);
-          playTone(200, 0.28, "sine", 0.18, now + 0.1, 120);
-        }
-
-        function playLevelClearSound() {
-          if (!canScheduleNamedSound("level-clear")) {
-            return;
-          }
-          const now = audio.ctx.currentTime;
-          playTone(261.63, 0.18, "triangle", 0.2, now);
-          playTone(329.63, 0.18, "triangle", 0.2, now + 0.18);
-          playTone(392.0, 0.22, "triangle", 0.2, now + 0.36);
-        }
-
-        function playFruitSound() {
-          if (!canScheduleNamedSound("fruit")) {
-            return;
-          }
-          const now = audio.ctx.currentTime;
-          playTone(523.25, 0.16, "triangle", 0.22, now, 380);
-          playTone(659.25, 0.16, "triangle", 0.18, now + 0.08, 440);
-        }
-
-        function playGameOverSound() {
-          if (!canScheduleNamedSound("game-over")) {
-            return;
-          }
-          const now = audio.ctx.currentTime + 0.1;
-          playTone(220, 0.24, "triangle", 0.14, now, 164.81);
-          playTone(146.83, 0.32, "sine", 0.12, now + 0.18, 110);
-        }
-
-        function scheduleMusic() {
-          if (!audio.ctx || !audio.musicOn || audio.musicTimer || audio.muted) {
-            return;
-          }
-          const start = audio.ctx.currentTime + 0.02;
-          let time = start;
-          musicPattern.forEach((note) => {
-            if (note.freq > 0) {
-              playTone(note.freq, note.dur, "triangle", 0.085, time, null, audio.musicGain);
-              playTone(note.freq * 0.5, note.dur, "sine", 0.045, time, null, audio.musicGain);
-            }
-            time += note.dur;
-          });
-
-          const total = time - start;
-          audio.musicTimer = setTimeout(() => {
-            audio.musicTimer = null;
-            if (audio.musicOn && state.phase === "playing") {
-              scheduleMusic();
-            }
-          }, total * 1000);
-        }
-
-        function startMusic() {
-          if (!audio.ctx) {
-            return;
-          }
-          audio.musicOn = true;
-          scheduleMusic();
-        }
-
-        function stopMusic() {
-          if (audio.musicTimer) {
-            clearTimeout(audio.musicTimer);
-            audio.musicTimer = null;
-          }
-          audio.musicOn = false;
-        }
-
-        function setMusicState(phase) {
-          if (!audio.ctx) {
-            return;
-          }
-          if (audio.muted) {
-            stopMusic();
-            return;
-          }
-          if (phase === "playing") {
-            audio.musicGain.gain.setTargetAtTime(audioLevels.music, audio.ctx.currentTime, 0.08);
-            startMusic();
-          } else if (phase === "paused") {
-            audio.musicGain.gain.setTargetAtTime(audioLevels.music * 0.45, audio.ctx.currentTime, 0.08);
-          } else {
-            stopMusic();
-            audio.musicGain.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.1);
-          }
-        }
-
-        function updateMuteButton() {
-          muteBtn.textContent = audio.muted ? "Unmute" : "Mute";
-          muteBtn.classList.toggle("is-muted", audio.muted);
-          muteBtn.setAttribute("aria-pressed", audio.muted ? "true" : "false");
-        }
-
-        function setMuted(isMuted) {
-          audio.muted = isMuted;
-          persistSoundPreference(isMuted);
-          if (audio.ctx && audio.master) {
-            const target = isMuted ? 0 : audioLevels.master;
-            audio.master.gain.setTargetAtTime(target, audio.ctx.currentTime, 0.06);
-            if (isMuted) {
-              stopMusic();
-            } else {
-              setMusicState(state.phase);
-            }
-          }
-          updateMuteButton();
-        }
-
-        function toggleMute() {
-          const nextMuted = !audio.muted;
-          if (nextMuted) {
-            setMuted(true);
-            return;
-          }
-          setMuted(false);
-          unlockAudio({ force: true });
-        }
-
-        function clamp(value, min, max) {
-          return Math.max(min, Math.min(max, value));
-        }
-
-        function round(value, places = 2) {
-          const scale = Math.pow(10, places);
-          return Math.round(value * scale) / scale;
-        }
-
-        function ageForDiagnostics(value) {
-          return value === null ? null : round(value);
-        }
-
-        function boardPixelSize() {
-          return tileSize * width;
-        }
-
-        function resetFeedback(resetCounters = false) {
-          feedback.particles = [];
-          feedback.rings = [];
-          feedback.pops = [];
-          feedback.screenFlash = 0;
-          feedback.screenShake = 0;
-          feedback.dangerCue = 0;
-          feedback.nearestGhost = null;
-          feedback.powerPulse = 0;
-          feedback.lastPelletAge = null;
-          feedback.lastPowerAge = null;
-          feedback.lastFruitAge = null;
-          feedback.lastGhostEatAge = null;
-          feedback.lastHitAge = null;
-          if (resetCounters) {
-            feedback.counters.pellet = 0;
-            feedback.counters.power = 0;
-            feedback.counters.fruit = 0;
-            feedback.counters.ghostEat = 0;
-            feedback.counters.hit = 0;
-          }
-        }
-
-        function pushFeedbackRing(x, y, color, options = {}) {
-          feedback.rings.push({
-            x,
-            y,
-            color,
-            age: 0,
-            ttl: options.ttl ?? 0.55,
-            radius: options.radius ?? 0.35,
-            grow: options.grow ?? 0.75,
-            lineWidth: options.lineWidth ?? 0.08,
-            fill: options.fill ?? false,
-          });
-          if (feedback.rings.length > 18) {
-            feedback.rings.splice(0, feedback.rings.length - 18);
-          }
-        }
-
-        function pushFeedbackPop(x, y, text, color, options = {}) {
-          feedback.pops.push({
-            x,
-            y,
-            text,
-            color,
-            age: 0,
-            ttl: options.ttl ?? 0.7,
-            vy: options.vy ?? -1.15,
-            size: options.size ?? 0.62,
-          });
-          if (feedback.pops.length > 10) {
-            feedback.pops.splice(0, feedback.pops.length - 10);
-          }
-        }
-
-        function pushFeedbackParticles(x, y, color, count, options = {}) {
-          const baseSpeed = options.speed ?? 2.3;
-          const ttl = options.ttl ?? 0.42;
-          const size = options.size ?? 0.07;
-          const seed = feedback.time * 7.13 + feedback.particles.length * 0.31 + feedback.counters.pellet * 0.17;
-          for (let i = 0; i < count; i += 1) {
-            const angle = (Math.PI * 2 * i) / Math.max(1, count) + Math.sin(seed + i * 12.989) * 0.32;
-            const speed = baseSpeed * (0.75 + (i % 4) * 0.13);
-            feedback.particles.push({
-              x,
-              y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              color,
-              size,
-              age: 0,
-              ttl,
-            });
-          }
-          if (feedback.particles.length > 90) {
-            feedback.particles.splice(0, feedback.particles.length - 90);
-          }
-        }
-
-        function distanceToGhost(ghost) {
-          let dx = Math.abs(pacman.pos.x - ghost.pos.x);
-          dx = Math.min(dx, width - dx);
-          const dy = pacman.pos.y - ghost.pos.y;
-          return Math.sqrt(dx * dx + dy * dy);
-        }
-
-        function isHarmfulGhost(ghost) {
-          return ghost.state !== "frightened" && ghost.state !== "eyes" && ghost.state !== "waiting";
-        }
-
-        function updateThreatDiagnostics() {
-          let nearest = null;
-          let nearestDistance = Infinity;
-          let nearestHarmfulDistance = Infinity;
-          ghosts.forEach((ghost) => {
-            if (ghost.state === "eyes" || ghost.state === "waiting") {
-              return;
-            }
-            const distance = distanceToGhost(ghost);
-            if (distance < nearestDistance) {
-              nearestDistance = distance;
-              nearest = {
-                name: ghost.name,
-                state: ghost.state,
-                distance: round(distance),
-                tile: { col: Math.floor(ghost.pos.x), row: Math.floor(ghost.pos.y) },
-                harmful: isHarmfulGhost(ghost),
-              };
-            }
-            if (isHarmfulGhost(ghost)) {
-              nearestHarmfulDistance = Math.min(nearestHarmfulDistance, distance);
-            }
-          });
-          feedback.nearestGhost = nearest;
-          feedback.dangerCue =
-            state.phase === "playing" && Number.isFinite(nearestHarmfulDistance)
-              ? round(clamp((4.2 - nearestHarmfulDistance) / 3.4, 0, 1), 3)
-              : 0;
-        }
-
-        function updateFeedback(dt) {
-          feedback.time += dt;
-          feedback.screenFlash = Math.max(0, feedback.screenFlash - dt * 2.6);
-          feedback.screenShake = Math.max(0, feedback.screenShake - dt * 2.8);
-          feedback.powerPulse = Math.max(0, feedback.powerPulse - dt * 1.4);
-          ["lastPelletAge", "lastPowerAge", "lastFruitAge", "lastGhostEatAge", "lastHitAge"].forEach((key) => {
-            if (feedback[key] !== null) {
-              feedback[key] += dt;
-              if (feedback[key] > 6) {
-                feedback[key] = null;
-              }
-            }
-          });
-
-          feedback.particles = feedback.particles
-            .map((particle) => ({
-              ...particle,
-              x: particle.x + particle.vx * dt,
-              y: particle.y + particle.vy * dt,
-              age: particle.age + dt,
-            }))
-            .filter((particle) => particle.age < particle.ttl);
-          feedback.rings = feedback.rings
-            .map((ring) => ({ ...ring, age: ring.age + dt }))
-            .filter((ring) => ring.age < ring.ttl);
-          feedback.pops = feedback.pops
-            .map((pop) => ({ ...pop, y: pop.y + pop.vy * dt, age: pop.age + dt }))
-            .filter((pop) => pop.age < pop.ttl);
-          updateThreatDiagnostics();
-        }
-
-        function recordPellet(col, row) {
-          const x = col + 0.5;
-          const y = row + 0.5;
-          feedback.lastPelletAge = 0;
-          feedback.counters.pellet += 1;
-          pushFeedbackParticles(x, y, "#ffd166", 5, { speed: 1.4, ttl: 0.3, size: 0.045 });
-          pushFeedbackPop(x, y - 0.2, "+10", "#ffd166", { ttl: 0.45, size: 0.46, vy: -0.72 });
-        }
-
-        function recordPower(col, row) {
-          const x = col + 0.5;
-          const y = row + 0.5;
-          feedback.lastPowerAge = 0;
-          feedback.counters.power += 1;
-          feedback.powerPulse = 1;
-          feedback.screenFlash = Math.max(feedback.screenFlash, 0.28);
-          pushFeedbackRing(x, y, "#ffd166", { radius: 0.35, grow: 1.35, ttl: 0.9, lineWidth: 0.11 });
-          pushFeedbackRing(pacman.pos.x, pacman.pos.y, "#4cc9f0", { radius: 0.55, grow: 1.1, ttl: 0.75 });
-          pushFeedbackParticles(x, y, "#ffd166", 16, { speed: 2.4, ttl: 0.62, size: 0.075 });
-          pushFeedbackPop(x, y - 0.45, "POWER", "#f6f5ff", { ttl: 0.9, size: 0.72, vy: -0.78 });
-        }
-
-        function recordFruit(points) {
-          const fruit = fruitTypes[fruitState.kindIndex];
-          feedback.lastFruitAge = 0;
-          feedback.counters.fruit += 1;
-          pushFeedbackRing(fruitSpawn.x, fruitSpawn.y, fruit.color, { radius: 0.45, grow: 1, ttl: 0.72, lineWidth: 0.1 });
-          pushFeedbackParticles(fruitSpawn.x, fruitSpawn.y, fruit.color, 14, { speed: 2.2, ttl: 0.55, size: 0.07 });
-          pushFeedbackPop(fruitSpawn.x, fruitSpawn.y - 0.45, `+${points}`, fruit.color, { ttl: 0.9, size: 0.68 });
-        }
-
-        function recordGhostEat(ghost, points) {
-          feedback.lastGhostEatAge = 0;
-          feedback.counters.ghostEat += 1;
-          pushFeedbackRing(ghost.pos.x, ghost.pos.y, "#6ee7b7", { radius: 0.45, grow: 0.95, ttl: 0.72, lineWidth: 0.1 });
-          pushFeedbackParticles(ghost.pos.x, ghost.pos.y, "#6ee7b7", 12, { speed: 2.3, ttl: 0.52, size: 0.07 });
-          pushFeedbackPop(ghost.pos.x, ghost.pos.y - 0.42, `+${points}`, "#6ee7b7", { ttl: 0.85, size: 0.68 });
-        }
-
-        function recordHit(ghost) {
-          feedback.lastHitAge = 0;
-          feedback.counters.hit += 1;
-          feedback.screenFlash = Math.max(feedback.screenFlash, 0.9);
-          feedback.screenShake = Math.max(feedback.screenShake, 0.8);
-          pushFeedbackRing(pacman.pos.x, pacman.pos.y, "#ff4d6d", { radius: 0.5, grow: 1.2, ttl: 0.82, lineWidth: 0.14 });
-          pushFeedbackParticles(pacman.pos.x, pacman.pos.y, "#ff4d6d", 18, { speed: 2.8, ttl: 0.65, size: 0.08 });
-          pushFeedbackPop(pacman.pos.x, pacman.pos.y - 0.45, ghost ? "HIT" : "MISS", "#ff8fa3", { ttl: 0.8, size: 0.74 });
-        }
-
-        function resetPellets() {
-          pellets = new Set(basePellets);
-          powerPellets = new Set(basePower);
-          pelletsRemaining = basePellets.length + basePower.length;
-        }
-
-        function clearFruit() {
-          fruitState.active = false;
-          fruitState.timer = 0;
-        }
-
-        function resetFruitState() {
-          clearFruit();
-          fruitState.kindIndex = 0;
-          fruitState.spawned = 0;
-          fruitState.thresholds = fruitSpawnFractions.map((fraction) => Math.floor(totalPellets * fraction));
-        }
-
-        function getDotLimitForGhost(name) {
-          if (name === "Rosewire") {
-            return 0;
-          }
-          if (name === "Bluewire") {
-            return state.level === 1 ? 30 : 0;
-          }
-          if (name === "Amberline") {
-            if (state.level === 1) {
-              return 60;
-            }
-            if (state.level === 2) {
-              return 50;
-            }
-            return 0;
-          }
-          return 0;
-        }
-
-        function resetDotCountersForLevel() {
-          house.globalCounterActive = false;
-          house.globalCounter = 0;
-          house.pendingRelease = null;
-          house.disableGlobalAfterRelease = false;
-          house.dotTimer = 0;
-          ghosts.forEach((ghost) => {
-            ghost.dotCounter = 0;
-            ghost.dotLimit = getDotLimitForGhost(ghost.name);
-          });
-        }
-
-        function enableGlobalDotCounter() {
-          house.globalCounterActive = true;
-          house.globalCounter = 0;
-          house.pendingRelease = null;
-          house.disableGlobalAfterRelease = false;
-          house.dotTimer = 0;
-        }
-
-        function resetGhostModes() {
-          modeState.index = 0;
-          modeState.timer = modeSchedule[0];
-        }
-
-        function resetPositions() {
-          pacman.pos = { ...pacStart };
-          pacman.dir = -1;
-          pacman.nextDir = -1;
-          house.timer = 0;
-          house.exitCooldown = 0;
-          house.dotTimer = 0;
-          house.pendingRelease = null;
-          house.disableGlobalAfterRelease = false;
-          ghosts.forEach((ghost) => {
-            ghost.pos = { ...ghost.start };
-            ghost.dir = -1;
-            ghost.state = ghost.name === "Redshift" ? "normal" : "waiting";
-            ghost.inHouse = tileAt(Math.floor(ghost.pos.x), Math.floor(ghost.pos.y)) === "H";
-            ghost.houseTarget = ghost.houseTop;
-            ghost.respawnTimer = 0;
-          });
-          state.frightenedTimer = 0;
-          state.eatStreak = 0;
-          clearFruit();
-        }
-
-        function resetGame() {
-          state.score = 0;
-          state.level = 1;
-          state.lives = 3;
-          state.pendingNextLevel = false;
-          resetPellets();
-          resetFruitState();
-          resetGhostModes();
-          resetDotCountersForLevel();
-          resetPositions();
-          resetFeedback(true);
-          setPhase("ready", "Ready", "Press Enter or tap Start.");
-          announceStatus("Ready. Press Enter or tap Start.");
-          updateHud();
-        }
-
-        function updateHud() {
-          if (state.score > state.highScore) {
-            state.highScore = state.score;
-            localStorage.setItem("mazeChaseHigh", state.highScore);
-          }
-          scoreEl.textContent = state.score;
-          highScoreEl.textContent = state.highScore;
-          levelEl.textContent = state.level;
-          livesEl.textContent = state.lives;
-        }
-
-        function setPhase(phase, title, message) {
-          state.phase = phase;
-          overlayTitle.textContent = title;
-          overlayMessage.textContent = message;
-          overlay.classList.toggle("show", phase !== "playing");
-          if (phase === "playing") {
-            deactivateDialog(overlay, false);
-            canvas.focus({ preventScroll: true });
-          } else {
-            activateDialog(overlay, phase === "paused" ? pauseBtn : canvas, phase === "paused" ? startBtn : startBtn);
-          }
-          pauseBtn.textContent = phase === "paused" ? "Resume" : "Pause";
-          setMusicState(phase);
-        }
-
-        function startPlay() {
-          if (state.phase === "playing") {
-            return;
-          }
-          state.pendingNextLevel = false;
-          setPhase("playing", "", "");
-          announceStatus(`Started level ${state.level}.`);
-          lastTime = performance.now();
-          accumulator = 0;
-        }
-
-        function handleStartAction() {
-          unlockAudio();
-          if (state.phase === "ready") {
-            playStartSound("start");
-            startPlay();
-            return;
-          }
-          if (state.phase === "levelcomplete") {
-            state.level += 1;
-            resetPellets();
-            resetFruitState();
-            resetGhostModes();
-            resetDotCountersForLevel();
-            resetPositions();
-            updateHud();
-            playStartSound("start");
-            startPlay();
-            announceStatus(`Level ${state.level} started.`);
-            return;
-          }
-          if (state.phase === "gameover") {
-            resetGame();
-            playStartSound("restart");
-            startPlay();
-          }
-        }
-
-        function handleResetAction() {
-          unlockAudio();
-          resetGame();
-          playStartSound("restart");
-        }
-
-        function togglePause() {
-          unlockAudio();
-          if (state.phase === "playing") {
-            setPhase("paused", "Paused", "Press P or Space to resume.");
-            return;
-          }
-          if (state.phase === "paused") {
-            startPlay();
-            return;
-          }
-          recordSoundDiagnostic("action-unavailable", audio.muted ? "muted" : "unavailable");
-        }
-
-        function tileAt(col, row) {
-          if (row < 0 || row >= height) {
-            return "#";
-          }
-          if (col < 0 || col >= width) {
-            return "#";
-          }
-          return map[row][col];
-        }
-
-        function isCentered(pos) {
-          const fracX = pos.x - Math.floor(pos.x);
-          const fracY = pos.y - Math.floor(pos.y);
-          return Math.abs(fracX - 0.5) < 0.05 && Math.abs(fracY - 0.5) < 0.05;
-        }
-
-        function snapToCenter(pos) {
-          pos.x = Math.round(pos.x - 0.5) + 0.5;
-          pos.y = Math.round(pos.y - 0.5) + 0.5;
-        }
-
-        function canMovePacman(dirIndex) {
-          if (dirIndex < 0) {
-            return false;
-          }
-          const dir = DIRS[dirIndex];
-          const col = Math.floor(pacman.pos.x);
-          const row = Math.floor(pacman.pos.y);
-          let nextCol = col + dir.x;
-          const nextRow = row + dir.y;
-          if (nextCol < 0) {
-            nextCol = width - 1;
-          } else if (nextCol >= width) {
-            nextCol = 0;
-          }
-          const tile = tileAt(nextCol, nextRow);
-          if (tile === "#" || tile === "=" || tile === "H") {
-            return false;
-          }
-          return true;
-        }
-
-        function canMoveGhost(ghost, dirIndex) {
-          if (dirIndex < 0) {
-            return false;
-          }
-          const dir = DIRS[dirIndex];
-          const col = Math.floor(ghost.pos.x);
-          const row = Math.floor(ghost.pos.y);
-          let nextCol = col + dir.x;
-          const nextRow = row + dir.y;
-          if (nextCol < 0) {
-            nextCol = width - 1;
-          } else if (nextCol >= width) {
-            nextCol = 0;
-          }
-          const tile = tileAt(nextCol, nextRow);
-          if (tile === "#") {
-            return false;
-          }
-          if (tile === "=") {
-            return ghost.state === "eyes" || ghost.state === "leaving" || ghost.inHouse;
-          }
-          if (tile === "H") {
-            return ghost.inHouse || ghost.state === "eyes" || ghost.state === "leaving";
-          }
-          return true;
-        }
-
-        function getTargetTile(target) {
-          return {
-            col: Math.floor(target.x),
-            row: Math.floor(target.y),
-          };
-        }
-
-        function getGlobalMode() {
-          return modeState.index % 2 === 0 ? "scatter" : "chase";
-        }
-
-        function advanceGhostMode(dt) {
-          if (!Number.isFinite(modeState.timer)) {
-            return false;
-          }
-          modeState.timer -= dt;
-          let changed = false;
-          while (modeState.timer <= 0 && modeState.index < modeSchedule.length - 1) {
-            modeState.index += 1;
-            modeState.timer += modeSchedule[modeState.index];
-            changed = true;
-          }
-          if (modeState.index >= modeSchedule.length - 1 && modeState.timer <= 0) {
-            modeState.timer = Infinity;
-          }
-          return changed;
-        }
-
-        function reverseGhostsOnModeChange() {
-          ghosts.forEach((ghost) => {
-            if (ghost.state !== "normal" || ghost.inHouse) {
-              return;
-            }
-            if (ghost.dir >= 0) {
-              ghost.dir = (ghost.dir + 2) % DIRS.length;
-            }
-          });
-        }
-
-        function getGhostByName(name) {
-          return ghosts.find((ghost) => ghost.name === name);
-        }
-
-        function isGhostReadyToLeave(ghost) {
-          return ghost && ghost.state === "waiting" && ghost.inHouse && ghost.respawnTimer <= 0;
-        }
-
-        function getPreferredHouseGhost() {
-          for (let i = 0; i < dotReleaseOrder.length; i += 1) {
-            const ghost = getGhostByName(dotReleaseOrder[i]);
-            if (isGhostReadyToLeave(ghost)) {
-              return ghost;
-            }
-          }
-          return null;
-        }
-
-        function getHouseTimerLimit() {
-          return state.level >= 5 ? 3 : 4;
-        }
-
-        function getGlobalReleaseCandidate() {
-          if (house.globalCounter === globalDotThresholds.Rosewire) {
-            return getGhostByName("Rosewire");
-          }
-          if (house.globalCounter === globalDotThresholds.Bluewire) {
-            return getGhostByName("Bluewire");
-          }
-          if (house.globalCounter === globalDotThresholds.Amberline) {
-            return getGhostByName("Amberline");
-          }
-          return null;
-        }
-
-        function registerDotEaten() {
-          house.dotTimer = 0;
-          if (house.globalCounterActive) {
-            house.globalCounter += 1;
-            const candidate = getGlobalReleaseCandidate();
-            if (isGhostReadyToLeave(candidate)) {
-              house.pendingRelease = candidate;
-              if (house.globalCounter === globalDotThresholds.Amberline) {
-                house.disableGlobalAfterRelease = true;
-              }
-            }
-            return;
-          }
-          const counterGhost = getPreferredHouseGhost();
-          if (counterGhost) {
-            counterGhost.dotCounter += 1;
-          }
-        }
-
-        function releaseGhost(ghost) {
-          ghost.state = "leaving";
-          ghost.inHouse = true;
-          ghost.dir = 0;
-          ghost.houseTarget = null;
-          house.exitCooldown = houseExitCooldown;
-        }
-
-        function updateHouse(dt) {
-          house.timer += dt;
-          house.dotTimer += dt;
-          if (house.exitCooldown > 0) {
-            house.exitCooldown = Math.max(0, house.exitCooldown - dt);
-          }
-
-          if (house.exitCooldown > 0) {
-            return;
-          }
-
-          if (house.pendingRelease && isGhostReadyToLeave(house.pendingRelease)) {
-            releaseGhost(house.pendingRelease);
-            house.pendingRelease = null;
-            if (house.disableGlobalAfterRelease) {
-              house.globalCounterActive = false;
-              house.globalCounter = 0;
-              house.disableGlobalAfterRelease = false;
-            }
-            return;
-          }
-
-          if (house.dotTimer >= getHouseTimerLimit()) {
-            const forced = getPreferredHouseGhost();
-            if (forced) {
-              releaseGhost(forced);
-              house.dotTimer = 0;
-              return;
-            }
-          }
-
-          if (!house.globalCounterActive) {
-            const counterGhost = getPreferredHouseGhost();
-            if (counterGhost && counterGhost.dotCounter >= counterGhost.dotLimit) {
-              releaseGhost(counterGhost);
-            }
-          }
-        }
-
-        function updateHousePacing(ghost, dt) {
-          ghost.inHouse = true;
-          if (ghost.respawnTimer > 0) {
-            ghost.respawnTimer -= dt;
-            return;
-          }
-          if (!ghost.houseTarget) {
-            ghost.houseTarget = ghost.houseTop;
-          }
-
-          if (isCentered(ghost.pos)) {
-            snapToCenter(ghost.pos);
-            if (Math.abs(ghost.pos.y - ghost.houseTarget.y) < 0.05) {
-              ghost.houseTarget = ghost.houseTarget === ghost.houseTop ? ghost.houseBottom : ghost.houseTop;
-            }
-            ghost.dir = ghost.houseTarget.y < ghost.pos.y ? 0 : 2;
-          }
-
-          moveEntity(ghost, housePaceSpeed, dt);
-        }
-
-        function moveEntity(entity, speed, dt) {
-          if (entity.dir < 0) {
-            return;
-          }
-          const dir = DIRS[entity.dir];
-          let remaining = speed * dt;
-
-          while (remaining > 0) {
-            const centerX = Math.floor(entity.pos.x) + 0.5;
-            const centerY = Math.floor(entity.pos.y) + 0.5;
-            let targetX = entity.pos.x;
-            let targetY = entity.pos.y;
-
-            if (dir.x > 0) {
-              targetX = entity.pos.x < centerX ? centerX : centerX + 1;
-            } else if (dir.x < 0) {
-              targetX = entity.pos.x > centerX ? centerX : centerX - 1;
-            } else if (dir.y > 0) {
-              targetY = entity.pos.y < centerY ? centerY : centerY + 1;
-            } else if (dir.y < 0) {
-              targetY = entity.pos.y > centerY ? centerY : centerY - 1;
-            }
-
-            const dist = dir.x !== 0 ? Math.abs(targetX - entity.pos.x) : Math.abs(targetY - entity.pos.y);
-            if (dist < 1e-6) {
-              break;
-            }
-            const step = Math.min(remaining, dist);
-            entity.pos.x += dir.x * step;
-            entity.pos.y += dir.y * step;
-            remaining -= step;
-
-            if (entity.pos.x < 0) {
-              entity.pos.x += width;
-            } else if (entity.pos.x >= width) {
-              entity.pos.x -= width;
-            }
-
-            if (step >= dist - 1e-6) {
-              break;
-            }
-          }
-        }
-
-        function getLevelFactor(cap) {
-          return Math.min(state.level - 1, cap);
-        }
-
-        function getSpeedMultiplier(stepAmount) {
-          return 1 + getLevelFactor(speedLevelCap) * stepAmount;
-        }
-
-        function getPacmanSpeed() {
-          return pacmanSpeedBase * getSpeedMultiplier(pacmanSpeedStep);
-        }
-
-        function getGhostBaseSpeed() {
-          return ghostSpeedBase * getSpeedMultiplier(ghostSpeedStep);
-        }
-
-        function getPowerDuration() {
-          return Math.max(powerDurationMin, powerDurationBase - getLevelFactor(12) * powerDurationStep);
-        }
-
-        function getFrightenedBlinkStart() {
-          return getPowerDuration() * frightenedBlinkStartRatio;
-        }
-
-        function getFrightenedBlinkFastStart() {
-          return getPowerDuration() * frightenedBlinkFastStartRatio;
-        }
-
-        function getFruitDuration() {
-          return Math.max(fruitDurationMin, fruitDurationBase - getLevelFactor(10) * fruitDurationStep);
-        }
-
-        function getFruitTier(spawnIndex) {
-          const baseTier = Math.min(Math.floor((state.level - 1) / 2), fruitTypes.length - 1);
-          return Math.min(baseTier + spawnIndex, fruitTypes.length - 1);
-        }
-
-        function spawnFruit() {
-          const spawnIndex = fruitState.spawned;
-          fruitState.kindIndex = getFruitTier(spawnIndex);
-          fruitState.timer = getFruitDuration();
-          fruitState.active = true;
-          fruitState.spawned += 1;
-        }
-
-        function checkFruitSpawn() {
-          if (fruitState.active || pelletsRemaining <= 0) {
-            return;
-          }
-          if (fruitState.spawned >= fruitState.thresholds.length) {
-            return;
-          }
-          if (pelletsRemaining <= fruitState.thresholds[fruitState.spawned]) {
-            spawnFruit();
-          }
-        }
-
-        function updateFruit(dt) {
-          if (fruitState.active) {
-            fruitState.timer = Math.max(0, fruitState.timer - dt);
-            if (fruitState.timer === 0) {
-              fruitState.active = false;
-            }
-          }
-          checkFruitSpawn();
-        }
-
-        function getFruitScore() {
-          const fruit = fruitTypes[fruitState.kindIndex];
-          const levelBonus = getLevelFactor(12) * 50;
-          return fruit.points + levelBonus;
-        }
-
-        function checkFruitPickup() {
-          if (!fruitState.active) {
-            return;
-          }
-          const dx = pacman.pos.x - fruitSpawn.x;
-          const dy = pacman.pos.y - fruitSpawn.y;
-          if (dx * dx + dy * dy < 0.45 * 0.45) {
-            const points = getFruitScore();
-            state.score += points;
-            recordFruit(points);
-            fruitState.active = false;
-            fruitState.timer = 0;
-            playFruitSound();
-            updateHud();
-          }
-        }
-
-        function getGhostComboScore() {
-          const levelMultiplier = 1 + getLevelFactor(10) * 0.08;
-          return Math.round(250 * Math.pow(2, state.eatStreak) * levelMultiplier);
-        }
-
-        function consumePellet() {
-          const col = Math.floor(pacman.pos.x);
-          const row = Math.floor(pacman.pos.y);
-          const index = row * width + col;
-          if (pellets.has(index)) {
-            pellets.delete(index);
-            pelletsRemaining -= 1;
-            state.score += 10;
-            recordPellet(col, row);
-            playPelletSound();
-            updateHud();
-            announceStatus(`Pellet collected. ${pelletsRemaining} left.`);
-            checkFruitSpawn();
-          } else if (powerPellets.has(index)) {
-            powerPellets.delete(index);
-            pelletsRemaining -= 1;
-            state.score += 50;
-            recordPower(col, row);
-            activatePower();
-            playPowerSound();
-            updateHud();
-            announceStatus(`Power pellet collected. ${pelletsRemaining} left.`);
-            checkFruitSpawn();
-          }
-        }
-
-        function updatePacman(dt) {
-          if (isCentered(pacman.pos)) {
-            snapToCenter(pacman.pos);
-            consumePellet();
-            if (pacman.nextDir >= 0 && canMovePacman(pacman.nextDir)) {
-              pacman.dir = pacman.nextDir;
-            }
-            if (!canMovePacman(pacman.dir)) {
-              pacman.dir = -1;
-            }
-          }
-
-          const speed = getPacmanSpeed();
-          moveEntity(pacman, speed, dt);
-
-          if (isCentered(pacman.pos)) {
-            snapToCenter(pacman.pos);
-            consumePellet();
-          }
-        }
-
-        function activatePower() {
-          state.frightenedTimer = getPowerDuration();
-          state.eatStreak = 0;
-          ghosts.forEach((ghost) => {
-            const col = Math.floor(ghost.pos.x);
-            const row = Math.floor(ghost.pos.y);
-            ghost.inHouse = tileAt(col, row) === "H";
-            if (
-              ghost.state === "normal" ||
-              ghost.state === "frightened" ||
-              (ghost.state === "leaving" && !ghost.inHouse)
-            ) {
-              ghost.state = "frightened";
-              if (ghost.dir >= 0) {
-                ghost.dir = (ghost.dir + 2) % DIRS.length;
-              }
-            }
-          });
-        }
-
-        function getGhostSpeed(ghost) {
-          const base = getGhostBaseSpeed();
-          if (ghost.state === "frightened") {
-            const flashMultiplier = state.frightenedTimer <= getFrightenedBlinkStart() ? 0.5 : 0.55;
-            return base * flashMultiplier;
-          }
-          if (ghost.state === "eyes") {
-            return base * 1.45;
-          }
-          if (ghost.state === "leaving") {
-            return base * 0.85;
-          }
-          return base;
-        }
-
-        function getFrightenedBlinkOn() {
-          const blinkStart = getFrightenedBlinkStart();
-          if (state.frightenedTimer > blinkStart) {
-            return false;
-          }
-          const duration = getPowerDuration();
-          const elapsed = duration - state.frightenedTimer;
-          const rate =
-            state.frightenedTimer <= getFrightenedBlinkFastStart() ? frightenedBlinkFastRate : frightenedBlinkSlowRate;
-          return Math.floor(elapsed * rate) % 2 === 0;
-        }
-
-        function chooseGhostDirection(ghost, target) {
-          const col = Math.floor(ghost.pos.x);
-          const row = Math.floor(ghost.pos.y);
-          const allowReverse = ghost.state === "eyes";
-          let options = [];
-
-          TURN_PRIORITY.forEach((dirIndex) => {
-            if (canMoveGhost(ghost, dirIndex)) {
-              options.push(dirIndex);
-            }
-          });
-
-          if (!options.length) {
-            return ghost.dir;
-          }
-
-          if (ghost.dir >= 0 && !allowReverse && options.length > 1) {
-            const reverse = (ghost.dir + 2) % DIRS.length;
-            const filtered = options.filter((dirIndex) => dirIndex !== reverse);
-            if (filtered.length) {
-              options = filtered;
-            }
-          }
-
-          if (ghost.state === "frightened") {
-            return options[Math.floor(Math.random() * options.length)];
-          }
-
-          if (options.length === 1) {
-            return options[0];
-          }
-
-          const targetTile = getTargetTile(target);
-          let bestDir = options[0];
-          let bestDist = Infinity;
-
-          options.forEach((dirIndex) => {
-            const dir = DIRS[dirIndex];
-            const nextCol = col + dir.x;
-            const nextRow = row + dir.y;
-            const dx = nextCol - targetTile.col;
-            const dy = nextRow - targetTile.row;
-            const dist = dx * dx + dy * dy;
-            if (dist < bestDist) {
-              bestDist = dist;
-              bestDir = dirIndex;
-            }
-          });
-
-          return bestDir;
-        }
-
-        function getPacmanAhead(tilesAhead) {
-          const dirIndex = pacman.dir >= 0 ? pacman.dir : 1;
-          const dir = DIRS[dirIndex];
-          const ahead = {
-            x: pacman.pos.x + dir.x * tilesAhead,
-            y: pacman.pos.y + dir.y * tilesAhead,
-          };
-          if (dirIndex === 0) {
-            // Replicate the classic overflow bug: up also offsets left.
-            ahead.x -= tilesAhead;
-          }
-          return ahead;
-        }
-
-        function getChaseTarget(ghost) {
-          const ahead = getPacmanAhead(4);
-
-          if (ghost.name === "Rosewire") {
-            return ahead;
-          }
-          if (ghost.name === "Bluewire") {
-            const blinky = ghosts[0];
-            const pivot = getPacmanAhead(2);
-            return {
-              x: pivot.x + (pivot.x - blinky.pos.x),
-              y: pivot.y + (pivot.y - blinky.pos.y),
-            };
-          }
-          if (ghost.name === "Amberline") {
-            const dx = Math.floor(pacman.pos.x) - Math.floor(ghost.pos.x);
-            const dy = Math.floor(pacman.pos.y) - Math.floor(ghost.pos.y);
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            return dist >= 8 ? pacman.pos : ghost.scatter;
-          }
-          return pacman.pos;
-        }
-
-        function updateGhost(ghost, dt) {
-          if (ghost.state === "waiting") {
-            updateHousePacing(ghost, dt);
-            return;
-          }
-
-          if (isCentered(ghost.pos)) {
-            snapToCenter(ghost.pos);
-            const col = Math.floor(ghost.pos.x);
-            const row = Math.floor(ghost.pos.y);
-            ghost.inHouse = tileAt(col, row) === "H";
-
-            if (ghost.state === "leaving") {
-              const dx = ghost.pos.x - exitTile.x;
-              const dy = ghost.pos.y - exitTile.y;
-              if (Math.abs(dx) < 0.2 && Math.abs(dy) < 0.2) {
-                ghost.state = "normal";
-              }
-            }
-
-            if (ghost.state === "eyes") {
-              const dx = ghost.pos.x - ghost.housePos.x;
-              const dy = ghost.pos.y - ghost.housePos.y;
-              if (Math.abs(dx) < 0.2 && Math.abs(dy) < 0.2) {
-                ghost.state = "waiting";
-                ghost.respawnTimer = houseRespawnDelay;
-                ghost.inHouse = true;
-                ghost.houseTarget = ghost.houseTop;
-                ghost.dir = 2;
-                return;
-              }
-            }
-
-            let target = ghost.scatter;
-            const mode = getGlobalMode();
-
-            if (ghost.state === "leaving") {
-              target = exitTile;
-            } else if (ghost.state === "eyes") {
-              target = ghost.housePos;
-            } else if (ghost.state === "frightened") {
-              target = ghost.pos;
-            } else if (mode === "chase") {
-              target = getChaseTarget(ghost);
-            }
-
-            ghost.dir = chooseGhostDirection(ghost, target);
-          }
-
-          const speed = getGhostSpeed(ghost);
-          moveEntity(ghost, speed, dt);
-        }
-
-        function checkCollisions() {
-          ghosts.forEach((ghost) => {
-            const dx = pacman.pos.x - ghost.pos.x;
-            const dy = pacman.pos.y - ghost.pos.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 0.45) {
-              if (ghost.state === "frightened") {
-                ghost.state = "eyes";
-                ghost.dir = (ghost.dir + 2) % DIRS.length;
-                const points = getGhostComboScore();
-                state.score += points;
-                state.eatStreak += 1;
-                recordGhostEat(ghost, points);
-                playGhostEatSound();
-                updateHud();
-              } else if (ghost.state !== "eyes" && ghost.state !== "waiting") {
-                if (state.phase === "playing") {
-                  recordHit(ghost);
-                }
-                loseLife();
-              }
-            }
-          });
-        }
-
-        function loseLife() {
-          if (state.phase !== "playing") {
-            return;
-          }
-          state.lives -= 1;
-          playDeathSound();
-          updateHud();
-          if (state.lives <= 0) {
-            playGameOverSound();
-            setPhase("gameover", "Game Over", "Press Enter to retry.");
-            announceStatus(`Caught. Game over with ${state.score} points.`);
-            return;
-          }
-          resetGhostModes();
-          resetPositions();
-          setPhase("ready", "Ready", "Press Enter to continue.");
-          announceStatus(`Caught. ${state.lives} lives left.`);
-        }
-
-        function updateTimers(dt) {
-          updateHouse(dt);
-          if (state.frightenedTimer > 0) {
-            state.frightenedTimer = Math.max(0, state.frightenedTimer - dt);
-            if (state.frightenedTimer === 0) {
-              ghosts.forEach((ghost) => {
-                if (ghost.state === "frightened") {
-                  ghost.state = "normal";
-                }
-              });
-            }
-          }
-          if (advanceGhostMode(dt)) {
-            reverseGhostsOnModeChange();
-          }
-          updateFruit(dt);
-        }
-
-        function update(dt) {
-          updateTimers(dt);
-          updatePacman(dt);
-          checkFruitPickup();
-          ghosts.forEach((ghost) => updateGhost(ghost, dt));
-          checkCollisions();
-          updateFeedback(dt);
-
-          if (pelletsRemaining <= 0 && !state.pendingNextLevel) {
-            state.pendingNextLevel = true;
-            playLevelClearSound();
-            setPhase("levelcomplete", "Level Clear", "Press Enter for the next wave.");
-            announceStatus(`Level ${state.level} clear. Press Enter for the next wave.`);
-          }
-        }
-
-        function drawWalls() {
-          ctx.save();
-          ctx.fillStyle = "#0c1a3f";
-          ctx.strokeStyle = "rgba(76, 201, 240, 0.8)";
-          ctx.lineWidth = Math.max(1, tileSize * 0.08);
-          for (let row = 0; row < height; row += 1) {
-            for (let col = 0; col < width; col += 1) {
-              const tile = map[row][col];
-              if (tile === "#") {
-                const x = col * tileSize;
-                const y = row * tileSize;
-                ctx.beginPath();
-                ctx.rect(x + tileSize * 0.08, y + tileSize * 0.08, tileSize * 0.84, tileSize * 0.84);
-                ctx.fill();
-                ctx.stroke();
-              }
-            }
-          }
-
-          gateCols.forEach((col) => {
-            const x = col * tileSize + tileSize * 0.2;
-            const y = gateRow * tileSize + tileSize * 0.45;
-            ctx.strokeStyle = "rgba(255, 209, 102, 0.6)";
-            ctx.lineWidth = tileSize * 0.08;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + tileSize * 0.6, y);
-            ctx.stroke();
-          });
-
-          ctx.restore();
-        }
-
-        function drawPellets(time) {
-          ctx.save();
-          pellets.forEach((index) => {
-            const row = Math.floor(index / width);
-            const col = index % width;
-            const x = (col + 0.5) * tileSize;
-            const y = (row + 0.5) * tileSize;
-            const twinkle = 0.75 + Math.abs(Math.sin(time * 3.4 + index)) * 0.25;
-            ctx.fillStyle = "rgba(255, 214, 128, 0.9)";
-            ctx.beginPath();
-            ctx.arc(x, y, tileSize * 0.075 * twinkle, 0, Math.PI * 2);
-            ctx.fill();
-          });
-
-          const pulse = 0.16 + Math.abs(Math.sin(time * 5)) * 0.08;
-          powerPellets.forEach((index) => {
-            const row = Math.floor(index / width);
-            const col = index % width;
-            const x = (col + 0.5) * tileSize;
-            const y = (row + 0.5) * tileSize;
-            ctx.save();
-            ctx.shadowColor = "rgba(255, 209, 102, 0.9)";
-            ctx.shadowBlur = tileSize * 0.45;
-            ctx.strokeStyle = "rgba(255, 209, 102, 0.42)";
-            ctx.lineWidth = tileSize * 0.05;
-            ctx.beginPath();
-            ctx.arc(x, y, tileSize * (pulse + 0.13), 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = "rgba(255, 209, 102, 1)";
-            ctx.beginPath();
-            ctx.arc(x, y, tileSize * pulse, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          });
-          ctx.restore();
-        }
-
-        function drawFruit(time) {
-          if (!fruitState.active) {
-            return;
-          }
-          const fruit = fruitTypes[fruitState.kindIndex];
-          const x = fruitSpawn.x * tileSize;
-          const y = fruitSpawn.y * tileSize;
-          const bob = Math.sin(time * 6) * tileSize * 0.04;
-
-          ctx.save();
-          ctx.translate(x, y + bob);
-          const pulse = 0.72 + Math.abs(Math.sin(time * 4.6)) * 0.28;
-          ctx.strokeStyle = `${fruit.color}aa`;
-          ctx.lineWidth = tileSize * 0.06;
-          ctx.shadowColor = fruit.color;
-          ctx.shadowBlur = tileSize * 0.36;
-          ctx.beginPath();
-          ctx.arc(0, 0, tileSize * (0.4 + pulse * 0.08), 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = fruit.color;
-          ctx.beginPath();
-          ctx.arc(0, 0, tileSize * 0.28, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
-          ctx.beginPath();
-          ctx.arc(-tileSize * 0.08, -tileSize * 0.08, tileSize * 0.08, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.strokeStyle = "#6ee7b7";
-          ctx.lineWidth = tileSize * 0.05;
-          ctx.beginPath();
-          ctx.moveTo(0, -tileSize * 0.28);
-          ctx.lineTo(tileSize * 0.06, -tileSize * 0.42);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        function drawPacman(time) {
-          const centerX = pacman.pos.x * tileSize;
-          const centerY = pacman.pos.y * tileSize;
-          const radius = tileSize * 0.45;
-          const mouth = 0.25 + Math.abs(Math.sin(time * 8)) * 0.18;
-          let angle = 0;
-          if (pacman.dir === 0) {
-            angle = -Math.PI / 2;
-          } else if (pacman.dir === 1) {
-            angle = 0;
-          } else if (pacman.dir === 2) {
-            angle = Math.PI / 2;
-          } else if (pacman.dir === 3) {
-            angle = Math.PI;
-          }
-
-          ctx.save();
-          if (feedback.dangerCue > 0) {
-            const alpha = 0.18 + feedback.dangerCue * 0.34;
-            ctx.strokeStyle = `rgba(255, 77, 109, ${alpha})`;
-            ctx.lineWidth = tileSize * (0.06 + feedback.dangerCue * 0.05);
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, tileSize * (0.72 + Math.sin(time * 9) * 0.05), 0, Math.PI * 2);
-            ctx.stroke();
-          }
-          if (feedback.powerPulse > 0 || state.frightenedTimer > 0) {
-            const pulse = Math.max(feedback.powerPulse, Math.min(1, state.frightenedTimer / getPowerDuration()));
-            ctx.strokeStyle = `rgba(76, 201, 240, ${0.18 + pulse * 0.36})`;
-            ctx.lineWidth = tileSize * 0.08;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, tileSize * (0.7 + (1 - pulse) * 0.35), 0, Math.PI * 2);
-            ctx.stroke();
-          }
-          if (feedback.lastHitAge !== null && feedback.lastHitAge < 0.45) {
-            const hitAlpha = 1 - feedback.lastHitAge / 0.45;
-            ctx.strokeStyle = `rgba(255, 77, 109, ${hitAlpha * 0.7})`;
-            ctx.lineWidth = tileSize * 0.11;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, tileSize * (0.55 + (1 - hitAlpha) * 0.55), 0, Math.PI * 2);
-            ctx.stroke();
-          }
-          ctx.fillStyle = "#ffd166";
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
-          ctx.arc(centerX, centerY, radius, angle + mouth, angle - mouth, true);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-        }
-
-        function drawGhost(ghost, time) {
-          const x = ghost.pos.x * tileSize;
-          const y = ghost.pos.y * tileSize;
-          const size = tileSize * 0.45;
-          const wobble = Math.sin(time * 6 + ghost.pos.x) * tileSize * 0.05;
-
-          ctx.save();
-          if (ghost.state === "eyes") {
-            drawGhostEyes(ghost, x, y, size);
-            ctx.restore();
-            return;
-          }
-
-          let bodyColor = ghost.color;
-          const distance = distanceToGhost(ghost);
-          const harmful = isHarmfulGhost(ghost);
-          if (harmful && distance < 4.2) {
-            const cue = clamp((4.2 - distance) / 3.4, 0, 1);
-            ctx.strokeStyle = `rgba(255, 77, 109, ${0.18 + cue * 0.35})`;
-            ctx.lineWidth = tileSize * (0.05 + cue * 0.05);
-            ctx.beginPath();
-            ctx.arc(x, y, tileSize * (0.66 + Math.sin(time * 7) * 0.04), 0, Math.PI * 2);
-            ctx.stroke();
-          }
-          if (ghost.state === "frightened") {
-            const blinkAlpha = getFrightenedBlinkOn() ? 0.72 : 0.42;
-            ctx.strokeStyle = `rgba(246, 245, 255, ${blinkAlpha})`;
-            ctx.lineWidth = tileSize * 0.08;
-            ctx.shadowColor = "rgba(76, 201, 240, 0.85)";
-            ctx.shadowBlur = tileSize * 0.38;
-            ctx.beginPath();
-            ctx.arc(x, y, tileSize * (0.62 + Math.sin(time * 6) * 0.04), 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-            if (state.frightenedTimer <= getFrightenedBlinkStart()) {
-              const blinkOn = getFrightenedBlinkOn();
-              bodyColor = blinkOn ? "#f6f5ff" : "#3b5bff";
-            } else {
-              bodyColor = "#3b5bff";
-            }
-          } else if (harmful) {
-            ctx.shadowColor = ghost.color;
-            ctx.shadowBlur = tileSize * 0.22;
-          }
-          ctx.fillStyle = bodyColor;
-          ctx.beginPath();
-          ctx.arc(x, y - wobble * 0.4, size, Math.PI, 0, false);
-          ctx.lineTo(x + size, y + size);
-          for (let i = 0; i < 4; i += 1) {
-            const waveX = x + size - (i + 0.5) * (size * 0.5);
-            const waveY = y + size - (i % 2 === 0 ? wobble : -wobble);
-            ctx.lineTo(waveX, waveY);
-          }
-          ctx.closePath();
-          ctx.fill();
-          ctx.shadowBlur = 0;
-
-          drawGhostEyes(ghost, x, y, size);
-          ctx.restore();
-        }
-
-        function drawGhostEyes(ghost, x, y, size) {
-          const dir = ghost.dir >= 0 ? DIRS[ghost.dir] : DIRS[1];
-          const offsetX = dir.x * size * 0.2;
-          const offsetY = dir.y * size * 0.2;
-          ctx.fillStyle = "#f4f7ff";
-          ctx.beginPath();
-          ctx.arc(x - size * 0.2, y - size * 0.1, size * 0.18, 0, Math.PI * 2);
-          ctx.arc(x + size * 0.2, y - size * 0.1, size * 0.18, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#1d2340";
-          ctx.beginPath();
-          ctx.arc(x - size * 0.2 + offsetX, y - size * 0.1 + offsetY, size * 0.08, 0, Math.PI * 2);
-          ctx.arc(x + size * 0.2 + offsetX, y - size * 0.1 + offsetY, size * 0.08, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        function drawFeedbackEffects() {
-          ctx.save();
-          feedback.rings.forEach((ring) => {
-            const progress = ring.age / ring.ttl;
-            const alpha = Math.max(0, 1 - progress);
-            const x = ring.x * tileSize;
-            const y = ring.y * tileSize;
-            ctx.globalAlpha = alpha;
-            ctx.strokeStyle = ring.color;
-            ctx.lineWidth = Math.max(1, tileSize * ring.lineWidth);
-            ctx.beginPath();
-            ctx.arc(x, y, tileSize * (ring.radius + ring.grow * progress), 0, Math.PI * 2);
-            if (ring.fill) {
-              ctx.fillStyle = ring.color;
-              ctx.fill();
-            }
-            ctx.stroke();
-          });
-
-          feedback.particles.forEach((particle) => {
-            const alpha = Math.max(0, 1 - particle.age / particle.ttl);
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = particle.color;
-            ctx.beginPath();
-            ctx.arc(particle.x * tileSize, particle.y * tileSize, tileSize * particle.size, 0, Math.PI * 2);
-            ctx.fill();
-          });
-
-          feedback.pops.forEach((pop) => {
-            const alpha = Math.max(0, 1 - pop.age / pop.ttl);
-            const x = pop.x * tileSize;
-            const y = pop.y * tileSize;
-            ctx.globalAlpha = alpha;
-            ctx.font = `800 ${Math.max(11, tileSize * pop.size)}px system-ui, sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.lineWidth = Math.max(2, tileSize * 0.12);
-            ctx.strokeStyle = "rgba(8, 12, 24, 0.82)";
-            ctx.fillStyle = pop.color;
-            ctx.strokeText(pop.text, x, y);
-            ctx.fillText(pop.text, x, y);
-          });
-          ctx.restore();
-        }
-
-        function drawScreenFeedback() {
-          if (feedback.screenFlash <= 0) {
-            return;
-          }
-          ctx.save();
-          ctx.fillStyle = `rgba(255, 77, 109, ${Math.min(0.28, feedback.screenFlash * 0.22)})`;
-          ctx.fillRect(0, 0, boardPixelSize(), boardPixelSize());
-          ctx.restore();
-        }
-
-        function render(time) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.save();
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.restore();
-
-          const shakeAmount = feedback.screenShake > 0 ? feedback.screenShake * tileSize * 0.16 : 0;
-          const shakeX = shakeAmount ? Math.sin(feedback.time * 61) * shakeAmount : 0;
-          const shakeY = shakeAmount ? Math.cos(feedback.time * 47) * shakeAmount : 0;
-          ctx.save();
-          if (shakeAmount) {
-            ctx.translate(shakeX, shakeY);
-          }
-          drawWalls();
-          drawPellets(time);
-          drawFruit(time);
-          drawPacman(time);
-          ghosts.forEach((ghost) => drawGhost(ghost, time));
-          drawFeedbackEffects();
-          ctx.restore();
-          drawScreenFeedback();
-        }
-
-        function loop(timestamp) {
-          const now = timestamp || performance.now();
-          const dt = Math.min(0.05, (now - lastTime) / 1000 || 0);
-          lastTime = now;
-
-          if (state.phase === "playing") {
-            accumulator += dt;
-            while (accumulator >= step) {
-              update(step);
-              accumulator -= step;
-            }
-          } else {
-            updateFeedback(dt);
-          }
-
-          render(now / 1000);
-          requestAnimationFrame(loop);
-        }
-
-        function dirName(index) {
-          return DIRS[index] ? DIRS[index].name : "none";
-        }
-
-        function renderGameToText() {
-          return JSON.stringify({
-            game: "Maze Chase",
-            coordinateSystem: "maze tiles, origin top-left, x right, y down",
-            phase: state.phase,
-            score: state.score,
-            highScore: state.highScore,
-            level: state.level,
-            lives: state.lives,
-            pendingNextLevel: !!state.pendingNextLevel,
-            pelletsRemaining,
-            powerPelletsRemaining: powerPellets.size,
-            frightenedTimer: round(state.frightenedTimer),
-            eatStreak: state.eatStreak,
-            dangerCue: feedback.dangerCue,
-            nearestGhost: feedback.nearestGhost,
-            mode: { index: modeState.index, timer: round(modeState.timer), name: getGlobalMode() },
-            pacman: {
-              x: round(pacman.pos.x),
-              y: round(pacman.pos.y),
-              tile: { col: Math.floor(pacman.pos.x), row: Math.floor(pacman.pos.y) },
-              dir: dirName(pacman.dir),
-              nextDir: dirName(pacman.nextDir)
-            },
-            fruit: {
-              active: !!fruitState.active,
-              timer: round(fruitState.timer),
-              spawned: fruitState.spawned,
-              kind: fruitTypes[fruitState.kindIndex]?.name || null
-            },
-            ghosts: ghosts.map(ghost => ({
-              name: ghost.name,
-              state: ghost.state,
-              x: round(ghost.pos.x),
-              y: round(ghost.pos.y),
-              tile: { col: Math.floor(ghost.pos.x), row: Math.floor(ghost.pos.y) },
-              dir: dirName(ghost.dir),
-              inHouse: !!ghost.inHouse,
-              dotCounter: ghost.dotCounter,
-              dotLimit: ghost.dotLimit
-            })),
-            house: {
-              globalCounterActive: !!house.globalCounterActive,
-              globalCounter: house.globalCounter,
-              pendingRelease: house.pendingRelease
-            },
-            feedback: {
-              lastPelletAge: ageForDiagnostics(feedback.lastPelletAge),
-              lastPowerAge: ageForDiagnostics(feedback.lastPowerAge),
-              lastFruitAge: ageForDiagnostics(feedback.lastFruitAge),
-              lastGhostEatAge: ageForDiagnostics(feedback.lastGhostEatAge),
-              lastHitAge: ageForDiagnostics(feedback.lastHitAge),
-              pelletCount: feedback.counters.pellet,
-              powerCount: feedback.counters.power,
-              fruitCount: feedback.counters.fruit,
-              ghostEatCount: feedback.counters.ghostEat,
-              hitCount: feedback.counters.hit,
-              feedbackParticles: feedback.particles.length + feedback.rings.length,
-              popupCount: feedback.pops.length,
-              counts: {
-                pellet: feedback.counters.pellet,
-                power: feedback.counters.power,
-                fruit: feedback.counters.fruit,
-                ghostEat: feedback.counters.ghostEat,
-                hit: feedback.counters.hit,
-                particles: feedback.particles.length + feedback.rings.length,
-                popups: feedback.pops.length
-              },
-              screenFlash: round(feedback.screenFlash, 3),
-              screenShake: round(feedback.screenShake, 3)
-            },
-            audio: {
-              soundEnabled: !audio.muted,
-              muted: !!audio.muted,
-              audioReady: !!audio.ctx,
-              lastSound: audio.lastSound,
-              soundCount: audio.soundCount,
-              unlocked: !!audio.unlocked,
-              musicOn: !!audio.musicOn,
-              lastSoundStatus: audio.lastSoundStatus,
-              soundCounts: { ...audio.soundCounts }
-            },
-            fullscreen: {
-              available: !!fullscreenDiagnostics.available,
-              active: !!fullscreenDiagnostics.active,
-              element: fullscreenDiagnostics.element,
-              requests: fullscreenDiagnostics.requests,
-              changes: fullscreenDiagnostics.changes,
-              errors: fullscreenDiagnostics.errors,
-              lastError: fullscreenDiagnostics.lastError
-            },
-            liveStatus: liveStatus.textContent,
-            overlay: { visible: overlay.classList.contains("show"), title: overlayTitle.textContent },
-            controls: { pauseLabel: pauseBtn.textContent, mutedLabel: muteBtn.textContent }
-          });
-        }
-
-        window.render_game_to_text = renderGameToText;
-        window.advanceTime = function advanceTime(ms = 0) {
-          const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
-          for (let i = 0; i < steps; i++) {
-            if (state.phase === "playing") {
-              update(step);
-            } else {
-              updateFeedback(step);
-            }
-          }
-          render(performance.now() / 1000);
-          return renderGameToText();
-        };
-
-        function handleDirection(dirName) {
-          const dirIndex = DIRS.findIndex((dir) => dir.name === dirName);
-          pacman.nextDir = dirIndex;
-        }
-
-        function handleSwipeStart(event) {
-          if (event.pointerType !== "mouse") {
-            swipeStart = [event.clientX, event.clientY, event.pointerId];
-          }
-        }
-
-        function handleSwipeEnd(event) {
-          if (!swipeStart || swipeStart[2] !== event.pointerId) {
-            return;
-          }
-          const dx = event.clientX - swipeStart[0];
-          const dy = event.clientY - swipeStart[1];
-          swipeStart = null;
-          if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) {
-            return;
-          }
-          unlockAudio();
-          handleDirection(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
-        }
-
-        const keyDirections = {
-          ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
-          w: "up", a: "left", s: "down", d: "right",
-        };
-
-        function handleKeydown(event) {
-          const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-          const direction = keyDirections[key];
-          if (
-            key === "f" &&
-            !event.altKey &&
-            !event.ctrlKey &&
-            !event.metaKey &&
-            !event.shiftKey &&
-            !activeDialog &&
-            !isEditableTarget(event.target)
-          ) {
-            event.preventDefault();
-            toggleFullscreen();
-            return;
-          }
-          if (
-            event.target &&
-            event.target.closest &&
-            event.target.closest("button, a, input, select, textarea") &&
-            event.key !== "Escape" &&
-            event.key !== "Tab" &&
-            key !== "m"
-          ) {
-            return;
-          }
-          if (direction || event.key === " " || key === "m") {
-            event.preventDefault();
-          }
-          if (direction || ["Enter", " ", "p"].includes(key)) {
-            unlockAudio();
-          }
-          if (key === "m") {
-            toggleMute();
-          } else if (direction) {
-            handleDirection(direction);
-          } else if (key === "Enter") {
-            handleStartAction();
-          } else if (key === " " || key === "p") {
-            togglePause();
-          }
-        }
-
-        function bindControls() {
-          document.addEventListener("keydown", handleKeydown);
-          document.addEventListener("fullscreenchange", handleFullscreenChange);
-          startBtn.addEventListener("click", handleStartAction);
-          resetBtn.addEventListener("click", handleResetAction);
-          pauseBtn.addEventListener("click", togglePause);
-          muteBtn.addEventListener("click", toggleMute);
-          fullscreenBtn.addEventListener("click", toggleFullscreen);
-          canvas.addEventListener("pointerdown", handleSwipeStart);
-          canvas.addEventListener("pointerup", handleSwipeEnd);
-          canvas.addEventListener("pointercancel", () => swipeStart = null);
-        }
-
-        function init() {
-          resizeCanvas();
-          window.addEventListener("resize", resizeCanvas);
-          resetGame();
-          bindControls();
-          updateMuteButton();
-          syncFullscreenButton();
-          requestAnimationFrame(loop);
-        }
-
-        init();
-      })();
-    </script>
+(()=>{const canvas=document.getElementById("game");const ctx=canvas.getContext("2d")
+;const scoreEl=document.getElementById("score")
+;const highScoreEl=document.getElementById("high-score")
+;const levelEl=document.getElementById("level");const livesEl=document.getElementById("lives")
+;const overlay=document.getElementById("overlay")
+;const overlayTitle=document.getElementById("overlay-title")
+;const overlayMessage=document.getElementById("overlay-message")
+;const startBtn=document.getElementById("start-btn")
+;const resetBtn=document.getElementById("reset-btn")
+;const pauseBtn=document.getElementById("pause-btn")
+;const muteBtn=document.getElementById("mute-btn")
+;const fullscreenBtn=document.getElementById("fullscreen-btn")
+;const liveStatus=document.getElementById("live-status")
+;const FOCUSABLE_SELECTOR='button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+;let activeDialog=null;let activeDialogTrigger=null;function dialogFocusables(dialog){
+return[...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter((el=>el.getClientRects().length>0))}
+function activateDialog(dialog,trigger,preferred){activeDialog=dialog
+;activeDialogTrigger=trigger&&typeof trigger.focus==="function"?trigger:document.activeElement
+;setTimeout((()=>{
+const target=preferred&&preferred.getClientRects().length>0?preferred:dialogFocusables(dialog)[0]||dialog
+;target.focus({preventScroll:true})}),0)}function deactivateDialog(dialog,restoreFocus=true){
+if(activeDialog!==dialog)return;const target=activeDialogTrigger;activeDialog=null
+;activeDialogTrigger=null
+;if(restoreFocus&&target&&target.isConnected&&target.getClientRects().length>0){
+setTimeout((()=>target.focus({preventScroll:true})),0)}}
+document.addEventListener("keydown",(event=>{
+if(!activeDialog||!activeDialog.classList.contains("show")||event.key!=="Tab")return
+;const focusables=dialogFocusables(activeDialog);if(!focusables.length)return
+;const first=focusables[0];const last=focusables[focusables.length-1]
+;if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus({
+preventScroll:true})}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault()
+;first.focus({preventScroll:true})}}),true)
+;const rawMap=["############################","#............##............#","#.####.#####.##.#####.####.#","#o####.#####.##.#####.####o#","#.####.#####.##.#####.####.#","#..........................#","#.####.##.########.##.####.#","#.####.##.########.##.####.#","#......##....##....##......#","######.##### ## #####.######","     #.##### ## #####.#     ","######.##          ##.######","######.## ###==### ##.######","######.## #HHHHHH# ##.######","      .   #HHHHHH#   .      ","######.## #HHHHHH# ##.######","######.## ######## ##.######","######.##          ##.######","######.## ######## ##.######","#............##............#","#.####.#####.##.#####.####.#","#o..##................##..o#","###.##.##.########.##.##.###","#......##....##....##......#","#.##########.##.##########.#","#.##########.##.##########.#","#..........................#","############################"]
+;const map=rawMap.map((row=>row.split("")));const width=map[0].length;const height=map.length
+;const DIRS=[{x:0,y:-1,name:"up"},{x:1,y:0,name:"right"},{x:0,y:1,name:"down"},{x:-1,y:0,name:"left"
+}];const TURN_PRIORITY=[0,3,2,1];const basePellets=[];const basePower=[]
+;for(let row=0;row<height;row+=1){for(let col=0;col<width;col+=1){const tile=map[row][col]
+;const index=row*width+col;if(tile==="."){basePellets.push(index)}else if(tile==="o"){
+basePower.push(index)}}}const totalPellets=basePellets.length+basePower.length;const state={
+phase:"ready",score:0,highScore:Number(localStorage.getItem("mazeChaseHigh")||0),level:1,lives:3,
+frightenedTimer:0,eatStreak:0,pendingNextLevel:false};const house={timer:0,exitCooldown:0,
+dotTimer:0,globalCounter:0,globalCounterActive:false,pendingRelease:null,
+disableGlobalAfterRelease:false};const dotReleaseOrder=["Rosewire","Bluewire","Amberline"]
+;const globalDotThresholds={Rosewire:7,Bluewire:17,Amberline:32}
+;const modeSchedule=[7,20,7,20,5,20,5,Infinity];const modeState={index:0,timer:modeSchedule[0]}
+;const speedLevelCap=12;const pacmanSpeedBase=7;const ghostSpeedBase=6.2;const pacmanSpeedStep=.035
+;const ghostSpeedStep=.045;const powerDurationBase=8;const powerDurationMin=3.5
+;const powerDurationStep=.4;const frightenedBlinkStartRatio=.32
+;const frightenedBlinkFastStartRatio=.12;const frightenedBlinkSlowRate=4
+;const frightenedBlinkFastRate=10;const fruitSpawnFractions=[.7,.35];const fruitDurationBase=9
+;const fruitDurationMin=6.5;const fruitDurationStep=.2;const fruitTypes=[{name:"Cherry",
+color:"#ff4d6d",points:150},{name:"Strawberry",color:"#ff6fb1",points:300},{name:"Orange",
+color:"#ffb347",points:500},{name:"Apple",color:"#ff4d4d",points:700},{name:"Melon",color:"#6ee7b7",
+points:1e3},{name:"Galaxian",color:"#4cc9f0",points:1500},{name:"Bell",color:"#ffd166",points:2e3},{
+name:"Key",color:"#dbe7ff",points:3e3}];const houseExitCooldown=.85;const houseRespawnDelay=1.4
+;const housePaceSpeed=2.8;const tileCenter=(col,row)=>({x:col+.5,y:row+.5})
+;const pacStart=tileCenter(13,23);const gateRow=12;const gateCols=[13,14]
+;const exitTile=tileCenter(13,gateRow-1);const fruitSpawn=tileCenter(13,17)
+;const houseCenter=tileCenter(13,14);const houseLeft=tileCenter(11,14)
+;const houseRight=tileCenter(15,14);const blinkyStart=exitTile
+;const ghosts=[createGhost("Redshift","#ff4d6d",houseCenter,blinkyStart,houseCenter,tileCenter(width-2,1)),createGhost("Rosewire","#ff9ff3",houseCenter,houseCenter,houseCenter,tileCenter(1,1)),createGhost("Bluewire","#4dd0ff",houseCenter,houseLeft,houseLeft,tileCenter(width-2,height-2)),createGhost("Amberline","#ffb347",houseCenter,houseRight,houseRight,tileCenter(1,height-2))]
+;let pellets=new Set;let powerPellets=new Set;let pelletsRemaining=0;const pacman={pos:{...pacStart
+},dir:-1,nextDir:-1};const fruitState={active:false,timer:0,kindIndex:0,spawned:0,thresholds:[]}
+;const feedback={time:0,particles:[],rings:[],pops:[],screenFlash:0,screenShake:0,dangerCue:0,
+nearestGhost:null,powerPulse:0,lastPelletAge:null,lastPowerAge:null,lastFruitAge:null,
+lastGhostEatAge:null,lastHitAge:null,counters:{pellet:0,power:0,fruit:0,ghostEat:0,hit:0}}
+;const audioLevels={master:.6,music:.24,sfx:.38};const SOUND_STORAGE_KEY="maze-chase.sound.v1"
+;const LEGACY_MUTED_STORAGE_KEY="mazeChaseMuted";const soundCounterKeys={start:"start",
+restart:"restart",pellet:"pellet","power-pellet":"powerPellet",fruit:"fruit","ghost-eat":"ghostEat",
+"player-death":"playerDeath","level-clear":"levelClear","game-over":"gameOver",
+"audio-unavailable":"unavailableAction","action-unavailable":"unavailableAction"}
+;function readStorageValue(key){try{return localStorage.getItem(key)}catch(error){return null}}
+function writeStorageValue(key,value){try{localStorage.setItem(key,value)}catch(error){}}
+function persistedSoundValueToMuted(value){if(value===null){return null}
+const normalized=String(value).toLowerCase();if(["1","true","on","enabled"].includes(normalized)){
+return false}if(["0","false","off","disabled"].includes(normalized)){return true}return null}
+function persistedMutedValueToMuted(value){if(value===null){return null}
+const normalized=String(value).toLowerCase();if(["1","true","muted"].includes(normalized)){
+return true}if(["0","false","unmuted"].includes(normalized)){return false}return null}
+function persistSoundPreference(isMuted){writeStorageValue(SOUND_STORAGE_KEY,isMuted?"0":"1")
+;writeStorageValue(LEGACY_MUTED_STORAGE_KEY,isMuted?"1":"0")}function getPersistedMuted(){
+const storedSound=persistedSoundValueToMuted(readStorageValue(SOUND_STORAGE_KEY))
+;if(storedSound!==null){return storedSound}
+const legacyMuted=persistedMutedValueToMuted(readStorageValue(LEGACY_MUTED_STORAGE_KEY))
+;if(legacyMuted!==null){persistSoundPreference(legacyMuted);return legacyMuted}return false}
+const savedMuted=getPersistedMuted();const audio={ctx:null,master:null,musicGain:null,sfxGain:null,
+unlocked:false,musicTimer:null,musicOn:false,lastPelletSound:0,muted:savedMuted,lastSound:null,
+lastSoundStatus:"none",soundCount:0,soundCounts:{start:0,restart:0,pellet:0,powerPellet:0,fruit:0,
+ghostEat:0,playerDeath:0,levelClear:0,gameOver:0,unavailableAction:0},unavailableNotified:false}
+;const fullscreenDiagnostics={available:!!document.fullscreenEnabled,active:false,element:null,
+requests:0,changes:0,errors:0,lastError:null};function announceStatus(message){
+liveStatus.textContent="";requestAnimationFrame((()=>{liveStatus.textContent=message}))}
+function fullscreenElementName(){const element=document.fullscreenElement;if(!element){return null}
+return element.id||element.tagName.toLowerCase()}function syncFullscreenButton(){
+fullscreenDiagnostics.available=!!document.fullscreenEnabled
+;fullscreenDiagnostics.active=!!document.fullscreenElement
+;fullscreenDiagnostics.element=fullscreenElementName();const active=fullscreenDiagnostics.active
+;fullscreenBtn.setAttribute("aria-pressed",active?"true":"false")
+;fullscreenBtn.textContent=active?"Exit":"Full"
+;fullscreenBtn.title=active?"Exit fullscreen":"Enter fullscreen"
+;fullscreenBtn.disabled=!fullscreenDiagnostics.available}async function toggleFullscreen(){
+if(!document.fullscreenEnabled){fullscreenDiagnostics.available=false
+;fullscreenDiagnostics.errors+=1;fullscreenDiagnostics.lastError="fullscreen-unavailable"
+;syncFullscreenButton();return}fullscreenDiagnostics.requests+=1;try{if(document.fullscreenElement){
+await document.exitFullscreen()}else{await document.documentElement.requestFullscreen()}
+}catch(error){fullscreenDiagnostics.errors+=1
+;fullscreenDiagnostics.lastError=error&&error.name?error.name:"fullscreen-error"
+;syncFullscreenButton()}}function handleFullscreenChange(){fullscreenDiagnostics.changes+=1
+;syncFullscreenButton();resizeCanvas()}function isEditableTarget(target){
+return!!(target&&target.closest&&target.closest("button, a, input, select, textarea, [contenteditable='true']"))
+}const musicPattern=[{freq:523.25,dur:.16},{freq:659.25,dur:.16},{freq:783.99,dur:.16},{freq:659.25,
+dur:.16},{freq:523.25,dur:.16},{freq:392,dur:.16},{freq:523.25,dur:.32},{freq:0,dur:.16},{freq:392,
+dur:.16},{freq:523.25,dur:.16},{freq:659.25,dur:.16},{freq:783.99,dur:.16},{freq:880,dur:.16},{
+freq:783.99,dur:.16},{freq:659.25,dur:.16},{freq:523.25,dur:.32}];let tileSize=18;let lastTime=0
+;let accumulator=0;let swipeStart=null;const step=1/60
+;function createGhost(name,color,home,start,housePos,scatter){const houseCol=Math.floor(housePos.x)
+;const houseRow=Math.floor(housePos.y);return{name:name,color:color,home:home,start:start,
+housePos:housePos,scatter:scatter,pos:{...start},dir:-1,state:"waiting",inHouse:true,dotCounter:0,
+dotLimit:0,respawnTimer:0,houseTop:tileCenter(houseCol,houseRow-1),
+houseBottom:tileCenter(houseCol,houseRow+1),houseTarget:null}}function resizeCanvas(){
+const wrapper=canvas.parentElement;const compact=window.innerWidth<=720
+;const heightLimit=window.innerHeight*(compact?.74:.76)
+;const size=Math.min(wrapper.clientWidth,heightLimit,720);const dpr=window.devicePixelRatio||1
+;canvas.style.width=`${size}px`;canvas.style.height=`${size}px`;canvas.width=Math.floor(size*dpr)
+;canvas.height=Math.floor(size*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);tileSize=size/width}
+function recordSoundDiagnostic(name,status="scheduled"){audio.lastSound=name
+;audio.lastSoundStatus=status;audio.soundCount+=1
+;const counterKey=soundCounterKeys[name]||"unavailableAction"
+;audio.soundCounts[counterKey]=(audio.soundCounts[counterKey]||0)+1}function audioBlockStatus(){
+if(audio.muted){return"muted"}if(!audio.ctx||!audio.sfxGain){return"not-ready"}return null}
+function canScheduleNamedSound(name){const status=audioBlockStatus();if(status){
+recordSoundDiagnostic(name,status);return false}recordSoundDiagnostic(name);return true}
+function initAudio(){if(audio.ctx){return true}
+const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx){
+if(!audio.unavailableNotified){audio.unavailableNotified=true
+;recordSoundDiagnostic("audio-unavailable","unavailable")}return false}audio.ctx=new AudioCtx
+;audio.master=audio.ctx.createGain();audio.master.gain.value=audio.muted?0:audioLevels.master
+;audio.master.connect(audio.ctx.destination);audio.musicGain=audio.ctx.createGain()
+;audio.musicGain.gain.value=audioLevels.music;audio.musicGain.connect(audio.master)
+;audio.sfxGain=audio.ctx.createGain();audio.sfxGain.gain.value=audioLevels.sfx
+;audio.sfxGain.connect(audio.master);return true}function unlockAudio(options={}){
+if(audio.muted&&!options.force){return false}initAudio();if(!audio.ctx){return false}
+if(audio.ctx.state==="suspended"){audio.ctx.resume()}if(!audio.unlocked){audio.unlocked=true
+;setMusicState(state.phase)}return true}
+function playTone(freq,duration,type,volume,when,endFreq,bus){if(!audio.ctx||freq<=0||audio.muted){
+return}const osc=audio.ctx.createOscillator();const gain=audio.ctx.createGain()
+;const startTime=when??audio.ctx.currentTime;const targetBus=bus||audio.sfxGain;osc.type=type
+;osc.frequency.setValueAtTime(freq,startTime);if(endFreq){
+osc.frequency.exponentialRampToValueAtTime(endFreq,startTime+duration)}
+gain.gain.setValueAtTime(1e-4,startTime)
+;gain.gain.exponentialRampToValueAtTime(volume,startTime+.02)
+;gain.gain.exponentialRampToValueAtTime(1e-4,startTime+duration);osc.connect(gain)
+;gain.connect(targetBus);osc.start(startTime);osc.stop(startTime+duration+.05)}
+function playStartSound(name="start"){if(!canScheduleNamedSound(name)){return}
+const now=audio.ctx.currentTime;const base=name==="restart"?293.66:329.63
+;playTone(base,.1,"triangle",.14,now,base*1.25);playTone(base*1.5,.12,"sine",.1,now+.08,base*1.75)}
+function playPelletSound(){if(audioBlockStatus()){canScheduleNamedSound("pellet");return}
+const now=audio.ctx.currentTime;if(now-audio.lastPelletSound<.05){
+recordSoundDiagnostic("pellet","throttled");return}audio.lastPelletSound=now
+;recordSoundDiagnostic("pellet");playTone(420,.04,"sine",.11,null,320)}function playPowerSound(){
+if(!canScheduleNamedSound("power-pellet")){return}const now=audio.ctx.currentTime
+;playTone(329.63,.16,"triangle",.16,now,260);playTone(392,.18,"triangle",.14,now+.08,310)}
+function playGhostEatSound(){if(!canScheduleNamedSound("ghost-eat")){return}
+playTone(196,.2,"triangle",.24,null,130)}function playDeathSound(){
+if(!canScheduleNamedSound("player-death")){return}const now=audio.ctx.currentTime
+;playTone(360,.32,"sine",.26,now,160);playTone(200,.28,"sine",.18,now+.1,120)}
+function playLevelClearSound(){if(!canScheduleNamedSound("level-clear")){return}
+const now=audio.ctx.currentTime;playTone(261.63,.18,"triangle",.2,now)
+;playTone(329.63,.18,"triangle",.2,now+.18);playTone(392,.22,"triangle",.2,now+.36)}
+function playFruitSound(){if(!canScheduleNamedSound("fruit")){return}const now=audio.ctx.currentTime
+;playTone(523.25,.16,"triangle",.22,now,380);playTone(659.25,.16,"triangle",.18,now+.08,440)}
+function playGameOverSound(){if(!canScheduleNamedSound("game-over")){return}
+const now=audio.ctx.currentTime+.1;playTone(220,.24,"triangle",.14,now,164.81)
+;playTone(146.83,.32,"sine",.12,now+.18,110)}function scheduleMusic(){
+if(!audio.ctx||!audio.musicOn||audio.musicTimer||audio.muted){return}
+const start=audio.ctx.currentTime+.02;let time=start;musicPattern.forEach((note=>{if(note.freq>0){
+playTone(note.freq,note.dur,"triangle",.085,time,null,audio.musicGain)
+;playTone(note.freq*.5,note.dur,"sine",.045,time,null,audio.musicGain)}time+=note.dur}))
+;const total=time-start;audio.musicTimer=setTimeout((()=>{audio.musicTimer=null
+;if(audio.musicOn&&state.phase==="playing"){scheduleMusic()}}),total*1e3)}function startMusic(){
+if(!audio.ctx){return}audio.musicOn=true;scheduleMusic()}function stopMusic(){if(audio.musicTimer){
+clearTimeout(audio.musicTimer);audio.musicTimer=null}audio.musicOn=false}
+function setMusicState(phase){if(!audio.ctx){return}if(audio.muted){stopMusic();return}
+if(phase==="playing"){
+audio.musicGain.gain.setTargetAtTime(audioLevels.music,audio.ctx.currentTime,.08);startMusic()
+}else if(phase==="paused"){
+audio.musicGain.gain.setTargetAtTime(audioLevels.music*.45,audio.ctx.currentTime,.08)}else{
+stopMusic();audio.musicGain.gain.setTargetAtTime(0,audio.ctx.currentTime,.1)}}
+function updateMuteButton(){muteBtn.textContent=audio.muted?"Unmute":"Mute"
+;muteBtn.classList.toggle("is-muted",audio.muted)
+;muteBtn.setAttribute("aria-pressed",audio.muted?"true":"false")}function setMuted(isMuted){
+audio.muted=isMuted;persistSoundPreference(isMuted);if(audio.ctx&&audio.master){
+const target=isMuted?0:audioLevels.master
+;audio.master.gain.setTargetAtTime(target,audio.ctx.currentTime,.06);if(isMuted){stopMusic()}else{
+setMusicState(state.phase)}}updateMuteButton()}function toggleMute(){const nextMuted=!audio.muted
+;if(nextMuted){setMuted(true);return}setMuted(false);unlockAudio({force:true})}
+function clamp(value,min,max){return Math.max(min,Math.min(max,value))}
+function round(value,places=2){const scale=Math.pow(10,places);return Math.round(value*scale)/scale}
+function ageForDiagnostics(value){return value===null?null:round(value)}function boardPixelSize(){
+return tileSize*width}function resetFeedback(resetCounters=false){feedback.particles=[]
+;feedback.rings=[];feedback.pops=[];feedback.screenFlash=0;feedback.screenShake=0
+;feedback.dangerCue=0;feedback.nearestGhost=null;feedback.powerPulse=0;feedback.lastPelletAge=null
+;feedback.lastPowerAge=null;feedback.lastFruitAge=null;feedback.lastGhostEatAge=null
+;feedback.lastHitAge=null;if(resetCounters){feedback.counters.pellet=0;feedback.counters.power=0
+;feedback.counters.fruit=0;feedback.counters.ghostEat=0;feedback.counters.hit=0}}
+function pushFeedbackRing(x,y,color,options={}){feedback.rings.push({x:x,y:y,color:color,age:0,
+ttl:options.ttl??.55,radius:options.radius??.35,grow:options.grow??.75,
+lineWidth:options.lineWidth??.08,fill:options.fill??false});if(feedback.rings.length>18){
+feedback.rings.splice(0,feedback.rings.length-18)}}
+function pushFeedbackPop(x,y,text,color,options={}){feedback.pops.push({x:x,y:y,text:text,
+color:color,age:0,ttl:options.ttl??.7,vy:options.vy??-1.15,size:options.size??.62})
+;if(feedback.pops.length>10){feedback.pops.splice(0,feedback.pops.length-10)}}
+function pushFeedbackParticles(x,y,color,count,options={}){const baseSpeed=options.speed??2.3
+;const ttl=options.ttl??.42;const size=options.size??.07
+;const seed=feedback.time*7.13+feedback.particles.length*.31+feedback.counters.pellet*.17
+;for(let i=0;i<count;i+=1){const angle=Math.PI*2*i/Math.max(1,count)+Math.sin(seed+i*12.989)*.32
+;const speed=baseSpeed*(.75+i%4*.13);feedback.particles.push({x:x,y:y,vx:Math.cos(angle)*speed,
+vy:Math.sin(angle)*speed,color:color,size:size,age:0,ttl:ttl})}if(feedback.particles.length>90){
+feedback.particles.splice(0,feedback.particles.length-90)}}function distanceToGhost(ghost){
+let dx=Math.abs(pacman.pos.x-ghost.pos.x);dx=Math.min(dx,width-dx);const dy=pacman.pos.y-ghost.pos.y
+;return Math.sqrt(dx*dx+dy*dy)}function isHarmfulGhost(ghost){
+return ghost.state!=="frightened"&&ghost.state!=="eyes"&&ghost.state!=="waiting"}
+function updateThreatDiagnostics(){let nearest=null;let nearestDistance=Infinity
+;let nearestHarmfulDistance=Infinity;ghosts.forEach((ghost=>{
+if(ghost.state==="eyes"||ghost.state==="waiting"){return}const distance=distanceToGhost(ghost)
+;if(distance<nearestDistance){nearestDistance=distance;nearest={name:ghost.name,state:ghost.state,
+distance:round(distance),tile:{col:Math.floor(ghost.pos.x),row:Math.floor(ghost.pos.y)},
+harmful:isHarmfulGhost(ghost)}}if(isHarmfulGhost(ghost)){
+nearestHarmfulDistance=Math.min(nearestHarmfulDistance,distance)}}));feedback.nearestGhost=nearest
+;feedback.dangerCue=state.phase==="playing"&&Number.isFinite(nearestHarmfulDistance)?round(clamp((4.2-nearestHarmfulDistance)/3.4,0,1),3):0
+}function updateFeedback(dt){feedback.time+=dt
+;feedback.screenFlash=Math.max(0,feedback.screenFlash-dt*2.6)
+;feedback.screenShake=Math.max(0,feedback.screenShake-dt*2.8)
+;feedback.powerPulse=Math.max(0,feedback.powerPulse-dt*1.4)
+;["lastPelletAge","lastPowerAge","lastFruitAge","lastGhostEatAge","lastHitAge"].forEach((key=>{
+if(feedback[key]!==null){feedback[key]+=dt;if(feedback[key]>6){feedback[key]=null}}}))
+;feedback.particles=feedback.particles.map((particle=>({...particle,x:particle.x+particle.vx*dt,
+y:particle.y+particle.vy*dt,age:particle.age+dt}))).filter((particle=>particle.age<particle.ttl))
+;feedback.rings=feedback.rings.map((ring=>({...ring,age:ring.age+dt
+}))).filter((ring=>ring.age<ring.ttl));feedback.pops=feedback.pops.map((pop=>({...pop,
+y:pop.y+pop.vy*dt,age:pop.age+dt}))).filter((pop=>pop.age<pop.ttl));updateThreatDiagnostics()}
+function recordPellet(col,row){const x=col+.5;const y=row+.5;feedback.lastPelletAge=0
+;feedback.counters.pellet+=1;pushFeedbackParticles(x,y,"#ffd166",5,{speed:1.4,ttl:.3,size:.045})
+;pushFeedbackPop(x,y-.2,"+10","#ffd166",{ttl:.45,size:.46,vy:-.72})}function recordPower(col,row){
+const x=col+.5;const y=row+.5;feedback.lastPowerAge=0;feedback.counters.power+=1
+;feedback.powerPulse=1;feedback.screenFlash=Math.max(feedback.screenFlash,.28)
+;pushFeedbackRing(x,y,"#ffd166",{radius:.35,grow:1.35,ttl:.9,lineWidth:.11})
+;pushFeedbackRing(pacman.pos.x,pacman.pos.y,"#4cc9f0",{radius:.55,grow:1.1,ttl:.75})
+;pushFeedbackParticles(x,y,"#ffd166",16,{speed:2.4,ttl:.62,size:.075})
+;pushFeedbackPop(x,y-.45,"POWER","#f6f5ff",{ttl:.9,size:.72,vy:-.78})}function recordFruit(points){
+const fruit=fruitTypes[fruitState.kindIndex];feedback.lastFruitAge=0;feedback.counters.fruit+=1
+;pushFeedbackRing(fruitSpawn.x,fruitSpawn.y,fruit.color,{radius:.45,grow:1,ttl:.72,lineWidth:.1})
+;pushFeedbackParticles(fruitSpawn.x,fruitSpawn.y,fruit.color,14,{speed:2.2,ttl:.55,size:.07})
+;pushFeedbackPop(fruitSpawn.x,fruitSpawn.y-.45,`+${points}`,fruit.color,{ttl:.9,size:.68})}
+function recordGhostEat(ghost,points){feedback.lastGhostEatAge=0;feedback.counters.ghostEat+=1
+;pushFeedbackRing(ghost.pos.x,ghost.pos.y,"#6ee7b7",{radius:.45,grow:.95,ttl:.72,lineWidth:.1})
+;pushFeedbackParticles(ghost.pos.x,ghost.pos.y,"#6ee7b7",12,{speed:2.3,ttl:.52,size:.07})
+;pushFeedbackPop(ghost.pos.x,ghost.pos.y-.42,`+${points}`,"#6ee7b7",{ttl:.85,size:.68})}
+function recordHit(ghost){feedback.lastHitAge=0;feedback.counters.hit+=1
+;feedback.screenFlash=Math.max(feedback.screenFlash,.9)
+;feedback.screenShake=Math.max(feedback.screenShake,.8)
+;pushFeedbackRing(pacman.pos.x,pacman.pos.y,"#ff4d6d",{radius:.5,grow:1.2,ttl:.82,lineWidth:.14})
+;pushFeedbackParticles(pacman.pos.x,pacman.pos.y,"#ff4d6d",18,{speed:2.8,ttl:.65,size:.08})
+;pushFeedbackPop(pacman.pos.x,pacman.pos.y-.45,ghost?"HIT":"MISS","#ff8fa3",{ttl:.8,size:.74})}
+function resetPellets(){pellets=new Set(basePellets);powerPellets=new Set(basePower)
+;pelletsRemaining=basePellets.length+basePower.length}function clearFruit(){fruitState.active=false
+;fruitState.timer=0}function resetFruitState(){clearFruit();fruitState.kindIndex=0
+;fruitState.spawned=0
+;fruitState.thresholds=fruitSpawnFractions.map((fraction=>Math.floor(totalPellets*fraction)))}
+function getDotLimitForGhost(name){if(name==="Rosewire"){return 0}if(name==="Bluewire"){
+return state.level===1?30:0}if(name==="Amberline"){if(state.level===1){return 60}
+if(state.level===2){return 50}return 0}return 0}function resetDotCountersForLevel(){
+house.globalCounterActive=false;house.globalCounter=0;house.pendingRelease=null
+;house.disableGlobalAfterRelease=false;house.dotTimer=0;ghosts.forEach((ghost=>{ghost.dotCounter=0
+;ghost.dotLimit=getDotLimitForGhost(ghost.name)}))}function enableGlobalDotCounter(){
+house.globalCounterActive=true;house.globalCounter=0;house.pendingRelease=null
+;house.disableGlobalAfterRelease=false;house.dotTimer=0}function resetGhostModes(){modeState.index=0
+;modeState.timer=modeSchedule[0]}function resetPositions(){pacman.pos={...pacStart};pacman.dir=-1
+;pacman.nextDir=-1;house.timer=0;house.exitCooldown=0;house.dotTimer=0;house.pendingRelease=null
+;house.disableGlobalAfterRelease=false;ghosts.forEach((ghost=>{ghost.pos={...ghost.start}
+;ghost.dir=-1;ghost.state=ghost.name==="Redshift"?"normal":"waiting"
+;ghost.inHouse=tileAt(Math.floor(ghost.pos.x),Math.floor(ghost.pos.y))==="H"
+;ghost.houseTarget=ghost.houseTop;ghost.respawnTimer=0}));state.frightenedTimer=0;state.eatStreak=0
+;clearFruit()}function resetGame(){state.score=0;state.level=1;state.lives=3
+;state.pendingNextLevel=false;resetPellets();resetFruitState();resetGhostModes()
+;resetDotCountersForLevel();resetPositions();resetFeedback(true)
+;setPhase("ready","Ready","Press Enter or tap Start.")
+;announceStatus("Ready. Press Enter or tap Start.");updateHud()}function updateHud(){
+if(state.score>state.highScore){state.highScore=state.score
+;localStorage.setItem("mazeChaseHigh",state.highScore)}scoreEl.textContent=state.score
+;highScoreEl.textContent=state.highScore;levelEl.textContent=state.level
+;livesEl.textContent=state.lives}function setPhase(phase,title,message){state.phase=phase
+;overlayTitle.textContent=title;overlayMessage.textContent=message
+;overlay.classList.toggle("show",phase!=="playing");if(phase==="playing"){
+deactivateDialog(overlay,false);canvas.focus({preventScroll:true})}else{
+activateDialog(overlay,phase==="paused"?pauseBtn:canvas,phase==="paused"?startBtn:startBtn)}
+pauseBtn.textContent=phase==="paused"?"Resume":"Pause";setMusicState(phase)}function startPlay(){
+if(state.phase==="playing"){return}state.pendingNextLevel=false;setPhase("playing","","")
+;announceStatus(`Started level ${state.level}.`);lastTime=performance.now();accumulator=0}
+function handleStartAction(){unlockAudio();if(state.phase==="ready"){playStartSound("start")
+;startPlay();return}if(state.phase==="levelcomplete"){state.level+=1;resetPellets()
+;resetFruitState();resetGhostModes();resetDotCountersForLevel();resetPositions();updateHud()
+;playStartSound("start");startPlay();announceStatus(`Level ${state.level} started.`);return}
+if(state.phase==="gameover"){resetGame();playStartSound("restart");startPlay()}}
+function handleResetAction(){unlockAudio();resetGame();playStartSound("restart")}
+function togglePause(){unlockAudio();if(state.phase==="playing"){
+setPhase("paused","Paused","Press P or Space to resume.");return}if(state.phase==="paused"){
+startPlay();return}recordSoundDiagnostic("action-unavailable",audio.muted?"muted":"unavailable")}
+function tileAt(col,row){if(row<0||row>=height){return"#"}if(col<0||col>=width){return"#"}
+return map[row][col]}function isCentered(pos){const fracX=pos.x-Math.floor(pos.x)
+;const fracY=pos.y-Math.floor(pos.y);return Math.abs(fracX-.5)<.05&&Math.abs(fracY-.5)<.05}
+function snapToCenter(pos){pos.x=Math.round(pos.x-.5)+.5;pos.y=Math.round(pos.y-.5)+.5}
+function canMovePacman(dirIndex){if(dirIndex<0){return false}const dir=DIRS[dirIndex]
+;const col=Math.floor(pacman.pos.x);const row=Math.floor(pacman.pos.y);let nextCol=col+dir.x
+;const nextRow=row+dir.y;if(nextCol<0){nextCol=width-1}else if(nextCol>=width){nextCol=0}
+const tile=tileAt(nextCol,nextRow);if(tile==="#"||tile==="="||tile==="H"){return false}return true}
+function canMoveGhost(ghost,dirIndex){if(dirIndex<0){return false}const dir=DIRS[dirIndex]
+;const col=Math.floor(ghost.pos.x);const row=Math.floor(ghost.pos.y);let nextCol=col+dir.x
+;const nextRow=row+dir.y;if(nextCol<0){nextCol=width-1}else if(nextCol>=width){nextCol=0}
+const tile=tileAt(nextCol,nextRow);if(tile==="#"){return false}if(tile==="="){
+return ghost.state==="eyes"||ghost.state==="leaving"||ghost.inHouse}if(tile==="H"){
+return ghost.inHouse||ghost.state==="eyes"||ghost.state==="leaving"}return true}
+function getTargetTile(target){return{col:Math.floor(target.x),row:Math.floor(target.y)}}
+function getGlobalMode(){return modeState.index%2===0?"scatter":"chase"}
+function advanceGhostMode(dt){if(!Number.isFinite(modeState.timer)){return false}modeState.timer-=dt
+;let changed=false;while(modeState.timer<=0&&modeState.index<modeSchedule.length-1){
+modeState.index+=1;modeState.timer+=modeSchedule[modeState.index];changed=true}
+if(modeState.index>=modeSchedule.length-1&&modeState.timer<=0){modeState.timer=Infinity}
+return changed}function reverseGhostsOnModeChange(){ghosts.forEach((ghost=>{
+if(ghost.state!=="normal"||ghost.inHouse){return}if(ghost.dir>=0){
+ghost.dir=(ghost.dir+2)%DIRS.length}}))}function getGhostByName(name){
+return ghosts.find((ghost=>ghost.name===name))}function isGhostReadyToLeave(ghost){
+return ghost&&ghost.state==="waiting"&&ghost.inHouse&&ghost.respawnTimer<=0}
+function getPreferredHouseGhost(){for(let i=0;i<dotReleaseOrder.length;i+=1){
+const ghost=getGhostByName(dotReleaseOrder[i]);if(isGhostReadyToLeave(ghost)){return ghost}}
+return null}function getHouseTimerLimit(){return state.level>=5?3:4}
+function getGlobalReleaseCandidate(){if(house.globalCounter===globalDotThresholds.Rosewire){
+return getGhostByName("Rosewire")}if(house.globalCounter===globalDotThresholds.Bluewire){
+return getGhostByName("Bluewire")}if(house.globalCounter===globalDotThresholds.Amberline){
+return getGhostByName("Amberline")}return null}function registerDotEaten(){house.dotTimer=0
+;if(house.globalCounterActive){house.globalCounter+=1;const candidate=getGlobalReleaseCandidate()
+;if(isGhostReadyToLeave(candidate)){house.pendingRelease=candidate
+;if(house.globalCounter===globalDotThresholds.Amberline){house.disableGlobalAfterRelease=true}}
+return}const counterGhost=getPreferredHouseGhost();if(counterGhost){counterGhost.dotCounter+=1}}
+function releaseGhost(ghost){ghost.state="leaving";ghost.inHouse=true;ghost.dir=0
+;ghost.houseTarget=null;house.exitCooldown=houseExitCooldown}function updateHouse(dt){
+house.timer+=dt;house.dotTimer+=dt;if(house.exitCooldown>0){
+house.exitCooldown=Math.max(0,house.exitCooldown-dt)}if(house.exitCooldown>0){return}
+if(house.pendingRelease&&isGhostReadyToLeave(house.pendingRelease)){
+releaseGhost(house.pendingRelease);house.pendingRelease=null;if(house.disableGlobalAfterRelease){
+house.globalCounterActive=false;house.globalCounter=0;house.disableGlobalAfterRelease=false}return}
+if(house.dotTimer>=getHouseTimerLimit()){const forced=getPreferredHouseGhost();if(forced){
+releaseGhost(forced);house.dotTimer=0;return}}if(!house.globalCounterActive){
+const counterGhost=getPreferredHouseGhost()
+;if(counterGhost&&counterGhost.dotCounter>=counterGhost.dotLimit){releaseGhost(counterGhost)}}}
+function updateHousePacing(ghost,dt){ghost.inHouse=true;if(ghost.respawnTimer>0){
+ghost.respawnTimer-=dt;return}if(!ghost.houseTarget){ghost.houseTarget=ghost.houseTop}
+if(isCentered(ghost.pos)){snapToCenter(ghost.pos);if(Math.abs(ghost.pos.y-ghost.houseTarget.y)<.05){
+ghost.houseTarget=ghost.houseTarget===ghost.houseTop?ghost.houseBottom:ghost.houseTop}
+ghost.dir=ghost.houseTarget.y<ghost.pos.y?0:2}moveEntity(ghost,housePaceSpeed,dt)}
+function moveEntity(entity,speed,dt){if(entity.dir<0){return}const dir=DIRS[entity.dir]
+;let remaining=speed*dt;while(remaining>0){const centerX=Math.floor(entity.pos.x)+.5
+;const centerY=Math.floor(entity.pos.y)+.5;let targetX=entity.pos.x;let targetY=entity.pos.y
+;if(dir.x>0){targetX=entity.pos.x<centerX?centerX:centerX+1}else if(dir.x<0){
+targetX=entity.pos.x>centerX?centerX:centerX-1}else if(dir.y>0){
+targetY=entity.pos.y<centerY?centerY:centerY+1}else if(dir.y<0){
+targetY=entity.pos.y>centerY?centerY:centerY-1}
+const dist=dir.x!==0?Math.abs(targetX-entity.pos.x):Math.abs(targetY-entity.pos.y);if(dist<1e-6){
+break}const step=Math.min(remaining,dist);entity.pos.x+=dir.x*step;entity.pos.y+=dir.y*step
+;remaining-=step;if(entity.pos.x<0){entity.pos.x+=width}else if(entity.pos.x>=width){
+entity.pos.x-=width}if(step>=dist-1e-6){break}}}function getLevelFactor(cap){
+return Math.min(state.level-1,cap)}function getSpeedMultiplier(stepAmount){
+return 1+getLevelFactor(speedLevelCap)*stepAmount}function getPacmanSpeed(){
+return pacmanSpeedBase*getSpeedMultiplier(pacmanSpeedStep)}function getGhostBaseSpeed(){
+return ghostSpeedBase*getSpeedMultiplier(ghostSpeedStep)}function getPowerDuration(){
+return Math.max(powerDurationMin,powerDurationBase-getLevelFactor(12)*powerDurationStep)}
+function getFrightenedBlinkStart(){return getPowerDuration()*frightenedBlinkStartRatio}
+function getFrightenedBlinkFastStart(){return getPowerDuration()*frightenedBlinkFastStartRatio}
+function getFruitDuration(){
+return Math.max(fruitDurationMin,fruitDurationBase-getLevelFactor(10)*fruitDurationStep)}
+function getFruitTier(spawnIndex){
+const baseTier=Math.min(Math.floor((state.level-1)/2),fruitTypes.length-1)
+;return Math.min(baseTier+spawnIndex,fruitTypes.length-1)}function spawnFruit(){
+const spawnIndex=fruitState.spawned;fruitState.kindIndex=getFruitTier(spawnIndex)
+;fruitState.timer=getFruitDuration();fruitState.active=true;fruitState.spawned+=1}
+function checkFruitSpawn(){if(fruitState.active||pelletsRemaining<=0){return}
+if(fruitState.spawned>=fruitState.thresholds.length){return}
+if(pelletsRemaining<=fruitState.thresholds[fruitState.spawned]){spawnFruit()}}
+function updateFruit(dt){if(fruitState.active){fruitState.timer=Math.max(0,fruitState.timer-dt)
+;if(fruitState.timer===0){fruitState.active=false}}checkFruitSpawn()}function getFruitScore(){
+const fruit=fruitTypes[fruitState.kindIndex];const levelBonus=getLevelFactor(12)*50
+;return fruit.points+levelBonus}function checkFruitPickup(){if(!fruitState.active){return}
+const dx=pacman.pos.x-fruitSpawn.x;const dy=pacman.pos.y-fruitSpawn.y;if(dx*dx+dy*dy<.45*.45){
+const points=getFruitScore();state.score+=points;recordFruit(points);fruitState.active=false
+;fruitState.timer=0;playFruitSound();updateHud()}}function getGhostComboScore(){
+const levelMultiplier=1+getLevelFactor(10)*.08
+;return Math.round(250*Math.pow(2,state.eatStreak)*levelMultiplier)}function consumePellet(){
+const col=Math.floor(pacman.pos.x);const row=Math.floor(pacman.pos.y);const index=row*width+col
+;if(pellets.has(index)){pellets.delete(index);pelletsRemaining-=1;state.score+=10
+;recordPellet(col,row);playPelletSound();updateHud()
+;announceStatus(`Pellet collected. ${pelletsRemaining} left.`);checkFruitSpawn()
+}else if(powerPellets.has(index)){powerPellets.delete(index);pelletsRemaining-=1;state.score+=50
+;recordPower(col,row);activatePower();playPowerSound();updateHud()
+;announceStatus(`Power pellet collected. ${pelletsRemaining} left.`);checkFruitSpawn()}}
+function updatePacman(dt){if(isCentered(pacman.pos)){snapToCenter(pacman.pos);consumePellet()
+;if(pacman.nextDir>=0&&canMovePacman(pacman.nextDir)){pacman.dir=pacman.nextDir}
+if(!canMovePacman(pacman.dir)){pacman.dir=-1}}const speed=getPacmanSpeed()
+;moveEntity(pacman,speed,dt);if(isCentered(pacman.pos)){snapToCenter(pacman.pos);consumePellet()}}
+function activatePower(){state.frightenedTimer=getPowerDuration();state.eatStreak=0
+;ghosts.forEach((ghost=>{const col=Math.floor(ghost.pos.x);const row=Math.floor(ghost.pos.y)
+;ghost.inHouse=tileAt(col,row)==="H"
+;if(ghost.state==="normal"||ghost.state==="frightened"||ghost.state==="leaving"&&!ghost.inHouse){
+ghost.state="frightened";if(ghost.dir>=0){ghost.dir=(ghost.dir+2)%DIRS.length}}}))}
+function getGhostSpeed(ghost){const base=getGhostBaseSpeed();if(ghost.state==="frightened"){
+const flashMultiplier=state.frightenedTimer<=getFrightenedBlinkStart()?.5:.55
+;return base*flashMultiplier}if(ghost.state==="eyes"){return base*1.45}if(ghost.state==="leaving"){
+return base*.85}return base}function getFrightenedBlinkOn(){
+const blinkStart=getFrightenedBlinkStart();if(state.frightenedTimer>blinkStart){return false}
+const duration=getPowerDuration();const elapsed=duration-state.frightenedTimer
+;const rate=state.frightenedTimer<=getFrightenedBlinkFastStart()?frightenedBlinkFastRate:frightenedBlinkSlowRate
+;return Math.floor(elapsed*rate)%2===0}function chooseGhostDirection(ghost,target){
+const col=Math.floor(ghost.pos.x);const row=Math.floor(ghost.pos.y)
+;const allowReverse=ghost.state==="eyes";let options=[];TURN_PRIORITY.forEach((dirIndex=>{
+if(canMoveGhost(ghost,dirIndex)){options.push(dirIndex)}}));if(!options.length){return ghost.dir}
+if(ghost.dir>=0&&!allowReverse&&options.length>1){const reverse=(ghost.dir+2)%DIRS.length
+;const filtered=options.filter((dirIndex=>dirIndex!==reverse));if(filtered.length){options=filtered}
+}if(ghost.state==="frightened"){return options[Math.floor(Math.random()*options.length)]}
+if(options.length===1){return options[0]}const targetTile=getTargetTile(target)
+;let bestDir=options[0];let bestDist=Infinity;options.forEach((dirIndex=>{const dir=DIRS[dirIndex]
+;const nextCol=col+dir.x;const nextRow=row+dir.y;const dx=nextCol-targetTile.col
+;const dy=nextRow-targetTile.row;const dist=dx*dx+dy*dy;if(dist<bestDist){bestDist=dist
+;bestDir=dirIndex}}));return bestDir}function getPacmanAhead(tilesAhead){
+const dirIndex=pacman.dir>=0?pacman.dir:1;const dir=DIRS[dirIndex];const ahead={
+x:pacman.pos.x+dir.x*tilesAhead,y:pacman.pos.y+dir.y*tilesAhead};if(dirIndex===0){
+ahead.x-=tilesAhead}return ahead}function getChaseTarget(ghost){const ahead=getPacmanAhead(4)
+;if(ghost.name==="Rosewire"){return ahead}if(ghost.name==="Bluewire"){const blinky=ghosts[0]
+;const pivot=getPacmanAhead(2);return{x:pivot.x+(pivot.x-blinky.pos.x),
+y:pivot.y+(pivot.y-blinky.pos.y)}}if(ghost.name==="Amberline"){
+const dx=Math.floor(pacman.pos.x)-Math.floor(ghost.pos.x)
+;const dy=Math.floor(pacman.pos.y)-Math.floor(ghost.pos.y);const dist=Math.sqrt(dx*dx+dy*dy)
+;return dist>=8?pacman.pos:ghost.scatter}return pacman.pos}function updateGhost(ghost,dt){
+if(ghost.state==="waiting"){updateHousePacing(ghost,dt);return}if(isCentered(ghost.pos)){
+snapToCenter(ghost.pos);const col=Math.floor(ghost.pos.x);const row=Math.floor(ghost.pos.y)
+;ghost.inHouse=tileAt(col,row)==="H";if(ghost.state==="leaving"){const dx=ghost.pos.x-exitTile.x
+;const dy=ghost.pos.y-exitTile.y;if(Math.abs(dx)<.2&&Math.abs(dy)<.2){ghost.state="normal"}}
+if(ghost.state==="eyes"){const dx=ghost.pos.x-ghost.housePos.x;const dy=ghost.pos.y-ghost.housePos.y
+;if(Math.abs(dx)<.2&&Math.abs(dy)<.2){ghost.state="waiting";ghost.respawnTimer=houseRespawnDelay
+;ghost.inHouse=true;ghost.houseTarget=ghost.houseTop;ghost.dir=2;return}}let target=ghost.scatter
+;const mode=getGlobalMode();if(ghost.state==="leaving"){target=exitTile
+}else if(ghost.state==="eyes"){target=ghost.housePos}else if(ghost.state==="frightened"){
+target=ghost.pos}else if(mode==="chase"){target=getChaseTarget(ghost)}
+ghost.dir=chooseGhostDirection(ghost,target)}const speed=getGhostSpeed(ghost)
+;moveEntity(ghost,speed,dt)}function checkCollisions(){ghosts.forEach((ghost=>{
+const dx=pacman.pos.x-ghost.pos.x;const dy=pacman.pos.y-ghost.pos.y
+;const dist=Math.sqrt(dx*dx+dy*dy);if(dist<.45){if(ghost.state==="frightened"){ghost.state="eyes"
+;ghost.dir=(ghost.dir+2)%DIRS.length;const points=getGhostComboScore();state.score+=points
+;state.eatStreak+=1;recordGhostEat(ghost,points);playGhostEatSound();updateHud()
+}else if(ghost.state!=="eyes"&&ghost.state!=="waiting"){if(state.phase==="playing"){recordHit(ghost)
+}loseLife()}}}))}function loseLife(){if(state.phase!=="playing"){return}state.lives-=1
+;playDeathSound();updateHud();if(state.lives<=0){playGameOverSound()
+;setPhase("gameover","Game Over","Press Enter to retry.")
+;announceStatus(`Caught. Game over with ${state.score} points.`);return}resetGhostModes()
+;resetPositions();setPhase("ready","Ready","Press Enter to continue.")
+;announceStatus(`Caught. ${state.lives} lives left.`)}function updateTimers(dt){updateHouse(dt)
+;if(state.frightenedTimer>0){state.frightenedTimer=Math.max(0,state.frightenedTimer-dt)
+;if(state.frightenedTimer===0){ghosts.forEach((ghost=>{if(ghost.state==="frightened"){
+ghost.state="normal"}}))}}if(advanceGhostMode(dt)){reverseGhostsOnModeChange()}updateFruit(dt)}
+function update(dt){updateTimers(dt);updatePacman(dt);checkFruitPickup()
+;ghosts.forEach((ghost=>updateGhost(ghost,dt)));checkCollisions();updateFeedback(dt)
+;if(pelletsRemaining<=0&&!state.pendingNextLevel){state.pendingNextLevel=true;playLevelClearSound()
+;setPhase("levelcomplete","Level Clear","Press Enter for the next wave.")
+;announceStatus(`Level ${state.level} clear. Press Enter for the next wave.`)}}function drawWalls(){
+ctx.save();ctx.fillStyle="#0c1a3f";ctx.strokeStyle="rgba(76, 201, 240, 0.8)"
+;ctx.lineWidth=Math.max(1,tileSize*.08);for(let row=0;row<height;row+=1){
+for(let col=0;col<width;col+=1){const tile=map[row][col];if(tile==="#"){const x=col*tileSize
+;const y=row*tileSize;ctx.beginPath()
+;ctx.rect(x+tileSize*.08,y+tileSize*.08,tileSize*.84,tileSize*.84);ctx.fill();ctx.stroke()}}}
+gateCols.forEach((col=>{const x=col*tileSize+tileSize*.2;const y=gateRow*tileSize+tileSize*.45
+;ctx.strokeStyle="rgba(255, 209, 102, 0.6)";ctx.lineWidth=tileSize*.08;ctx.beginPath()
+;ctx.moveTo(x,y);ctx.lineTo(x+tileSize*.6,y);ctx.stroke()}));ctx.restore()}
+function drawPellets(time){ctx.save();pellets.forEach((index=>{const row=Math.floor(index/width)
+;const col=index%width;const x=(col+.5)*tileSize;const y=(row+.5)*tileSize
+;const twinkle=.75+Math.abs(Math.sin(time*3.4+index))*.25;ctx.fillStyle="rgba(255, 214, 128, 0.9)"
+;ctx.beginPath();ctx.arc(x,y,tileSize*.075*twinkle,0,Math.PI*2);ctx.fill()}))
+;const pulse=.16+Math.abs(Math.sin(time*5))*.08;powerPellets.forEach((index=>{
+const row=Math.floor(index/width);const col=index%width;const x=(col+.5)*tileSize
+;const y=(row+.5)*tileSize;ctx.save();ctx.shadowColor="rgba(255, 209, 102, 0.9)"
+;ctx.shadowBlur=tileSize*.45;ctx.strokeStyle="rgba(255, 209, 102, 0.42)";ctx.lineWidth=tileSize*.05
+;ctx.beginPath();ctx.arc(x,y,tileSize*(pulse+.13),0,Math.PI*2);ctx.stroke()
+;ctx.fillStyle="rgba(255, 209, 102, 1)";ctx.beginPath();ctx.arc(x,y,tileSize*pulse,0,Math.PI*2)
+;ctx.fill();ctx.restore()}));ctx.restore()}function drawFruit(time){if(!fruitState.active){return}
+const fruit=fruitTypes[fruitState.kindIndex];const x=fruitSpawn.x*tileSize
+;const y=fruitSpawn.y*tileSize;const bob=Math.sin(time*6)*tileSize*.04;ctx.save()
+;ctx.translate(x,y+bob);const pulse=.72+Math.abs(Math.sin(time*4.6))*.28
+;ctx.strokeStyle=`${fruit.color}aa`;ctx.lineWidth=tileSize*.06;ctx.shadowColor=fruit.color
+;ctx.shadowBlur=tileSize*.36;ctx.beginPath();ctx.arc(0,0,tileSize*(.4+pulse*.08),0,Math.PI*2)
+;ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=fruit.color;ctx.beginPath()
+;ctx.arc(0,0,tileSize*.28,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(255, 255, 255, 0.55)"
+;ctx.beginPath();ctx.arc(-tileSize*.08,-tileSize*.08,tileSize*.08,0,Math.PI*2);ctx.fill()
+;ctx.strokeStyle="#6ee7b7";ctx.lineWidth=tileSize*.05;ctx.beginPath();ctx.moveTo(0,-tileSize*.28)
+;ctx.lineTo(tileSize*.06,-tileSize*.42);ctx.stroke();ctx.restore()}function drawPacman(time){
+const centerX=pacman.pos.x*tileSize;const centerY=pacman.pos.y*tileSize;const radius=tileSize*.45
+;const mouth=.25+Math.abs(Math.sin(time*8))*.18;let angle=0;if(pacman.dir===0){angle=-Math.PI/2
+}else if(pacman.dir===1){angle=0}else if(pacman.dir===2){angle=Math.PI/2}else if(pacman.dir===3){
+angle=Math.PI}ctx.save();if(feedback.dangerCue>0){const alpha=.18+feedback.dangerCue*.34
+;ctx.strokeStyle=`rgba(255, 77, 109, ${alpha})`;ctx.lineWidth=tileSize*(.06+feedback.dangerCue*.05)
+;ctx.beginPath();ctx.arc(centerX,centerY,tileSize*(.72+Math.sin(time*9)*.05),0,Math.PI*2)
+;ctx.stroke()}if(feedback.powerPulse>0||state.frightenedTimer>0){
+const pulse=Math.max(feedback.powerPulse,Math.min(1,state.frightenedTimer/getPowerDuration()))
+;ctx.strokeStyle=`rgba(76, 201, 240, ${.18+pulse*.36})`;ctx.lineWidth=tileSize*.08;ctx.beginPath()
+;ctx.arc(centerX,centerY,tileSize*(.7+(1-pulse)*.35),0,Math.PI*2);ctx.stroke()}
+if(feedback.lastHitAge!==null&&feedback.lastHitAge<.45){const hitAlpha=1-feedback.lastHitAge/.45
+;ctx.strokeStyle=`rgba(255, 77, 109, ${hitAlpha*.7})`;ctx.lineWidth=tileSize*.11;ctx.beginPath()
+;ctx.arc(centerX,centerY,tileSize*(.55+(1-hitAlpha)*.55),0,Math.PI*2);ctx.stroke()}
+ctx.fillStyle="#ffd166";ctx.beginPath();ctx.moveTo(centerX,centerY)
+;ctx.arc(centerX,centerY,radius,angle+mouth,angle-mouth,true);ctx.closePath();ctx.fill()
+;ctx.restore()}function drawGhost(ghost,time){const x=ghost.pos.x*tileSize
+;const y=ghost.pos.y*tileSize;const size=tileSize*.45
+;const wobble=Math.sin(time*6+ghost.pos.x)*tileSize*.05;ctx.save();if(ghost.state==="eyes"){
+drawGhostEyes(ghost,x,y,size);ctx.restore();return}let bodyColor=ghost.color
+;const distance=distanceToGhost(ghost);const harmful=isHarmfulGhost(ghost)
+;if(harmful&&distance<4.2){const cue=clamp((4.2-distance)/3.4,0,1)
+;ctx.strokeStyle=`rgba(255, 77, 109, ${.18+cue*.35})`;ctx.lineWidth=tileSize*(.05+cue*.05)
+;ctx.beginPath();ctx.arc(x,y,tileSize*(.66+Math.sin(time*7)*.04),0,Math.PI*2);ctx.stroke()}
+if(ghost.state==="frightened"){const blinkAlpha=getFrightenedBlinkOn()?.72:.42
+;ctx.strokeStyle=`rgba(246, 245, 255, ${blinkAlpha})`;ctx.lineWidth=tileSize*.08
+;ctx.shadowColor="rgba(76, 201, 240, 0.85)";ctx.shadowBlur=tileSize*.38;ctx.beginPath()
+;ctx.arc(x,y,tileSize*(.62+Math.sin(time*6)*.04),0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0
+;if(state.frightenedTimer<=getFrightenedBlinkStart()){const blinkOn=getFrightenedBlinkOn()
+;bodyColor=blinkOn?"#f6f5ff":"#3b5bff"}else{bodyColor="#3b5bff"}}else if(harmful){
+ctx.shadowColor=ghost.color;ctx.shadowBlur=tileSize*.22}ctx.fillStyle=bodyColor;ctx.beginPath()
+;ctx.arc(x,y-wobble*.4,size,Math.PI,0,false);ctx.lineTo(x+size,y+size);for(let i=0;i<4;i+=1){
+const waveX=x+size-(i+.5)*(size*.5);const waveY=y+size-(i%2===0?wobble:-wobble)
+;ctx.lineTo(waveX,waveY)}ctx.closePath();ctx.fill();ctx.shadowBlur=0;drawGhostEyes(ghost,x,y,size)
+;ctx.restore()}function drawGhostEyes(ghost,x,y,size){const dir=ghost.dir>=0?DIRS[ghost.dir]:DIRS[1]
+;const offsetX=dir.x*size*.2;const offsetY=dir.y*size*.2;ctx.fillStyle="#f4f7ff";ctx.beginPath()
+;ctx.arc(x-size*.2,y-size*.1,size*.18,0,Math.PI*2);ctx.arc(x+size*.2,y-size*.1,size*.18,0,Math.PI*2)
+;ctx.fill();ctx.fillStyle="#1d2340";ctx.beginPath()
+;ctx.arc(x-size*.2+offsetX,y-size*.1+offsetY,size*.08,0,Math.PI*2)
+;ctx.arc(x+size*.2+offsetX,y-size*.1+offsetY,size*.08,0,Math.PI*2);ctx.fill()}
+function drawFeedbackEffects(){ctx.save();feedback.rings.forEach((ring=>{
+const progress=ring.age/ring.ttl;const alpha=Math.max(0,1-progress);const x=ring.x*tileSize
+;const y=ring.y*tileSize;ctx.globalAlpha=alpha;ctx.strokeStyle=ring.color
+;ctx.lineWidth=Math.max(1,tileSize*ring.lineWidth);ctx.beginPath()
+;ctx.arc(x,y,tileSize*(ring.radius+ring.grow*progress),0,Math.PI*2);if(ring.fill){
+ctx.fillStyle=ring.color;ctx.fill()}ctx.stroke()}));feedback.particles.forEach((particle=>{
+const alpha=Math.max(0,1-particle.age/particle.ttl);ctx.globalAlpha=alpha
+;ctx.fillStyle=particle.color;ctx.beginPath()
+;ctx.arc(particle.x*tileSize,particle.y*tileSize,tileSize*particle.size,0,Math.PI*2);ctx.fill()}))
+;feedback.pops.forEach((pop=>{const alpha=Math.max(0,1-pop.age/pop.ttl);const x=pop.x*tileSize
+;const y=pop.y*tileSize;ctx.globalAlpha=alpha
+;ctx.font=`800 ${Math.max(11,tileSize*pop.size)}px system-ui, sans-serif`;ctx.textAlign="center"
+;ctx.textBaseline="middle";ctx.lineWidth=Math.max(2,tileSize*.12)
+;ctx.strokeStyle="rgba(8, 12, 24, 0.82)";ctx.fillStyle=pop.color;ctx.strokeText(pop.text,x,y)
+;ctx.fillText(pop.text,x,y)}));ctx.restore()}function drawScreenFeedback(){
+if(feedback.screenFlash<=0){return}ctx.save()
+;ctx.fillStyle=`rgba(255, 77, 109, ${Math.min(.28,feedback.screenFlash*.22)})`
+;ctx.fillRect(0,0,boardPixelSize(),boardPixelSize());ctx.restore()}function render(time){
+ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.restore()
+;const shakeAmount=feedback.screenShake>0?feedback.screenShake*tileSize*.16:0
+;const shakeX=shakeAmount?Math.sin(feedback.time*61)*shakeAmount:0
+;const shakeY=shakeAmount?Math.cos(feedback.time*47)*shakeAmount:0;ctx.save();if(shakeAmount){
+ctx.translate(shakeX,shakeY)}drawWalls();drawPellets(time);drawFruit(time);drawPacman(time)
+;ghosts.forEach((ghost=>drawGhost(ghost,time)));drawFeedbackEffects();ctx.restore()
+;drawScreenFeedback()}function loop(timestamp){const now=timestamp||performance.now()
+;const dt=Math.min(.05,(now-lastTime)/1e3||0);lastTime=now;if(state.phase==="playing"){
+accumulator+=dt;while(accumulator>=step){update(step);accumulator-=step}}else{updateFeedback(dt)}
+render(now/1e3);requestAnimationFrame(loop)}function dirName(index){
+return DIRS[index]?DIRS[index].name:"none"}function renderGameToText(){return JSON.stringify({
+game:"Maze Chase",coordinateSystem:"maze tiles, origin top-left, x right, y down",phase:state.phase,
+score:state.score,highScore:state.highScore,level:state.level,lives:state.lives,
+pendingNextLevel:!!state.pendingNextLevel,pelletsRemaining:pelletsRemaining,
+powerPelletsRemaining:powerPellets.size,frightenedTimer:round(state.frightenedTimer),
+eatStreak:state.eatStreak,dangerCue:feedback.dangerCue,nearestGhost:feedback.nearestGhost,mode:{
+index:modeState.index,timer:round(modeState.timer),name:getGlobalMode()},pacman:{
+x:round(pacman.pos.x),y:round(pacman.pos.y),tile:{col:Math.floor(pacman.pos.x),
+row:Math.floor(pacman.pos.y)},dir:dirName(pacman.dir),nextDir:dirName(pacman.nextDir)},fruit:{
+active:!!fruitState.active,timer:round(fruitState.timer),spawned:fruitState.spawned,
+kind:fruitTypes[fruitState.kindIndex]?.name||null},ghosts:ghosts.map((ghost=>({name:ghost.name,
+state:ghost.state,x:round(ghost.pos.x),y:round(ghost.pos.y),tile:{col:Math.floor(ghost.pos.x),
+row:Math.floor(ghost.pos.y)},dir:dirName(ghost.dir),inHouse:!!ghost.inHouse,
+dotCounter:ghost.dotCounter,dotLimit:ghost.dotLimit}))),house:{
+globalCounterActive:!!house.globalCounterActive,globalCounter:house.globalCounter,
+pendingRelease:house.pendingRelease},feedback:{
+lastPelletAge:ageForDiagnostics(feedback.lastPelletAge),
+lastPowerAge:ageForDiagnostics(feedback.lastPowerAge),
+lastFruitAge:ageForDiagnostics(feedback.lastFruitAge),
+lastGhostEatAge:ageForDiagnostics(feedback.lastGhostEatAge),
+lastHitAge:ageForDiagnostics(feedback.lastHitAge),pelletCount:feedback.counters.pellet,
+powerCount:feedback.counters.power,fruitCount:feedback.counters.fruit,
+ghostEatCount:feedback.counters.ghostEat,hitCount:feedback.counters.hit,
+feedbackParticles:feedback.particles.length+feedback.rings.length,popupCount:feedback.pops.length,
+counts:{pellet:feedback.counters.pellet,power:feedback.counters.power,fruit:feedback.counters.fruit,
+ghostEat:feedback.counters.ghostEat,hit:feedback.counters.hit,
+particles:feedback.particles.length+feedback.rings.length,popups:feedback.pops.length},
+screenFlash:round(feedback.screenFlash,3),screenShake:round(feedback.screenShake,3)},audio:{
+soundEnabled:!audio.muted,muted:!!audio.muted,audioReady:!!audio.ctx,lastSound:audio.lastSound,
+soundCount:audio.soundCount,unlocked:!!audio.unlocked,musicOn:!!audio.musicOn,
+lastSoundStatus:audio.lastSoundStatus,soundCounts:{...audio.soundCounts}},fullscreen:{
+available:!!fullscreenDiagnostics.available,active:!!fullscreenDiagnostics.active,
+element:fullscreenDiagnostics.element,requests:fullscreenDiagnostics.requests,
+changes:fullscreenDiagnostics.changes,errors:fullscreenDiagnostics.errors,
+lastError:fullscreenDiagnostics.lastError},liveStatus:liveStatus.textContent,overlay:{
+visible:overlay.classList.contains("show"),title:overlayTitle.textContent},controls:{
+pauseLabel:pauseBtn.textContent,mutedLabel:muteBtn.textContent}})}
+window.render_game_to_text=renderGameToText;window.advanceTime=function advanceTime(ms=0){
+const steps=Math.max(1,Math.round(Math.max(0,ms)/(1e3/60)));for(let i=0;i<steps;i++){
+if(state.phase==="playing"){update(step)}else{updateFeedback(step)}}render(performance.now()/1e3)
+;return renderGameToText()};function handleDirection(dirName){
+const dirIndex=DIRS.findIndex((dir=>dir.name===dirName));pacman.nextDir=dirIndex}
+function handleSwipeStart(event){if(event.pointerType!=="mouse"){
+swipeStart=[event.clientX,event.clientY,event.pointerId]}}function handleSwipeEnd(event){
+if(!swipeStart||swipeStart[2]!==event.pointerId){return}const dx=event.clientX-swipeStart[0]
+;const dy=event.clientY-swipeStart[1];swipeStart=null;if(Math.max(Math.abs(dx),Math.abs(dy))<18){
+return}unlockAudio();handleDirection(Math.abs(dx)>Math.abs(dy)?dx>0?"right":"left":dy>0?"down":"up")
+}const keyDirections={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",w:"up",
+a:"left",s:"down",d:"right"};function handleKeydown(event){
+const key=event.key.length===1?event.key.toLowerCase():event.key;const direction=keyDirections[key]
+;if(key==="f"&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!activeDialog&&!isEditableTarget(event.target)){
+event.preventDefault();toggleFullscreen();return}
+if(event.target&&event.target.closest&&event.target.closest("button, a, input, select, textarea")&&event.key!=="Escape"&&event.key!=="Tab"&&key!=="m"){
+return}if(direction||event.key===" "||key==="m"){event.preventDefault()}
+if(direction||["Enter"," ","p"].includes(key)){unlockAudio()}if(key==="m"){toggleMute()
+}else if(direction){handleDirection(direction)}else if(key==="Enter"){handleStartAction()
+}else if(key===" "||key==="p"){togglePause()}}function bindControls(){
+document.addEventListener("keydown",handleKeydown)
+;document.addEventListener("fullscreenchange",handleFullscreenChange)
+;startBtn.addEventListener("click",handleStartAction)
+;resetBtn.addEventListener("click",handleResetAction);pauseBtn.addEventListener("click",togglePause)
+;muteBtn.addEventListener("click",toggleMute)
+;fullscreenBtn.addEventListener("click",toggleFullscreen)
+;canvas.addEventListener("pointerdown",handleSwipeStart)
+;canvas.addEventListener("pointerup",handleSwipeEnd)
+;canvas.addEventListener("pointercancel",(()=>swipeStart=null))}function init(){resizeCanvas()
+;window.addEventListener("resize",resizeCanvas);resetGame();bindControls();updateMuteButton()
+;syncFullscreenButton();requestAnimationFrame(loop)}init()})();
+</script>
   </body>
 </html>

@@ -88,8 +88,8 @@ async function checkPerformanceBaselineNegative() {
 const BUDGETS = {
   Catalog: { transferKb: 200, requests: 18 },
   Lexica: { transferKb: 160, requests: 4 },
-  "Idle Tycoon": { transferKb: 210, requests: 4 },
-  "Arcade Jump": { transferKb: 130, requests: 4 },
+  "Idle Tycoon": { transferKb: 170, requests: 4 },
+  "Arcade Jump": { transferKb: 110, requests: 4 },
   "Brick Breaker": { transferKb: 120, requests: 4 },
   default: { transferKb: 100, requests: 3 }
 };
@@ -119,8 +119,51 @@ Latest pass covered 1 manifest games and 2 pages total.
   });
 }
 
+async function checkPageWeightNegative() {
+  await withFixture('page-weight', async (root) => {
+    await writeFixture(root, 'websites/manifest.json', JSON.stringify([{
+      id: 'fixture-game',
+      slug: 'fixture-game',
+      title: 'Fixture Game',
+      subtitle: 'Fixture.',
+      url: 'websites/fixture-game.html',
+      cover: 'covers/fixture-game.svg',
+      tags: ['Puzzle'],
+      addedAt: '2026-05-23',
+      popularity: 1,
+    }], null, 2));
+    await writeFixture(root, 'scripts/audit-pagespeed.mjs', `
+const BUDGETS = {
+  Catalog: { transferKb: 200, requests: 18 },
+  Lexica: { transferKb: 160, requests: 4 },
+  "Idle Tycoon": { transferKb: 170, requests: 4 },
+  "Arcade Jump": { transferKb: 110, requests: 4 },
+  "Brick Breaker": { transferKb: 120, requests: 4 },
+  default: { transferKb: 1, requests: 3 }
+};
+`);
+    await writeFixture(root, 'index.html', '<!doctype html><script>function aboveFoldCoverCount() { return 6; // desktop\\n}</script>');
+    await writeFixture(root, 'sw.js', 'self.addEventListener("install", () => {});');
+    await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
+    await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'covers/fixture-game.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'websites/fixture-game.html', '<!doctype html><title>Fixture</title><script src="heavy.js"></script>');
+    await writeFixture(root, 'websites/heavy.js', `export const payload = '${'x'.repeat(1800)}';`);
+
+    const result = runValidator('scripts/check-page-weight.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0) {
+      fail('check-page-weight fixture: expected failure for oversized static payload, got success');
+    }
+    if (!/Fixture Game/.test(combined) || !/static page weight/.test(combined)) {
+      fail(`check-page-weight fixture: expected oversized Fixture Game payload message, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
+}
+
 await checkGeneratedSurfaceNegative();
 await checkPerformanceBaselineNegative();
+await checkPageWeightNegative();
 
 if (issues.length > 0) {
   console.error(`Validator fixture check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -128,4 +171,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Validator fixture check passed: generated-surface and performance-baseline negative paths fail on throwaway fixtures.');
+console.log('Validator fixture check passed: generated-surface, performance-baseline, and page-weight negative paths fail on throwaway fixtures.');
