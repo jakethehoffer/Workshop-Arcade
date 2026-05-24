@@ -3,8 +3,8 @@
 //
 // The browser performance audit is the final source of truth, but it runs in a
 // slow Playwright job. This fast gate catches deterministic payload drift by
-// summing each manifest game HTML file plus its local script dependencies and
-// comparing that total with the same publish budgets used by
+// summing each manifest game HTML file plus its same-origin first-load assets
+// and comparing that total with the same publish budgets used by
 // scripts/audit-pagespeed.mjs. It also checks the catalog's local first-load
 // shell: catalog HTML, manifest, service worker/install metadata, app icon, and
 // the desktop eager cover set.
@@ -66,10 +66,52 @@ function readBudget(source, key) {
   return { transferKb: Number(match[1]), requests: Number(match[2]) };
 }
 
-function scriptSrcs(html) {
-  return [...html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi)]
-    .map((match) => match[1].trim())
+function tagAttributes(tag) {
+  const attrs = {};
+  for (const match of tag.matchAll(/\s([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g)) {
+    attrs[match[1].toLowerCase()] = (match[2] ?? match[3] ?? match[4] ?? '').trim();
+  }
+  return attrs;
+}
+
+function cssUrls(source) {
+  return [...source.matchAll(/url\(\s*(?:"([^"]+)"|'([^']+)'|([^)'"\s]+))\s*\)/gi)]
+    .map((match) => (match[1] ?? match[2] ?? match[3] ?? '').trim())
     .filter(Boolean);
+}
+
+function srcsetUrls(srcset) {
+  return srcset
+    .split(',')
+    .map((entry) => entry.trim().split(/\s+/, 1)[0])
+    .filter(Boolean);
+}
+
+function firstLoadResourceRefs(html) {
+  const refs = [];
+
+  for (const match of html.matchAll(/<(script|img|audio|video|source|track)\b[^>]*>/gi)) {
+    const attrs = tagAttributes(match[0]);
+    if (attrs.src) refs.push(attrs.src);
+    if (attrs.srcset) refs.push(...srcsetUrls(attrs.srcset));
+  }
+
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const attrs = tagAttributes(match[0]);
+    const rel = (attrs.rel || '').toLowerCase();
+    const countsOnLoad = /\b(?:stylesheet|preload|modulepreload|icon|apple-touch-icon|manifest)\b/.test(rel);
+    if (countsOnLoad && attrs.href) refs.push(attrs.href);
+  }
+
+  for (const match of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+    refs.push(...cssUrls(match[1]));
+  }
+
+  for (const match of html.matchAll(/\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)) {
+    refs.push(...cssUrls(match[1] ?? match[2] ?? ''));
+  }
+
+  return refs;
 }
 
 function isLocalSrc(src) {
@@ -85,11 +127,29 @@ function resolveLocalDependency(fromRelativePath, src) {
   const resolvedRelative = relative(repoRoot, absolute);
 
   if (resolvedRelative.startsWith('..') || isAbsolute(resolvedRelative)) {
-    fail(`${fromRelativePath}: script dependency escapes repo root (${src})`);
+    fail(`${fromRelativePath}: local dependency escapes repo root (${src})`);
     return null;
   }
 
   return toPosixPath(resolvedRelative);
+}
+
+async function collectGameDependencies(htmlPath, html) {
+  const dependencyPaths = firstLoadResourceRefs(html)
+    .filter(isLocalSrc)
+    .map((src) => resolveLocalDependency(htmlPath, src))
+    .filter(Boolean);
+  const seen = new Set(dependencyPaths);
+
+  for (const cssPath of [...seen].filter((dependency) => dependency.endsWith('.css'))) {
+    const css = await readText(cssPath);
+    for (const src of cssUrls(css).filter(isLocalSrc)) {
+      const dependency = resolveLocalDependency(cssPath, src);
+      if (dependency) seen.add(dependency);
+    }
+  }
+
+  return [...seen];
 }
 
 function defaultSortedGames(manifest) {
@@ -163,11 +223,7 @@ async function checkGames(manifest, budgets) {
     const html = await readText(htmlPath);
     if (!html) continue;
 
-    const dependencyPaths = scriptSrcs(html)
-      .filter(isLocalSrc)
-      .map((src) => resolveLocalDependency(htmlPath, src))
-      .filter(Boolean);
-    const uniqueDependencies = [...new Set(dependencyPaths)];
+    const uniqueDependencies = await collectGameDependencies(htmlPath, html);
     const htmlBytes = await fileSize(htmlPath);
     const dependencyBytes = (await Promise.all(uniqueDependencies.map((file) => fileSize(file))))
       .reduce((sum, size) => sum + size, 0);

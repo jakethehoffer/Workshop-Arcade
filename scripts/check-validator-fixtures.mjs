@@ -147,8 +147,10 @@ const BUDGETS = {
     await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
     await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
     await writeFixture(root, 'covers/fixture-game.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-    await writeFixture(root, 'websites/fixture-game.html', '<!doctype html><title>Fixture</title><script src="heavy.js"></script>');
-    await writeFixture(root, 'websites/heavy.js', `export const payload = '${'x'.repeat(1800)}';`);
+    await writeFixture(root, 'websites/fixture-game.html', '<!doctype html><title>Fixture</title><link rel="stylesheet" href="fixture.css"><main style="background-image:url(heavy-inline.dat)">Fixture</main>');
+    await writeFixture(root, 'websites/fixture.css', 'body { background-image: url("heavy-bg.dat"); }');
+    await writeFixture(root, 'websites/heavy-inline.dat', 'i'.repeat(80));
+    await writeFixture(root, 'websites/heavy-bg.dat', 'x'.repeat(1800));
 
     const result = runValidator('scripts/check-page-weight.mjs', root);
     const combined = `${result.stdout}\n${result.stderr}`;

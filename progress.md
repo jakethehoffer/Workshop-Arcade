@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-05-24 Codex pass 85
+
+- Implemented the non-conflicting asset gate + compact feel pass on `codex/nonconflicting-asset-feel-pass-2026-05-24`: coordinator-owned static page-weight asset coverage plus isolated Circuit Draft, Market Minute, and Cipher Rooms polish.
+- Extended `npm run test:page-weight` so game budgets include same-origin first-load assets beyond scripts, including local images/media/source/link assets and simple CSS `url(...)` references. The page-weight negative fixture now proves an oversized non-script local asset fails fast.
+- Polished three existing game surfaces without changing scoring/rules/storage keys, manifest entries, generated surfaces, package scripts, workflows, service worker, covers, or capture recipes: Circuit Draft lane/draft/install flow; Market Minute contract/action readiness and mobile density; Cipher Rooms clue/keypad/unlock feedback.
+- Suggested next pass: keep using small non-conflicting bundles; choose either another validation blind-spot closure or a one-file polish pass on older high-use games after reviewing the latest strict capture artifact.
+
 ## 2026-05-24 Codex pass 84
 
 - Implemented the non-conflicting runtime + legacy feel pass on `codex/nonconflicting-runtime-polish-2026-05-24`: coordinator-owned catalog first-load cover-request gating plus isolated Memory Match, Idle Tycoon, and Rhythm Circuit polish.
