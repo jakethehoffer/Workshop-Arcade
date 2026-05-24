@@ -1117,7 +1117,7 @@ function aboveFoldCoverCount() {
 // up-front (44 total = catalog HTML + manifest.json + sw.js + app icon + 40
 // covers). The IntersectionObserver below makes the deferral actually deferred:
 // below-the-fold covers ship with a tiny blank placeholder src and only swap to
-// the real cover URL once the card crosses within rootMargin of the viewport.
+// the real cover URL once the card actually enters the viewport.
 // The loading="lazy" + fetchpriority="low" hints stay in place so browsers
 // without IntersectionObserver still get the native lazy-load behaviour.
 const COVER_LAZY_PLACEHOLDER = "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27640%27%20height%3D%27360%27%2F%3E";
@@ -1139,7 +1139,7 @@ function getCoverLazyObserver() {
       }
       obs.unobserve(img);
     }
-  }, { rootMargin: '300px 0px' });
+  }, { rootMargin: '0px 0px' });
   return coverLazyObserver;
 }
 

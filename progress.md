@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-05-24 Codex pass 84
+
+- Implemented the non-conflicting runtime + legacy feel pass on `codex/nonconflicting-runtime-polish-2026-05-24`: coordinator-owned catalog first-load cover-request gating plus isolated Memory Match, Idle Tycoon, and Rhythm Circuit polish.
+- Extended `npm run test:games` with a browser-backed catalog resource assertion that proves startup makes zero GitHub API requests, first-load covers stay limited to visible/eager cards, and deferred covers request only after an explicit scroll. The new gate exposed a real `index.html` lazy-cover regression from the old `300px` observer margin, so the observer now swaps covers only when cards enter the viewport.
+- Polished three existing game surfaces without changing scoring/rules/storage keys, manifest entries, generated surfaces, package scripts, workflows, service worker, covers, or capture recipes: Memory Match visible match/mismatch/status feedback; Idle Tycoon save/menu/run hierarchy and venture flow; Rhythm Circuit ready-state, lane, and judgement readability.
+- Suggested next pass: keep using small non-conflicting bundles; the best remaining candidates are either another focused runtime guard or one-file polish on older high-popularity games after reviewing the latest strict capture artifact.
+
 ## 2026-05-23 Codex pass 83
 
 - Implemented the non-conflicting quality pass on `codex/nonconflicting-quality-pass-2026-05-23`: coordinator-owned catalog runtime request gating plus isolated Paddle Pulse, Neon Drift, and Reflex Spark polish.

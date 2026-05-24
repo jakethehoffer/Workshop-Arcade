@@ -156,6 +156,94 @@ function observePage(page, baseUrl, label) {
   });
 }
 
+function recordPageRequests(page) {
+  const requests = [];
+  page.on("request", (request) => {
+    requests.push({
+      url: request.url(),
+      resourceType: request.resourceType()
+    });
+  });
+  return requests;
+}
+
+function localRequestPath(requestUrl, baseUrl) {
+  if (!requestUrl.startsWith(baseUrl)) return null;
+  const pathname = decodeURIComponent(new URL(requestUrl).pathname);
+  return pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+}
+
+function uniqueCoverRequests(requests, baseUrl) {
+  const coverSet = new Set(manifest.map((game) => game.cover).filter(Boolean));
+  return [...new Set(requests
+    .map((request) => localRequestPath(request.url, baseUrl))
+    .filter((requestPath) => requestPath && coverSet.has(requestPath)))];
+}
+
+async function currentCatalogCoverState(page) {
+  return await page.locator(".card").evaluateAll((cards) => cards.map((card) => {
+    const img = card.querySelector(".thumb img");
+    const rect = card.getBoundingClientRect();
+    const src = img?.getAttribute("src") || "";
+    const lazySrc = img?.dataset.lazySrc || "";
+    const rawCover = lazySrc || src;
+    let cover = rawCover;
+    try {
+      cover = new URL(rawCover, location.href).pathname.replace(/^\/+/, "");
+    } catch {
+      cover = rawCover;
+    }
+    return {
+      title: card.querySelector(".title")?.textContent?.trim() || "unknown",
+      cover,
+      visible: rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth,
+      eager: img?.loading === "eager" || img?.getAttribute("fetchpriority") === "high",
+      placeholder: src.startsWith("data:image/svg+xml")
+    };
+  }));
+}
+
+async function checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, label) {
+  await page.waitForTimeout(500);
+
+  if (githubRequests.length) {
+    addFailure(label, `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
+  }
+
+  const initialState = await currentCatalogCoverState(page);
+  const allowedInitialCovers = new Set(initialState
+    .filter((cover) => cover.visible || cover.eager)
+    .map((cover) => cover.cover)
+    .filter(Boolean));
+  const initialCoverRequests = uniqueCoverRequests(requests, baseUrl);
+  const earlyBelowFoldCovers = initialCoverRequests.filter((cover) => !allowedInitialCovers.has(cover));
+  if (earlyBelowFoldCovers.length) {
+    addFailure(label, `below-fold covers loaded before scroll: ${earlyBelowFoldCovers.join(", ")}`);
+  }
+
+  const missingEagerCovers = initialState
+    .filter((cover) => cover.eager && cover.cover && !initialCoverRequests.includes(cover.cover))
+    .map((cover) => cover.cover);
+  if (missingEagerCovers.length) {
+    addFailure(label, `eager first-viewport covers did not request on startup: ${missingEagerCovers.join(", ")}`);
+  }
+
+  const firstDeferredCover = page.locator(".card img[data-lazy-src]").first();
+  if (await firstDeferredCover.count()) {
+    await firstDeferredCover.scrollIntoViewIfNeeded();
+  } else {
+    await page.evaluate(() => window.scrollTo(0, document.scrollingElement?.scrollHeight || document.documentElement.scrollHeight));
+  }
+  await page.waitForTimeout(700);
+  const afterScrollCoverRequests = uniqueCoverRequests(requests, baseUrl);
+  const newCoverRequests = afterScrollCoverRequests.filter((cover) => !initialCoverRequests.includes(cover));
+  if (newCoverRequests.length === 0 && afterScrollCoverRequests.length < manifest.length) {
+    addFailure(label, "scrolling the catalog did not trigger any deferred below-fold cover requests");
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(100);
+}
+
 async function getFilterChips(page) {
   return await page.locator("#filters .chip").evaluateAll((chips) => chips.map((chip) => ({
     category: chip.dataset.category || "",
@@ -378,8 +466,12 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
     viewport: { width: 390, height: 844, isMobile: true, hasTouch: true }
   });
   observePage(page, baseUrl, "catalog mobile");
+  const githubRequests = [];
+  const requests = recordPageRequests(page);
+  await installCatalogGithubApiStub(page, githubRequests);
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
+  await checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, "catalog mobile");
 
   const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
   if (overflow > 2) {
@@ -393,6 +485,7 @@ async function checkCatalog(browser, baseUrl) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   observePage(page, baseUrl, "catalog");
   const githubRequests = [];
+  const requests = recordPageRequests(page);
   await installCatalogGithubApiStub(page, githubRequests);
   setPhase("catalog", "navigate catalog");
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
@@ -404,6 +497,8 @@ async function checkCatalog(browser, baseUrl) {
     addFailure("catalog", `expected ${manifest.length} cards, found ${cardCount}`);
   }
 
+  setPhase("catalog", "check first-load resources");
+  await checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, "catalog");
   setPhase("catalog", "check filter chips");
   await checkFilterChips(page);
   setPhase("catalog", "check card tag filtering");

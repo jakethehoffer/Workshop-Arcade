@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Memory Match</title>
+<link rel="icon" href="data:," />
 <!-- workshop-meta:start -->
 <meta name="description" content="Flip cards two at a time and find every pair. Three difficulty grids." />
 <meta name="theme-color" content="#0b0f14" />
@@ -112,6 +113,37 @@
   .seg button{border-radius:999px;border:0;background:transparent;box-shadow:none;padding:6px 12px}
   .seg button[aria-pressed="true"]{background:linear-gradient(180deg,rgba(94,234,212,0.22),rgba(11,17,32,0.92));border:1px solid rgba(94,234,212,0.55);box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 12px rgba(94,234,212,0.18)}
 
+  .status-strip{
+    width:min(100%,620px);display:flex;align-items:center;justify-content:center;gap:10px;
+    min-height:42px;padding:8px 12px;border-radius:12px;
+    background:linear-gradient(180deg,rgba(16,26,46,0.92),rgba(8,14,26,0.92));
+    border:1px solid rgba(94,234,212,0.24);
+    box-shadow:0 8px 18px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .status-kicker{
+    flex:0 0 auto;min-width:72px;text-align:center;
+    color:#5eead4;font-size:10px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;
+  }
+  .status-copy{color:#d8e4f8;font-size:14px;line-height:1.25;font-weight:700;text-align:center}
+  .status-strip[data-tone="flipped"]{border-color:rgba(124,158,255,0.5)}
+  .status-strip[data-tone="flipped"] .status-kicker{color:#9bb4ff}
+  .status-strip[data-tone="match"]{
+    border-color:rgba(94,234,212,0.75);
+    background:linear-gradient(180deg,rgba(19,64,70,0.92),rgba(8,24,32,0.94));
+    box-shadow:0 8px 20px rgba(0,0,0,0.26), 0 0 18px rgba(94,234,212,0.16);
+  }
+  .status-strip[data-tone="mismatch"]{
+    border-color:rgba(251,146,60,0.78);
+    background:linear-gradient(180deg,rgba(82,42,20,0.9),rgba(28,18,16,0.94));
+    box-shadow:0 8px 20px rgba(0,0,0,0.26), 0 0 18px rgba(251,146,60,0.13);
+  }
+  .status-strip[data-tone="mismatch"] .status-kicker{color:#fdba74}
+  .status-strip[data-tone="win"]{
+    border-color:rgba(250,204,21,0.72);
+    background:linear-gradient(180deg,rgba(74,57,18,0.9),rgba(25,22,12,0.94));
+  }
+  .status-strip[data-tone="win"] .status-kicker{color:#fde68a}
+
   .board{
     --cols:4;
     display:grid;gap:10px;width:100%;
@@ -119,31 +151,91 @@
   }
   .card{
     aspect-ratio:1/1;border-radius:14px;border:1px solid rgba(94,234,212,0.22);
-    background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
+    background:
+      radial-gradient(circle at 50% 44%,rgba(94,234,212,0.08),transparent 36%),
+      linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
     color:#e6edf3;cursor:pointer;
+    position:relative;overflow:hidden;isolation:isolate;
     display:flex;align-items:center;justify-content:center;
     font-size:clamp(28px,7vw,52px);line-height:1;
     box-shadow:0 8px 18px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
-    transition:transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    transition:transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
     -webkit-tap-highlight-color:transparent;
   }
+  .card::before,.card::after{pointer-events:none}
   .card:hover:not([data-state="matched"]):not(:disabled){border-color:rgba(94,234,212,0.55);transform:translateY(-1px)}
-  .card[data-state="hidden"]{color:transparent}
-  .card[data-state="hidden"]::before{
-    content:"";display:block;width:46%;height:46%;border-radius:50%;
-    background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2);
-    opacity:0.45;filter:blur(2px);
+  .card[data-state="hidden"]{
+    color:transparent;
+    background:
+      linear-gradient(135deg,rgba(94,234,212,0.16),transparent 36%),
+      repeating-linear-gradient(135deg,rgba(255,255,255,0.035) 0 6px,transparent 6px 13px),
+      linear-gradient(180deg,rgba(18,33,57,0.96),rgba(8,14,28,0.96));
   }
-  .card[data-state="up"]{background:linear-gradient(180deg,rgba(45,75,120,0.55),rgba(20,38,70,0.65));border-color:rgba(94,234,212,0.55)}
+  .card[data-state="hidden"]::before{
+    content:"";display:block;width:58%;height:58%;border-radius:50%;
+    background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2);
+    opacity:0.34;filter:blur(5px);
+  }
+  .card[data-state="hidden"]::after{
+    content:"?";position:absolute;inset:auto;
+    width:38%;height:38%;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(94,234,212,0.36);
+    color:rgba(216,228,248,0.86);
+    background:rgba(6,14,26,0.5);
+    font-size:0.52em;font-weight:900;
+    text-shadow:0 0 12px rgba(94,234,212,0.28);
+  }
+  .card[data-state="up"]{
+    background:
+      radial-gradient(circle at 50% 42%,rgba(124,158,255,0.22),transparent 42%),
+      linear-gradient(180deg,rgba(45,75,120,0.62),rgba(20,38,70,0.72));
+    border-color:rgba(124,158,255,0.68);
+    box-shadow:0 10px 22px rgba(0,0,0,0.3), 0 0 16px rgba(124,158,255,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
   .card[data-state="matched"]{
-    background:linear-gradient(180deg,rgba(94,234,212,0.18),rgba(20,38,70,0.65));
-    border-color:rgba(94,234,212,0.75);
+    background:
+      radial-gradient(circle at 50% 42%,rgba(94,234,212,0.22),transparent 44%),
+      linear-gradient(180deg,rgba(94,234,212,0.28),rgba(16,57,65,0.72));
+    border-color:rgba(94,234,212,0.95);
     color:#5eead4;
     cursor:default;
-    box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 18px rgba(94,234,212,0.18);
+    box-shadow:inset 0 0 0 1px rgba(94,234,212,0.28), 0 0 22px rgba(94,234,212,0.24);
+  }
+  .card[data-state="matched"]::after{
+    content:"PAIR";position:absolute;right:6px;top:6px;
+    padding:3px 5px;border-radius:999px;
+    background:rgba(6,24,30,0.72);border:1px solid rgba(94,234,212,0.44);
+    color:#bffbf2;font-size:8px;font-weight:900;letter-spacing:0.12em;
+  }
+  .card[data-feedback="match"]{animation:matchPop 0.5s ease-out}
+  .card[data-feedback="mismatch"]{
+    border-color:rgba(251,146,60,0.92);
+    background:
+      radial-gradient(circle at 50% 42%,rgba(251,146,60,0.24),transparent 43%),
+      linear-gradient(180deg,rgba(84,45,30,0.82),rgba(31,25,34,0.78));
+    box-shadow:0 10px 22px rgba(0,0,0,0.3), 0 0 18px rgba(251,146,60,0.18);
+    animation:mismatchWobble 0.36s ease-in-out;
+  }
+  .card[data-feedback="mismatch"]::after{
+    content:"MISS";position:absolute;right:6px;top:6px;
+    padding:3px 5px;border-radius:999px;
+    background:rgba(37,18,10,0.72);border:1px solid rgba(251,146,60,0.48);
+    color:#fed7aa;font-size:8px;font-weight:900;letter-spacing:0.1em;
   }
   .card:focus-visible{outline:3px solid rgba(124,158,255,0.7);outline-offset:2px}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  @keyframes matchPop{
+    0%{transform:scale(1)}
+    45%{transform:scale(1.055)}
+    100%{transform:scale(1)}
+  }
+  @keyframes mismatchWobble{
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-3px)}
+    70%{transform:translateX(3px)}
+  }
 
   .overlay{
     position:fixed;inset:0;background:rgba(3,7,18,0.72);backdrop-filter:blur(8px);
@@ -166,7 +258,26 @@
   @media (max-width:560px){
     body{padding:14px 10px 24px}
     .brand .title{font-size:18px;letter-spacing:0.14em}
+    .panel{gap:10px}
+    .hud{gap:6px}
+    .pill{min-width:64px;padding:6px 8px;border-radius:10px}
+    .pill .label{font-size:8px;letter-spacing:0.18em}
+    .pill .value{font-size:15px}
+    .controls{width:100%;gap:6px}
+    .btn,.seg button{padding:7px 9px;border-radius:9px;font-size:11px;letter-spacing:0.035em}
+    .seg{width:100%;padding:2px}
+    .seg button{flex:1;padding:6px 8px}
+    .status-strip{min-height:38px;padding:7px 9px;gap:7px;border-radius:10px}
+    .status-kicker{min-width:58px;font-size:9px;letter-spacing:0.16em}
+    .status-copy{font-size:12px}
     .board{gap:7px}
+    .card{border-radius:11px}
+    .card[data-state="matched"]::after,
+    .card[data-feedback="mismatch"]::after{right:4px;top:4px;padding:2px 4px;font-size:7px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .card{transition:none}
+    .card[data-feedback="match"],.card[data-feedback="mismatch"]{animation:none}
   }
 </style>
 </head>
@@ -195,7 +306,11 @@
     <button class="btn" type="button" id="fullscreenBtn" aria-pressed="false" title="Enter fullscreen (F)" aria-label="Enter fullscreen">⛶ Full</button>
     <button class="btn" type="button" id="helpBtn">❓ Help</button>
   </div>
-  <p class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Ready.</p>
+  <div class="status-strip" id="statusStrip" data-tone="ready" aria-hidden="true">
+    <span class="status-kicker" id="statusKicker">Ready</span>
+    <span class="status-copy" id="statusText">Pick any two hidden cards.</span>
+  </div>
+  <p class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Ready. Pick any two hidden cards.</p>
   <div class="board" id="board" role="grid" aria-label="Memory match board"></div>
 </div>
 
@@ -254,6 +369,9 @@
     help:    document.getElementById('helpBtn'),
     helpOverlay: document.getElementById('helpOverlay'),
     helpClose:   document.getElementById('helpClose'),
+    statusStrip: document.getElementById('statusStrip'),
+    statusKicker:document.getElementById('statusKicker'),
+    statusText:  document.getElementById('statusText'),
     liveStatus:  document.getElementById('liveStatus'),
     winOverlay:  document.getElementById('winOverlay'),
     winMoves:    document.getElementById('winMoves'),
@@ -334,6 +452,10 @@
     mismatchCount: 0,
     streak: 0,           // consecutive matches in the current run
     bestStreak: 0,       // best streak this run
+    cardFeedback: Object.create(null),
+    statusTone: 'ready',
+    statusKicker: 'Ready',
+    statusMessage: 'Pick any two hidden cards.',
     soundEnabled: true
   };
 
@@ -370,6 +492,23 @@
   function announce(message){
     if (els.liveStatus) els.liveStatus.textContent = message;
   }
+  function setVisibleStatus(tone, kicker, message){
+    state.statusTone = tone;
+    state.statusKicker = kicker;
+    state.statusMessage = message;
+    if (els.statusStrip) els.statusStrip.dataset.tone = tone;
+    if (els.statusKicker) els.statusKicker.textContent = kicker;
+    if (els.statusText) els.statusText.textContent = message;
+    announce(kicker + '. ' + message);
+  }
+  function setCardFeedback(ids, result){
+    for (const id of ids) state.cardFeedback[id] = result;
+    for (const id of ids) refreshCard(id);
+  }
+  function clearCardFeedback(ids){
+    for (const id of ids) delete state.cardFeedback[id];
+    for (const id of ids) refreshCard(id);
+  }
 
   function setDifficulty(name){
     if (!DIFFICULTIES[name]) return;
@@ -396,11 +535,12 @@
     state.busy = false;
     state.streak = 0;
     state.bestStreak = 0;
+    state.cardFeedback = Object.create(null);
     els.board.style.setProperty('--cols', conf.cols);
     renderBoard();
     updateHud();
     closeOverlay(els.winOverlay);
-    announce(state.difficulty + ' board ready. Find ' + conf.pairs + ' pairs.');
+    setVisibleStatus('ready', 'Ready', state.difficulty + ': find ' + conf.pairs + ' pairs.');
   }
 
   function renderBoard(){
@@ -410,6 +550,7 @@
       btn.className = 'card';
       btn.type = 'button';
       btn.dataset.state = card.state;
+      btn.dataset.feedback = state.cardFeedback[card.id] || 'idle';
       btn.dataset.id = String(card.id);
       btn.setAttribute('role', 'gridcell');
       btn.setAttribute('aria-label', card.state === 'hidden' ? 'Hidden card ' + (card.id + 1) : 'Card ' + (card.id + 1) + ': ' + card.icon);
@@ -424,6 +565,7 @@
     const btn = els.board.querySelector('button[data-id="' + id + '"]');
     if (!btn) return;
     btn.dataset.state = card.state;
+    btn.dataset.feedback = state.cardFeedback[id] || 'idle';
     btn.textContent = card.state === 'hidden' ? '' : card.icon;
     btn.setAttribute('aria-label', card.state === 'hidden'
       ? 'Hidden card ' + (card.id + 1)
@@ -456,7 +598,7 @@
     state.flipped.push(id);
     state.lastFlipAt = state.now;
     state.flipCount += 1;
-    announce('Flipped card ' + (id + 1) + '.');
+    setVisibleStatus('flipped', 'Card up', state.flipped.length === 1 ? 'Pick one more card.' : 'Checking the pair.');
     playFlip();
     refreshCard(id);
 
@@ -472,7 +614,8 @@
         state.matchCount += 1;
         state.streak += 1;
         if (state.streak > state.bestStreak) state.bestStreak = state.streak;
-        announce('Matched ' + a.icon + '. ' + state.matched + ' of ' + DIFFICULTIES[state.difficulty].pairs + ' pairs found.');
+        setCardFeedback([aId, bId], 'match');
+        setVisibleStatus('match', 'Match', a.icon + ' pair found. ' + state.matched + ' of ' + DIFFICULTIES[state.difficulty].pairs + ' pairs.');
         playMatch(state.streak);
         refreshCard(aId);
         refreshCard(bId);
@@ -484,7 +627,8 @@
         state.lastMismatchAt = state.now;
         state.mismatchCount += 1;
         state.streak = 0;
-        announce('No match. Try another pair.');
+        setCardFeedback([aId, bId], 'mismatch');
+        setVisibleStatus('mismatch', 'No match', 'Watch these two flip back.');
         playMismatch();
         updateHud();
       }
@@ -499,11 +643,11 @@
     if (aId == null || bId == null) { state.busy = false; return; }
     const a = state.cards[aId], b = state.cards[bId];
     a.state = b.state = 'hidden';
-    refreshCard(aId);
-    refreshCard(bId);
+    clearCardFeedback([aId, bId]);
     state.flipped = [];
     state.busy = false;
     state.pendingResolveAt = 0;
+    setVisibleStatus('ready', 'Try again', 'Pick any hidden card.');
   }
 
   function finishGame(){
@@ -521,7 +665,7 @@
     els.winNote.textContent = (beat
       ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves in ' + formatTime(elapsed) + '.'
       : 'Finished in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.') + streakNote;
-    announce('Board complete in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.');
+    setVisibleStatus('win', 'Complete', state.moves + ' moves in ' + formatTime(elapsed) + '.');
     playWin();
     openOverlay(els.winOverlay, els.winPlayAgain);
     updateHud();
@@ -682,6 +826,13 @@
       bestStreak: state.bestStreak,
       soundEnabled: state.soundEnabled,
       liveStatus: els.liveStatus ? els.liveStatus.textContent : '',
+      visibleFeedback: {
+        tone: state.statusTone,
+        label: state.statusKicker,
+        message: state.statusMessage,
+        cardIds: Object.keys(state.cardFeedback).map(Number),
+        cardTypes: Object.assign({}, state.cardFeedback)
+      },
       fullscreenActive: isFullscreenActive(),
       fullscreenSupported: fullscreenSupported(),
       feedback: {
@@ -692,6 +843,9 @@
         matchCount: state.matchCount,
         mismatchCount: state.mismatchCount,
         streak: state.streak,
+        visibleLabel: state.statusKicker,
+        visibleTone: state.statusTone,
+        highlightedCards: Object.keys(state.cardFeedback).length,
         flashActive: state.busy
       }
     });

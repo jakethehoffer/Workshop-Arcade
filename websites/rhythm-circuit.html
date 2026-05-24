@@ -69,7 +69,7 @@
       linear-gradient(180deg,#0b0f14,#070b12 80%);
     display:flex;flex-direction:column;align-items:center;padding:22px 14px 28px;overflow-x:hidden;
   }
-  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none}
+  .brand{display:flex;flex-direction:column;gap:3px;line-height:1;align-self:flex-start;margin-bottom:8px;user-select:none;transition:margin 140ms ease,opacity 140ms ease}
   .brand .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
   .brand .title{font-size:22px;letter-spacing:0;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.2);text-transform:uppercase}
   .panel{width:100%;max-width:720px;display:flex;flex-direction:column;gap:12px}
@@ -95,6 +95,16 @@
     color:rgba(94,234,212,0.86);font-weight:800;
   }
   .lane-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .timing-readout{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch}
+  .timing-chip{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;
+    border:1px solid rgba(94,234,212,0.18);border-radius:10px;
+    background:rgba(7,16,26,0.72);padding:7px 9px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.035);
+  }
+  .timing-chip .label{font-size:9px;letter-spacing:0;text-transform:uppercase;color:rgba(94,234,212,0.78);font-weight:800;white-space:nowrap}
+  .timing-chip .value{font-size:12px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .timing-chip[data-kind="window"]{justify-content:center;background:rgba(20,30,50,0.72)}
   .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
   .btn,.lane-btn{
     background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
@@ -103,11 +113,38 @@
     letter-spacing:0;text-transform:uppercase;font-size:12px;
     box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
   }
-  .lane-btn{min-height:44px;font-size:15px;font-weight:800}
-  .lane-btn[data-active="true"]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
+  .lane-btn{
+    --lane-color:#5eead4;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:7px;
+    min-height:50px;font-size:15px;font-weight:800;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;
+  }
+  .lane-btn::before{
+    content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--lane-color);
+    opacity:0.72;box-shadow:0 0 16px var(--lane-color);
+  }
+  .lane-btn:nth-child(1){--lane-color:#5eead4}
+  .lane-btn:nth-child(2){--lane-color:#22d3ee}
+  .lane-btn:nth-child(3){--lane-color:#7c9eff}
+  .lane-btn:nth-child(4){--lane-color:#f472b6}
+  .lane-key{font-size:20px;line-height:1}
+  .lane-sub{font-size:9px;text-transform:uppercase;color:rgba(182,196,220,0.86);line-height:1}
+  .lane-btn[data-active="true"]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent;transform:translateY(1px)}
+  .lane-btn[data-active="true"] .lane-sub{color:rgba(6,36,42,0.76)}
   .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}
   .fullscreen-btn[aria-pressed="true"]{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
   .btn:hover,.lane-btn:hover{border-color:rgba(94,234,212,0.55)}
+  .btn:focus-visible,.lane-btn:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:2px}
+  body[data-mode="playing"]{padding-top:14px}
+  body[data-mode="playing"] .brand{margin-bottom:2px;opacity:0.74}
+  body[data-mode="playing"] .brand .eyebrow{display:none}
+  body[data-mode="playing"] .brand .title{font-size:14px}
+  body[data-mode="playing"] .panel{gap:8px}
+  body[data-mode="playing"] .hud{gap:6px}
+  body[data-mode="playing"] .pill{min-width:62px;padding:5px 8px;border-radius:9px}
+  body[data-mode="playing"] .pill .label{font-size:8px}
+  body[data-mode="playing"] .pill .value{font-size:14px}
+  body[data-mode="playing"] .status{min-height:16px;font-size:10px}
+  body[data-mode="playing"] .btn{padding:7px 9px;font-size:10px}
+  body[data-mode="playing"] .lane-btn{min-height:44px}
   html:fullscreen body{min-height:100vh;padding:18px 12px;overflow:auto}
   html:fullscreen .panel{max-width:820px}
   html:-webkit-full-screen body{min-height:100vh;padding:18px 12px;overflow:auto}
@@ -133,9 +170,17 @@
     .panel{gap:10px}
     .pill{min-width:64px;padding:7px 9px}
     .pill .value{font-size:16px}
+    .timing-readout{grid-template-columns:1fr;gap:6px}
+    .timing-chip{padding:6px 8px}
     .status{font-size:11px;letter-spacing:0}
     .btn{padding:8px 10px;font-size:11px}
-    .lane-btn{min-height:42px;padding:8px 6px}
+    .lane-btn{min-height:46px;padding:8px 6px;gap:5px}
+    .lane-key{font-size:18px}
+    body[data-mode="playing"] .brand .title{font-size:13px}
+    body[data-mode="playing"] .timing-readout{grid-template-columns:1fr .82fr 1.18fr}
+    body[data-mode="playing"] .timing-chip{justify-content:center;padding:5px 6px}
+    body[data-mode="playing"] .timing-chip .label{display:none}
+    body[data-mode="playing"] .timing-chip .value{text-align:center;font-size:10px}
   }
 </style>
 </head>
@@ -156,10 +201,15 @@
     <canvas id="game" width="880" height="550" tabindex="0" aria-label="Rhythm Circuit playfield. Hit falling notes at the pulse line with D, F, J, K, or the four touch lane buttons."></canvas>
   </div>
   <div class="lane-buttons" aria-label="Touch lane controls">
-    <button class="lane-btn" type="button" data-lane="0" aria-label="Lane one D">D</button>
-    <button class="lane-btn" type="button" data-lane="1" aria-label="Lane two F">F</button>
-    <button class="lane-btn" type="button" data-lane="2" aria-label="Lane three J">J</button>
-    <button class="lane-btn" type="button" data-lane="3" aria-label="Lane four K">K</button>
+    <button class="lane-btn" type="button" data-lane="0" aria-label="Lane one D"><span class="lane-key">D</span><span class="lane-sub">Tap</span></button>
+    <button class="lane-btn" type="button" data-lane="1" aria-label="Lane two F"><span class="lane-key">F</span><span class="lane-sub">Tap</span></button>
+    <button class="lane-btn" type="button" data-lane="2" aria-label="Lane three J"><span class="lane-key">J</span><span class="lane-sub">Tap</span></button>
+    <button class="lane-btn" type="button" data-lane="3" aria-label="Lane four K"><span class="lane-key">K</span><span class="lane-sub">Tap</span></button>
+  </div>
+  <div class="timing-readout" aria-label="Timing feedback">
+    <div class="timing-chip"><span class="label">Next</span><span class="value" id="nextCueValue">20 notes</span></div>
+    <div class="timing-chip" data-kind="window"><span class="label">Hit Window</span><span class="value" id="hitWindowValue">±165ms</span></div>
+    <div class="timing-chip"><span class="label">Last</span><span class="value" id="lastTimingValue">Ready</span></div>
   </div>
   <div class="status" id="statusLine" aria-live="polite">Press Start to arm the circuit.</div>
   <div class="controls">
@@ -222,6 +272,9 @@
     sound: document.getElementById("soundBtn"),
     fullscreen: document.getElementById("fullscreenBtn"),
     help: document.getElementById("helpBtn"),
+    nextCue: document.getElementById("nextCueValue"),
+    hitWindow: document.getElementById("hitWindowValue"),
+    lastTiming: document.getElementById("lastTimingValue"),
     helpOverlay: document.getElementById("helpOverlay"),
     helpClose: document.getElementById("helpClose"),
     laneButtons: Array.from(document.querySelectorAll(".lane-btn"))
@@ -244,6 +297,10 @@
     laneFlashUntil: [0,0,0,0],
     judgement: "",
     judgementUntil: 0,
+    lastTimingText: "Ready",
+    lastJudgement: "",
+    lastDelta: null,
+    lastLane: null,
     now: 0
   };
   const feedback = { lastHitAt:-9999, lastMissAt:-9999, lastStartAt:-9999, lastCompleteAt:-9999, hitCount:0, missCount:0, startCount:0, completeCount:0 };
@@ -272,12 +329,37 @@
   function laneWidth(){ return 150; }
   function laneLeft(lane){ return 104 + lane * 168; }
   function noteY(note){ return TOP_Y + ((LEAD_MS - (note.time - state.time)) / LEAD_MS) * (HIT_Y - TOP_Y); }
+  function timingBandPixels(ms){ return (ms / LEAD_MS) * (HIT_Y - TOP_Y); }
   function visibleNotes(){
     return chart.filter((note) => note.status === "pending" && note.time - state.time <= LEAD_MS + 120 && note.time - state.time >= -210);
   }
   function nextPending(){ return chart.find((note) => note.status === "pending") || null; }
   function recordUiAction(action){
     lastUiAction = action;
+  }
+  function formatTiming(delta){
+    if (!Number.isFinite(delta)) return "";
+    const rounded = Math.abs(Math.round(delta));
+    if (rounded <= 4) return "On beat";
+    return `${delta < 0 ? "Early" : "Late"} ${rounded}ms`;
+  }
+  function setLastTiming(judgement, delta, lane = null){
+    state.lastJudgement = judgement || "";
+    state.lastDelta = Number.isFinite(delta) ? Math.round(delta) : null;
+    state.lastLane = lane;
+    const timing = formatTiming(delta);
+    state.lastTimingText = timing ? `${judgement} · ${timing}` : judgement || "Ready";
+  }
+  function nextCueText(){
+    const next = nextPending();
+    if (state.mode === "ready") return `${rawChart.length} notes`;
+    if (state.mode === "complete") return "Complete";
+    if (!next) return "Final pulse";
+    const due = Math.round(next.time - state.time);
+    const key = laneKeys[next.lane].toUpperCase();
+    if (due <= 0) return `${key} now`;
+    if (due < 1000) return `${key} in ${due}ms`;
+    return `${key} in ${(due / 1000).toFixed(1)}s`;
   }
   function fullscreenElement(){
     return document.fullscreenElement || document.webkitFullscreenElement || null;
@@ -414,6 +496,7 @@
     state.message = "Catch the circuit pulse.";
     state.judgement = "";
     state.judgementUntil = 0;
+    setLastTiming("Ready", NaN);
     feedback.lastStartAt = state.now;
     feedback.startCount += 1;
     playStart();
@@ -425,6 +508,7 @@
     state.mode = "complete";
     state.combo = 0;
     state.message = state.score >= state.bestScore && state.score > 0 ? "New best circuit." : "Run complete.";
+    setLastTiming("Complete", NaN);
     if (state.score > state.bestScore) {
       state.bestScore = state.score;
       saveBestScore(state.bestScore);
@@ -453,6 +537,7 @@
     state.judgement = judgement;
     state.judgementUntil = state.time + 420;
     state.message = `${judgement} +${base}`;
+    setLastTiming(judgement, delta, note.lane);
     feedback.lastHitAt = state.now;
     feedback.hitCount += 1;
     playHit(note.lane, judgement);
@@ -470,6 +555,7 @@
     state.judgement = reason;
     state.judgementUntil = state.time + 420;
     state.message = reason;
+    setLastTiming(reason, note.delta, note.lane);
     feedback.lastMissAt = state.now;
     feedback.missCount += 1;
     playMiss();
@@ -492,6 +578,7 @@
       state.judgement = "Empty";
       state.judgementUntil = state.time + 300;
       state.message = "Empty lane";
+      setLastTiming("Empty", NaN, lane);
       feedback.lastMissAt = state.now;
       feedback.missCount += 1;
       playMiss();
@@ -545,6 +632,15 @@
       const x = laneLeft(lane);
       const active = state.time < state.laneFlashUntil[lane];
       drawRoundedRect(x,52,laneWidth(),420,14,active ? "rgba(94,234,212,0.16)" : "rgba(10,18,31,0.62)", "rgba(94,234,212,0.18)");
+      const okBand = timingBandPixels(165);
+      const goodBand = timingBandPixels(115);
+      const perfectBand = timingBandPixels(70);
+      ctx.fillStyle = "rgba(244,114,182,0.035)";
+      ctx.fillRect(x + 20, HIT_Y - okBand, laneWidth() - 40, okBand * 2);
+      ctx.fillStyle = "rgba(34,211,238,0.045)";
+      ctx.fillRect(x + 24, HIT_Y - goodBand, laneWidth() - 48, goodBand * 2);
+      ctx.fillStyle = "rgba(94,234,212,0.07)";
+      ctx.fillRect(x + 30, HIT_Y - perfectBand, laneWidth() - 60, perfectBand * 2);
       ctx.fillStyle = "rgba(230,237,243,0.20)";
       ctx.font = "800 18px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
@@ -583,20 +679,49 @@
       ctx.fillStyle = "rgba(94,234,212,0.9)";
       ctx.font = "700 17px ui-sans-serif, system-ui";
       ctx.fillText(state.message, W/2, H/2 + 20);
+      if (state.mode === "ready") {
+        const keys = ["D","F","J","K"];
+        const keyW = 58;
+        const startX = W / 2 - (keys.length * keyW + (keys.length - 1) * 12) / 2;
+        for (let i = 0; i < keys.length; i += 1) {
+          const x = startX + i * (keyW + 12);
+          drawRoundedRect(x, H / 2 + 52, keyW, 42, 10, "rgba(10,18,31,0.92)", laneColors[i]);
+          ctx.fillStyle = "#e6edf3";
+          ctx.font = "800 20px ui-sans-serif, system-ui";
+          ctx.fillText(keys[i], x + keyW / 2, H / 2 + 80);
+        }
+        ctx.fillStyle = "rgba(182,196,220,0.9)";
+        ctx.font = "700 14px ui-sans-serif, system-ui";
+        ctx.fillText("Press Start, Space, or Enter", W/2, H/2 + 128);
+      } else {
+        ctx.fillStyle = "rgba(182,196,220,0.9)";
+        ctx.font = "700 14px ui-sans-serif, system-ui";
+        ctx.fillText(`Max combo ${state.maxCombo} · Accuracy ${state.accuracy}%`, W/2, H/2 + 58);
+      }
     } else if (state.judgement && state.time < state.judgementUntil) {
       ctx.textAlign = "center";
       ctx.fillStyle = state.judgement === "Miss" || state.judgement === "Empty" ? "#ffd6d6" : "#dffff8";
       ctx.font = "800 34px ui-sans-serif, system-ui";
       ctx.fillText(state.judgement, W/2, 130);
+      const timing = formatTiming(state.lastDelta);
+      if (timing) {
+        ctx.fillStyle = "rgba(230,237,243,0.86)";
+        ctx.font = "800 17px ui-sans-serif, system-ui";
+        ctx.fillText(timing, W/2, 158);
+      }
     }
 
     syncHud();
   }
   function syncHud(){
+    document.body.dataset.mode = state.mode;
     els.score.textContent = String(state.score);
     els.combo.textContent = String(state.combo);
     els.accuracy.textContent = `${state.accuracy}%`;
     els.best.textContent = String(state.bestScore);
+    els.nextCue.textContent = nextCueText();
+    els.hitWindow.textContent = "±165ms";
+    els.lastTiming.textContent = state.lastTimingText;
     els.comboPill.dataset.hot = state.combo >= 4 ? "true" : "false";
     els.status.textContent = state.message;
     els.start.textContent = state.mode === "playing" ? "Restart" : state.mode === "complete" ? "New Run" : "Start Run";
@@ -732,6 +857,16 @@
       visibleNotes: visible,
       laneStates: state.laneFlashUntil.map((until, lane) => ({ lane, key: laneKeys[lane].toUpperCase(), active: state.time < until })),
       judgement: state.time < state.judgementUntil ? state.judgement : "",
+      timingFeedback: {
+        nextCue: nextCueText(),
+        hitWindowMs: 165,
+        perfectWindowMs: 70,
+        goodWindowMs: 115,
+        lastText: state.lastTimingText,
+        lastJudgement: state.lastJudgement,
+        lastDeltaMs: state.lastDelta,
+        lastLane: state.lastLane
+      },
       message: state.message,
       soundEnabled,
       lastUiAction,

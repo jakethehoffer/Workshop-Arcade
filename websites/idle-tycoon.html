@@ -280,6 +280,10 @@
     .slot-card.recent {
       border-color: rgba(70, 211, 194, 0.5);
     }
+    .slot-card.active-slot {
+      border-color: rgba(246, 196, 83, 0.72);
+      box-shadow: inset 3px 0 0 var(--accent), 0 10px 22px rgba(0, 0, 0, 0.3);
+    }
     .slot-title {
       font-size: 16px;
       font-weight: 700;
@@ -296,6 +300,9 @@
     }
     .slot-card.empty .slot-status {
       color: var(--muted);
+    }
+    .slot-card.active-slot .slot-status {
+      color: var(--accent-2);
     }
     .slot-delete {
       position: absolute;
@@ -328,6 +335,15 @@
       gap: 12px;
       flex-wrap: wrap;
       align-items: center;
+    }
+    .menu-help {
+      margin-right: auto;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .menu-return[hidden] {
+      display: none;
     }
     .tutorial-overlay {
       position: fixed;
@@ -517,6 +533,17 @@
       align-items: center;
       justify-content: flex-end;
     }
+    .save-status {
+      flex: 1 1 100%;
+      text-align: right;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .save-status.is-fresh {
+      color: var(--accent-2);
+    }
     .grid {
       display: grid;
       grid-template-columns: minmax(250px, 1fr) minmax(320px, 1.4fr) minmax(250px, 1fr);
@@ -586,6 +613,21 @@
       margin: 0;
       color: var(--muted);
       line-height: 1.5;
+    }
+    .action-hint {
+      margin: -4px 0 14px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(70, 211, 194, 0.24);
+      background: rgba(9, 17, 16, 0.72);
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.35;
+      text-align: left;
+    }
+    .action-hint.ready {
+      border-color: rgba(246, 196, 83, 0.42);
+      box-shadow: inset 3px 0 0 var(--accent);
     }
     .panel-subhead {
       margin-top: 14px;
@@ -1213,6 +1255,31 @@
       gap: 8px;
       justify-items: end;
     }
+    .venture-status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .venture-flow,
+    .buy-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(8, 14, 13, 0.68);
+      padding: 5px 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .venture-flow {
+      color: var(--ink);
+      border-color: rgba(70, 211, 194, 0.26);
+    }
     .venture-actions {
       display: flex;
       gap: 8px;
@@ -1243,6 +1310,13 @@
       animation: cardIn 0.5s ease both;
       animation-delay: var(--delay, 0s);
     }
+    .business-card.actionable {
+      border-color: rgba(246, 196, 83, 0.44);
+      box-shadow: inset 3px 0 0 var(--accent), 0 16px 34px rgba(0, 0, 0, 0.3);
+    }
+    .business-card.running {
+      border-color: rgba(70, 211, 194, 0.34);
+    }
     .business-top {
       display: flex;
       justify-content: space-between;
@@ -1259,6 +1333,21 @@
       color: var(--muted);
       font-size: 13px;
       line-height: 1.4;
+    }
+    .business-state {
+      justify-self: start;
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      border: 1px solid rgba(70, 211, 194, 0.25);
+      background: rgba(8, 14, 13, 0.7);
+      color: var(--accent-2);
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
     .owned {
       background: rgba(8, 14, 13, 0.7);
@@ -1551,6 +1640,16 @@
       .menu-options {
         gap: 8px;
       }
+      .menu-footer {
+        justify-content: stretch;
+      }
+      .menu-help {
+        flex: 1 1 100%;
+        margin-right: 0;
+      }
+      .menu-return {
+        width: 100%;
+      }
       .stat-tray {
         position: static;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1580,6 +1679,10 @@
         flex: 1 1 0;
         padding: 7px 8px;
       }
+      .save-status {
+        text-align: left;
+        font-size: 10px;
+      }
       .stat-actions .fullscreen-btn {
         flex-basis: 100%;
       }
@@ -1606,8 +1709,29 @@
       .insight-card {
         display: none;
       }
+      .click-panel {
+        display: grid;
+        grid-template-columns: minmax(130px, 0.85fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        text-align: left;
+      }
+      .click-panel .panel-head,
+      .click-panel .action-hint,
+      .click-panel .boost-card {
+        grid-column: 1 / -1;
+      }
+      .click-panel .action-hint {
+        margin: 0;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
       .clicker-stage {
+        grid-column: 1;
         margin: 0 0 6px;
+      }
+      .clicker-meta {
+        grid-column: 2;
       }
       .clicker {
         width: min(152px, 42vw);
@@ -1680,6 +1804,21 @@
       .business-kpis {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+      .business-desc {
+        display: none;
+      }
+      .business-state,
+      .venture-flow,
+      .buy-status {
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+      .business-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .business-actions [data-action="manager"] {
+        grid-column: 1 / -1;
+      }
       .buy-controls {
         gap: 8px;
       }
@@ -1725,7 +1864,7 @@
       <div class="menu-header">
         <p class="eyebrow">Arcade Ventures</p>
         <h1>Idle Tycoon</h1>
-        <p class="subtitle menu-subtitle">Select a save slot to begin your run.</p>
+        <p class="subtitle menu-subtitle" id="menuSubtitle">Choose a save slot. Empty slots start fresh; filled slots continue from autosave.</p>
       </div>
       <div class="menu-section">
         <h2>Save Files</h2>
@@ -1740,6 +1879,8 @@
         </div>
       </div>
       <div class="menu-footer">
+        <span class="menu-help" id="menuHelp">Saves stay in this browser.</span>
+        <button class="btn ghost menu-return" id="menuReturnBtn" type="button" hidden>Back to Run</button>
       </div>
     </div>
   </div>
@@ -1804,6 +1945,7 @@
         <span class="value" id="nextUnlock">Trailhead Cart</span>
       </div>
       <div class="stat stat-actions">
+        <span class="save-status" id="saveStatus" aria-live="polite">Autosaves on</span>
         <button class="btn ghost" id="menuBtn" type="button">Menu</button>
         <button class="btn ghost" id="saveBtn" type="button">Save</button>
         <button class="btn ghost fullscreen-btn" id="fullscreenBtn" type="button" aria-pressed="false" title="Enter fullscreen (Shift+F)">Fullscreen</button>
@@ -1818,6 +1960,7 @@
           <h2>Clicker Core</h2>
           <p>Tap the sigil to stack credits. Momentum and Surge reward sustained action.</p>
         </div>
+        <div class="action-hint" id="actionHint" aria-live="polite">Tap the core to earn credits, then buy Trailhead Cart.</div>
         <div class="clicker-stage">
           <button class="clicker" id="clicker" type="button" aria-label="Tap to earn credits">
             <span class="clicker-ring"></span>
@@ -1914,6 +2057,10 @@
           <div>
             <h2>Ventures</h2>
             <p>Start production cycles for a payout. Managers keep them running.</p>
+            <div class="venture-status-row" id="ventureStatus" aria-live="polite">
+              <span class="venture-flow" id="ventureFlow">Trailhead Cart is available first.</span>
+              <span class="buy-status" id="buyStatus">Buying x1</span>
+            </div>
           </div>
           <div class="buy-controls">
             <div class="buy-toggle" id="buyToggle">
@@ -2021,6 +2168,7 @@
           <span class="value" data-field="owned">0</span>
         </div>
       </div>
+      <div class="business-state" data-field="status">Locked</div>
       <div class="business-stats">
         <div class="stat">
           <span class="label">Cycle</span>
@@ -2107,8 +2255,9 @@ buyAmount:1,momentum:0,lastClick:0,totalClicks:0,totalCycles:0,totalPurchases:0,
 totalEvents:0,surgeCharge:0,totalCrits:0,achievements:{},quests:[],daily:{lastClaim:0,streak:0},
 ...BASE_STATE};const settings={soundEnabled:DEFAULT_SETTINGS.soundEnabled,
 musicEnabled:DEFAULT_SETTINGS.musicEnabled,tutorialOnStart:DEFAULT_SETTINGS.tutorialOnStart,
-hasPlayed:DEFAULT_SETTINGS.hasPlayed};const interactionFeedback={lastEvent:null,lastEventAge:null,
-activeCueCount:0,slotSelectCount:0,clickEarnCount:0,lastSlot:null,lastEarnAmount:0}
+ hasPlayed:DEFAULT_SETTINGS.hasPlayed};const interactionFeedback={lastEvent:null,lastEventAge:null,
+ activeCueCount:0,slotSelectCount:0,clickEarnCount:0,lastSlot:null,lastEarnAmount:0,
+ ventureActionCount:0,lastVentureAction:null,lastStatusText:""}
 ;let pendingTutorial=false;let audioCtx=null;let masterGain=null;let sfxGain=null
 ;let sfxCompressor=null;let musicGain=null;let musicFilter=null;let musicDelay=null
 ;let musicDelayGain=null;let musicLfo=null;let musicLfoGain=null;let noiseBuffer=null
@@ -2242,6 +2391,8 @@ body:"Claim the Daily Drop, and clear quests and achievements for bonus credits.
 allTime:document.getElementById("allTime"),autoIncome:document.getElementById("autoIncome"),
 clickIncome:document.getElementById("clickIncome"),angelCount:document.getElementById("angelCount"),
 angelBonus:document.getElementById("angelBonus"),nextUnlock:document.getElementById("nextUnlock"),
+actionHint:document.getElementById("actionHint"),ventureFlow:document.getElementById("ventureFlow"),
+buyStatus:document.getElementById("buyStatus"),saveStatus:document.getElementById("saveStatus"),
 clicker:document.getElementById("clicker"),clickerFx:document.getElementById("clickerFx"),
 momentumFill:document.getElementById("momentumFill"),
 momentumLabel:document.getElementById("momentumLabel"),
@@ -2273,6 +2424,8 @@ saveBtn:document.getElementById("saveBtn"),menuBtn:document.getElementById("menu
 toast:document.getElementById("toast"),businessList:document.getElementById("businessList"),
 upgradeList:document.getElementById("upgradeList")};const menu={
 container:document.getElementById("mainMenu"),slots:document.getElementById("saveSlots"),
+subtitle:document.getElementById("menuSubtitle"),help:document.getElementById("menuHelp"),
+returnBtn:document.getElementById("menuReturnBtn"),
 soundToggle:document.getElementById("menuSoundToggle"),
 musicToggle:document.getElementById("menuMusicToggle"),
 tutorialToggle:document.getElementById("menuTutorialToggle")};const tutorial={
@@ -2280,8 +2433,8 @@ overlay:document.getElementById("tutorialOverlay"),step:document.getElementById(
 title:document.getElementById("tutorialTitle"),body:document.getElementById("tutorialBody"),
 backBtn:document.getElementById("tutorialBack"),nextBtn:document.getElementById("tutorialNext"),
 skipBtn:document.getElementById("tutorialSkip"),marker:document.getElementById("tutorialMarker"),
-markerLabel:document.getElementById("tutorialMarkerLabel")};let gameStarted=false
-;let lastFrame=performance.now();let toastTimer=null;let saveTimer=null;let activeEvent=null
+ markerLabel:document.getElementById("tutorialMarkerLabel")};let gameStarted=false
+;let lastFrame=performance.now();let toastTimer=null;let saveTimer=null;let saveStatusTimer=null;let activeEvent=null
 ;let nextEventAt=0;let surgeActiveUntil=0;let surgeCooldownUntil=0;let markerFrame=null
 ;function init(){buildBusinessCards();buildPerkCards();buildAchievementCards();bindEvents()
 ;const lastSave=loadGame();applyPurchasedPerks();normalizeProgressState();ensureQuests()
@@ -2306,6 +2459,10 @@ if(menu.musicToggle){menu.musicToggle.classList.toggle("active",settings.musicEn
 menu.tutorialToggle.classList.toggle("active",settings.tutorialOnStart)
 ;menu.tutorialToggle.setAttribute("aria-pressed",settings.tutorialOnStart?"true":"false")
 ;menu.tutorialToggle.textContent=`Tutorial on Start: ${settings.tutorialOnStart?"On":"Off"}`}}
+function syncMenuMode(){const slot=activeSlot||getLastActiveSlot();if(menu.subtitle){
+menu.subtitle.textContent=gameStarted?`Slot ${slot||1} is active. Save, switch slots, or return to the run.`:"Choose a save slot. Empty slots start fresh; filled slots continue from autosave."}
+if(menu.help){menu.help.textContent=gameStarted?"Switching slots saves first and reloads.":"Saves stay in this browser."}
+if(menu.returnBtn){menu.returnBtn.hidden=!gameStarted;menu.returnBtn.disabled=!gameStarted}}
 function bindMenuEvents(){if(menu.soundToggle){menu.soundToggle.addEventListener("click",(()=>{
 if(settings.soundEnabled){playSfx("menu")}settings.soundEnabled=!settings.soundEnabled
 ;if(settings.soundEnabled){initAudio();playSfx("menu")}syncMenuSettings();saveSettings()}))}
@@ -2314,7 +2471,8 @@ playSfx("menu")}settings.musicEnabled=!settings.musicEnabled;if(settings.musicEn
 ;if(gameStarted)startMusic()}else if(gameStarted){stopMusic()}syncMenuSettings();saveSettings()}))}
 if(menu.tutorialToggle){menu.tutorialToggle.addEventListener("click",(()=>{
 if(settings.soundEnabled){playSfx("menu")}settings.tutorialOnStart=!settings.tutorialOnStart
-;syncMenuSettings();saveSettings()}))}}function bindTutorialEvents(){if(tutorial.nextBtn){
+;syncMenuSettings();saveSettings()}))}if(menu.returnBtn){menu.returnBtn.addEventListener("click",(()=>{
+playSfx("menu");hideMainMenu()}))}}function bindTutorialEvents(){if(tutorial.nextBtn){
 tutorial.nextBtn.addEventListener("click",(()=>{if(tutorialIndex>=TUTORIAL_STEPS.length-1){
 endTutorial();return}tutorialIndex+=1;updateTutorialStep()}))}if(tutorial.backBtn){
 tutorial.backBtn.addEventListener("click",(()=>{if(tutorialIndex<=0)return;tutorialIndex-=1
@@ -2551,7 +2709,7 @@ migrateLegacySave();loadSettings();bindMenuEvents();bindTutorialEvents()
 ;const pendingSlot=consumePendingSlot();if(pendingSlot){startWithSlot(pendingSlot,{tutorial:false})
 ;return}showMainMenu()}function showMainMenu(){if(!menu.container||!menu.slots){startWithSlot(1)
 ;return}document.body.classList.add("menu-open");menu.container.classList.remove("hidden")
-;syncMenuSettings();renderSaveSlots()}function hideMainMenu(){if(!menu.container)return
+;syncMenuMode();syncMenuSettings();renderSaveSlots()}function hideMainMenu(){if(!menu.container)return
 ;document.body.classList.remove("menu-open");menu.container.classList.add("hidden")}
 function startWithSlot(slot,options={}){if(gameStarted)return;gameStarted=true
 ;const shouldTutorial=!!options.tutorial||settings.tutorialOnStart;if(!settings.hasPlayed){
@@ -2584,19 +2742,20 @@ const ok=window.confirm(`Switch to Save Slot ${slot}? Current progress will be s
 ;const message=isActiveSlot?`Delete Save Slot ${slot}? This will erase the active save and return to the menu.`:`Delete Save Slot ${slot}? This cannot be undone.`
 ;const ok=window.confirm(message);if(!ok)return;localStorage.removeItem(getSaveKey(slot))
 ;if(getLastActiveSlot()===slot){localStorage.removeItem(ACTIVE_SLOT_KEY)}
-if(gameStarted&&isActiveSlot){window.location.reload();return}renderSaveSlots();syncMenuSettings()}
+if(gameStarted&&isActiveSlot){window.location.reload();return}syncMenuMode();renderSaveSlots();syncMenuSettings()}
 function renderSaveSlots(){if(!menu.slots)return;menu.slots.innerHTML=""
 ;const lastSlot=getLastActiveSlot();for(let slot=1;slot<=SAVE_SLOT_COUNT;slot+=1){
 const data=readSlotData(slot);const card=document.createElement("div");card.className="slot-card"
 ;card.setAttribute("role","button");card.tabIndex=0;if(!data)card.classList.add("empty")
-;if(slot===lastSlot)card.classList.add("recent");const title=document.createElement("span")
+;const isCurrent=gameStarted&&(activeSlot||lastSlot)===slot;if(slot===lastSlot)card.classList.add("recent")
+;if(isCurrent)card.classList.add("active-slot");const title=document.createElement("span")
 ;title.className="slot-title";title.textContent=`Save Slot ${slot}`
 ;const meta=document.createElement("span");meta.className="slot-meta";if(data){
 const run=formatNumber(data.lifetime||0);const allTime=formatNumber(data.allTime??data.lifetime??0)
-;meta.textContent=`Run ${run} | All-time ${allTime}`}else{meta.textContent="Empty slot"}
+;const age=formatSaveAge(data.timestamp);meta.textContent=`Run ${run} | All-time ${allTime}${age?` | ${age}`:""}`}else{meta.textContent="Empty slot"}
 const status=document.createElement("span");status.className="slot-status"
-;if(gameStarted&&(activeSlot||lastSlot)===slot){status.textContent="Active"}else{
-status.textContent=data?"Continue":"New"}const deleteBtn=document.createElement("button")
+;if(isCurrent){status.textContent="Active run"}else{
+status.textContent=data?slot===lastSlot?"Continue recent":"Continue":"Start new"}const deleteBtn=document.createElement("button")
 ;deleteBtn.type="button";deleteBtn.className="slot-delete";deleteBtn.textContent="Delete"
 ;deleteBtn.disabled=!data;deleteBtn.addEventListener("click",(event=>{event.stopPropagation()
 ;playSfx("menu");handleDeleteSlot(slot,!!data)}));card.appendChild(title);card.appendChild(meta)
@@ -2614,6 +2773,7 @@ const fragment=template.content.cloneNode(true);const card=fragment.querySelecto
 ;const durationEl=card.querySelector('[data-field="duration"]')
 ;const payoutEl=card.querySelector('[data-field="payout"]')
 ;const boostEl=card.querySelector('[data-field="boost"]')
+;const statusEl=card.querySelector('[data-field="status"]')
 ;const progressEl=card.querySelector('[data-field="progress"]')
 ;const milestoneEl=card.querySelector('[data-field="milestone"]')
 ;const automationEl=card.querySelector('[data-field="automation"]')
@@ -2623,11 +2783,13 @@ const fragment=template.content.cloneNode(true);const card=fragment.querySelecto
 ;const startBtn=card.querySelector('[data-action="start"]')
 ;const buyBtn=card.querySelector('[data-action="buy"]')
 ;const managerBtn=card.querySelector('[data-action="manager"]')
-;startBtn.addEventListener("click",(()=>{playSfx("run");startCycle(biz)}))
+;startBtn.addEventListener("click",(()=>{playSfx("run");if(startCycle(biz)){
+const message=`${biz.name} cycle started.`;showToast(message);recordInteractionFeedback("venture-action",{
+action:"run",business:biz.id,status:message})}}))
 ;buyBtn.addEventListener("click",(()=>buyBusiness(biz)))
 ;managerBtn.addEventListener("click",(()=>hireManager(biz)));biz.ui={card:card,ownedEl:ownedEl,
 durationEl:durationEl,payoutEl:payoutEl,boostEl:boostEl,progressEl:progressEl,
-milestoneEl:milestoneEl,automationEl:automationEl,rateEl:rateEl,synergyEl:synergyEl,lockEl:lockEl,
+statusEl:statusEl,milestoneEl:milestoneEl,automationEl:automationEl,rateEl:rateEl,synergyEl:synergyEl,lockEl:lockEl,
 startBtn:startBtn,buyBtn:buyBtn,managerBtn:managerBtn};ui.businessList.appendChild(fragment)}))}
 function buildPerkCards(){const template=document.getElementById("perkTemplate")
 ;ui.upgradeList.innerHTML="";perks.forEach(((perk,index)=>{
@@ -2706,6 +2868,7 @@ id:biz.id,name:biz.name,unlocked:isBusinessUnlocked(biz),owned:biz.owned,running
 manager:biz.manager,progress:Math.round(biz.progress*100)/100,
 cost:Math.round(calcBulkCost(biz,Math.max(1,resolveBuyCount(biz)))),
 payout:Math.round(calcBusinessPayout(biz)),duration:Math.round(calcBusinessDuration(biz)*10)/10,
+status:biz.ui?.statusEl?.textContent||"",
 affordable:state.cash>=calcBulkCost(biz,Math.max(1,resolveBuyCount(biz)))})))
 ;const canRunAll=businesses.some((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running))
 ;const canHireAll=businesses.some((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&state.cash>=calcManagerCost(biz)))
@@ -2736,17 +2899,26 @@ elementTag:getFullscreenElement()?.tagName||null,
 target:getFullscreenTarget()?.className||getFullscreenTarget()?.tagName||null,
 buttonPressed:ui.fullscreenBtn?.getAttribute("aria-pressed")==="true",
 buttonTitle:ui.fullscreenBtn?.title||""},settings:{soundEnabled:settings.soundEnabled,
-musicEnabled:settings.musicEnabled,tutorialOnStart:settings.tutorialOnStart},feedback:{
+musicEnabled:settings.musicEnabled,tutorialOnStart:settings.tutorialOnStart},visibleFeedback:{
+actionHint:ui.actionHint?.textContent||"",ventureStatus:ui.ventureFlow?.textContent||"",
+buyStatus:ui.buyStatus?.textContent||"",saveStatus:ui.saveStatus?.textContent||"",
+menuHelp:menu.help?.textContent||""},feedback:{
 lastEvent:interactionFeedback.lastEvent,lastEventAge:feedbackAge(interactionFeedback.lastEventAge),
 activeCueCount:interactionFeedback.activeCueCount,
 slotSelectCount:interactionFeedback.slotSelectCount,
 clickEarnCount:interactionFeedback.clickEarnCount,lastSlot:interactionFeedback.lastSlot,
-lastEarnAmount:Math.round(interactionFeedback.lastEarnAmount)}})}
+lastEarnAmount:Math.round(interactionFeedback.lastEarnAmount),
+ventureActionCount:interactionFeedback.ventureActionCount,
+lastVentureAction:interactionFeedback.lastVentureAction,
+lastStatusText:interactionFeedback.lastStatusText}})}
 function recordInteractionFeedback(type,details={}){interactionFeedback.lastEvent=type
 ;interactionFeedback.lastEventAge=0;interactionFeedback.activeCueCount=1;if(type==="slot-select"){
 interactionFeedback.slotSelectCount+=1;interactionFeedback.lastSlot=details.slot??null}
 if(type==="click-earn"){interactionFeedback.clickEarnCount+=1
-;interactionFeedback.lastEarnAmount=Number(details.amount)||0}}function stepInteractionFeedback(dt){
+;interactionFeedback.lastEarnAmount=Number(details.amount)||0}if(type==="venture-action"){
+interactionFeedback.ventureActionCount+=1;interactionFeedback.lastVentureAction={
+action:details.action||null,business:details.business||null}}if(details.status){
+interactionFeedback.lastStatusText=String(details.status)}}function stepInteractionFeedback(dt){
 if(interactionFeedback.lastEventAge===null){return}
 interactionFeedback.lastEventAge+=Math.max(0,Number(dt)||0)
 ;interactionFeedback.activeCueCount=interactionFeedback.lastEventAge<=1.25?1:0}
@@ -2781,7 +2953,8 @@ const now=performance.now();if(surgeActiveUntil&&now<surgeActiveUntil)return
 ;const duration=getSurgeDuration();surgeActiveUntil=now+duration*1e3
 ;surgeCooldownUntil=surgeActiveUntil+SURGE_COOLDOWN*1e3;state.surgeCharge=0;state.totalSurges+=1
 ;playSfx("surge");triggerSurgeBurst();showToast("Momentum Surge activated.");scheduleSave()}
-function startCycle(biz){if(biz.owned<=0||biz.running)return;biz.running=true;biz.progress=0}
+function startCycle(biz){if(biz.owned<=0||biz.running)return false;biz.running=true;biz.progress=0
+;return true}
 function updateBusinesses(dt){businesses.forEach((biz=>{if(biz.owned<=0){biz.running=false
 ;biz.progress=0;return}if(biz.manager&&!biz.running){startCycle(biz)}if(!biz.running)return
 ;const duration=calcBusinessDuration(biz);if(duration<=0)return;biz.progress+=dt/duration
@@ -2792,20 +2965,25 @@ state.totalCycles+=1;addSurgeCharge(SURGE_CHARGE_CYCLE);const payout=calcBusines
 ;earn(payout,false);biz.running=false;biz.progress=0}}}))}function runAllVentures(){let started=0
 ;businesses.forEach((biz=>{if(!isBusinessUnlocked(biz))return;if(biz.owned<=0)return
 ;if(biz.manager||biz.running)return;startCycle(biz);started+=1}));if(started>0){playSfx("run")
-;showToast(`Queued ${started} cycles.`);scheduleSave()}else{playSfx("menu")
+;const message=`Queued ${started} cycles.`;showToast(message);recordInteractionFeedback("venture-action",{
+action:"run-all",business:null,status:message});scheduleSave()}else{playSfx("menu")
 ;showToast("No ventures ready to run.")}}function hireAffordableManagers(){
 const candidates=businesses.filter((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager)).map((biz=>({
 biz:biz,cost:calcManagerCost(biz)}))).sort(((a,b)=>a.cost-b.cost));let hired=0
 ;candidates.forEach((item=>{if(state.cash<item.cost)return;state.cash-=item.cost
 ;item.biz.manager=true;startCycle(item.biz);hired+=1}));if(hired>0){playSfx("purchase")
-;showToast(`Hired ${hired} managers.`);scheduleSave()}else{playSfx("menu")
+;const message=`Hired ${hired} managers.`;showToast(message);recordInteractionFeedback("venture-action",{
+action:"hire-all",business:null,status:message});scheduleSave()}else{playSfx("menu")
 ;showToast("No managers affordable.")}}function buyBusiness(biz){const count=resolveBuyCount(biz)
 ;if(count<=0)return;const cost=calcBulkCost(biz,count);if(state.cash<cost)return;state.cash-=cost
 ;state.totalPurchases+=count;biz.owned+=count;checkMilestones(biz,false)
-;if(biz.manager)startCycle(biz);playSfx("purchase");scheduleSave()}function hireManager(biz){
+;if(biz.manager)startCycle(biz);const message=`Bought ${formatWhole(count)} ${biz.name}.`
+;playSfx("purchase");showToast(message);recordInteractionFeedback("venture-action",{
+action:"buy",business:biz.id,status:message});scheduleSave()}function hireManager(biz){
 if(biz.manager||biz.owned<=0)return;const cost=calcManagerCost(biz);if(state.cash<cost)return
-;state.cash-=cost;biz.manager=true;startCycle(biz);showToast(`${biz.name} manager hired.`)
-;playSfx("purchase");scheduleSave()}function buyPerk(perk){
+;state.cash-=cost;biz.manager=true;startCycle(biz);const message=`${biz.name} manager hired.`
+;showToast(message);recordInteractionFeedback("venture-action",{action:"hire",business:biz.id,
+status:message});playSfx("purchase");scheduleSave()}function buyPerk(perk){
 if(perk.purchased||!isPerkUnlocked(perk))return;if(state.cash<perk.cost)return;state.cash-=perk.cost
 ;perk.purchased=true;applyPerkEffect(perk);showToast(`${perk.name} unlocked.`);playSfx("purchase")
 ;scheduleSave()}function applyPerkEffect(perk){const effect=perk.effect
@@ -3152,7 +3330,7 @@ const bonus=1+state.momentum*MOMENTUM_BONUS
 ;ui.angelBonusCard.textContent=`x${angelBonusAfter.toFixed(2)}`
 ;ui.prestigeBtn.textContent=gain>0?`Prestige for +${formatWhole(gain)} Angels`:"Prestige locked"
 ;ui.prestigeBtn.disabled=gain<=0;businesses.forEach(updateBusinessUI);perks.forEach(updatePerkUI)
-;updateQuestUI();updateAchievementUI();updateDailyUI();updateInsightUI();if(ui.claimQuests){
+;updateGuidanceUI();updateQuestUI();updateAchievementUI();updateDailyUI();updateInsightUI();if(ui.claimQuests){
 const claimableQuests=state.quests.reduce(((count,quest)=>{const progress=getQuestProgress(quest)
 ;return count+(progress.current>=progress.target?1:0)}),0)
 ;ui.claimQuests.disabled=claimableQuests===0
@@ -3173,6 +3351,8 @@ const unlocked=isBusinessUnlocked(biz);const duration=calcBusinessDuration(biz)
 ;const unitRate=duration>0?unitPayout/duration:0;const buyCount=resolveBuyCount(biz)
 ;const displayCount=state.buyAmount==="max"&&buyCount===0?1:buyCount
 ;const buyCost=calcBulkCost(biz,displayCount);const managerCost=calcManagerCost(biz)
+;const canBuy=unlocked&&buyCount>0&&state.cash>=buyCost
+;const canRun=unlocked&&biz.owned>0&&!biz.running&&!biz.manager
 ;const nextMilestone=MILESTONES[biz.milestoneIndex];biz.ui.ownedEl.textContent=biz.owned
 ;biz.ui.durationEl.textContent=formatSeconds(duration)
 ;biz.ui.payoutEl.textContent=formatNumber(payout)
@@ -3184,12 +3364,18 @@ biz.ui.rateEl.textContent=`${formatNumber(rate)}/s`}if(biz.ui.synergyEl){
 biz.ui.synergyEl.textContent=`Synergy x${synergy.toFixed(2)}`
 ;biz.ui.synergyEl.classList.toggle("hot",synergy>1.01)}
 biz.ui.card.classList.toggle("locked",!unlocked)
+;biz.ui.card.classList.toggle("actionable",(biz.owned<=0&&canBuy)||canRun)
+;biz.ui.card.classList.toggle("running",biz.running||biz.manager)
 ;biz.ui.lockEl.textContent=unlocked?"":`Unlock at ${formatNumber(biz.unlockAt)} run`
+;if(biz.ui.statusEl){let status="Locked";if(unlocked){if(biz.manager){status="Automated"}else if(biz.running){
+status="Cycle running"}else if(biz.owned>0){status="Ready to run"}else if(canBuy){
+status="Ready to buy"}else{status=`Need ${formatNumber(Math.max(0,buyCost-state.cash))}`}}
+biz.ui.statusEl.textContent=status}
 ;const buyLabel=state.buyAmount==="max"?`Buy Max x${displayCount}`:`Buy x${buyCount}`
 ;biz.ui.buyBtn.textContent=`${buyLabel} (${formatNumber(buyCost)})`
-;biz.ui.buyBtn.disabled=!unlocked||buyCount<=0||state.cash<buyCost
+;biz.ui.buyBtn.disabled=!canBuy
 ;biz.ui.startBtn.textContent=biz.manager?"Auto":biz.running?"Running":"Run"
-;biz.ui.startBtn.disabled=!unlocked||biz.owned<=0||biz.running||biz.manager
+;biz.ui.startBtn.disabled=!canRun
 ;biz.ui.managerBtn.textContent=biz.manager?"Manager hired":`Hire Manager (${formatNumber(managerCost)})`
 ;biz.ui.managerBtn.disabled=!unlocked||biz.manager||biz.owned<=0||state.cash<managerCost}
 function updatePerkUI(perk){const unlocked=isPerkUnlocked(perk)
@@ -3202,11 +3388,37 @@ perk.ui.buyBtn.textContent=`Buy (${formatNumber(perk.cost)})`
 function getNextUnlockText(){const next=businesses.find((biz=>!isBusinessUnlocked(biz)))
 ;if(!next)return"All ventures unlocked";return`${next.name} at ${formatNumber(next.unlockAt)} run`}
 function isBusinessUnlocked(biz){return state.lifetime>=biz.unlockAt||biz.owned>0}
-function isPerkUnlocked(perk){return state.lifetime>=perk.unlockAt}function setBuyAmount(amount){
+function isPerkUnlocked(perk){return state.lifetime>=perk.unlockAt}function getBuyAmountLabel(){
+return state.buyAmount==="max"?"MAX":`x${state.buyAmount}`}function updateGuidanceUI(){
+if(ui.buyStatus){ui.buyStatus.textContent=`Buying ${getBuyAmountLabel()}`}const first=businesses[0]
+;const readyCycle=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running))
+;const affordableManager=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&state.cash>=calcManagerCost(biz)))
+;const running=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&biz.running))
+;const affordableNew=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned<=0&&state.cash>=calcBulkCost(biz,1)))
+;const nextUnlock=businesses.find((biz=>!isBusinessUnlocked(biz)));let hint="Tap the core to earn credits, buy a venture, then run cycles."
+;let ready=false;if(first&&first.owned<=0){const firstCost=calcBulkCost(first,1)
+;const need=Math.max(0,firstCost-state.cash);if(need>0){hint=`Tap ${formatNumber(need)} more credits, then buy ${first.name}.`}else{
+hint=`Buy ${first.name}, then run its first cycle.`;ready=true}}else if(readyCycle){
+hint=`Run ${readyCycle.name} for its payout, then reinvest.`;ready=true}else if(affordableManager){
+hint=`Hire ${affordableManager.name}'s manager for hands-free cycles.`;ready=true}else if(affordableNew){
+hint=`Buy ${affordableNew.name} to widen your economy.`;ready=true}else if(running){
+hint=`${running.name} is running. Watch the payout, then buy or automate.`}else if(nextUnlock){
+hint=`Earn ${formatNumber(Math.max(0,nextUnlock.unlockAt-state.lifetime))} more run credits to reveal ${nextUnlock.name}.`}else{
+hint="All ventures are visible. Balance milestones, managers, and prestige."}if(ui.actionHint){
+ui.actionHint.textContent=hint;ui.actionHint.classList.toggle("ready",ready)}
+if(ui.ventureFlow){const readyCount=businesses.filter((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running)).length
+;const runningCount=businesses.filter((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&(biz.running||biz.manager))).length
+;let flow="No venture action ready";if(first&&first.owned<=0){flow=state.cash>=calcBulkCost(first,1)?`Ready to buy: ${first.name}`:`First venture: ${first.name}`}else if(readyCount>0){flow=`${readyCount} cycle${readyCount===1?"":"s"} ready to run`}else if(affordableNew){
+flow=`Affordable: ${affordableNew.name}`}else if(runningCount>0){flow=`${runningCount} venture${runningCount===1?"":"s"} producing`}else if(nextUnlock){
+flow=`Next venture: ${nextUnlock.name}`}else{flow="All ventures visible"}ui.ventureFlow.textContent=flow}}
+function setBuyAmount(amount){
 state.buyAmount=amount;ui.buyToggle.querySelectorAll("button").forEach((btn=>{
 const isMax=btn.dataset.mult==="max"
 ;const isActive=isMax?amount==="max":Number(btn.dataset.mult)===amount
-;btn.classList.toggle("active",isActive)}))}function showToast(message){if(!ui.toast)return
+;btn.classList.toggle("active",isActive)}));updateGuidanceUI()}function setSaveStatus(message){
+if(!ui.saveStatus)return;ui.saveStatus.textContent=message;ui.saveStatus.classList.add("is-fresh")
+;clearTimeout(saveStatusTimer);saveStatusTimer=setTimeout((()=>{ui.saveStatus.textContent="Autosaves on"
+;ui.saveStatus.classList.remove("is-fresh")}),2200)}function showToast(message){if(!ui.toast)return
 ;ui.toast.textContent=message;ui.toast.classList.add("show");clearTimeout(toastTimer)
 ;toastTimer=setTimeout((()=>ui.toast.classList.remove("show")),2600)}function handleReset(){
 playSfx("menu");const ok=window.confirm("Reset all progress? This clears the local save.")
@@ -3221,7 +3433,7 @@ id:quest.id,name:quest.name,desc:quest.desc,metric:quest.metric,target:quest.tar
 reward:quest.reward,start:quest.start}))),daily:state.daily,businesses:businesses.map((biz=>({
 id:biz.id,owned:biz.owned,manager:biz.manager}))),buyAmount:state.buyAmount,
 perks:perks.filter((perk=>perk.purchased)).map((perk=>perk.id)),timestamp:Date.now()}
-;localStorage.setItem(SAVE_KEY,JSON.stringify(data))}function loadGame(){if(!SAVE_KEY)return null
+;localStorage.setItem(SAVE_KEY,JSON.stringify(data));setSaveStatus("Saved just now")}function loadGame(){if(!SAVE_KEY)return null
 ;const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;try{const data=JSON.parse(raw)
 ;state.cash=Number(data.cash)||0;state.lifetime=Number(data.lifetime)||0
 ;state.allTime=Number(data.allTime)||0;state.angelInvestors=Number(data.angelInvestors)||0
@@ -3245,6 +3457,11 @@ function applyOfflineEarnings(lastTimestamp){const now=Date.now()
 includeEvent:false,includeSurge:false});const gain=autoRate*seconds;if(gain<=0)return
 ;earn(gain,false)
 ;showToast(`Offline haul: ${formatNumber(gain)} credits over ${formatDuration(seconds)}.`)}
+function formatSaveAge(timestamp){const value=Number(timestamp);if(!Number.isFinite(value)||value<=0)return""
+;const seconds=Math.max(0,(Date.now()-value)/1e3);if(seconds<60)return"saved now"
+;if(seconds<3600)return`saved ${Math.floor(seconds/60)}m ago`
+;if(seconds<86400)return`saved ${Math.floor(seconds/3600)}h ago`
+;return`saved ${Math.floor(seconds/86400)}d ago`}
 function formatNumber(value){if(!Number.isFinite(value))return"0";const abs=Math.abs(value)
 ;if(abs<1e3)return value.toFixed(abs<10?2:abs<100?1:0);const units=["K","M","B","T","Qa","Qi"]
 ;let unit=-1;let n=abs;while(n>=1e3&&unit<units.length-1){n/=1e3;unit+=1}
