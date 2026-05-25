@@ -65,6 +65,7 @@ npm run test:validator-fixtures
 npm run test:catalog-perf
 npm run test:performance-baseline
 npm run test:page-weight
+npm run test:pwa-install-budget
 npm run test:cover-assets
 npm run test:game-contract
 npm run test:storage-contract
@@ -102,6 +103,7 @@ npm run audit:perf:ci
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
 - `npm run test:performance-baseline` keeps `docs/performance-baseline.md` aligned with the current manifest count and the strict CI budgets defined in `scripts/audit-pagespeed.mjs`.
 - `npm run test:page-weight` statically sums the catalog local shell plus each manifest game's HTML and same-origin script dependencies, then compares those totals to the strict publish budgets before the slower browser performance audit runs.
+- `npm run test:pwa-install-budget` statically sums the service-worker install payload (`sw.js`, install shell assets, newest pre-cached covers, and local PWA manifest icons) against the Catalog performance budget so offline support cannot silently exceed the publish contract.
 - `npm run test:cover-assets` verifies every manifest cover is a small local 16:9 SVG with no scripts, remote image references, embedded raster blobs, or unsafe SVG primitives.
 - `npm run test:csp` verifies the `<meta http-equiv="Content-Security-Policy">` in `index.html` declares every critical directive (`default-src`, `script-src`, `style-src`, `img-src`, `connect-src`, `frame-src`, `object-src`, `base-uri`, `form-action`) and matches the catalog's runtime contract (e.g. `connect-src` allows `https://api.github.com` for the issue queue + recent updates feeds, `frame-src 'self'` for the player modal). Flags any remote `https://` script-src entries so future remote-script dependencies must be explicitly confirmed.
 - `npm run test:deep-links` locks in the per-game deep-link + Share contract: the catalog parses `#play=<slug>` on cold load and via `hashchange`, `openPlayer` keeps the URL hash in sync, and the player modal exposes a Share button wired to the Web Share API with a `navigator.clipboard.writeText` fallback so a single tap shares the canonical deep-link URL.
@@ -128,7 +130,7 @@ npm run audit:perf:ci
 
 CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 33 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 34 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 

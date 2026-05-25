@@ -167,14 +167,76 @@
   #aiWrap{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);letter-spacing:0.02em;text-transform:uppercase;font-weight:600}
 
   main{display:grid;place-items:center;padding:0 10px}
-  .board-wrap{display:grid;gap:10px;align-items:start;max-width:100%}
+  .board-wrap{
+    display:grid;
+    gap:10px;
+    align-items:start;
+    width:min(100%, calc((var(--tile) * 8) + (var(--gap) * 9) + 2px));
+    max-width:100%;
+  }
 
-  .status{display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .status{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch}
+  .status-stack{display:flex;gap:8px;align-items:center;min-width:0;flex-wrap:wrap}
   .pill{
     font-size:.95rem;background:#0e1a30;border:1px solid var(--stroke);
     padding:7px 11px;border-radius:999px;color:var(--muted)
   }
   .turn{display:inline-flex;align-items:center;gap:8px}
+  .turn-pill{color:var(--ink);font-weight:800}
+  .capture-pill,.action-pill{
+    min-height:36px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-weight:750;
+  }
+  .capture-pill::before,.action-pill::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:999px;
+    background:rgba(167,183,206,.55);
+    flex:0 0 auto;
+  }
+  .capture-pill.is-clear{
+    color:#b8c7dc;
+    background:rgba(14,26,48,.82);
+  }
+  .capture-pill.is-clear::before{background:rgba(167,183,206,.5)}
+  .capture-pill.is-required{
+    color:#fde68a;
+    border-color:rgba(245,158,11,.78);
+    background:linear-gradient(180deg,rgba(120,53,15,.48),rgba(41,25,11,.92));
+    box-shadow:0 0 0 1px rgba(245,158,11,.18), 0 8px 26px rgba(245,158,11,.12);
+  }
+  .capture-pill.is-required::before{background:var(--warn);box-shadow:0 0 12px rgba(245,158,11,.75)}
+  .capture-pill.is-multi{
+    color:#bfdbfe;
+    border-color:rgba(96,165,250,.75);
+    background:linear-gradient(180deg,rgba(30,64,175,.45),rgba(15,23,42,.95));
+    box-shadow:0 0 0 1px rgba(96,165,250,.18), 0 8px 26px rgba(96,165,250,.12);
+  }
+  .capture-pill.is-multi::before{background:#60a5fa;box-shadow:0 0 12px rgba(96,165,250,.75)}
+  .action-pill{
+    justify-self:end;
+    max-width:min(48vw, 360px);
+    border-radius:12px;
+    color:#dbeafe;
+    background:linear-gradient(180deg,rgba(15,23,42,.92),rgba(8,13,25,.96));
+    border-color:rgba(94,234,212,.22);
+    line-height:1.2;
+  }
+  .action-pill.is-alert{
+    color:#fecaca;
+    border-color:rgba(248,113,113,.72);
+    background:linear-gradient(180deg,rgba(127,29,29,.5),rgba(35,12,18,.96));
+  }
+  .action-pill.is-alert::before{background:#fb7185;box-shadow:0 0 12px rgba(248,113,113,.75)}
+  .action-pill.is-capture{
+    color:#bbf7d0;
+    border-color:rgba(34,197,94,.58);
+  }
+  .action-pill.is-capture::before{background:var(--ok);box-shadow:0 0 12px rgba(34,197,94,.72)}
   .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
   .dot.red{background:var(--red)}
   .dot.black{background:var(--blue)}
@@ -228,7 +290,34 @@
     box-shadow:inset 0 0 0 2px rgba(124,158,255,.45), 0 0 22px rgba(124,158,255,.22);
   }
   .sq.hl{ outline:3px solid var(--ring); outline-offset:-3px }
-  .sq.move{ box-shadow: inset 0 0 0 3px var(--accent) }
+  .sq.move{ box-shadow: inset 0 0 0 3px var(--accent), 0 0 16px rgba(94,234,212,.18) }
+  .sq.capture-move{
+    box-shadow: inset 0 0 0 4px var(--ok), 0 0 20px rgba(34,197,94,.35);
+  }
+  .sq.capture-move::after,.sq.force-dst::after{
+    content:"JUMP";
+    position:absolute;
+    left:50%;
+    bottom:8%;
+    transform:translateX(-50%);
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(5,46,22,.86);
+    border:1px solid rgba(134,239,172,.7);
+    color:#dcfce7;
+    font-size:clamp(8px, calc(var(--tile) * .16), 12px);
+    font-weight:900;
+    line-height:1;
+    letter-spacing:.02em;
+    pointer-events:none;
+    z-index:3;
+  }
+  .sq.capture-move.multi-target::after,.sq.force-dst.multi-target::after{
+    content:"JUMP " attr(data-jumps);
+    background:rgba(30,58,138,.9);
+    border-color:rgba(147,197,253,.8);
+    color:#dbeafe;
+  }
   .sq.last-from{ box-shadow: inset 0 0 0 3px rgba(94,234,212,.34), inset 0 0 18px rgba(94,234,212,.16); }
   .sq.last-to{ box-shadow: inset 0 0 0 3px rgba(96,165,250,.52), 0 0 20px rgba(96,165,250,.22); }
   .sq.move-trail::after{
@@ -261,8 +350,52 @@
   @keyframes popRise{ from{opacity:1; transform:translate(-50%, 8px) scale(.88)} to{opacity:0; transform:translate(-50%, -18px) scale(1.08)} }
 
   /* Mandatory-capture hints (human only) */
-  .sq.force-src{ outline:3px solid var(--warn); outline-offset:-3px; }
-  .sq.force-dst{ box-shadow: inset 0 0 0 3px var(--ok); }
+  .sq.force-src{
+    outline:3px solid var(--warn);
+    outline-offset:-3px;
+    box-shadow:inset 0 0 0 2px rgba(251,191,36,.45), 0 0 22px rgba(245,158,11,.28);
+  }
+  .sq.force-src .piece::before{
+    content:"TAKE";
+    position:absolute;
+    left:50%;
+    bottom:-7px;
+    transform:translateX(-50%);
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(69,26,3,.92);
+    border:1px solid rgba(253,230,138,.78);
+    color:#fef3c7;
+    font-size:clamp(8px, calc(var(--tile) * .15), 11px);
+    font-weight:900;
+    line-height:1;
+    letter-spacing:.02em;
+    pointer-events:none;
+    z-index:5;
+  }
+  .sq.force-dst{ box-shadow: inset 0 0 0 4px var(--ok), 0 0 18px rgba(34,197,94,.3); }
+  .sq.multi-chain{
+    outline:3px solid #60a5fa;
+    outline-offset:-3px;
+    box-shadow:inset 0 0 0 2px rgba(96,165,250,.42), 0 0 24px rgba(96,165,250,.26);
+  }
+  .sq.multi-chain .piece::before{
+    content:"NEXT";
+    position:absolute;
+    left:50%;
+    bottom:-7px;
+    transform:translateX(-50%);
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(30,58,138,.92);
+    border:1px solid rgba(147,197,253,.8);
+    color:#dbeafe;
+    font-size:clamp(8px, calc(var(--tile) * .15), 11px);
+    font-weight:900;
+    line-height:1;
+    pointer-events:none;
+    z-index:5;
+  }
 
   /* Game Over overlay */
   .gameover{
@@ -310,6 +443,7 @@
     height: 74%;
     border-radius: 999px;
     display:grid;place-items:center;
+    position:relative;
     box-shadow: inset 0 4px 10px rgba(255,255,255,.12), inset 0 -6px 14px rgba(0,0,0,.5), 0 2px 10px rgba(0,0,0,.55);
     transform: translateZ(0);
     transition: transform .08s ease;
@@ -344,18 +478,50 @@
   footer small{color:var(--muted)}
   @media (max-width: 760px){
     .wrap{gap:8px}
-    header,footer{padding:10px 12px}
+    header,footer{padding:8px 10px}
     .header-top{align-items:center;gap:10px}
     .brand .eyebrow{font-size:9px;letter-spacing:0.28em}
     .title{font-size:17px;letter-spacing:0.1em}
-    .controls{gap:6px;margin-top:8px}
+    .controls{gap:5px;margin-top:6px}
     .control-group{padding:3px 4px;gap:4px}
-    .seg button,.btn,.select{font-size:12px;padding:6px 8px}
-    .control-group .btn{padding:5px 8px}
+    .seg button,.btn,.select{font-size:12px;padding:6px 8px;min-height:32px}
+    .control-group .btn{padding:5px 7px}
     #aiWrap{font-size:11px;letter-spacing:0.04em}
-    .status{justify-content:flex-start}
+    .status{grid-template-columns:1fr;gap:6px}
+    .status-stack{gap:6px}
     .pill{font-size:13px;padding:6px 10px}
+    .capture-pill,.action-pill{min-height:32px}
+    .action-pill{justify-self:stretch;max-width:none}
     footer small{font-size:11px;line-height:1.35}
+  }
+  @media (max-width: 520px){
+    .wrap{gap:6px}
+    header{padding:6px 8px}
+    .header-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+    .brand{gap:1px}
+    .brand .eyebrow{font-size:8px;letter-spacing:0.2em}
+    .title{font-size:15px;letter-spacing:0.08em}
+    .seg{border-radius:10px}
+    .seg button{padding:6px 8px;font-size:11px}
+    .controls{display:grid;grid-template-columns:1fr auto;align-items:center}
+    .control-group{min-width:0;justify-content:center;border-radius:10px}
+    .controls .btn{font-size:0;min-width:31px;padding:5px 6px}
+    .controls .btn::after{content:attr(data-short);font-size:12px;line-height:1}
+    #aiWrap{font-size:0;justify-self:end;gap:4px}
+    #aiWrap::before{content:"AI";font-size:11px;color:var(--muted);font-weight:800}
+    #aiWrap .select{font-size:11px;min-height:30px;padding:5px 6px}
+    .status-stack{display:grid;grid-template-columns:1fr auto;width:100%}
+    .turn-pill,.capture-pill,.action-pill{font-size:12px;padding:5px 8px}
+    .turn{gap:6px}
+    .dot{width:8px;height:8px}
+    main{padding:0 5px}
+    .board-wrap{gap:7px}
+    footer{display:none}
+  }
+  @media (max-width: 360px){
+    .seg button{padding:5px 6px}
+    .controls .btn{min-width:29px;padding:5px}
+    .turn-pill,.capture-pill,.action-pill{font-size:11px;padding:5px 7px}
   }
 </style>
   <script src="workshop-runtime.js"></script>
@@ -375,14 +541,14 @@
     </div>
     <div class="controls">
       <div class="control-group">
-        <button type="button" id="newBtn" class="btn">New Game</button>
-        <button type="button" id="undoBtn" class="btn">Undo</button>
-        <button type="button" id="flipBtn" class="btn">🔄 Flip</button>
+        <button type="button" id="newBtn" class="btn" data-short="New">New Game</button>
+        <button type="button" id="undoBtn" class="btn" data-short="Undo">Undo</button>
+        <button type="button" id="flipBtn" class="btn" data-short="Flip">🔄 Flip</button>
       </div>
       <div class="control-group">
-        <button type="button" id="sndBtn" class="btn" aria-pressed="true" aria-label="Sound on">🔊 Sound</button>
-        <button type="button" id="fullscreenBtn" class="btn" aria-pressed="false" title="Enter fullscreen (F)">Fullscreen</button>
-        <button type="button" id="helpBtn" class="btn">❓ Help</button>
+        <button type="button" id="sndBtn" class="btn" aria-pressed="true" aria-label="Sound on" data-short="Sound">🔊 Sound</button>
+        <button type="button" id="fullscreenBtn" class="btn" aria-pressed="false" title="Enter fullscreen (F)" data-short="Full">Fullscreen</button>
+        <button type="button" id="helpBtn" class="btn" aria-label="Open help" data-short="?">❓ Help</button>
       </div>
       <label id="autoFlipWrap" style="display:none;"><input type="checkbox" id="autoFlip"> Auto-flip board</label>
       <label id="aiWrap">AI Strength
@@ -416,7 +582,7 @@
       <li><strong>Select &amp; Move:</strong> Click a piece, then click a highlighted square.</li>
       <li><strong>Keyboard:</strong> Focus the board, use arrows or WASD to move square focus, Enter or Space to select and move, and Escape to cancel.</li>
       <li><strong>Mandatory captures:</strong> Sources are outlined <span style="color:var(--warn)">gold</span>; landing squares glow <span style="color:var(--ok)">green</span>.</li>
-      <li><strong>Multi-jump:</strong> If more captures are possible, the same piece stays selected until you finish.</li>
+      <li><strong>Multi-jump:</strong> Multi-hop captures are marked on the final landing square, and the piece follows each required hop in order.</li>
       <li><strong>Singleplayer:</strong> AI plays Black by default. Use “AI strength” to change depth.</li>
       <li><strong>Two-Player:</strong> Both humans play on the same device; switching modes restarts cleanly.</li>
       <li><strong>Undo:</strong> Reverts the last full turn (vs. AI it jumps back to your move).</li>
@@ -442,7 +608,11 @@
   <main>
     <div class="board-wrap">
       <div class="status">
-        <div class="turn pill"><span id="turnDot" class="dot red"></span><span id="turnText">Red to move</span></div>
+        <div class="status-stack">
+          <div class="turn pill turn-pill"><span id="turnDot" class="dot red"></span><span id="turnText">Red to move</span></div>
+          <div id="captureText" class="pill capture-pill is-clear">Free move</div>
+        </div>
+        <div id="actionText" class="pill action-pill" aria-live="polite" aria-atomic="true">Select a red piece.</div>
         <div id="liveStatus" class="sr-only" aria-live="polite" aria-atomic="true"></div>
       </div>
       <p id="boardHelp" class="sr-only">Use arrows or WASD to move the focused square. Press Enter or Space to select pieces and moves. Press Escape to cancel a selection.</p>
@@ -507,6 +677,8 @@ const feedback = {
 const elBoard   = document.getElementById('board');
 const elTurnText= document.getElementById('turnText');
 const elTurnDot = document.getElementById('turnDot');
+const elCaptureText = document.getElementById('captureText');
+const elActionText = document.getElementById('actionText');
 const elToast   = document.getElementById('toast');
 const elUndo    = document.getElementById('undoBtn');
 const elNew     = document.getElementById('newBtn');
@@ -719,6 +891,7 @@ elGoPlay.addEventListener('click', ()=>{ hideGameOver(); newGame(); });
 // --- Mandatory-capture highlighting state ---
 let forcedSources = new Set();
 let forcedTargets = new Set();
+let forcedTargetJumps = new Map();
 
 function isHumanTurn(){
   // In SP, human is the side that's not aiPlays; in PVP both are human
@@ -727,7 +900,7 @@ function isHumanTurn(){
 
 // Compute what to highlight when captures are mandatory for the human
 function updateForcedHighlights(){
-  forcedSources.clear(); forcedTargets.clear();
+  forcedSources.clear(); forcedTargets.clear(); forcedTargetJumps.clear();
 
   if(!isHumanTurn()) return;
 
@@ -747,7 +920,9 @@ function updateForcedHighlights(){
   for(const m of caps){
     forcedSources.add(m.from.join(','));
     const [er,ec] = m.steps[m.steps.length-1];
-    forcedTargets.add([er,ec].join(','));
+    const key = [er,ec].join(',');
+    forcedTargets.add(key);
+    forcedTargetJumps.set(key, Math.max(forcedTargetJumps.get(key) || 0, m.caps.length));
   }
 }
 
@@ -771,6 +946,10 @@ function toast(msg, ms=1400){
 function announceStatus(message){
   if(!elLiveStatus || !message) return;
   elLiveStatus.textContent = message;
+  if(elActionText){
+    elActionText.textContent = message;
+    elActionText.classList.remove('is-alert', 'is-capture');
+  }
 }
 
 function tactilePulse(pattern = 12){
@@ -879,7 +1058,20 @@ function squareAriaLabel(r, c){
   if(legalDest.some(m => {
     const [er,ec] = m.steps[m.steps.length - 1];
     return er === r && ec === c;
-  })) parts.push('legal target');
+  })) {
+    const captureTarget = legalDest.some(m => {
+      const [er,ec] = m.steps[m.steps.length - 1];
+      return er === r && ec === c && m.caps.length;
+    });
+    parts.push(captureTarget ? 'capture target' : 'legal target');
+  }
+  const key = `${r},${c}`;
+  if(!selected && forcedSources.has(key)) parts.push('mandatory capture source');
+  if(!selected && forcedTargets.has(key)){
+    const jumps = forcedTargetJumps.get(key) || 0;
+    parts.push(jumps > 1 ? `mandatory ${jumps}-jump landing square` : 'mandatory capture landing square');
+  }
+  if(mustContinueFrom && mustContinueFrom.r === r && mustContinueFrom.c === c) parts.push('must continue multi-jump');
   return parts.join(', ');
 }
 
@@ -902,10 +1094,11 @@ function cancelKeyboardSelection(key = 'Escape'){
 }
 
 function onBoardFocus(){
+  const hadFocusSquare = !!focusSquare;
   const focused = ensureFocusSquare();
   recordBoardInput('board-focus', {r:focused.r, c:focused.c, action:'focus'});
   announceStatus(focusSummary(focused.r, focused.c));
-  render();
+  if(!hadFocusSquare) render();
 }
 
 function onBoardKeyDown(e){
@@ -968,6 +1161,7 @@ function updateFullscreenUI(){
     ? (active ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)')
     : 'Fullscreen unavailable';
   elFullscreen.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
+  elFullscreen.dataset.short = active ? 'Exit' : 'Full';
 }
 
 async function toggleFullscreen(){
@@ -998,9 +1192,122 @@ function onFullscreenChange(){
   render();
 }
 
+function sideLabel(side = turn){
+  return side === RED ? 'Red' : 'Black';
+}
+
+function squareListFromKeys(keys, limit = 3){
+  const names = [...keys].map(key => {
+    const [r,c] = key.split(',').map(Number);
+    return squareName(r,c);
+  }).sort();
+  if(names.length <= limit) return names.join(', ');
+  return `${names.slice(0, limit).join(', ')} +${names.length - limit}`;
+}
+
+function destinationList(moves, limit = 3){
+  const names = moves.map(m => {
+    const [r,c] = m.steps[m.steps.length - 1];
+    return squareName(r,c);
+  });
+  if(names.length <= limit) return names.join(', ');
+  return `${names.slice(0, limit).join(', ')} +${names.length - limit}`;
+}
+
+function maxCaptureDepth(moves){
+  return moves.reduce((max, move) => Math.max(max, move.caps ? move.caps.length : 0), 0);
+}
+
+function currentCaptureStatus(){
+  if(mustContinueFrom){
+    return {
+      text: `Multi-jump from ${squareName(mustContinueFrom.r, mustContinueFrom.c)}`,
+      tone: 'is-multi'
+    };
+  }
+  const selectedDepth = selected ? maxCaptureDepth(legalDest) : 0;
+  if(selectedDepth){
+    return {
+      text: selectedDepth > 1 ? `Multi-jump x${selectedDepth}` : 'Jump target',
+      tone: selectedDepth > 1 ? 'is-multi' : 'is-required'
+    };
+  }
+  if(forcedSources.size){
+    const depth = maxCaptureDepth(generateMoves(board, turn).filter(m => m.caps.length));
+    return {
+      text: depth > 1 ? `Capture required (${depth} jumps)` : `Capture required (${forcedSources.size})`,
+      tone: depth > 1 ? 'is-multi' : 'is-required'
+    };
+  }
+  return { text: 'Free move', tone: 'is-clear' };
+}
+
+function currentActionStatus(){
+  const invalidActive = feedback.invalidFeedback && feedback.lastInvalidAge !== null && feedback.lastInvalidAge < 1.4;
+  if(invalidActive){
+    return { text: feedback.invalidFeedback.message, tone: 'is-alert' };
+  }
+  if(elGameOver && elGameOver.classList.contains('show')){
+    return { text: `${elGoWinner.textContent} wins.`, tone: '' };
+  }
+  if(locked && mode === 'SP' && turn === aiPlays){
+    return { text: `${sideLabel(turn)} is thinking.`, tone: '' };
+  }
+  if(mustContinueFrom){
+    const jumps = legalDest.filter(m => m.caps.length);
+    return {
+      text: `Continue the same piece to ${destinationList(jumps.length ? jumps : legalDest)}.`,
+      tone: 'is-capture'
+    };
+  }
+  if(selected){
+    if(!legalDest.length){
+      return { text: 'That piece has no legal target.', tone: 'is-alert' };
+    }
+    const jumps = legalDest.filter(m => m.caps.length);
+    if(jumps.length){
+      const depth = maxCaptureDepth(jumps);
+      const lead = depth > 1 ? `Multi-jump to ${destinationList(jumps)} captures ${depth}.` : `Jump to ${destinationList(jumps)}.`;
+      return { text: lead, tone: 'is-capture' };
+    }
+    return { text: `Move to ${destinationList(legalDest)}.`, tone: '' };
+  }
+  if(forcedSources.size){
+    const depth = maxCaptureDepth(generateMoves(board, turn).filter(m => m.caps.length));
+    return {
+      text: depth > 1 ? `Choose ${squareListFromKeys(forcedSources)} for a ${depth}-jump capture.` : `Choose ${squareListFromKeys(forcedSources)} to capture.`,
+      tone: 'is-capture'
+    };
+  }
+  if(feedback.lastMove){
+    const captureText = feedback.lastMove.captures.length ? `, captured ${feedback.lastMove.captures.length}` : '';
+    const crownText = feedback.lastMove.crowned ? ', kinged' : '';
+    return { text: `Last: ${feedback.lastMove.from} to ${feedback.lastMove.to}${captureText}${crownText}.`, tone: '' };
+  }
+  return { text: `${sideLabel(turn)} to move. Select a piece.`, tone: '' };
+}
+
+function updateReadableStatus(){
+  const capture = currentCaptureStatus();
+  if(elCaptureText){
+    elCaptureText.textContent = capture.text;
+    elCaptureText.className = `pill capture-pill ${capture.tone}`;
+  }
+  const action = currentActionStatus();
+  if(elActionText){
+    elActionText.textContent = action.text;
+    elActionText.className = `pill action-pill ${action.tone}`.trim();
+  }
+  if(elBoard){
+    elBoard.dataset.captureState = capture.tone.replace(/^is-/, '') || 'clear';
+  }
+}
+
 function updateTurnUI(){
-  elTurnText.textContent = (turn===RED? 'Red':'Black') + ' to move';
+  const thinking = locked && mode === 'SP' && turn === aiPlays;
+  elTurnText.textContent = sideLabel(turn) + (thinking ? ' thinking' : ' to move');
   elTurnDot.className = 'dot ' + (turn===RED ? 'red' : 'black');
+  updateReadableStatus();
 }
 // === Help modal helpers (must exist before listeners) ===
 let helpWasLocked = null;
@@ -1271,6 +1578,12 @@ function recordInvalidFeedback(reason, r, c, message){
   announceStatus(message);
 }
 
+function clearInvalidFeedback(){
+  feedback.lastInvalidAge = null;
+  feedback.invalidFeedback = null;
+  keyboardDiagnostics.lastError = null;
+}
+
 function recordMoveFeedback(move, piece, capturedSquares, crowned){
   const end = move.steps[move.steps.length - 1];
   feedback.moveCount++;
@@ -1279,6 +1592,7 @@ function recordMoveFeedback(move, piece, capturedSquares, crowned){
   feedback.lastMoveAge = 0;
   feedback.lastCaptureAge = capturedSquares.length ? 0 : feedback.lastCaptureAge;
   feedback.lastCrownAge = crowned ? 0 : feedback.lastCrownAge;
+  clearInvalidFeedback();
   feedback.activePopCount = 1;
   feedback.lastMove = {
     side: colorOf(piece) === RED ? 'red' : 'black',
@@ -1333,6 +1647,7 @@ function render(){
       if(lastMoveHasSquare(r, c, 'to')) sq.classList.add('last-to');
       if(lastMoveHasSquare(r, c, 'path')) sq.classList.add('move-trail');
       if(lastMoveHasSquare(r, c, 'capture')) sq.classList.add('capture-hit');
+      if(mustContinueFrom && mustContinueFrom.r === r && mustContinueFrom.c === c) sq.classList.add('multi-chain');
       elBoard.appendChild(sq);
 
       const v = board[r][c];
@@ -1366,17 +1681,34 @@ function render(){
 
   // Existing selection-destination highlight
   if(selected && legalDest.length){
-    const dests = new Set(legalDest.map(m=> m.steps[m.steps.length-1].join(',')));
+    const dests = new Map(legalDest.map(m=> [m.steps[m.steps.length-1].join(','), m]));
     for(const child of elBoard.children){
       const r=+child.dataset.r, c=+child.dataset.c;
-      if(dests.has([r,c].join(','))) child.classList.add('move');
+      const move = dests.get([r,c].join(','));
+      if(move){
+        child.classList.add('move');
+        if(move.caps.length){
+          child.classList.add('capture-move');
+          if(move.caps.length > 1){
+            child.classList.add('multi-target');
+            child.dataset.jumps = `x${move.caps.length}`;
+          }
+        }
+      }
     }
   } else {
     // ⬅️ If nothing selected, show capture landing squares (human only)
     for(const child of elBoard.children){
       const r=+child.dataset.r, c=+child.dataset.c;
       const key = r+','+c;
-      if(forcedTargets.has(key)) child.classList.add('force-dst');
+      if(forcedTargets.has(key)){
+        child.classList.add('force-dst');
+        const jumps = forcedTargetJumps.get(key) || 0;
+        if(jumps > 1){
+          child.classList.add('multi-target');
+          child.dataset.jumps = `x${jumps}`;
+        }
+      }
     }
   }
   
@@ -1424,7 +1756,13 @@ function handleSquareActivation(r, c, source = 'pointer'){
       recordInvalidFeedback('forced-capture-source', r, c, 'Capture is mandatory.');
       toast('Capture is mandatory.');
       Sound.invalidForcedCapture();
+      tactilePulse([16, 28, 16]);
+      selected = null;
+      legalDest = [];
+      render();
+      return;
     }
+    clearInvalidFeedback();
     selected = {r,c};
     legalDest = generateMoves(board, turn).filter(m=> m.from[0]===r && m.from[1]===c);
     recordBoardInput(`${source}-select`, {r,c, action:'select'});
@@ -1442,6 +1780,7 @@ function handleSquareActivation(r, c, source = 'pointer'){
       return er===r && ec===c;
     });
     if(chosen){
+      clearInvalidFeedback();
       recordBoardInput(`${source}-move`, {r,c, action:'move'});
       focusSquare = {r,c};
       tactilePulse(16);
@@ -1488,6 +1827,8 @@ async function makePlayerMove(move){
       selected = {r:end[0], c:end[1]};
       legalDest = moreCaps.map(m=> ({...m, from:end}));
       locked = false; // let the player continue
+      announceStatus(`Multi-jump required from ${squareName(end[0], end[1])}. Continue with the same piece.`);
+      toast('Continue the multi-jump with the same piece.', 1700);
       render();
       return;
     }
@@ -1708,6 +2049,12 @@ function renderGameToText(){
       lastError: fullscreenDiagnostics.lastError,
     },
     liveStatus: elLiveStatus ? elLiveStatus.textContent : '',
+    visibleStatus: {
+      turn: elTurnText ? elTurnText.textContent : '',
+      capture: elCaptureText ? elCaptureText.textContent : '',
+      action: elActionText ? elActionText.textContent : '',
+      captureState: elBoard ? elBoard.dataset.captureState || '' : '',
+    },
     invalidFeedback,
     focusSquare: focusedSquareName,
     focusedSquare: focusedSquareName,
@@ -1734,6 +2081,10 @@ function renderGameToText(){
     forcedTargets: [...forcedTargets].map(key => {
       const [r,c] = key.split(',').map(Number);
       return squareName(r,c);
+    }),
+    forcedTargetJumps: [...forcedTargetJumps].map(([key, jumps]) => {
+      const [r,c] = key.split(',').map(Number);
+      return { square: squareName(r,c), jumps };
     }),
     mustContinueFrom: mustContinueFrom ? squareName(mustContinueFrom.r, mustContinueFrom.c) : null,
     pieces: boardPieces(),
@@ -1830,6 +2181,7 @@ function updateSoundUI(){
   elSnd.setAttribute('aria-label', on ? 'Sound on' : 'Sound muted');
   elSnd.title = on ? 'Sound on' : 'Sound muted';
   elSnd.textContent = on ? '🔊 Sound' : '🔇 Muted';
+  elSnd.dataset.short = on ? 'Sound' : 'Mute';
 }
 elSnd.addEventListener('click', ()=>{
   const enabled = Sound.toggle();

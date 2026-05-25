@@ -90,10 +90,30 @@ button.action, button.pill.btn {
   color:inherit;
   text-align:inherit;
 }
-  .hud { position:fixed; top:10px; left:50%; z-index: 5; transform:translateX(-50%); display:flex; gap:12px; align-items:center; font-weight:700; letter-spacing:.3px; user-select:none; transition: opacity .2s ease, transform .2s ease; }
+  .hud { position:fixed; top:10px; left:50%; z-index: 5; transform:translateX(-50%); display:flex; gap:8px; align-items:center; justify-content:center; max-width:calc(100vw - 20px); font-weight:700; letter-spacing:.3px; user-select:none; transition: opacity .2s ease, transform .2s ease; }
   body.menu-open .hud { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-10px); }
-  .pill { background:#0f172a; border:1px solid #26334a; padding:6px 10px; border-radius:12px; }
+  .hud-cluster { display:flex; gap:6px; align-items:center; min-width:0; }
+  .hud-score { flex:0 0 auto; }
+  .hud-state { flex:1 1 auto; justify-content:center; }
+  .hud-actions { flex:0 0 auto; }
+  .pill { background:rgba(15,23,42,.9); border:1px solid #26334a; padding:6px 10px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,.18); }
   .pill b { color:var(--accent); }
+  .score-pill { padding:7px 12px; border-color:#1f766b; background:rgba(9,43,42,.94); }
+  .score-pill b { font-size:20px; line-height:1; }
+  .best-pill { color:#cbd5e1; }
+  .status-pill { min-width:82px; text-align:center; text-transform:uppercase; font-size:11px; letter-spacing:.08em; }
+  .status-pill.state-ready,
+  .status-pill.state-steady { color:#cbd5e1; }
+  .status-pill.state-jumping { border-color:#1f766b; color:#5eead4; background:#0b2a23; }
+  .status-pill.state-falling { border-color:#8a5f12; color:#fbbf24; background:#2a200a; }
+  .status-pill.state-danger { border-color:#9f1239; color:#fecdd3; background:#3b0a18; animation: dangerPulse 1s ease-in-out infinite; }
+  .status-pill.state-paused { border-color:#3a5f8f; color:#bfdbfe; background:#0e1b2e; }
+  .status-pill.state-over { border-color:#7f1d1d; color:#fca5a5; background:#2a0d0d; }
+  .buff-pill { min-width:148px; max-width:min(34vw, 340px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .buff-pill.buff-active { border-color:#1f766b; color:#bbf7d0; background:#0b2a23; }
+  .controls-pill { color:var(--muted); font-size:12px; white-space:nowrap; }
+  body.run-danger .hud { transform:translateX(-50%) translateY(1px); }
+  @keyframes dangerPulse { 0%, 100% { box-shadow:0 0 0 rgba(251,113,133,0); } 50% { box-shadow:0 0 24px rgba(251,113,133,.34); } }
   .btn { cursor:pointer; transition:.15s transform ease, .2s opacity; }
   .btn:active { transform:scale(.96); }
   .overlay {
@@ -195,6 +215,19 @@ button.action, button.pill.btn {
     border-color: #1f766b;
     color: var(--accent);
     box-shadow: 0 10px 24px rgba(15, 118, 110, 0.25);
+  }
+  .menu-kicker {
+    display: inline-flex;
+    width: fit-content;
+    border: 1px solid rgba(94, 234, 212, 0.34);
+    background: rgba(14, 44, 42, 0.72);
+    color: #99f6e4;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
   .menu-card .action.ghost {
     background: #0f172a;
@@ -392,15 +425,25 @@ button.action, button.pill.btn {
       right: 8px;
       top: 8px;
       transform: none;
-      justify-content: center;
+      max-width:none;
+      display:grid;
+      grid-template-columns: 1fr;
+      justify-items:center;
       align-items: flex-start;
-      flex-wrap: wrap;
       gap: 6px;
       font-size: 12px;
     }
     body.menu-open .hud { transform: translateY(-10px); }
+    body.run-danger .hud { transform: translateY(1px); }
+    .hud-cluster { flex-wrap:wrap; justify-content:center; }
+    .hud-score { grid-row:1; }
+    .hud-state { grid-row:2; width:100%; }
+    .hud-actions { grid-row:3; }
     .pill { padding: 6px 8px; border-radius: 10px; line-height: 1.25; }
-    .hud .pill[title="Controls"] { display: none; }
+    .score-pill b { font-size:16px; }
+    .status-pill { min-width:68px; font-size:10px; }
+    .buff-pill { min-width:0; max-width:calc(100vw - 110px); }
+    .controls-pill { display: none; }
     .overlay { align-items: flex-start; overflow-y: auto; padding: 12px 0; }
     .menu-card { padding: 16px; gap: 14px; max-height: calc(100vh - 24px); overflow-y: auto; }
     .menu-side { order: 0; gap: 10px; }
@@ -424,6 +467,7 @@ button.action, button.pill.btn {
     .menu-side {
       animation: none;
     }
+    .status-pill.state-danger { animation: none; }
   }
   @keyframes menuRise {
     from { opacity: 0; transform: translateY(14px); }
@@ -431,10 +475,41 @@ button.action, button.pill.btn {
   }
   .fade { animation: fade .35s ease both; }
   @keyframes fade { from { opacity:0; transform:translateY(8px) scale(.98) } to { opacity:1; transform:none } }
-  .touch-zone { position:fixed; inset:0; pointer-events:none; }
-  .zone { position:absolute; top:0; bottom:0; width:50%; opacity:.06; pointer-events:auto; }
-  .zone.left { left:0; background:linear-gradient(90deg,#ffffff 0%, transparent 60%); }
-  .zone.right { right:0; background:linear-gradient(270deg,#ffffff 0%, transparent 60%); }
+  .touch-zone { position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .15s ease; }
+  body.run-active .touch-zone { opacity:1; }
+  body.menu-open .touch-zone { display:none; }
+  .zone { position:absolute; top:0; bottom:0; width:50%; opacity:.1; pointer-events:auto; touch-action:none; transition:opacity .15s ease, background .15s ease; }
+  .zone.left { left:0; background:linear-gradient(90deg,rgba(94,234,212,.24) 0%, rgba(94,234,212,.08) 24%, transparent 64%); }
+  .zone.right { right:0; background:linear-gradient(270deg,rgba(94,234,212,.24) 0%, rgba(94,234,212,.08) 24%, transparent 64%); }
+  .zone::before {
+    content:"";
+    position:absolute;
+    top:22%;
+    bottom:22%;
+    width:3px;
+    border-radius:999px;
+    background:rgba(94,234,212,.42);
+  }
+  .zone.left::before { left:12px; }
+  .zone.right::before { right:12px; }
+  .zone::after {
+    position:absolute;
+    bottom:clamp(70px, 13vh, 116px);
+    border:1px solid rgba(94,234,212,.36);
+    border-radius:999px;
+    padding:6px 9px;
+    background:rgba(8,17,28,.52);
+    color:#ccfbf1;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    text-shadow:0 1px 2px rgba(0,0,0,.35);
+  }
+  .zone.left::after { content:"Hold left"; left:14px; }
+  .zone.right::after { content:"Hold right"; right:14px; }
+  .zone.is-active { opacity:.3; }
+  body.run-danger .zone { opacity:.16; }
   @media (hover:hover) and (pointer:fine) {
     .zone { display:none; }
     .legend { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 2px }
@@ -472,19 +547,27 @@ button.action, button.pill.btn {
   <canvas id="game" tabindex="0" aria-label="Arcade Jump game canvas"></canvas>
 
   <div class="hud" id="hud">
-    <div class="pill">Score: <b id="score">0</b></div>
-    <div class="pill">Best: <b id="best">0</b></div>
-    <div class="pill" id="buff">No power-ups</div>
-    <button class="pill btn" id="pause" type="button" aria-label="Pause or resume">⏸ Pause</button>
-    <button class="pill btn" id="fullscreenBtn" type="button" aria-label="Toggle fullscreen" aria-pressed="false" title="Enter fullscreen (F)">⛶ Fullscreen</button>
-    <button class="pill btn" id="mute" type="button" aria-label="Toggle sound" aria-pressed="false">🔊 Sound</button>
-    <div class="pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause • F fullscreen • M mute</div>
+    <div class="hud-cluster hud-score">
+      <div class="pill score-pill">Score: <b id="score">0</b></div>
+      <div class="pill best-pill">Best: <b id="best">0</b></div>
+    </div>
+    <div class="hud-cluster hud-state">
+      <div class="pill status-pill state-ready" id="runState">Ready</div>
+      <div class="pill buff-pill" id="buff">No power-ups</div>
+    </div>
+    <div class="hud-cluster hud-actions">
+      <button class="pill btn" id="pause" type="button" aria-label="Pause or resume">⏸ Pause</button>
+      <button class="pill btn" id="fullscreenBtn" type="button" aria-label="Toggle fullscreen" aria-pressed="false" title="Enter fullscreen (F)">⛶ Fullscreen</button>
+      <button class="pill btn" id="mute" type="button" aria-label="Toggle sound" aria-pressed="false">🔊 Sound</button>
+    </div>
+    <div class="pill controls-pill" title="Controls">←/A move • →/D move • Space start / <b>double-jump</b> • P pause • F fullscreen • M mute</div>
   </div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Arcade Jump ready.</div>
 
   <div class="overlay menu-overlay fade" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
     <div class="menu-card">
       <div class="menu-hero">
+        <span class="menu-kicker">Endless platform climb</span>
         <h1 class="menu-title" id="menuTitle">Arcade Jump</h1>
         <p class="menu-tagline">Climb through shifting platforms, chain power-ups, and jump to new heights.</p>
         <div class="menu-actions">
@@ -629,11 +712,25 @@ DPR=Math.min(2,window.devicePixelRatio||1);W=canvas.clientWidth=window.innerWidt
 ;canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);bg.width=Math.round(W*BG_DPR)
 ;bg.height=Math.round(H*BG_DPR);bgCtx.setTransform(BG_DPR,0,0,BG_DPR,0,0);rebuildHillsOnce()
 ;buildStars();buildMoonCraters()}window.addEventListener("resize",resize,{passive:true});resize()
-;const buffEl=document.getElementById("buff");function updateBuffHUD(){const P=state?.player
-;if(!P)return;const bits=[];if(P.jetpackT>0)bits.push(`🚀 ${P.jetpackT.toFixed(1)}s`)
+;const buffEl=document.getElementById("buff");const runStateEl=document.getElementById("runState")
+;function updateRunStateHUD(P,hasBuff=false){let stateName="ready",stateText="Ready"
+;let falling=false,danger=false;if(running&&paused){stateName="paused";stateText="Paused"
+}else if(running&&P){falling=P.vy>90;const lowFall=falling&&P.y>H-170
+;const stormDanger=storm.active&&!space.active;const enemyDanger=state?.enemies?.some((enemy=>enemy.alive!==false&&Math.abs(enemy.x+enemy.w/2-(P.x+P.w/2))<86&&Math.abs(enemy.y+enemy.h/2-(P.y+P.h/2))<120))
+;danger=lowFall||stormDanger||!!enemyDanger;if(danger){stateName="danger";stateText=stormDanger?"Storm":"Danger"
+}else if(falling){stateName="falling";stateText="Falling"}else if(P.vy<-80){stateName="jumping";stateText="Rising"
+}else{stateName="steady";stateText="Steady"}}else if(gameover&&gameover.style.display!=="none"){
+stateName="over";stateText="Game over"}if(runStateEl){runStateEl.textContent=stateText
+;runStateEl.className=`pill status-pill state-${stateName}`;runStateEl.setAttribute("aria-label",`Run state: ${stateText}`)}
+;body.classList.toggle("run-buff",!!hasBuff&&running);body.classList.toggle("run-falling",falling&&running&&!paused)
+;body.classList.toggle("run-danger",danger&&running&&!paused)
+;body.classList.toggle("run-active",running&&!paused&&!!P)}
+function updateBuffHUD(){const P=state?.player;const bits=[];if(P){if(P.jetpackT>0)bits.push(`🚀 ${P.jetpackT.toFixed(1)}s`)
 ;if(P.jumpBoostT>0)bits.push(`👟 ${P.jumpBoostT.toFixed(1)}s`)
-;if(P.slowT>0)bits.push(`⏳ ${P.slowT.toFixed(1)}s`);if(P.shield>0)bits.push(`🛡️ ready`)
-;buffEl.textContent=bits.length?`Power-ups: ${bits.join(" • ")}`:"No power-ups"}
+;if(P.slowT>0)bits.push(`⏳ ${P.slowT.toFixed(1)}s`);if(P.shield>0)bits.push(`🛡️ ready`)}
+;const hasBuff=bits.length>0;buffEl.textContent=hasBuff?`Power-ups: ${bits.join(" • ")}`:"No power-ups"
+;buffEl.classList.toggle("buff-active",hasBuff);buffEl.setAttribute("aria-label",hasBuff?`Active power-ups: ${bits.join(", ")}`:"No active power-ups")
+;updateRunStateHUD(P,hasBuff)}
 const scoreEl=document.getElementById("score");const bestEl=document.getElementById("best")
 ;const menuBestEl=document.getElementById("menuBest")
 ;const pauseBtn=document.getElementById("pause")
@@ -727,10 +824,11 @@ if(running&&!paused&&(e.code==="ArrowRight"||e.code==="KeyD")){recordFeedback("s
 ;window.addEventListener("keyup",(e=>{keys.delete(e.code)}));let touchLeft=false,touchRight=false
 ;const zoneLeft=document.getElementById("zoneLeft")
 ;const zoneRight=document.getElementById("zoneRight");zoneLeft.addEventListener("pointerdown",(e=>{
-e.preventDefault();touchLeft=true;if(running&&!paused)recordFeedback("steer",{direction:-1})}))
+e.preventDefault();touchLeft=true;zoneLeft.classList.add("is-active");if(running&&!paused)recordFeedback("steer",{direction:-1})}))
 ;zoneRight.addEventListener("pointerdown",(e=>{e.preventDefault();touchRight=true
-;if(running&&!paused)recordFeedback("steer",{direction:1})}));const endTouchLeft=()=>{
-touchLeft=false};const endTouchRight=()=>{touchRight=false}
+;zoneRight.classList.add("is-active");if(running&&!paused)recordFeedback("steer",{direction:1})}));const endTouchLeft=()=>{
+touchLeft=false;zoneLeft.classList.remove("is-active")};const endTouchRight=()=>{touchRight=false
+;zoneRight.classList.remove("is-active")}
 ;zoneLeft.addEventListener("pointerup",endTouchLeft)
 ;zoneRight.addEventListener("pointerup",endTouchRight)
 ;zoneLeft.addEventListener("pointercancel",endTouchLeft)
@@ -937,8 +1035,8 @@ red:false,cloud:false,rain:false}};storm.active=false;storm.flashT=0;storm.nextF
 let best=null;for(const p of state.plats){if(!p.alive)continue;if(!best||p.y>best.y)best=p}
 return best}function start(restarting=false){restarting=restarting===true;hide(menu);hide(gameover)
 ;if(!sound.muted){unlockAudioFromGesture(true)}else{music.stop()}reset()
-;if(state?.player)state.player.vy=bounceVy(JUMP_VY);scoreEl.textContent="0";updateBuffHUD()
-;paused=false;running=true;lastAnnouncedScore=0;bestAnnouncedThisRun=false;motionPhase="jumping"
+;if(state?.player)state.player.vy=bounceVy(JUMP_VY);scoreEl.textContent="0"
+;paused=false;running=true;lastAnnouncedScore=0;bestAnnouncedThisRun=false;motionPhase="jumping";updateBuffHUD()
 ;recordFeedback("start",{label:"GO"})
 ;setLiveStatus(`Run started. Score 0. Best ${best}. Jumping.`,true);lastT=performance.now()
 ;if(!restarting){sound.beep(880,.09,"triangle",.08,"start");toast("Good luck!")}}
@@ -949,11 +1047,11 @@ function gameOver(){running=false;paused=false;recordFeedback("game-over")
 ;sound.beep(440,.1,"sawtooth",.1,"game-over")
 ;setTimeout((()=>sound.beep(330,.12,"sawtooth",.1,"game-over")),90)
 ;setTimeout((()=>sound.beep(262,.18,"sawtooth",.1,"game-over")),200);show(gameover)
-;setLiveStatus(s>wasBest?`Game over. New best ${best}.`:`Game over. Score ${s}. Best ${best}.`,true)
+;updateBuffHUD();setLiveStatus(s>wasBest?`Game over. New best ${best}.`:`Game over. Score ${s}. Best ${best}.`,true)
 }async function togglePause(){if(!running)return;paused=!paused
 ;pauseBtn.textContent=paused?"▶ Resume":"⏸ Pause";if(paused){sound.record("pause")
 ;if(sound.ctx&&!sound.muted){try{await sound.ctx.suspend()}catch(e){}}}else if(!sound.muted){
-await unlockAudioFromGesture(true);sound.record("resume")}if(!paused)lastT=performance.now()}
+await unlockAudioFromGesture(true);sound.record("resume")}updateBuffHUD();if(!paused)lastT=performance.now()}
 function announceMotionPhase(){if(!running||paused||!state?.player)return
 ;const nextPhase=state.player.vy<-80?"jumping":state.player.vy>90?"falling":motionPhase
 ;if(nextPhase!==motionPhase){motionPhase=nextPhase
@@ -1500,6 +1598,9 @@ x:Math.round(enemy.x),y:Math.round(enemy.y),vx:Math.round((enemy.vx||0)*10)/10})
 active:storm.active,pendingSpace:storm.pendingSpace,bolts:storm.bolts.length},space:{
 active:space.active,planets:space.planets.length,shooters:space.shooters.length,
 ufos:space.ufos.length},input:{keys:Array.from(keys),touchLeft:touchLeft,touchRight:touchRight},
+hud:{runState:runStateEl?.textContent||"",buff:buffEl?.textContent||"",
+runDanger:body.classList.contains("run-danger"),runFalling:body.classList.contains("run-falling"),
+runBuff:body.classList.contains("run-buff")},
 feedback:getFeedbackDiagnostics(),liveStatus:liveStatus?.textContent||"",motionPhase:motionPhase,
 fullscreen:{supported:!!document.fullscreenEnabled,active:isFullscreenActive(),
 elementId:document.fullscreenElement?.id||"",

@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-05-25 Codex pass 87
+
+- Implemented the non-conflicting PWA budget + classics polish pass on `codex/nonconflicting-pwa-budget-classics-2026-05-25`: coordinator-owned PWA install-payload budget guard plus isolated Arcade Jump, Checkers, and Switchback Rally polish lanes.
+- Added `npm run test:pwa-install-budget`, wired into `npm test` and Validate Catalog, to keep the service-worker install payload (`sw.js`, install shell assets, newest pre-cached covers, and local PWA icons) inside the existing Catalog performance budget without changing `sw.js`.
+- Polished the three existing game surfaces without changing rules, scoring, storage keys, manifest entries, generated surfaces, covers, service worker behavior, or capture recipes: Arcade Jump HUD/state/steer affordance; Checkers mobile chrome plus capture/multi-jump readability; Switchback Rally mobile first-viewport control reach.
+- Local verification passed: focused game contract/a11y/a11y-polish/keyboard-help/runtime-storage checks; focused Playwright desktop/mobile smoke with no browser errors or mobile overflow; `validate-catalog.ps1`; `npm test` across 34 fast gates; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games`; `npm run capture:games:ci` with max score 0; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`.
+
 ## 2026-05-24 Codex pass 86
 
 - Implemented the non-conflicting SW freshness + dense classics polish pass on `codex/nonconflicting-sw-classics-2026-05-24`: coordinator-owned service-worker shell freshness guard plus isolated Lexica, 2048, and Volt Sudoku polish lanes.
