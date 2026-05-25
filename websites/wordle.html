@@ -154,7 +154,7 @@
   button{cursor:pointer}
   main{display:grid;justify-items:center;align-content:center;padding:18px 14px;gap:14px}
   .play-card{
-    width:min(100%,560px);
+    width:min(100%,550px);
     background:linear-gradient(180deg,rgba(20,32,52,0.75),rgba(10,18,32,0.92));
     border:1px solid rgba(34,211,238,0.22);
     border-radius:18px;
@@ -177,7 +177,7 @@
     font-weight:700;
   }
   .play-status .play-row{color:var(--muted);letter-spacing:0.18em}
-  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:7px;width:min(100%,440px);aspect-ratio: 5 / 6}
+  .board{display:grid;grid-template-rows:repeat(6,1fr);gap:7px;width:min(100%,410px);aspect-ratio: 5 / 6}
   .row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .tile{border:2px solid var(--stroke);display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:clamp(22px,6vw,30px);text-transform:uppercase;background:var(--panel)}
   .tile.filled{border-color:#475569}
@@ -197,14 +197,18 @@
   .key{background:var(--panel);border:1px solid var(--stroke);border-radius:8px;padding:9px 7px;font-weight:700;text-transform:uppercase;text-align:center}
   .key.wide{grid-column:span 2}
   .keys.row3 .key.wide{grid-column:auto}
+  .key[data-key=enter],.key[data-key=backspace]{background:linear-gradient(180deg,#1d3d53,#102236);border-color:rgba(34,211,238,.55);font-weight:800}
   .key svg{width:24px;height:18px;display:block;margin:0 auto}
   .key.k-c{background:var(--correct);border-color:var(--correct)}
   .key.k-p{background:var(--present);border-color:var(--present)}
   .key.k-a{background:var(--absent);border-color:var(--absent)}
-  footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;border-top:1px solid var(--stroke);flex-wrap:wrap}
-  .status{font-size:13px;color:var(--muted)}
+  .action-strip{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;margin-top:-2px}
+  .status{min-height:40px;display:flex;align-items:center;background:rgba(15,23,42,.82);border:1px solid rgba(148,163,184,.26);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.25;color:var(--muted)}
+  .status[data-tone=warn]{border-color:rgba(248,113,113,.55);color:#fecaca}
+  .status[data-tone=success]{border-color:rgba(52,211,153,.55);color:#bbf7d0}
   .btn{background:var(--panel);border:1px solid var(--stroke);padding:8px 10px;border-radius:10px}
   .btn.primary{border-color:var(--accent)}
+  .wrap.game-finished #newBtn{background:linear-gradient(180deg,#3de2f5,#22d3ee);border-color:rgba(34,211,238,.7);color:#06242a}
   .btn[data-hotkey],.pill[data-hotkey]{display:inline-flex;align-items:center;gap:6px}
   .btn[data-hotkey]::after,.pill[data-hotkey]::after{content:attr(data-hotkey);display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 6px;border-radius:999px;background:#111827;border:1px solid var(--stroke);color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
   dialog{border:1px solid var(--stroke);background:var(--panel);color:var(--ink);border-radius:14px;padding:16px;max-width:min(90vw,520px)}
@@ -213,6 +217,11 @@
   .close{background:transparent;border:0;color:var(--muted);font-size:20px;cursor:pointer}
   .meta{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
   .stat{background:#0f172a;border:1px solid var(--stroke);border-radius:12px;padding:8px 10px;font-size:12px}
+  .result-card{background:#0b1220;border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:10px 12px;margin:8px 0 12px}
+  .result-card p{margin:0}
+  .answer-line{margin-top:8px!important;color:var(--muted)}
+  .answer-line b{color:var(--ink);letter-spacing:.18em}
+  .result-actions{display:grid;grid-template-columns:1fr;gap:8px}
   .sr{position:absolute;left:-10000px}
   @media (max-width: 480px){
     .wrap{gap:6px}
@@ -222,15 +231,16 @@
     .controls{gap:6px}
     .pill{font-size:11px;padding:6px 8px}
     main{padding:8px 6px;align-content:start}
-    .play-card{padding:12px 10px 10px;border-radius:14px;gap:10px}
+    .play-card{padding:12px 10px 10px;border-radius:14px;gap:8px}
     .play-status{font-size:10px;letter-spacing:0.16em}
     .board{width:min(100%,330px);gap:5px}
     .keyboard{width:min(100%,370px);gap:5px;margin-bottom:6px}
     .row,.keys{gap:5px}
     .keys.row2{margin:0 10px}
     .key{padding:8px 4px;min-height:38px}
-    footer{padding:7px 10px}
-    .status{font-size:12px}
+    .action-strip{gap:6px}
+    .status{min-height:36px;font-size:12px;padding:7px 8px}
+    #newBtn{padding:8px 9px}
   }
 </style>
   <script src="workshop-runtime.js"></script>
@@ -258,6 +268,10 @@
         <span class="play-row">5 Letters &middot; 6 Tries</span>
       </div>
       <div id="board" class="board" aria-label="Guess grid" aria-live="polite"></div>
+      <div class="action-strip">
+        <div class="status" id="status" role="status" aria-live="polite" data-tone="info">Make a guess.</div>
+        <button type="button" class="btn" id="newBtn" data-hotkey="Ctrl+Enter">Play Again</button>
+      </div>
       <div class="keyboard">
         <div class="keys row1" id="row1"></div>
         <div class="keys row2" id="row2"></div>
@@ -266,12 +280,6 @@
     </div>
   </main>
 
-  <footer>
-    <div class="status" id="status">Make a guess.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button type="button" class="btn" id="newBtn" data-hotkey="Ctrl+Enter">Play Again</button>
-    </div>
-  </footer>
 </div>
 
 <dialog id="help">
@@ -308,9 +316,11 @@
     <strong id="overTitle">Game Over</strong> <!-- ADDED -->
     <button type="button" class="close" aria-label="Close" onclick="over.close()">×</button> <!-- ADDED -->
   </div> <!-- ADDED -->
-  <p id="overMsg">You win!</p> <!-- ADDED -->
-  <p><small>Answer: <b id="overSecret">?????</b></small></p> <!-- ADDED -->
-  <div style="display:flex; gap:8px; flex-wrap:wrap"> <!-- ADDED -->
+  <div class="result-card"> <!-- ADDED -->
+    <p id="overMsg">You win!</p> <!-- ADDED -->
+    <p class="answer-line">Answer: <b id="overSecret">?????</b></p> <!-- ADDED -->
+  </div> <!-- ADDED -->
+  <div class="result-actions"> <!-- ADDED -->
     <button type="button" class="btn primary" id="againBtn" data-hotkey="Enter">Play Again</button> <!-- ADDED -->
   </div> <!-- ADDED -->
 </dialog> <!-- ADDED -->
@@ -336,6 +346,7 @@
 
   // ===== DOM refs =====
   const board = document.getElementById('board');
+  const wrap = document.querySelector('.wrap');
   const statusEl = document.getElementById('status');
   const help = document.getElementById('help');
   const hardChk = document.getElementById('hard');
@@ -524,8 +535,9 @@ const AudioFX = (() => {                               // ADDED
     }
   }
   function setStatus(msg, warn=false){
+    const tone = warn === true ? 'warn' : (warn || 'info');
     statusEl.textContent=msg;
-    statusEl.style.color = warn? 'var(--warn)' : 'var(--muted)';
+    statusEl.dataset.tone = tone;
   }
 
   function chooseSecret(){
@@ -561,6 +573,8 @@ const AudioFX = (() => {                               // ADDED
     } // ADDED
 
     setStatus('Make a guess.');
+    wrap?.classList.remove('game-finished');
+    newBtn.textContent = 'Play Again';
     repaint();
     save();
   }
@@ -759,6 +773,9 @@ const AudioFX = (() => {                               // ADDED
   overTitle.textContent = won ? 'You Win!' : 'Game Over';
   overMsg.textContent = won ? `Solved in ${guesses.length}/6` : 'Out of tries.';
   overSecret.textContent = secret.toUpperCase();
+  setStatus(won ? `Solved in ${guesses.length}/6. Play again when ready.` : `Answer: ${secret.toUpperCase()}. Try another word.`, won ? 'success' : 'warn');
+  wrap?.classList.add('game-finished');
+  newBtn.textContent = 'Try Another';
     recordInputFeedback(won ? 'win' : 'loss', secret);
     won ? AudioFX.success() : AudioFX.fail();                   // ADDED
   try { over.showModal(); } catch(e){                      // CHANGED: robust open
@@ -809,9 +826,11 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
 
     if(guesses[guesses.length-1]===secret){
       finished = true;
+  setStatus('Revealing result...');
   setTimeout(()=>showGameOver(true), REVEAL_WAIT);   // CHANGED: wait for reveal
     } else if(guesses.length===6){
       finished = true;
+  setStatus('Revealing result...');
   setTimeout(()=>showGameOver(false), REVEAL_WAIT);  // CHANGED: wait for reveal
     } else {
       setStatus('Keep going…');
@@ -948,7 +967,10 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
         lossCount: inputFeedback.lossCount,
         lastInput: inputFeedback.lastInput,
         tactileActive: inputFeedback.activeCueCount > 0,
-        lastSound: AudioFX.diagnostics().lastSound
+        lastSound: AudioFX.diagnostics().lastSound,
+        statusTone: statusEl.dataset.tone || 'info',
+        resultCtaVisible: !!finished,
+        resultCtaLabel: newBtn.textContent
       }
     });
   }

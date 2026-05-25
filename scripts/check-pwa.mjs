@@ -12,6 +12,7 @@
 //   4. index.html links the manifest, exposes a theme-color, and registers
 //      the service worker behind a feature check.
 
+import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
@@ -89,6 +90,38 @@ async function checkManifest() {
   return parsed;
 }
 
+async function expectedShellRevision(coverPrefetchCount) {
+  const manifestRaw = await readFile(join(repoRoot, 'websites/manifest.json'), 'utf8');
+  const manifest = JSON.parse(manifestRaw);
+  const coverFiles = Array.isArray(manifest)
+    ? [...manifest]
+      .sort((a, b) => String(b?.addedAt || '').localeCompare(String(a?.addedAt || '')))
+      .slice(0, coverPrefetchCount)
+      .map((game) => game?.cover)
+      .filter((cover) => typeof cover === 'string' && cover.length > 0)
+    : [];
+  const shellFiles = [
+    'index.html',
+    'websites/manifest.json',
+    'covers/app-icon.svg',
+    'app.webmanifest',
+    'offline.html',
+    '404.html',
+    ...coverFiles,
+  ];
+  const hash = createHash('sha256');
+
+  for (const relative of shellFiles) {
+    const content = await readFile(join(repoRoot, relative), 'utf8');
+    hash.update(relative);
+    hash.update('\0');
+    hash.update(content.replace(/\r\n?/g, '\n'));
+    hash.update('\0');
+  }
+
+  return `shell-${hash.digest('hex').slice(0, 12)}`;
+}
+
 async function checkServiceWorker() {
   const swPath = 'sw.js';
   if (!(await exists(swPath))) {
@@ -112,8 +145,17 @@ async function checkServiceWorker() {
     }
   }
 
-  if (!/const\s+VERSION\s*=\s*['"`][\w.-]+['"`]/.test(src)) {
+  const versionMatch = src.match(/const\s+VERSION\s*=\s*['"`]([^'"`]+)['"`]/);
+  if (!versionMatch) {
     fail(`${swPath}: missing a versioned cache key (expected const VERSION = '...')`);
+  }
+  const revisionMatch = src.match(/const\s+SHELL_REVISION\s*=\s*['"`]([^'"`]+)['"`]/);
+  if (!revisionMatch) {
+    fail(`${swPath}: missing SHELL_REVISION constant for deterministic shell cache freshness`);
+  } else if (!/^shell-[a-f0-9]{12}$/.test(revisionMatch[1])) {
+    fail(`${swPath}: SHELL_REVISION must look like shell-<12 hex chars>, got "${revisionMatch[1]}"`);
+  } else if (versionMatch && !versionMatch[1].includes(revisionMatch[1])) {
+    fail(`${swPath}: VERSION "${versionMatch[1]}" must include SHELL_REVISION "${revisionMatch[1]}"`);
   }
   if (!/caches\.keys\(\)/.test(src) || !/caches\.delete\(/.test(src)) {
     fail(`${swPath}: must clean up old caches on activate (caches.keys() + caches.delete)`);
@@ -139,13 +181,20 @@ async function checkServiceWorker() {
   // fetches on return visits. The count must match index.html's
   // aboveFoldCoverCount() desktop branch (currently 6) so the pre-cache
   // and eager-load hint stay aligned.
+  let coverPrefetchCount = 0;
   if (!/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/.test(src)) {
     fail(`${swPath}: missing COVER_PREFETCH_COUNT constant — needed to pre-cache the newest catalog covers on install`);
   } else {
     const match = src.match(/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/);
-    const count = match ? parseInt(match[1], 10) : 0;
-    if (count < 1 || count > 12) {
-      fail(`${swPath}: COVER_PREFETCH_COUNT = ${count} is outside the sane range (1..12). Match it to the desktop aboveFoldCoverCount() return value (currently 6).`);
+    coverPrefetchCount = match ? parseInt(match[1], 10) : 0;
+    if (coverPrefetchCount < 1 || coverPrefetchCount > 12) {
+      fail(`${swPath}: COVER_PREFETCH_COUNT = ${coverPrefetchCount} is outside the sane range (1..12). Match it to the desktop aboveFoldCoverCount() return value (currently 6).`);
+    }
+  }
+  if (revisionMatch && /^shell-[a-f0-9]{12}$/.test(revisionMatch[1]) && coverPrefetchCount > 0) {
+    const expected = await expectedShellRevision(coverPrefetchCount);
+    if (revisionMatch[1] !== expected) {
+      fail(`${swPath}: SHELL_REVISION is ${revisionMatch[1]}, expected ${expected} from current install-time shell assets`);
     }
   }
   if (!/function\s+newestCoverUrls\s*\(/.test(src)) {

@@ -13,7 +13,11 @@
 // Cache key includes a version stamp so a deploy that ships a changed
 // shell file invalidates the old cache via `activate` cleanup.
 
-const VERSION = 'wa-v8-2026-05-22';
+// Deterministic hash of the install-time shell assets below plus the newest
+// COVER_PREFETCH_COUNT manifest covers. check-pwa.mjs recomputes it so shell
+// asset changes must also move the cache namespace.
+const SHELL_REVISION = 'shell-444540748fe7';
+const VERSION = 'wa-v9-shell-444540748fe7';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -160,4 +164,4 @@ self.addEventListener('message', (event) => {
 
 // Keep the constants reachable from check-pwa.mjs's static contract check.
 // They are documented references for tooling, not runtime exports.
-self.WORKSHOP_ARCADE_SW_FALLBACKS = { OFFLINE_URL, NOT_FOUND_URL };
+self.WORKSHOP_ARCADE_SW_FALLBACKS = { OFFLINE_URL, NOT_FOUND_URL, SHELL_REVISION };

@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-05-24 Codex pass 86
+
+- Implemented the non-conflicting SW freshness + dense classics polish pass on `codex/nonconflicting-sw-classics-2026-05-24`: coordinator-owned service-worker shell freshness guard plus isolated Lexica, 2048, and Volt Sudoku polish lanes.
+- Coordinator lane adds a deterministic `SHELL_REVISION` tied to install-time shell assets and newest pre-cached covers, with static/runtime PWA checks recomputing the revision to prevent stale offline cache namespaces.
+- Polished the three classic game surfaces without changing scoring/rules/storage keys, manifest entries, generated surfaces, package scripts, workflows, or capture recipes: Lexica keyboard/status/result flow; 2048 start overlay/status/undo controls; Volt Sudoku selected-cell/note/hint/status feedback and mobile density. Capture initially flagged Volt Sudoku mobile at 139 visible elements; the final mobile surface is 127 visible elements and the strict render gate scores 0.
+
 ## 2026-05-24 Codex pass 85
 
 - Implemented the non-conflicting asset gate + compact feel pass on `codex/nonconflicting-asset-feel-pass-2026-05-24`: coordinator-owned static page-weight asset coverage plus isolated Circuit Draft, Market Minute, and Cipher Rooms polish.

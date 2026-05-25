@@ -8,6 +8,7 @@
 // are unavailable.
 
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +26,39 @@ const mimeTypes = new Map([
 
 function fail(message) {
   issues.push(message);
+}
+
+async function expectedShellRevision() {
+  const swSource = await readFile(join(repoRoot, 'sw.js'), 'utf8');
+  const count = Number(swSource.match(/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/)?.[1] || 0);
+  const manifest = JSON.parse(await readFile(join(repoRoot, 'websites/manifest.json'), 'utf8'));
+  const coverFiles = Array.isArray(manifest)
+    ? [...manifest]
+      .sort((a, b) => String(b?.addedAt || '').localeCompare(String(a?.addedAt || '')))
+      .slice(0, count)
+      .map((game) => game?.cover)
+      .filter((cover) => typeof cover === 'string' && cover.length > 0)
+    : [];
+  const shellFiles = [
+    'index.html',
+    'websites/manifest.json',
+    'covers/app-icon.svg',
+    'app.webmanifest',
+    'offline.html',
+    '404.html',
+    ...coverFiles,
+  ];
+  const hash = createHash('sha256');
+
+  for (const relative of shellFiles) {
+    const content = await readFile(join(repoRoot, relative), 'utf8');
+    hash.update(relative);
+    hash.update('\0');
+    hash.update(content.replace(/\r\n?/g, '\n'));
+    hash.update('\0');
+  }
+
+  return `shell-${hash.digest('hex').slice(0, 12)}`;
 }
 
 function requestPath(requestUrl) {
@@ -80,12 +114,20 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
 
+  const expectedRevision = await expectedShellRevision();
   const cacheTruth = await page.evaluate(async () => {
     const swText = await (await fetch('sw.js', { cache: 'no-store' })).text();
     const version = swText.match(/const VERSION = ['"`]([^'"`]+)['"`]/)?.[1] || '';
+    const shellRevision = swText.match(/const SHELL_REVISION = ['"`]([^'"`]+)['"`]/)?.[1] || '';
     const names = await caches.keys();
-    return { version, names };
+    return { version, shellRevision, names };
   });
+  if (cacheTruth.shellRevision !== expectedRevision) {
+    fail(`service worker shell revision mismatch: expected ${expectedRevision}, got ${cacheTruth.shellRevision || 'missing'}`);
+  }
+  if (!cacheTruth.version.includes(cacheTruth.shellRevision)) {
+    fail(`cache version "${cacheTruth.version}" does not include shell revision "${cacheTruth.shellRevision}"`);
+  }
   if (!cacheTruth.version || !cacheTruth.names.length || cacheTruth.names.some((name) => !name.startsWith(cacheTruth.version))) {
     fail(`cache revision truth mismatch: ${JSON.stringify(cacheTruth)}`);
   }

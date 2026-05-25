@@ -95,7 +95,7 @@
       overflow-x:hidden;
       font-family:EmbeddedMontserrat, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif}
 
-    .wrap{width:min(94vw,720px);min-height:100dvh;margin:0 auto;padding:clamp(10px,2vw,18px);display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center}
+    .wrap{width:min(94vw,720px);min-height:100dvh;margin:0 auto;padding:clamp(10px,2vw,18px);display:grid;grid-template-rows:auto auto auto minmax(0,1fr);align-content:center}
     header{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
     h1{font-size:clamp(36px,7vw,58px);line-height:1;margin:0;color:var(--text);letter-spacing:0;text-shadow:0 0 18px rgba(88,226,206,.18)}
     .badges{margin-left:auto;display:flex;gap:10px}
@@ -103,9 +103,17 @@
     .badge .label{font-size:12px;color:var(--muted)}
     .badge .value{font-size:22px;font-weight:700}
 
-    .controls{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .controls-hint{color:var(--muted)}
-    button{appearance:none;border:1px solid rgba(88,226,206,.16);border-radius:9px;padding:9px 12px;background:linear-gradient(180deg,#182a32,#101d24);color:var(--text);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.22)}
+    .controls{margin-top:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;align-items:center}
+    .control-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .utility-controls{justify-content:flex-end}
+    .controls-hint{grid-column:1/-1;color:var(--muted);font-size:12px;line-height:1.35}
+    .status-strip{margin-top:8px;min-height:38px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(88,226,206,.18);border-radius:10px;background:linear-gradient(180deg,rgba(16,31,39,.92),rgba(10,20,27,.94));color:var(--text-light);font-size:13px;line-height:1.35;text-align:center;padding:8px 12px;box-shadow:0 10px 22px rgba(0,0,0,.2)}
+    .status-strip[data-tone="active"]{border-color:rgba(88,226,206,.38);box-shadow:0 0 0 1px rgba(88,226,206,.12),0 10px 22px rgba(0,0,0,.2)}
+    .status-strip[data-tone="success"]{border-color:rgba(246,196,83,.5);color:#fff7d8}
+    .status-strip[data-tone="warn"]{border-color:rgba(255,107,107,.42);color:#ffe3e3}
+    button{appearance:none;border:1px solid rgba(88,226,206,.16);border-radius:9px;padding:9px 12px;min-height:38px;background:linear-gradient(180deg,#182a32,#101d24);color:var(--text);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.22)}
+    .primary-action{border-color:rgba(246,196,83,.36);background:linear-gradient(180deg,#f7cf62,#d89a2f);color:#1b1508}
+    .undo-action.is-ready{border-color:rgba(88,226,206,.44);box-shadow:0 0 0 1px rgba(88,226,206,.14),0 8px 18px rgba(0,0,0,.22)}
     button:hover{border-color:rgba(88,226,206,.34)}
     button:disabled{opacity:.58;cursor:not-allowed}
     button:active{transform:translateY(1px);box-shadow:0 0 0 2px rgba(88,226,206,.14),0 5px 12px rgba(0,0,0,.2)}
@@ -136,10 +144,11 @@
       background:rgba(5,12,16,.76);backdrop-filter:saturate(1.2) blur(2px);
       opacity:0; pointer-events:none; transition:opacity var(--fade)}
     .overlay.show{opacity:1; pointer-events:auto}
+    .overlay.start{background:linear-gradient(180deg,rgba(5,12,16,.82),rgba(8,18,24,.72))}
     .card{background:linear-gradient(180deg,rgba(19,34,42,.98),rgba(9,18,24,.98));border:1px solid rgba(88,226,206,.22);border-radius:14px;padding:18px 20px;box-shadow:0 18px 44px rgba(0,0,0,.38);text-align:center;max-width:min(90%,420px);color:var(--text)}
     .card h2{margin:0 0 10px 0}
-    .card p{margin:0 0 14px 0}
-    .card .actions{display:flex;gap:10px;justify-content:center}
+    .card p{margin:0 0 14px 0;line-height:1.45}
+    .card .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     .card .primary{background:linear-gradient(180deg,#f9d86f,#f0b63e);color:#1b1508;border-color:rgba(246,196,83,.55)}
     .help-overlay{position:fixed;inset:0;display:none;place-items:center;pointer-events:none;z-index:100;background:rgba(0,0,0,0.72)}
     .help-overlay.show{display:grid;pointer-events:auto}
@@ -152,7 +161,7 @@
     .help-card .btn-close{margin-top:16px;width:100%;background:linear-gradient(180deg,#f9d86f,#f0b63e);color:#1b1508;border:none;padding:10px;border-radius:10px;font-weight:700;cursor:pointer}
     .help-card .btn-close:active{transform:translateY(1px)}
     @media (max-width: 520px){
-      .wrap{width:100%;max-width:100%;padding:10px 10px 8px;align-content:start;grid-template-rows:auto auto auto}
+      .wrap{width:100%;max-width:100%;padding:10px 10px 8px;align-content:start;grid-template-rows:auto auto auto auto}
       header{align-items:center;gap:8px}
       h1{font-size:34px}
       .badges{width:100%;margin-left:0}
@@ -160,9 +169,12 @@
       .badge .label{font-size:11px}
       .badge .value{font-size:20px}
       h1{line-height:1.05}
-      .controls{font-size:12px;gap:6px;margin-top:8px}
-      button{padding:8px 9px}
-      .controls-hint{width:100%;font-size:11px;line-height:1.2}
+      .controls{grid-template-columns:1fr;font-size:12px;gap:6px;margin-top:8px}
+      .control-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+      .utility-controls{grid-template-columns:repeat(3,minmax(0,1fr));justify-content:stretch}
+      button{padding:8px 6px;min-height:34px;font-size:12px}
+      .controls-hint{font-size:11px;line-height:1.2;text-align:center}
+      .status-strip{margin-top:6px;min-height:34px;font-size:12px;padding:7px 8px;border-radius:9px}
       .board{margin-top:8px;width:min(100%,370px)}
       .help-card{padding:18px;max-height:86dvh;overflow:auto}
     }
@@ -179,21 +191,26 @@
       </div>
     </header>
 
-    <div class="controls">
-      <button type="button" id="newBtn" title="Start a new game (N)">New Game</button>
-      <button type="button" id="undoBtn" title="Undo last move (Z)" disabled>Undo</button>
-      <button type="button" id="soundBtn" title="Toggle sound effects" aria-pressed="true">Sound On</button>
-      <button type="button" id="fullscreenBtn" title="Enter fullscreen (F)" aria-pressed="false">⛶ Full</button>
-      <button type="button" id="helpBtn" title="Help (H)">❓ Help</button>
+    <div class="controls" aria-label="Game controls">
+      <div class="control-group primary-controls">
+        <button type="button" id="newBtn" class="primary-action" title="Start a new game (N)" aria-label="Start a new 2048 board (N)">New Game</button>
+        <button type="button" id="undoBtn" class="undo-action" title="Undo last move (Z)" aria-label="Undo last move (Z)" disabled>Undo</button>
+      </div>
+      <div class="control-group utility-controls">
+        <button type="button" id="soundBtn" title="Toggle sound effects" aria-label="Toggle sound effects" aria-pressed="true">Sound On</button>
+        <button type="button" id="fullscreenBtn" title="Enter fullscreen (F)" aria-label="Toggle fullscreen (F)" aria-pressed="false">⛶ Full</button>
+        <button type="button" id="helpBtn" title="Help (H)" aria-label="Open help (?)">❓ Help</button>
+      </div>
       <span class="controls-hint" aria-hidden="true">Use ← ↑ → ↓ or WASD (swipe if mobile)</span>
     </div>
+    <div id="statusBar" class="status-strip" aria-live="polite" aria-atomic="true" data-tone="ready">Ready. Slide any direction to start.</div>
 
     <div class="board" id="board">
       <canvas id="game" width="600" height="600" aria-label="2048 game board" role="img"></canvas>
       <div id="overlay" class="overlay" aria-live="polite" aria-hidden="true">
         <div class="card" role="dialog" aria-modal="true" aria-labelledby="overlayTitle" aria-describedby="overlayDesc">
-          <h2 id="overlayTitle">You win!</h2>
-          <p id="overlayDesc">Reached 2048. Keep going?</p>
+          <h2 id="overlayTitle">Slide to start</h2>
+          <p id="overlayDesc">Use arrows, WASD, or a swipe. Your first slide starts the board.</p>
           <div class="actions">
             <button type="button" id="keepBtn" class="primary">Keep Playing</button>
             <button type="button" id="restartBtn">Restart</button>
@@ -286,6 +303,7 @@
   const soundBtn = document.getElementById('soundBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('statusBar');
 
   // --- Game state ------------------------------------------------------------
   let tiles = [];          // {id,value,r,c,fromR,fromC,toR,toC,scale,popStart,removing,mergedInto}
@@ -294,6 +312,10 @@
   best = Number(localStorage.getItem('best2048')||0);
   let moving = false;      // during slide animation
   let lastState = null;    // snapshot for undo
+  let overlayMode = null;
+  let startOverlayDismissed = false;
+  let statusMessage = 'Ready. Slide any direction to start.';
+  let statusTone = 'ready';
 
   let idCounter = 1;
   const cell = (r,c)=>({r,c});
@@ -311,7 +333,9 @@
     mergeTargets: [],
     moveCount: 0,
     mergeMoveCount: 0,
-    spawnCount: 0
+    spawnCount: 0,
+    lastVisibleFeedback: null,
+    lastVisibleFeedbackAt: null
   };
 
   const SOUND_KEY = '2048:sound';
@@ -438,6 +462,68 @@
     return tones[name] || tones.move;
   }
 
+  function setStatus(message, tone = 'ready'){
+    statusMessage = message;
+    statusTone = tone;
+    feedback.lastVisibleFeedback = message;
+    feedback.lastVisibleFeedbackAt = performance.now();
+    if(statusEl){
+      statusEl.textContent = message;
+      statusEl.dataset.tone = tone;
+    }
+  }
+
+  function directionLabel(dir){
+    return ({ left: 'left', right: 'right', up: 'up', down: 'down' })[dir] || dir;
+  }
+
+  function canUndoNow(){
+    return !!lastState && !moving && !over;
+  }
+
+  function syncActionButtons(){
+    const canUndo = canUndoNow();
+    undoBtn.disabled = !canUndo;
+    undoBtn.classList.toggle('is-ready', canUndo);
+    undoBtn.setAttribute('aria-disabled', String(!canUndo));
+    undoBtn.title = canUndo
+      ? 'Undo last move (Z)'
+      : over
+      ? 'Undo unavailable after game over'
+      : moving
+      ? 'Undo available after the slide settles'
+      : 'Make a move to enable undo';
+    newBtn.title = (feedback.moveCount > 0 || score > 0)
+      ? 'Restart with a fresh board (N)'
+      : 'Start a fresh board (N)';
+  }
+
+  function showStartOverlay(){
+    clearQueue();
+    overlayMode = 'start';
+    startOverlayDismissed = false;
+    overlayTitle.textContent = 'Slide to start';
+    overlayDesc.textContent = 'Use arrows, WASD, or a swipe. Your first slide starts the board.';
+    keepBtn.style.display = '';
+    keepBtn.textContent = 'Start Sliding';
+    keepBtn.setAttribute('aria-label', 'Start playing 2048');
+    restartBtn.textContent = 'New Board';
+    restartBtn.setAttribute('aria-label', 'Deal a fresh 2048 board');
+    overlay.setAttribute('aria-hidden','false');
+    overlay.classList.remove('win','game-over');
+    overlay.classList.add('show','start');
+    setStatus('Ready. Slide any direction to start.', 'ready');
+    syncActionButtons();
+    requestAnimationFrame(()=> keepBtn.focus());
+  }
+
+  function dismissStartOverlay(message = 'Playing. Merge matching tiles toward 2048.'){
+    if(overlayMode !== 'start') return;
+    startOverlayDismissed = true;
+    hideOverlay();
+    setStatus(message, 'active');
+  }
+
   // --- Input queue so fast swipes/keys aren't dropped -------------------------
 const inputQ = [];
 const MAX_Q = 6;
@@ -506,7 +592,7 @@ function clearQueue(){ inputQ.length = 0; }
 
   // --- Game lifecycle --------------------------------------------------------
   function newGame(options = {}){
-      clearQueue();                      // <-- added
+    clearQueue();
     board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
     tiles = [];
     score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null;
@@ -516,6 +602,9 @@ function clearQueue(){ inputQ.length = 0; }
     hideOverlay();
     draw();
     if(options.sound) playSound('newGame');
+    if(options.startOverlay !== false) showStartOverlay();
+    else setStatus('Playing. Merge matching tiles toward 2048.', 'active');
+    syncActionButtons();
   }
 
   function snapshot(){
@@ -542,20 +631,27 @@ function clearQueue(){ inputQ.length = 0; }
   }
 
   function undo(){
-    if(!lastState || moving || over) return; // Prevent undo when game is over
+    if(!lastState || moving || over) {
+      setStatus(over ? 'Undo is unavailable after game over.' : moving ? 'Undo is available after the slide settles.' : 'Make a move before using undo.', 'warn');
+      syncActionButtons();
+      return;
+    } // Prevent undo when game is over
     restore(lastState);
     lastState = null;
     undoBtn.disabled = true;
     resetFeedback();
     updateHUD();
     draw();
+    setStatus('Undid the last slide. Choose the next direction.', 'active');
     playSound('undo');
+    syncActionButtons();
   }
 
   function updateHUD(){
     scoreEl.textContent = score;
     if(score>best){ best = score; localStorage.setItem('best2048', best); }
     bestEl.textContent = best;
+    syncActionButtons();
   }
 
   // --- Tile utilities --------------------------------------------------------
@@ -587,6 +683,8 @@ function move(dir){
 
   lastState = snapshot();
   undoBtn.disabled = false;
+  setStatus(`Sliding ${directionLabel(dir)}...`, 'active');
+  syncActionButtons();
   const mergeTargets = [];
 
   // Reset per-move flags/targets
@@ -659,6 +757,7 @@ function move(dir){
   if(!moved){
     lastState = null; undoBtn.disabled = true;
     recordInvalidFeedback(dir);
+    syncActionButtons();
     if(!canAnyMove()){
       over = true; 
       undoBtn.disabled = true; // Disable undo when game over
@@ -669,6 +768,7 @@ function move(dir){
 
   // Animate slide, then commit + spawn
   moving = true;
+  syncActionButtons();
   const slideMs = effectiveSlideTime();          // ⬅️ use dynamic time
   const start = performance.now();
   function frame(){
@@ -702,6 +802,7 @@ if(!over) checkEndStates();
       });
 
       moving = false;
+      syncActionButtons();
       draw();
       pumpQueue();   // ⬅️ run any buffered inputs now
     }
@@ -725,6 +826,8 @@ if(!over) checkEndStates();
     feedback.moveCount = 0;
     feedback.mergeMoveCount = 0;
     feedback.spawnCount = 0;
+    feedback.lastVisibleFeedback = null;
+    feedback.lastVisibleFeedbackAt = null;
   }
 
   function recordMoveFeedback(info){
@@ -740,16 +843,26 @@ if(!over) checkEndStates();
     if(feedback.mergeCount) feedback.mergeMoveCount++;
     if(feedback.spawnedTile) feedback.spawnCount++;
     if(feedback.largestMergedTile >= 128) flashBoard('major-merge', 360);
+    if(overlayMode !== 'win' && overlayMode !== 'gameOver'){
+      const base = feedback.mergeCount
+        ? `Merged ${feedback.mergeCount} pair${feedback.mergeCount === 1 ? '' : 's'} for +${feedback.scoreGained}.`
+        : `Moved ${directionLabel(info.direction)}.`;
+      const spawn = feedback.spawnedTile ? ` New ${feedback.spawnedTile.value} appeared.` : '';
+      setStatus(`${base}${spawn}`, feedback.mergeCount ? 'success' : 'active');
+    }
     if(!overlay.classList.contains('show')) playSound(feedback.mergeCount ? 'merge' : 'move');
+    syncActionButtons();
   }
 
   function recordInvalidFeedback(direction){
     feedback.lastInvalidDirection = direction;
     feedback.lastInvalidAt = performance.now();
     feedback.invalidMoveCount++;
+    setStatus(`No tiles moved ${directionLabel(direction)}. Try another direction.`, 'warn');
     flashBoard('invalid', 240);
     playSound('invalid');
     draw();
+    syncActionButtons();
   }
 
   function feedbackAge(){
@@ -1053,12 +1166,21 @@ function checkWinOnly(){
 
   // --- Overlay controls ------------------------------------------------------
   function showOverlay(title, desc, canKeep){
-      clearQueue();                      // <-- added (optional but recommended)
+    clearQueue();
+    overlayMode = canKeep ? 'win' : 'gameOver';
+    startOverlayDismissed = true;
     overlayTitle.textContent = title; overlayDesc.textContent = desc;
     // Show or hide the Keep Playing button depending on context
     keepBtn.style.display = canKeep ? '' : 'none';
+    keepBtn.textContent = 'Keep Playing';
+    keepBtn.setAttribute('aria-label', 'Keep playing after reaching 2048');
+    restartBtn.textContent = 'Restart';
+    restartBtn.setAttribute('aria-label', 'Restart 2048');
     overlay.setAttribute('aria-hidden','false');
-    overlay.classList.add('show');
+    overlay.classList.remove('start','win','game-over');
+    overlay.classList.add('show', canKeep ? 'win' : 'game-over');
+    setStatus(canKeep ? `Reached ${WIN_VALUE}. Keep playing or restart.` : 'Game over. No moves remain.', canKeep ? 'success' : 'warn');
+    syncActionButtons();
     if(title.includes('Win')) playSound('win');
     else if(title.includes('Game Over')) playSound('gameOver');
     // Focus the most relevant action
@@ -1066,10 +1188,26 @@ function checkWinOnly(){
   }
   function hideOverlay(){
     overlay.classList.remove('show');
+    overlay.classList.remove('start','win','game-over');
     overlay.setAttribute('aria-hidden','true');
+    overlayMode = null;
+    keepBtn.textContent = 'Keep Playing';
+    restartBtn.textContent = 'Restart';
   }
 
-  keepBtn.addEventListener('click',()=>{ noteAudioGesture(); keepPlaying = true; hideOverlay(); draw(); });
+  keepBtn.addEventListener('click',()=>{
+    noteAudioGesture();
+    if(overlayMode === 'start'){
+      dismissStartOverlay();
+      draw();
+      return;
+    }
+    keepPlaying = true;
+    hideOverlay();
+    setStatus(`Continuing past ${WIN_VALUE}. Keep building the board.`, 'success');
+    syncActionButtons();
+    draw();
+  });
 
   // Help menu
   const helpBtn = document.getElementById('helpBtn');
@@ -1171,6 +1309,7 @@ function checkWinOnly(){
     soundState.enabled = !soundState.enabled;
     writeSoundPreference(soundState.enabled);
     updateSoundButton();
+    setStatus(soundState.enabled ? 'Sound effects on.' : 'Sound effects off.', soundState.enabled ? 'active' : 'ready');
     if(soundState.enabled) playSound('move');
   });
 
@@ -1186,33 +1325,49 @@ function checkWinOnly(){
     }
     if((k==='n'||k==='N') && !helpOpen){ newGame({ sound: true }); return; }
     if(k==='z' || k==='Z') { if(!over) undo(); return; } // Prevent undo when game over
+    const dir = DIR_KEYS[k] || DIR_KEYS[String(k).toLowerCase()];
+    if(dir && overlayMode === 'start' && overlay.classList.contains('show')){
+      e.preventDefault();
+      dismissStartOverlay(`First slide ${directionLabel(dir)}. Keep merging toward ${WIN_VALUE}.`);
+      enqueue(dir);
+      return;
+    }
     if(overlay.classList.contains('show') || helpOpen){
       // Block moves while overlay is up; let the focused button handle keys.
       e.preventDefault();
       return;
     }
-    const dir = DIR_KEYS[k];
   if(dir){ e.preventDefault(); enqueue(dir); }  // ⬅️ was move(dir)
   }, {passive:false});
 
   // Touch swipe handling (simple threshold)
   let touchStart = null;
-  canvas.addEventListener('touchstart', e=>{
+  function handleTouchStart(e){
     noteAudioGesture();
     if(e.touches.length!==1) return;
     const t = e.touches[0]; touchStart = {x:t.clientX, y:t.clientY};
-  }, {passive:true});
+  }
 
-  canvas.addEventListener('touchend', e=>{
+  function handleTouchEnd(e){
     if(!touchStart || helpOpen) return; const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.x; const dy = t.clientY - touchStart.y;
     const ax = Math.abs(dx), ay = Math.abs(dy); const TH = 24; // px threshold
     if(Math.max(ax,ay) > TH){
       const dir = (ax>ay) ? (dx<0?'left':'right') : (dy<0?'up':'down');
-    enqueue(dir);                                // ⬅️ was move(dir)
+      if(overlay.classList.contains('show') && overlayMode !== 'start') {
+        touchStart = null;
+        return;
+      }
+      if(overlayMode === 'start') dismissStartOverlay(`First swipe ${directionLabel(dir)}. Keep merging toward ${WIN_VALUE}.`);
+      enqueue(dir);                                // ⬅️ was move(dir)
     }
     touchStart = null;
-  }, {passive:true});
+  }
+
+  canvas.addEventListener('touchstart', handleTouchStart, {passive:true});
+  canvas.addEventListener('touchend', handleTouchEnd, {passive:true});
+  overlay.addEventListener('touchstart', handleTouchStart, {passive:true});
+  overlay.addEventListener('touchend', handleTouchEnd, {passive:true});
 
   // --- Diagnostics for smoke/debug tooling ----------------------------------
   function valueMatrix(){
@@ -1255,7 +1410,16 @@ function checkWinOnly(){
       tiles: tiles.map(t => ({ row: t.r, col: t.c, value: t.value })),
       grid: matrix,
       overlay: overlay.classList.contains('show') ? overlayTitle.textContent : null,
+      overlayMode,
       helpOpen,
+      status: {
+        message: statusMessage,
+        tone: statusTone,
+        startOverlayDismissed,
+        canUndo: canUndoNow(),
+        undoDisabled: undoBtn.disabled,
+        newGameTitle: newBtn.title
+      },
       fullscreen: {
         supported: fullscreenSupported(),
         active: fullscreenActive()
@@ -1298,7 +1462,8 @@ function checkWinOnly(){
         moveCount: feedback.moveCount,
         mergeMoveCount: feedback.mergeMoveCount,
         spawnCount: feedback.spawnCount,
-        activePopCount: activeFeedbackCount()
+        activePopCount: activeFeedbackCount(),
+        lastVisibleFeedback: feedback.lastVisibleFeedback
       }
     });
   }
