@@ -68,7 +68,7 @@ for (const file of generatorSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:all']);
+const fastGateExclusions = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();

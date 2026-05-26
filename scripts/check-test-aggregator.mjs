@@ -87,7 +87,7 @@ function extractExcludedScripts(runnerSrc) {
 
 async function checkCoverage(pkg, runnerSrc) {
   const excluded = extractExcludedScripts(runnerSrc);
-  const allowedExcluded = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:all']);
+  const allowedExcluded = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
   for (const required of allowedExcluded) {
     if (!excluded.has(required)) {
       fail(`scripts/run-fast-tests.mjs: EXCLUDED_SCRIPTS must list "${required}" (browser-backed slow gate / would recurse)`);

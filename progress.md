@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-05-26 Codex pass 88
+
+- Implemented the live Pages smoke + legacy polish pass on `codex/live-smoke-and-legacy-polish`: coordinator-owned `npm run test:live-pages` plus isolated Lumen Lander, Relay Choir, and Block Drop polish lanes.
+- Added `scripts/check-live-pages.mjs` to smoke the deployed GitHub Pages site by default, with `WORKSHOP_ARCADE_URL` and `WORKSHOP_ARCADE_LIVE_SLUGS` overrides. It checks catalog startup, manifest/feed/sitemap, selected game URLs, browser/page errors, mobile overflow, and ensures the catalog does not call the GitHub API during startup.
+- Polished the three existing games without changing scoring/rules/storage keys/manifest/generated surfaces/service worker: Lumen Lander now exposes visible start/thrust/landing feedback and no longer needs the capture feedback exemption; Relay Choir has clearer first-action and gate-budget feedback with denser mobile controls; Block Drop has clearer start/status feedback and mobile control hierarchy.
+- Local verification passed: focused Lumen contract/a11y/a11y-polish/keyboard-help/runtime-storage checks; desktop/mobile Playwright probes for all three touched games; `validate-catalog.ps1`; `npm test` across 34 fast gates; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games`; `npm run capture:games:ci` with max score 0; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`; `npm run test:live-pages`; `git diff --check`.
+
 ## 2026-05-25 Codex pass 87
 
 - Implemented the non-conflicting PWA budget + classics polish pass on `codex/nonconflicting-pwa-budget-classics-2026-05-25`: coordinator-owned PWA install-payload budget guard plus isolated Arcade Jump, Checkers, and Switchback Rally polish lanes.

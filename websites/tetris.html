@@ -105,12 +105,17 @@
     font-size:12px; letter-spacing:0.04em;
   }
   .keynote { display:none; }
+  .mobile-status { display:none; }
   .sr-only {
     position:absolute; width:1px; height:1px; padding:0; margin:-1px;
     overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
 
-  .btns { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; width:min(100vw - 16px, 520px); justify-content:center; z-index:45; }
+  .btns {
+    position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+    display:grid; grid-template-columns:0.9fr 1fr 1.3fr 1fr 0.9fr; gap:8px;
+    width:min(100vw - 16px, 520px); justify-content:center; align-items:end; z-index:45;
+  }
   .btn {
     background:linear-gradient(180deg,rgba(20,30,50,0.95),rgba(11,17,32,0.95));
     border:1px solid rgba(125,211,252,0.22);
@@ -121,7 +126,20 @@
   .btn:hover{ border-color:rgba(125,211,252,0.55); }
   .btn:active { transform:translateY(1px); }
   .fullscreen-btn[aria-pressed="true"] { background:rgba(45,212,191,0.9); color:#05202a; border-color:rgba(45,212,191,0.86); }
-  .btns .btn { touch-action: none; flex:1 1 0; min-width:0; padding:10px 8px; }
+  .btns .btn { touch-action: none; min-width:0; min-height:50px; padding:10px 8px; }
+  .btns .move-btn { font-size:21px; }
+  .btns .rotate-btn { font-size:18px; }
+  .btns .hard-drop-btn {
+    min-height:58px; transform:translateY(-4px);
+    background:linear-gradient(180deg,#7dd3fc,#38bdf8);
+    color:#06111c; border-color:#bae6fd; letter-spacing:0.08em;
+    box-shadow:0 12px 26px rgba(56,189,248,0.2), 0 8px 16px rgba(0,0,0,0.34);
+  }
+  .btns .hard-drop-btn:active { transform:translateY(-2px); }
+  .btn.touch-active {
+    border-color:#bae6fd;
+    box-shadow:0 0 0 2px rgba(125,211,252,0.18), 0 8px 16px rgba(0,0,0,0.32);
+  }
   @media (min-width: 860px){ .btns { display:none; } }
   #holdCanvas, #nextCanvas { background:#0e1522; margin-top:4px; }
 
@@ -136,6 +154,7 @@
   }
   .start-panel[hidden] { display:none; }
   .start-title { text-align:center; font-size:13px; letter-spacing:1.2px; color:#7dd3fc; text-transform:uppercase; font-weight:800; }
+  .start-state { text-align:center; font-size:12px; color:#cbd5e1; font-weight:700; }
   .start-actions { display:grid; grid-template-columns:1fr auto; gap:8px; }
   .start-actions .btn:first-child { background:#37b5ff; color:#06111c; border-color:#79d6ff; }
 
@@ -158,7 +177,7 @@
   .key { display:inline-block; padding:4px 8px; border-radius:8px; background:#111827; border:1px solid #2a344a; font-weight:700; margin:2px 6px 2px 0; }
   .help-actions { display:flex; justify-content:center; gap:10px; margin-top:14px; }
   @media (max-width: 720px){
-    body { padding:128px 8px 84px; }
+    body { padding:128px 8px 118px; }
     .brand { display:none; }
     .hud { top:6px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; overflow:visible; align-items:stretch; }
     .hud > *{ min-width:0; }
@@ -166,7 +185,21 @@
     #holdCanvas, #nextCanvas { width:34px; height:34px; }
     #status, #resetBtn, #soundBtn { display:none; }
     #fullscreenBtn { padding:4px 5px; font-size:12px; border-radius:9px; line-height:1.1; }
-    .start-panel { top:48%; width:min(88vw, 260px); padding:12px; }
+    .mobile-status {
+      position:fixed; left:8px; right:8px; bottom:74px; z-index:44;
+      display:flex; align-items:center; justify-content:center;
+      min-height:30px; padding:4px 10px; box-sizing:border-box;
+      border:1px solid rgba(125,211,252,0.24); border-radius:12px;
+      background:rgba(9,14,28,0.88); color:#dbeafe;
+      font-size:12px; font-weight:800; text-align:center;
+      box-shadow:0 8px 18px rgba(0,0,0,0.32);
+    }
+    .btns { bottom:10px; grid-template-columns:0.86fr 0.96fr 1.36fr 0.96fr 0.86fr; gap:6px; width:min(100vw - 16px, 430px); }
+    .btns .btn { min-height:46px; padding:8px 4px; border-radius:12px; font-size:12px; }
+    .btns .move-btn { font-size:22px; }
+    .btns .rotate-btn { font-size:18px; }
+    .btns .hard-drop-btn { min-height:54px; font-size:13px; }
+    .start-panel { top:47%; width:min(88vw, 260px); padding:12px; gap:8px; }
     .start-actions { grid-template-columns:1fr 72px; }
     .help-card { padding:14px; }
     .help-grid { font-size:13px; gap:6px; }
@@ -186,6 +219,7 @@
 
   <div id="startPanel" class="start-panel" role="group" aria-label="Block Drop start controls">
     <div class="start-title">Block Drop</div>
+    <div id="startState" class="start-state">Ready</div>
     <div class="start-actions">
       <button id="playBtn" class="btn" type="button">Play</button>
       <button id="openHelpBtn" class="btn" type="button">Help</button>
@@ -232,12 +266,14 @@
     <button class="btn fullscreen-btn" id="fullscreenBtn" type="button" aria-pressed="false" aria-label="Enter fullscreen" title="Enter fullscreen (F)">Fullscreen</button>
   </div>
 
+  <div id="mobileStatus" class="mobile-status" aria-hidden="true">Ready</div>
+
   <div class="btns">
-    <button class="btn" id="leftBtn" type="button">Left</button>
-    <button class="btn" id="rotLBtn" type="button">Rotate L</button>
-    <button class="btn" id="hardBtn" type="button">Drop</button>
-    <button class="btn" id="rotRBtn" type="button">Rotate R</button>
-    <button class="btn" id="rightBtn" type="button">Right</button>
+    <button class="btn move-btn" id="leftBtn" type="button" aria-label="Move left">&larr;</button>
+    <button class="btn rotate-btn" id="rotLBtn" type="button" aria-label="Rotate counterclockwise">&#8634;</button>
+    <button class="btn hard-drop-btn" id="hardBtn" type="button" aria-label="Hard drop">Drop</button>
+    <button class="btn rotate-btn" id="rotRBtn" type="button" aria-label="Rotate clockwise">&#8635;</button>
+    <button class="btn move-btn" id="rightBtn" type="button" aria-label="Move right">&rarr;</button>
   </div>
 
 
@@ -256,6 +292,7 @@
   const helpPlay = document.getElementById('helpPlay');
   const helpMute = document.getElementById('helpMute');
   const startPanel = document.getElementById('startPanel');
+  const startStateEl = document.getElementById('startState');
   const playBtn = document.getElementById('playBtn');
   const openHelpBtn = document.getElementById('openHelpBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -419,6 +456,7 @@
     const show = !running && !helpUp;
     startPanel.hidden = !show;
     if (show && playBtn) playBtn.textContent = gameOver ? 'Play Again' : 'Play';
+    if (show && startStateEl) startStateEl.textContent = gameOver ? 'Game over - Score ' + score : 'Ready - Best ' + best;
   }
 
   // Viewport-fit resize
@@ -427,7 +465,7 @@
     const vh = window.innerHeight;
     const compact = vw < 720;
     const topReserve = compact ? 132 : 100;
-    const bottomReserve = compact ? 84 : 20;
+    const bottomReserve = compact ? 118 : 20;
     const usableW = Math.max(240, vw - (compact ? 16 : 24));
     const usableH = Math.max(360, vh - topReserve - bottomReserve);
     let cell = Math.floor(Math.min(usableW/10, usableH/20));
@@ -514,10 +552,12 @@
   const bestEl  = document.getElementById('best');
   const statusEl= document.getElementById('status');
   const liveStatusEl = document.getElementById('liveStatus');
+  const mobileStatusEl = document.getElementById('mobileStatus');
 
   const HS_KEY = 'blockdrop_best';
   let best = 0; try { best = Number(localStorage.getItem(HS_KEY)||0); } catch(_) {}
   bestEl.textContent = 'Best: ' + best;
+  setMobileStatus('Ready - Best ' + best);
 
   const W = 10, H = 20;
   const empty = ()=>Array.from({length:H},()=>Array(W).fill(0));
@@ -710,6 +750,23 @@
     feedback.inputCount++;
   }
 
+  function setMobileStatus(message){
+    if(!mobileStatusEl) return;
+    mobileStatusEl.textContent = String(message || '');
+  }
+
+  function flashControlButton(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add('touch-active');
+    window.setTimeout(()=>el.classList.remove('touch-active'), 140);
+  }
+
+  function noteControlFeedback(id, message){
+    flashControlButton(id);
+    setMobileStatus(message);
+  }
+
   function announceStatus(type, message, options = {}){
     const text = String(message || '');
     const now = performance.now();
@@ -720,6 +777,7 @@
     feedback.recentStatus.push({ ...entry, at: now });
     if(feedback.recentStatus.length > 8) feedback.recentStatus.splice(0, feedback.recentStatus.length - 8);
     if(statusEl) statusEl.textContent = text;
+    setMobileStatus(text);
     queueLiveStatus(text);
     if(options.tactile !== false) tactilePulse(options.tactile || type);
   }
@@ -851,7 +909,7 @@
     if(collide(piece.x,piece.y,piece.shape)) {
       recordTopOut(pieceSnapshot(piece));
       gameOver=true; running=false;
-      announceStatus('game-over', 'Game Over - Click Reset', { tactile: 'game-over' });
+      announceStatus('game-over', 'Game Over - Play Again', { tactile: 'game-over' });
       saveBest(); stopMusic(); updateStartPanel(); return null;
     }
     return piece;
@@ -863,8 +921,8 @@
       recordLock(lockedPiece);
       recordTopOut(lockedPiece);
       gameOver=true; running=false;
-      announceStatus('game-over', 'Game Over - Click Reset', { tactile: 'game-over' });
-      saveBest(); stopMusic(); return;
+      announceStatus('game-over', 'Game Over - Play Again', { tactile: 'game-over' });
+      saveBest(); stopMusic(); updateStartPanel(); return;
     }
     const tspin = isTSpin();
     merge();
@@ -1299,7 +1357,7 @@
       ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 16);
       ctx.font = '18px system-ui, sans-serif';
       ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
-      ctx.fillText('Press Space or click Reset to restart', canvas.width/2, canvas.height/2 + 36);
+      ctx.fillText('Press Space or Play Again', canvas.width/2, canvas.height/2 + 36);
     }
     ctx.restore();
     drawScreenFeedback();
@@ -1498,6 +1556,10 @@
     if(!el) return;
     el.addEventListener('click',()=>{
       if(inputType) recordInput(inputType, 'button:' + id);
+      if(inputType){
+        const label = id === 'hardBtn' ? 'Hard drop' : (id === 'rotLBtn' ? 'Rotate left' : 'Rotate right');
+        noteControlFeedback(id, label);
+      }
       if(gameOver){ newGame(); } else if(!running){ togglePause(); fn(); } else { fn(); }
     });
   }
@@ -1508,10 +1570,12 @@
     const setHeld = (isDown)=>{
       if(!running || gameOver){
         if(isDown) recordInput(gameOver ? 'restart' : 'start', 'button:' + id);
+        if(isDown) noteControlFeedback(id, 'Starting');
         if(isDown) newGame();
         return;
       }
       if(isDown) recordInput('move-' + dir, 'button:' + id);
+      if(isDown) noteControlFeedback(id, dir === 'left' ? 'Move left' : 'Move right');
       if(dir === 'left') leftHeld = isDown;
       if(dir === 'right') rightHeld = isDown;
       updateMoveDir();
@@ -1708,8 +1772,21 @@
         ariaLabel: fullscreenBtn ? fullscreenBtn.getAttribute('aria-label') : null,
         title: fullscreenBtn ? fullscreenBtn.title : null
       },
+      visibleFeedback: {
+        startPanelVisible: !!(startPanel && !startPanel.hidden),
+        startState: startStateEl ? startStateEl.textContent : null,
+        mobileStatus: mobileStatusEl ? mobileStatusEl.textContent : null,
+        touchControls: {
+          left: document.getElementById('leftBtn')?.textContent || null,
+          rotateLeft: document.getElementById('rotLBtn')?.getAttribute('aria-label') || null,
+          hardDrop: document.getElementById('hardBtn')?.textContent || null,
+          rotateRight: document.getElementById('rotRBtn')?.getAttribute('aria-label') || null,
+          right: document.getElementById('rightBtn')?.textContent || null
+        }
+      },
       muted: !!muted,
-      status: statusEl.textContent
+      status: statusEl.textContent,
+      mobileStatus: mobileStatusEl ? mobileStatusEl.textContent : null
     });
   }
 

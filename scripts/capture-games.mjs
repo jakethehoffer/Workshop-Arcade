@@ -1450,7 +1450,6 @@ function getInteractionRecipe(slug) {
     "lumen-lander": {
       name: "start descent and burn thrusters",
       expectsStart: true,
-      expectsFeedback: false,
       freezePostAtEvent: true,
       run: async (page) => {
         await page.evaluate(() => {
