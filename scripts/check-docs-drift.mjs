@@ -48,7 +48,14 @@ const liveSmokeRequiredText = [
   'WORKSHOP_ARCADE_SKIP_CONTENT_HASH',
   'WORKSHOP_ARCADE_EXPECTED_SW_REVISION',
   'WORKSHOP_ARCADE_SKIP_SW_REVISION',
-  'test-results/live-pages-smoke/<timestamp>/summary.json'
+  'test-results/live-pages-smoke/<timestamp>/summary.json',
+  'test-results/live-pages-smoke/<timestamp>/report.md'
+];
+
+const localPerfSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md',
+  'docs/performance-baseline.md'
 ];
 
 const issues = [];
@@ -88,6 +95,14 @@ for (const file of liveSmokeSurfaces) {
     if (!text.includes(requiredText)) {
       issues.push(`${file}: missing live-smoke contract text "${requiredText}"`);
     }
+  }
+}
+
+for (const file of localPerfSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  if (!text.includes('npm run audit:perf:local')) {
+    issues.push(`${file}: missing local performance-audit command "npm run audit:perf:local"`);
   }
 }
 

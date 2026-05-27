@@ -63,11 +63,13 @@
 <style>
 :root{color-scheme:dark;--bg:#07110f;--panel:#0f1d19;--panel2:#152b25;--ink:#f2fff8;--muted:#a9c2b6;--mint:#69e6a8;--gold:#ffd166;--blue:#6ecbff;--rose:#ff7b9b;--line:rgba(130,238,178,.25)}
 *{box-sizing:border-box}html,body{height:100%;margin:0}body{min-height:100dvh;display:grid;place-items:center;padding:13px 9px 16px;background:radial-gradient(760px 460px at 8% -12%,rgba(105,230,168,.18),transparent 60%),radial-gradient(680px 430px at 94% 0,rgba(110,203,255,.12),transparent 58%),linear-gradient(180deg,#07110f,#091412 78%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden}
-.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.controls,.palette{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:var(--mint);font-size:10px;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.title{display:block;margin-top:4px;font-size:clamp(23px,4vw,34px);font-weight:950;text-transform:uppercase;letter-spacing:.03em}
-.pill,.btn{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 12px 28px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05);color:var(--ink);font:inherit;font-size:12px;font-weight:850}.pill{min-width:78px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--mint);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}.stage{border:1px solid rgba(130,238,178,.3);border-radius:8px;overflow:hidden;background:#07110f;box-shadow:0 22px 54px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07110f;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.8);outline-offset:-4px}
-.status{min-height:20px;text-align:center;color:var(--mint);font-size:12px;font-weight:900;text-transform:uppercase}.btn{min-height:36px;padding:7px 10px;cursor:pointer;text-transform:uppercase}.btn:hover{border-color:rgba(255,209,102,.65)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#9af5c0,#46d88b);color:#062018}.btn.warn{color:var(--gold);border-color:rgba(255,209,102,.46)}.btn:disabled{opacity:.48;cursor:not-allowed}.help{color:var(--muted);text-align:center;font-size:12px;line-height:1.35}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;border:1px solid rgba(130,238,178,.25);border-radius:6px;background:#07110f;color:var(--ink);font-weight:900}
-@media(max-width:700px){body{padding:8px 6px 12px}.app{gap:7px}.top{align-items:start}.title{font-size:21px}.eyebrow{font-size:9px}.pill{min-width:62px;padding:6px}.value{font-size:14px}.btn{font-size:11px;padding:7px 8px;flex:1 1 96px}canvas{max-height:55vh}.help{font-size:11px}.stage{border-radius:7px}}
-@media(max-width:430px){.hud{justify-content:stretch}.pill{flex:1 1 29%}.controls,.palette{gap:5px}.btn{flex-basis:31%}}
+.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.controls,.palette,.actionRow,.goalStrip{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:var(--mint);font-size:10px;font-weight:950;letter-spacing:0;text-transform:uppercase}.title{display:block;margin-top:4px;font-size:clamp(23px,4vw,34px);font-weight:950;text-transform:uppercase;letter-spacing:0}
+main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 12px 28px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05);color:var(--ink);font:inherit;font-size:12px;font-weight:850}.pill{min-width:78px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--mint);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
+.primaryPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,142px);gap:8px;align-items:stretch;border:1px solid rgba(130,238,178,.3);border-radius:8px;padding:8px;background:linear-gradient(180deg,rgba(21,43,37,.94),rgba(10,24,20,.94));box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05)}.actionMeta{display:grid;gap:7px;min-width:0}.actionRow{justify-content:flex-start;align-items:stretch}.selectedCue{min-width:126px;padding:8px 10px;line-height:1.08}.selectedCue .value{font-size:16px;text-transform:uppercase}.goalStrip{justify-content:flex-start;flex:1 1 280px}.goalChip{min-width:142px;flex:1 1 142px;padding:7px 9px;line-height:1.15}.goalChip.done{border-color:rgba(105,230,168,.65);background:linear-gradient(180deg,rgba(57,126,86,.55),rgba(16,43,30,.75))}.goalChip .value{font-size:14px;text-transform:capitalize}.goalChip .label{color:var(--gold)}.primaryPanel #dayBtn{width:100%;min-height:100%;font-size:13px}
+.stage{border:1px solid rgba(130,238,178,.3);border-radius:8px;overflow:hidden;background:#07110f;box-shadow:0 22px 54px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07110f;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.8);outline-offset:-4px}
+.status{min-height:20px;color:var(--mint);font-size:12px;font-weight:900;text-transform:uppercase;line-height:1.3}.btn{min-height:36px;padding:7px 10px;cursor:pointer;text-transform:uppercase}.btn:hover{border-color:rgba(255,209,102,.65)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#9af5c0,#46d88b);color:#062018}.btn.warn{color:var(--gold);border-color:rgba(255,209,102,.46)}.btn:disabled{opacity:.48;cursor:not-allowed}.help{color:var(--muted);text-align:center;font-size:12px;line-height:1.35}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;border:1px solid rgba(130,238,178,.25);border-radius:6px;background:#07110f;color:var(--ink);font-weight:900}
+@media(max-width:700px){body{padding:8px 6px 12px}.app{gap:7px}.top{align-items:start}.title{font-size:21px}.eyebrow{font-size:9px}.pill{min-width:62px;padding:6px}.value{font-size:14px}.primaryPanel{grid-template-columns:1fr;padding:7px;gap:7px}.primaryPanel #dayBtn{min-height:42px}.selectedCue{min-width:118px;padding:7px 8px}.goalChip{min-width:126px;padding:7px 8px}.status{font-size:11px}.btn{font-size:11px;padding:7px 8px;flex:1 1 96px}canvas{max-height:55vh}.help{font-size:11px}.stage{border-radius:7px}}
+@media(max-width:430px){.hud{justify-content:stretch}.pill{flex:1 1 29%}.controls,.palette,.actionRow,.goalStrip{gap:5px}.selectedCue{flex:1 1 100%}.goalChip{flex:1 1 calc(50% - 5px);min-width:0}.goalChip .value{font-size:13px}.btn{flex-basis:31%}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -84,16 +86,24 @@
     </div>
   </header>
   <main aria-label="Bloomkeeper Grid game">
+    <section class="primaryPanel" id="firstActionPanel" aria-label="Current garden action">
+      <div class="actionMeta">
+        <div class="actionRow">
+          <span class="selectedCue" id="toolCue" aria-live="polite"><span class="label">Selected Tool</span><span class="value">Seed</span></span>
+          <div class="goalStrip" id="goalStrip" aria-label="Current goal progress"></div>
+        </div>
+        <div class="status" id="statusLine" aria-live="polite">Place seeds near future water waves.</div>
+        <div class="palette" aria-label="Tool palette">
+          <button class="btn primary" type="button" data-tool="seed" aria-pressed="true">1 Seed</button>
+          <button class="btn" type="button" data-tool="sprinkler" aria-pressed="false">2 Sprinkler</button>
+          <button class="btn" type="button" data-tool="shade" aria-pressed="false">3 Shade</button>
+        </div>
+      </div>
+      <button class="btn primary" id="dayBtn" type="button">Day</button>
+    </section>
     <div class="stage"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Bloomkeeper Grid. Move the cursor with arrows or WASD, select seed sprinkler or shade, place items, and advance days to meet garden goals."></canvas></div>
   </main>
-  <div class="status" id="statusLine" aria-live="polite">Place seeds near future water waves.</div>
-  <div class="palette" aria-label="Tool palette">
-    <button class="btn primary" type="button" data-tool="seed" aria-pressed="true">1 Seed</button>
-    <button class="btn" type="button" data-tool="sprinkler" aria-pressed="false">2 Sprinkler</button>
-    <button class="btn" type="button" data-tool="shade" aria-pressed="false">3 Shade</button>
-  </div>
   <div class="controls" aria-label="Run controls">
-    <button class="btn primary" id="dayBtn" type="button">Day</button>
     <button class="btn warn" id="restartBtn" type="button">Restart</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
     <button class="btn" id="fullBtn" type="button">Fullscreen</button>
@@ -128,7 +138,9 @@
     moves: document.getElementById("moveValue"), score: document.getElementById("scoreValue"),
     best: document.getElementById("bestValue"), status: document.getElementById("statusLine"),
     dayBtn: document.getElementById("dayBtn"), restart: document.getElementById("restartBtn"),
-    sound: document.getElementById("soundBtn"), full: document.getElementById("fullBtn")
+    sound: document.getElementById("soundBtn"), full: document.getElementById("fullBtn"),
+    toolCue: document.getElementById("toolCue"), goalStrip: document.getElementById("goalStrip"),
+    firstAction: document.getElementById("firstActionPanel")
   };
   function storage() {
     if (window.workshopStorage) return window.workshopStorage;
@@ -146,7 +158,7 @@
     mode: "planning", stageIndex: 0, day: 0, score: 0, best: Number(getStored(BEST_KEY, 0)) || 0,
     movesLeft: 0, selectedTool: "seed", cursor: { r: 3, c: 3 }, cells: [], feedback: "Place seeds near future water waves.",
     feedbackMs: 1600, complete: false, fail: false, runComplete: false, sound: getStored(SOUND_KEY, true) !== false,
-    lastSound: "none", soundCount: 0, gesture: false, lastGrowth: [], solvedStages: []
+    lastSound: "none", soundCount: 0, gesture: false, lastGrowth: [], solvedStages: [], lastAction: "ready"
   };
   let audio = null;
   function stage() { return STAGES[state.stageIndex]; }
@@ -207,6 +219,7 @@
     state.complete = false;
     state.runComplete = false;
     state.lastGrowth = [];
+    state.lastAction = "stage-load";
     if (!keepScore) {
       state.score = 0;
       state.solvedStages = [];
@@ -218,6 +231,7 @@
   function restartRun() {
     markGesture();
     loadStage(0, false);
+    state.lastAction = "restart";
     tone("restart");
   }
   function countItems(type) { return flatCells().filter((x) => x.item === type).length; }
@@ -262,7 +276,65 @@
     });
   }
   function goalsMet() { return goalProgress().every((g) => g.done); }
+  function toolLabel(tool) {
+    return tool === "sprinkler" ? "Sprinkler" : tool === "shade" ? "Shade" : "Seed";
+  }
+  function goalPhrase(g) {
+    return g.have + "/" + g.need + " " + g.color + " " + g.shape;
+  }
+  function goalReadiness() {
+    const progress = goalProgress();
+    const remaining = progress.filter((g) => !g.done);
+    return {
+      allGoalsReady: remaining.length === 0,
+      readyCount: progress.length - remaining.length,
+      totalGoals: progress.length,
+      nextGoal: remaining.length ? goalPhrase(remaining[0]) : "all ready",
+      remaining: remaining.map((g) => ({ color: g.color, shape: g.shape, need: g.need, have: g.have }))
+    };
+  }
+  function syncActionPanel() {
+    if (els.toolCue) {
+      const value = els.toolCue.querySelector(".value");
+      if (value) value.textContent = toolLabel(state.selectedTool);
+      els.toolCue.dataset.tool = state.selectedTool;
+    }
+    if (els.goalStrip) {
+      els.goalStrip.replaceChildren();
+      goalProgress().forEach((g) => {
+        const chip = document.createElement("span");
+        chip.className = "goalChip" + (g.done ? " done" : "");
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = g.done ? "Ready" : "Goal";
+        const value = document.createElement("span");
+        value.className = "value";
+        value.textContent = goalPhrase(g);
+        chip.append(label, value);
+        els.goalStrip.appendChild(chip);
+      });
+    }
+  }
+  function firstActionVisibility() {
+    const panel = els.firstAction;
+    const day = els.dayBtn;
+    const panelRect = panel ? panel.getBoundingClientRect() : null;
+    const dayRect = day ? day.getBoundingClientRect() : null;
+    const canvasRect = canvas.getBoundingClientRect();
+    const visible = !!panelRect && panelRect.width > 0 && panelRect.height > 0 && panelRect.bottom > 0 && panelRect.top < window.innerHeight;
+    return {
+      visible,
+      beforeCanvas: !!panelRect && panelRect.top <= canvasRect.top,
+      top: panelRect ? Math.round(panelRect.top) : null,
+      bottom: panelRect ? Math.round(panelRect.bottom) : null,
+      dayButton: day ? { text: day.textContent.trim(), visible: Boolean(day.offsetParent), top: dayRect ? Math.round(dayRect.top) : null } : null,
+      selectedTool: toolLabel(state.selectedTool),
+      status: els.status ? els.status.textContent.trim() : "",
+      goals: goalProgress().map(goalPhrase)
+    };
+  }
   function advanceDay() {
+    state.lastAction = state.complete && !state.runComplete ? "next-stage" : "advance-day";
     if (state.complete || state.runComplete) {
       if (!state.runComplete) nextStage();
       return;
@@ -279,6 +351,7 @@
       state.score += bonus;
       state.complete = true;
       state.mode = "stage-complete";
+      state.lastAction = "stage-complete";
       if (!state.solvedStages.includes(state.stageIndex)) state.solvedStages.push(state.stageIndex);
       setFeedback(stage().name + " complete. +" + bonus, 2400);
       tone(state.stageIndex === STAGES.length - 1 ? "complete" : "solve");
@@ -286,14 +359,17 @@
       if (state.stageIndex === STAGES.length - 1) {
         state.runComplete = true;
         state.mode = "run-complete";
+        state.lastAction = "run-complete";
         setFeedback("Run complete. Final score " + state.score + ".", 3200);
       }
     } else if (state.day >= stage().maxDays) {
       state.fail = true;
       state.mode = "fail";
+      state.lastAction = "garden-failed";
       setFeedback("Garden failed: " + progress.filter((g) => !g.done).map((g) => g.color + " " + g.shape).join(", ") + " still needed.", 3000);
       tone("fail");
     } else {
+      state.lastAction = "day-advanced";
       setFeedback("Day " + state.day + ": growth waves reached " + state.lastGrowth.length + " plants.", 1500);
       tone("day");
     }
@@ -304,6 +380,7 @@
     if (state.stageIndex >= STAGES.length - 1) {
       state.runComplete = true;
       state.mode = "run-complete";
+      state.lastAction = "run-complete";
       persist();
       render();
       return;
@@ -318,6 +395,7 @@
   function placeTool() {
     const x = cell(state.cursor.r, state.cursor.c);
     if (!canPlace(x, state.selectedTool)) {
+      state.lastAction = "blocked-place";
       setFeedback(state.fail ? "Restart after a failed garden." : "No moves left for this stage.", 1500);
       tone("fail");
       return;
@@ -327,6 +405,7 @@
     x.age = 0;
     derivePlant(x);
     if (prev !== x.item && state.movesLeft > 0) state.movesLeft -= 1;
+    state.lastAction = x.item ? "place-" + state.selectedTool : "clear-cell";
     setFeedback(x.item ? state.selectedTool + " placed." : "Cell cleared.", 1000);
     tone("place");
     syncHud();
@@ -335,28 +414,33 @@
   function selectTool(tool) {
     if (!TOOLS.includes(tool)) return;
     state.selectedTool = tool;
+    state.lastAction = "select-" + tool;
     document.querySelectorAll("[data-tool]").forEach((button) => {
       const active = button.dataset.tool === tool;
       button.classList.toggle("primary", active);
       button.setAttribute("aria-pressed", String(active));
     });
+    syncActionPanel();
     render();
   }
   function moveCursor(dr, dc) {
     state.cursor.r = (state.cursor.r + dr + N) % N;
     state.cursor.c = (state.cursor.c + dc + N) % N;
+    state.lastAction = "move-cursor";
     tone("move");
     render();
   }
   function toggleSound() {
     markGesture();
     state.sound = !state.sound;
+    state.lastAction = "toggle-sound";
     if (state.sound) tone("toggle"); else state.lastSound = "sound-off";
     persist();
     syncHud();
   }
   function toggleFullscreen() {
     markGesture();
+    state.lastAction = "toggle-fullscreen";
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     else document.documentElement.requestFullscreen?.().catch(() => {});
     setTimeout(render, 80);
@@ -379,10 +463,12 @@
     els.score.textContent = String(state.score);
     els.best.textContent = String(state.best);
     els.dayBtn.textContent = state.complete && !state.runComplete ? "Next" : "Day";
+    els.dayBtn.setAttribute("aria-label", state.complete && !state.runComplete ? "Next plot" : "Advance day");
     els.dayBtn.disabled = state.fail;
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", String(state.sound));
     els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+    syncActionPanel();
   }
   function roundRect(x, y, w, h, r, fill, stroke) {
     ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) ctx.fill(); if (stroke) ctx.stroke();
@@ -502,7 +588,12 @@
       cursor: { r: state.cursor.r, c: state.cursor.c },
       grid: gridSummary(),
       goalProgress: goalProgress(),
+      goalReadiness: goalReadiness(),
+      goalReady: goalReadiness().allGoalsReady,
       feedback: state.feedback,
+      feedbackActive: state.feedbackMs > 0,
+      lastAction: state.lastAction,
+      visibleFirstAction: firstActionVisibility(),
       soundEnabled: state.sound,
       lastSound: state.lastSound,
       soundCount: state.soundCount,

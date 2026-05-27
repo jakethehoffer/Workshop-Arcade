@@ -78,6 +78,12 @@ button{font:inherit}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
 canvas:focus-visible,button:focus-visible{outline:3px solid rgba(250,204,21,.86);outline-offset:2px}
 .status{min-height:22px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.routeStrip{display:grid;grid-template-columns:minmax(92px,.8fr) minmax(190px,1.5fr) minmax(100px,.85fr) minmax(178px,auto);gap:7px;align-items:stretch}
+.routeCell{min-width:0;border:1px solid rgba(103,232,249,.22);border-radius:8px;padding:7px 8px;background:linear-gradient(180deg,rgba(12,27,43,.96),rgba(5,12,24,.98));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.routeCell .value{font-size:13px;overflow:hidden;text-overflow:ellipsis}
+.routeActions{display:grid;grid-template-columns:repeat(2,minmax(82px,1fr));gap:7px}
+.routeActions button{min-height:46px;padding:7px 10px}
+.status.routeStatus{grid-column:1/-1;display:flex;align-items:center;justify-content:center;min-height:32px;padding:6px 10px;border:1px solid rgba(103,232,249,.18);border-radius:8px;background:rgba(4,12,24,.72);line-height:1.25}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
 button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 button.primary{border-color:transparent;background:linear-gradient(180deg,#7df9ff,#22d3ee);color:#06272e}
@@ -85,8 +91,8 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
 .touch{display:grid;grid-template-columns:repeat(5,minmax(0,118px));justify-content:center;gap:7px}
 .touch button{min-height:48px;padding:8px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@media(max-width:760px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:center;font-size:10px}.hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:14px}.bar button{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,64px));gap:6px}.touch button{font-size:10px;min-height:44px}}
-@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,86px))}}
+@media(max-width:760px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:center;font-size:10px}.hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:14px}.routeStrip{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.routeActions{grid-column:1/-1;order:-1}.routeCell{padding:6px 6px}.routeCell .label{font-size:8px}.routeCell .value{font-size:11px}.status.routeStatus{font-size:11px;min-height:30px;padding:5px 8px}.bar button{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,64px));gap:6px}.touch button{font-size:10px;min-height:44px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.routeStrip{grid-template-columns:repeat(2,minmax(0,1fr))}.routeCell.wide,.routeActions,.status.routeStatus{grid-column:1/-1}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,86px))}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -105,13 +111,21 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     <div class="pill"><span class="label">Score</span><span class="value" id="scoreOut">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestOut">0</span></div>
   </section>
+  <section class="routeStrip" aria-label="Route status and quick dispatch controls">
+    <div class="routeCell"><span class="label">Selected</span><span class="value" id="selectedSwitchOut">B -> C</span></div>
+    <div class="routeCell wide"><span class="label">Active Route</span><span class="value" id="routeOut">A -> B -> C</span></div>
+    <div class="routeCell"><span class="label">Next Train</span><span class="value" id="nextTrainOut">Red</span></div>
+    <div class="routeActions" aria-label="Quick route actions">
+      <button class="primary" id="startBtn" type="button">Start</button>
+      <button id="switchBtn" type="button" data-act="toggle">Switch B</button>
+    </div>
+    <div class="status routeStatus" id="statusOut" aria-live="polite">Press Start to open the yard.</div>
+  </section>
   <div class="panel">
     <canvas id="game" width="960" height="540" tabindex="0" aria-label="Rail Yard Relay playfield with trains, switches, tracks, and colored stations"></canvas>
   </div>
-  <div class="status" id="statusOut" aria-live="polite">Press Start to open the yard.</div>
   <div id="liveOut" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Press Start to open the yard.</div>
   <section class="bar" aria-label="Game controls">
-    <button class="primary" id="startBtn" type="button">Start</button>
     <button id="restartBtn" type="button">Restart</button>
     <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
     <button id="fullBtn" type="button">Fullscreen</button>
@@ -131,7 +145,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
   const W = canvas.width, H = canvas.height, STEP = 1 / 60;
   const BEST_KEY = "rail-yard-relay.best.v1", SOUND_KEY = "rail-yard-relay.sound.v1";
   const colors = { red:"#fb7185", blue:"#38bdf8", gold:"#facc15", green:"#34d399" };
-  const ids = ["stageOut","timeOut","movesOut","deliveredOut","lostOut","scoreOut","bestOut","statusOut","liveOut","startBtn","restartBtn","soundBtn","fullBtn"];
+  const ids = ["stageOut","timeOut","movesOut","deliveredOut","lostOut","scoreOut","bestOut","selectedSwitchOut","routeOut","nextTrainOut","statusOut","liveOut","startBtn","switchBtn","restartBtn","soundBtn","fullBtn"];
   const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
   const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
   const dist2 = (a,b) => (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
@@ -171,7 +185,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
   const state = {
     mode:"ready", stage:0, time:0, moves:0, score:0, best:readNum(BEST_KEY,0), delivered:0, lost:0,
     selected:0, switches:{}, trains:[], spawned:0, sound:readBool(SOUND_KEY,true), feedback:"Press Start to open the yard.",
-    lastInput:"none", lastSound:"none", spark:[]
+    lastInput:"none", lastSound:"none", lastFeedback:"status", feedbackTtl:0, spark:[]
   };
   function store(){ try { return window.localStorage; } catch (_) { return window.workshopStorage || null; } }
   function readNum(key,fallback){ try { const v=(store()||{}).getItem(key); return v == null ? fallback : Number(v) || fallback; } catch (_) { return fallback; } }
@@ -187,8 +201,45 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     for (const [id,nexts] of Object.entries(stage().switches)) for (const n of nexts) out.push([id,n,true]);
     return out;
   }
+  function title(text){ return text ? text.charAt(0).toUpperCase() + text.slice(1) : "None"; }
+  function selectedSwitchInfo(){
+    const ids = switchIds(), id = ids[state.selected] || ids[0] || null;
+    if (!id) return { id:null, index:-1, route:null, options:[], label:"No switch" };
+    const route = outgoing(id), options = stage().switches[id] || [];
+    return { id, index:state.selected, route, options, label:id + " -> " + route };
+  }
+  function traceRoute(startId="A"){
+    const path = [startId], seen = new Set(path);
+    let current = startId, blocked = false;
+    for (let guard=0; guard<14 && !stage().exits[current]; guard++) {
+      const next = outgoing(current);
+      if (!next || !stage().nodes[next]) { blocked = true; break; }
+      path.push(next); current = next;
+      if (seen.has(current)) { blocked = true; break; }
+      seen.add(current);
+    }
+    const exitTarget = stage().exits[current] || null;
+    return { path, exit:current, exitTarget, blocked, label:path.join(" -> ") + (exitTarget ? " -> " + title(exitTarget) : blocked ? " -> Blocked" : "") };
+  }
+  function nextTrainInfo(){
+    const active = state.trains.find(t => t.mode === "run");
+    if (active) return { source:"active", id:active.id, target:active.kind, from:active.from, to:active.to, label:title(active.kind) + " active" };
+    const upcoming = stage().plan[state.spawned];
+    if (!upcoming) return { source:"none", id:null, target:null, due:null, label:"Queue clear" };
+    const elapsed = stage().time - state.time;
+    return { source:"upcoming", id:state.spawned + 1, target:upcoming[0], due:Math.max(0, Math.round((upcoming[1] - elapsed) * 10) / 10), label:title(upcoming[0]) + " next" };
+  }
+  function routeSummaryInfo(next=nextTrainInfo()){
+    const route = traceRoute("A"), selected = selectedSwitchInfo();
+    return {
+      path:route.path, exit:route.exit, target:route.exitTarget, blocked:route.blocked, label:route.label,
+      selectedSwitch:selected.id, selectedRoute:selected.route, targetMatch:next.target ? route.exitTarget === next.target : null
+    };
+  }
+  function feedbackActive(){ return state.feedbackTtl > 0 || state.spark.length > 0; }
   function announce(text,type="status"){
     state.feedback = text; state.lastFeedback = type;
+    state.feedbackTtl = Math.max(state.feedbackTtl, type === "status" ? .25 : 1.35);
     el.statusOut.textContent = text; el.liveOut.textContent = text;
   }
   function beep(type){
@@ -246,6 +297,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     else { state.lost += 1; state.score = Math.max(0, state.score - 45); beep("lost"); }
   }
   function update(dt){
+    state.feedbackTtl = Math.max(0, state.feedbackTtl - dt);
     if (state.mode === "playing") {
       state.time = Math.max(0, state.time - dt);
       const plan = stage().plan;
@@ -282,6 +334,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     updateHud(); render();
   }
   function updateHud(){
+    const selected = selectedSwitchInfo(), next = nextTrainInfo(), route = routeSummaryInfo(next);
     el.stageOut.textContent = (state.stage + 1) + "/" + stages.length;
     el.timeOut.textContent = Math.ceil(state.time);
     el.movesOut.textContent = state.moves;
@@ -289,9 +342,17 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     el.lostOut.textContent = state.lost;
     el.scoreOut.textContent = state.score;
     el.bestOut.textContent = state.best;
+    el.selectedSwitchOut.textContent = selected.label;
+    el.selectedSwitchOut.title = selected.options.length ? "Options: " + selected.options.join(", ") : selected.label;
+    el.routeOut.textContent = route.label;
+    el.routeOut.title = route.label;
+    el.nextTrainOut.textContent = next.label;
+    el.nextTrainOut.title = next.due === null || next.due === undefined ? next.label : next.label + " in " + next.due + "s";
     el.soundBtn.textContent = state.sound ? "Sound On" : "Sound Off";
     el.soundBtn.setAttribute("aria-pressed", String(state.sound));
     el.startBtn.textContent = state.mode === "complete" ? "Next Stage" : state.mode === "won" ? "New Run" : state.mode === "playing" ? "Running" : "Start";
+    el.switchBtn.textContent = selected.id ? "Switch " + selected.id : "Switch";
+    el.switchBtn.setAttribute("aria-label", selected.id ? "Toggle switch " + selected.id + " from " + selected.route : "Toggle selected switch");
   }
   function drawTrack(a,b,active=false){
     ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
@@ -375,11 +436,14 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     try { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); } catch (_) {}
   }
   window.render_game_to_text = function () {
+    const next = nextTrainInfo(), route = routeSummaryInfo(next), selected = selectedSwitchInfo();
     return JSON.stringify({
       mode:state.mode, stage:{ index:state.stage+1, name:stage().name, time:Math.round(state.time*10)/10, quota:stage().quota },
       switches:Object.fromEntries(switchIds().map(id => [id,{ route:outgoing(id), selected:switchIds()[state.selected]===id }])),
       trains:state.trains.map(t => ({ id:t.id, target:t.kind, from:t.from, to:t.to, x:Math.round(t.x), y:Math.round(t.y), mode:t.mode })),
       targets:stage().exits, score:{ value:state.score, delivered:state.delivered, lost:state.lost, moves:state.moves }, best:state.best,
+      selectedSwitch:selected, nextTrain:next, routeSummary:route, feedbackActive:feedbackActive(),
+      routeStrip:{ selected:el.selectedSwitchOut.textContent, activeRoute:el.routeOut.textContent, nextTrain:el.nextTrainOut.textContent, status:el.statusOut.textContent, start:el.startBtn.textContent, switch:el.switchBtn.textContent },
       sound:state.sound, feedback:state.feedback, lastInput:state.lastInput, coordinateSystem:"canvas 960x540 origin top-left"
     });
   };

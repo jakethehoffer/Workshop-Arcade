@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-05-27 Codex pass 92
+
+- Implemented on `codex/live-shell-evidence-mobile-polish-2026-05-27`: coordinator-owned shell/live evidence broadening plus isolated Bloomkeeper Grid, Cipher Rooms, and Rail Yard Relay polish lanes.
+- `npm run test:live-pages` now records SHA-256 evidence for deployed shell/catalog assets (`index.html`, `websites/manifest.json`, `feed.json`, `sitemap.xml`, `app.webmanifest`, `offline.html`, `404.html`, and `robots.txt`) in addition to selected game HTML, captures catalog desktop/mobile screenshots, and writes both `summary.json` and a compact `report.md` under `test-results/live-pages-smoke/<timestamp>/`.
+- Added `npm run audit:perf:local` as a cross-platform local publish check that starts a disposable static server, points the strict perf audit at it, and cleans up afterward; docs and docs-drift coverage now describe the local-vs-live perf audit path.
+- Polished three existing games without changing rules/scoring/storage keys/manifest/generated surfaces/capture recipes: Bloomkeeper Grid moves selected tool, goal progress, status, tool palette, and Day action before the canvas; Cipher Rooms adds inspect-first guidance and quiets Unlock until code-ready; Rail Yard Relay adds a pre-canvas dispatcher route strip with Start/Switch/status.
+- Verification passed: focused game contract/a11y/a11y-polish/keyboard-help/runtime-storage checks for the three touched games; worker and integrator desktop/mobile Playwright probes with no overflow/errors and changed diagnostics; local live smoke with shell/game hashes, screenshots, and report; negative content-hash and required-slug checks failed as expected; `node --check` for changed scripts; `npm run test:docs`; `npm run test:tools`; `npm run test:test-aggregator`; `validate-catalog.ps1 -Fix`; `validate-catalog.ps1`; `npm test`; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games`; `npm run capture:games:ci` with max score 0; `npm run audit:perf:local`; `git diff --check`.
+
 ## 2026-05-27 Codex pass 91
 
 - Implemented on `codex/nonconflicting-quality-pass-2026-05-27`: coordinator-owned live Pages evidence hardening plus isolated Circuit Draft, Market Minute, and Tempo Forge polish lanes.

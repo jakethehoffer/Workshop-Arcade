@@ -29,6 +29,7 @@ const issues = [];
 const startedAt = new Date().toISOString();
 const summaryDir = resolve(repoRoot, 'test-results', 'live-pages-smoke', startedAt.replace(/[:.]/g, '-'));
 const summaryPath = resolve(summaryDir, 'summary.json');
+const reportPath = resolve(summaryDir, 'report.md');
 const requireLiveSlugs = parseBooleanFlag(process.env.WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS);
 const skipServiceWorkerRevision = parseBooleanFlag(process.env.WORKSHOP_ARCADE_SKIP_SW_REVISION);
 const skipContentHash = parseBooleanFlag(process.env.WORKSHOP_ARCADE_SKIP_CONTENT_HASH);
@@ -51,7 +52,10 @@ const summary = {
   contentHash: {
     skipped: skipContentHash,
     normalizedLineEndings: true,
+    shellAssets: [],
+    selectedGames: [],
   },
+  report: null,
   serviceWorker: {
     expectedShellRevision: expectedServiceWorkerRevision,
     expectedSource: skipServiceWorkerRevision
@@ -176,36 +180,64 @@ async function assertFetchOk(relativePath, label, validate) {
   return text;
 }
 
-async function assertGameContentHash(game, remoteText, record, label) {
+async function assertLocalContentHash(localPath, remoteText, record, label, group) {
   const remoteSha256 = sha256Text(remoteText);
-  record.contentHash = {
+  const contentHash = {
     check: skipContentHash ? 'skipped' : 'pending',
-    localPath: game.url,
+    localPath,
     normalizedLineEndings: true,
     localSha256: null,
     remoteSha256,
   };
+  record.contentHash = contentHash;
+  if (group && summary.contentHash[group]) {
+    summary.contentHash[group].push({
+      label,
+      relativePath: record.relativePath,
+      ...contentHash,
+    });
+  }
 
   if (skipContentHash) return;
 
   let localText;
   try {
-    localText = await readFile(resolve(repoRoot, game.url), 'utf8');
+    localText = await readFile(resolve(repoRoot, localPath), 'utf8');
   } catch (error) {
-    record.contentHash.check = 'failed';
-    fail(label, `unable to read local ${game.url} for content hash: ${error.message}`);
+    contentHash.check = 'failed';
+    if (group && summary.contentHash[group]) {
+      const aggregate = summary.contentHash[group].find((item) => item.label === label && item.relativePath === record.relativePath);
+      if (aggregate) aggregate.check = 'failed';
+    }
+    fail(label, `unable to read local ${localPath} for content hash: ${error.message}`);
     return;
   }
 
   const localSha256 = sha256Text(localText);
-  record.contentHash.localSha256 = localSha256;
+  contentHash.localSha256 = localSha256;
+  if (group && summary.contentHash[group]) {
+    const aggregate = summary.contentHash[group].find((item) => item.label === label && item.relativePath === record.relativePath);
+    if (aggregate) aggregate.localSha256 = localSha256;
+  }
   if (localSha256 !== remoteSha256) {
-    record.contentHash.check = 'failed';
-    fail(label, `content hash mismatch for ${game.url}: local ${localSha256}, remote ${remoteSha256}`);
+    contentHash.check = 'failed';
+    if (group && summary.contentHash[group]) {
+      const aggregate = summary.contentHash[group].find((item) => item.label === label && item.relativePath === record.relativePath);
+      if (aggregate) aggregate.check = 'failed';
+    }
+    fail(label, `content hash mismatch for ${localPath}: local ${localSha256}, remote ${remoteSha256}`);
     return;
   }
 
-  record.contentHash.check = 'passed';
+  contentHash.check = 'passed';
+  if (group && summary.contentHash[group]) {
+    const aggregate = summary.contentHash[group].find((item) => item.label === label && item.relativePath === record.relativePath);
+    if (aggregate) aggregate.check = 'passed';
+  }
+}
+
+async function assertGameContentHash(game, remoteText, record, label) {
+  await assertLocalContentHash(game.url, remoteText, record, label, 'selectedGames');
 }
 
 function gameForSlug(slug) {
@@ -372,6 +404,7 @@ async function checkCatalog(browser) {
     cardCount: 0,
     overflow: null,
     githubRequests,
+    screenshot: null,
   };
   summary.pages.push(pageRecord);
   await observePage(page, 'catalog', githubRequests);
@@ -383,6 +416,7 @@ async function checkCatalog(browser) {
   pageRecord.cardCount = await page.locator('.card').count();
   pageRecord.loaded = pageRecord.cardCount === manifest.length;
   pageRecord.overflow = await assertNoOverflow(page, 'catalog');
+  pageRecord.screenshot = await captureScreenshot(page, 'catalog desktop');
   const title = await page.title();
   pageRecord.title = title;
   if (!/Workshop Arcade/i.test(title)) {
@@ -408,6 +442,7 @@ async function checkCatalog(browser) {
     cardCount: 0,
     overflow: null,
     githubRequests: mobileGithubRequests,
+    screenshot: null,
   };
   summary.pages.push(mobileRecord);
   await observePage(mobilePage, 'catalog mobile', mobileGithubRequests);
@@ -417,6 +452,7 @@ async function checkCatalog(browser) {
   mobileRecord.cardCount = await mobilePage.locator('.card').count();
   mobileRecord.loaded = mobileRecord.cardCount === manifest.length;
   mobileRecord.overflow = await assertNoOverflow(mobilePage, 'catalog mobile');
+  mobileRecord.screenshot = await captureScreenshot(mobilePage, 'catalog mobile');
   if (mobileGithubRequests.length) {
     fail('catalog mobile', `GitHub API requested during startup: ${mobileGithubRequests.join(', ')}`);
   }
@@ -486,8 +522,81 @@ async function writeSummary() {
   summary.finishedAt = new Date().toISOString();
   summary.issueCount = issues.length;
   summary.issues = [...issues];
+  summary.report = relativeArtifactPath(reportPath);
   await mkdir(summaryDir, { recursive: true });
   await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  await writeFile(reportPath, buildReport(), 'utf8');
+}
+
+function hashCheckLabel(item) {
+  return item?.contentHash?.check || item?.check || 'not-recorded';
+}
+
+function formatSha(value) {
+  return value ? `\`${value.slice(0, 12)}\`` : '`n/a`';
+}
+
+function buildHashTable(title, rows) {
+  if (!rows.length) return `\n## ${title}\n\nNo entries recorded.\n`;
+  const lines = [
+    `\n## ${title}`,
+    '',
+    '| Surface | Path | Check | Local | Remote |',
+    '| --- | --- | --- | --- | --- |',
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.label} | \`${row.localPath || row.relativePath || ''}\` | ${row.check} | ${formatSha(row.localSha256)} | ${formatSha(row.remoteSha256)} |`);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+function buildPageTable() {
+  if (!summary.pages.length) return '\n## Render Evidence\n\nNo browser pages recorded.\n';
+  const lines = [
+    '\n## Render Evidence',
+    '',
+    '| Page | Viewport | Loaded | Overflow | Hooks | Canvas | Screenshot |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
+  ];
+  for (const page of summary.pages) {
+    const viewport = page.viewport ? `${page.viewport.width}x${page.viewport.height}` : 'n/a';
+    const hooks = page.hasRender == null
+      ? 'n/a'
+      : `render:${page.hasRender ? 'yes' : 'no'} advance:${page.hasAdvance ? 'yes' : 'no'}`;
+    const canvas = page.canvas
+      ? `${page.canvas.hasCanvas ? 'yes' : 'no'}${page.canvas.hasCanvas ? ` / nonblank:${page.canvas.nonblank ? 'yes' : 'no'}` : ''}`
+      : 'n/a';
+    const screenshot = page.screenshot ? `\`${page.screenshot}\`` : 'n/a';
+    lines.push(`| ${page.label} | ${viewport} | ${page.loaded ? 'yes' : 'no'} | ${page.overflow ?? 'n/a'} | ${hooks} | ${canvas} | ${screenshot} |`);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+function buildReport() {
+  const lines = [
+    '# Workshop Arcade Live Pages Smoke',
+    '',
+    `- Status: ${summary.status}`,
+    `- Base URL: ${summary.baseUrl}`,
+    `- Started: ${summary.startedAt}`,
+    `- Finished: ${summary.finishedAt}`,
+    `- Slugs: ${summary.slugsChecked.length ? summary.slugsChecked.join(', ') : 'none'}`,
+    `- Content hash: ${summary.contentHash.skipped ? 'skipped' : 'enabled'}`,
+    `- Service worker revision: ${summary.serviceWorker.revisionCheck}`,
+    `- Summary JSON: \`${relativeArtifactPath(summaryPath)}\``,
+  ];
+  if (summary.issues.length) {
+    lines.push('', '## Issues', '');
+    for (const issue of summary.issues) lines.push(`- ${issue}`);
+  }
+  lines.push(buildHashTable('Shell Content Hashes', summary.contentHash.shellAssets));
+  lines.push(buildHashTable('Selected Game Content Hashes', summary.contentHash.selectedGames));
+  lines.push(buildPageTable());
+  lines.push('\n## Fetches', '', '| Surface | Status | Bytes | Hash |', '| --- | --- | --- | --- |');
+  for (const fetchRecord of summary.fetches) {
+    lines.push(`| ${fetchRecord.label} | ${fetchRecord.status ?? 'n/a'} | ${fetchRecord.bytes ?? 0} | ${hashCheckLabel(fetchRecord)} |`);
+  }
+  return `${lines.join('\n')}\n`;
 }
 
 let browser;
@@ -496,12 +605,13 @@ try {
     fail('config', 'WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS=1 requires WORKSHOP_ARCADE_LIVE_SLUGS or WORKSHOP_ARCADE_TOUCHED_SLUGS');
   }
 
-  await assertFetchOk('', 'catalog root', ({ text, contentType }) => {
+  await assertFetchOk('', 'catalog root', ({ text, contentType, record }) => {
     if (!/html/i.test(contentType)) fail('catalog root', `unexpected content-type ${contentType}`);
     if (!/Workshop Arcade/i.test(text)) fail('catalog root', 'missing Workshop Arcade text');
+    return assertLocalContentHash('index.html', text, record, 'catalog root', 'shellAssets');
   });
 
-  await assertFetchOk('websites/manifest.json', 'manifest', ({ text, contentType }) => {
+  await assertFetchOk('websites/manifest.json', 'manifest', async ({ text, contentType, record }) => {
     if (!/json/i.test(contentType)) fail('manifest', `unexpected content-type ${contentType}`);
     try {
       const remoteManifest = JSON.parse(text);
@@ -513,9 +623,10 @@ try {
     } catch (error) {
       fail('manifest', `invalid JSON: ${error.message}`);
     }
+    await assertLocalContentHash('websites/manifest.json', text, record, 'manifest', 'shellAssets');
   });
 
-  await assertFetchOk('feed.json', 'feed', ({ text, contentType }) => {
+  await assertFetchOk('feed.json', 'feed', async ({ text, contentType, record }) => {
     if (!/json/i.test(contentType)) fail('feed', `unexpected content-type ${contentType}`);
     try {
       const feed = JSON.parse(text);
@@ -525,9 +636,10 @@ try {
     } catch (error) {
       fail('feed', `invalid JSON: ${error.message}`);
     }
+    await assertLocalContentHash('feed.json', text, record, 'feed', 'shellAssets');
   });
 
-  await assertFetchOk('sitemap.xml', 'sitemap', ({ text, contentType }) => {
+  await assertFetchOk('sitemap.xml', 'sitemap', async ({ text, contentType, record }) => {
     if (!/xml/i.test(contentType)) fail('sitemap', `unexpected content-type ${contentType}`);
     const locs = [...text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
     const expectedMinimum = manifest.length + 1;
@@ -536,9 +648,10 @@ try {
     if (!text.includes('<urlset') || locs.length < expectedMinimum || !hasTargetRoot) {
       fail('sitemap', `expected urlset with at least ${expectedMinimum} URLs and a catalog root reference, found ${locs.length}`);
     }
+    await assertLocalContentHash('sitemap.xml', text, record, 'sitemap', 'shellAssets');
   });
 
-  await assertFetchOk('app.webmanifest', 'app webmanifest', ({ text, contentType }) => {
+  await assertFetchOk('app.webmanifest', 'app webmanifest', async ({ text, contentType, record }) => {
     if (!/json|manifest/i.test(contentType)) fail('app webmanifest', `unexpected content-type ${contentType}`);
     try {
       const appManifest = JSON.parse(text);
@@ -548,6 +661,7 @@ try {
     } catch (error) {
       fail('app webmanifest', `invalid JSON: ${error.message}`);
     }
+    await assertLocalContentHash('app.webmanifest', text, record, 'app webmanifest', 'shellAssets');
   });
 
   await assertFetchOk('sw.js', 'service worker', ({ text }) => {
@@ -576,19 +690,22 @@ try {
     summary.serviceWorker.revisionCheck = 'passed';
   });
 
-  await assertFetchOk('offline.html', 'offline page', ({ text, contentType }) => {
+  await assertFetchOk('offline.html', 'offline page', async ({ text, contentType, record }) => {
     if (!/html/i.test(contentType)) fail('offline page', `unexpected content-type ${contentType}`);
     if (!/offline/i.test(text) || !/catalog/i.test(text)) fail('offline page', 'missing offline/catalog recovery copy');
+    await assertLocalContentHash('offline.html', text, record, 'offline page', 'shellAssets');
   });
 
-  await assertFetchOk('404.html', '404 page', ({ text, contentType }) => {
+  await assertFetchOk('404.html', '404 page', async ({ text, contentType, record }) => {
     if (!/html/i.test(contentType)) fail('404 page', `unexpected content-type ${contentType}`);
     if (!/404|not found/i.test(text) || !/catalog/i.test(text)) fail('404 page', 'missing not-found/catalog recovery copy');
+    await assertLocalContentHash('404.html', text, record, '404 page', 'shellAssets');
   });
 
-  await assertFetchOk('robots.txt', 'robots', ({ text, contentType }) => {
+  await assertFetchOk('robots.txt', 'robots', async ({ text, contentType, record }) => {
     if (!/text|plain/i.test(contentType)) fail('robots', `unexpected content-type ${contentType}`);
     if (!/Sitemap:/i.test(text)) fail('robots', 'missing Sitemap directive');
+    await assertLocalContentHash('robots.txt', text, record, 'robots', 'shellAssets');
   });
 
   const games = slugsToCheck.map((slug) => {

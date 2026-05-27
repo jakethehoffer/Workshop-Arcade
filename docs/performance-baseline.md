@@ -4,11 +4,12 @@ This is a tracked set of performance and SEO audit snapshots for the live GitHub
 
 ```bash
 npm run audit:perf
+npm run audit:perf:local
 ```
 
 `audit:perf` is a local Playwright-based audit (see `scripts/audit-pagespeed.mjs`). It hits the live URL, walks the catalog plus every game in `websites/manifest.json`, and measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console errors, meta-tag completeness, and the largest single resource per page. The raw per-run JSON is written under `test-results/lighthouse-baseline/<timestamp>/` (gitignored).
 
-CI runs `npm run audit:perf:ci` against a local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
+Use `npm run audit:perf:local` for local publish checks: it starts a disposable static server, sets `WORKSHOP_ARCADE_URL` to that server, runs the strict audit, and cleans up the server. CI runs `npm run audit:perf:ci` against its own local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
 
 CI budgets:
 
@@ -377,8 +378,7 @@ npm run audit:perf
 Run the same strict checks CI uses against a local static server:
 
 ```bash
-npm run start -- --host 127.0.0.1 --port 4173
-WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci
+npm run audit:perf:local
 ```
 
 Audit a different deployment by overriding the URL:
