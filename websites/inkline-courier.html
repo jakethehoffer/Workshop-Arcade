@@ -66,8 +66,9 @@ body{min-height:100vh;display:flex;justify-content:center;padding:14px 10px 18px
 .shell{width:min(960px,100%);display:flex;flex-direction:column;gap:9px}.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;font-size:10px;text-transform:uppercase;color:#67e8f9;font-weight:900}.title{display:block;margin-top:3px;font-size:24px;text-transform:uppercase;font-weight:950;text-shadow:0 0 18px rgba(103,232,249,.24)}.help{max-width:610px;text-align:right;color:#a8b6ca;font-size:12px;line-height:1.35}
 .hud,.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}.pill{min-width:76px;text-align:center;padding:7px 9px;border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linear-gradient(180deg,rgba(18,32,50,.96),rgba(8,15,28,.97));box-shadow:0 8px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);line-height:1.05}.pill[data-hot=true]{border-color:rgba(250,204,21,.76);box-shadow:0 0 18px rgba(250,204,21,.12),0 8px 18px rgba(0,0,0,.24)}.label{display:block;font-size:9px;color:#67e8f9;font-weight:900;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border:1px solid rgba(103,232,249,.28);border-radius:8px;overflow:hidden;background:#061019;box-shadow:0 18px 44px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:62vh;background:#061019;touch-action:none}canvas:focus-visible,button:focus-visible{outline:3px solid rgba(250,204,21,.82);outline-offset:2px}.status{min-height:20px;text-align:center;color:#67e8f9;font-size:12px;font-weight:900;text-transform:uppercase}
+.routebar{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:8px}.routechip{min-width:0;padding:8px 10px;border:1px solid rgba(103,232,249,.24);border-radius:8px;background:linear-gradient(180deg,rgba(15,23,42,.94),rgba(2,8,23,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.routechip .label{text-align:left}.routeText{display:block;margin-top:2px;color:#dffcff;font-size:13px;font-weight:950;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.routechip[data-state=ready]{border-color:rgba(74,222,128,.7);box-shadow:0 0 16px rgba(74,222,128,.12),inset 0 1px 0 rgba(255,255,255,.04)}.routechip[data-state=need]{border-color:rgba(250,204,21,.54)}.routechip[data-state=blocked],.routechip[data-state=fail]{border-color:rgba(251,113,133,.72);box-shadow:0 0 16px rgba(251,113,133,.12),inset 0 1px 0 rgba(255,255,255,.04)}.routechip[data-state=running]{border-color:rgba(125,249,255,.72);box-shadow:0 0 16px rgba(34,211,238,.12),inset 0 1px 0 rgba(255,255,255,.04)}
 button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linear-gradient(180deg,rgba(18,32,50,.96),rgba(8,15,28,.97));color:#eaf7ff;font:inherit;font-size:12px;font-weight:900;text-transform:uppercase;padding:8px 11px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04)}button.primary,button[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#7df9ff,#22d3ee);color:#05272d}button:hover{border-color:rgba(103,232,249,.58)}
-@media(max-width:700px){body{padding:10px 8px 16px}.shell{gap:7px}.brand{display:none}.help{text-align:left;font-size:11px}.pill{min-width:62px;padding:6px}.value{font-size:15px}button{font-size:11px;padding:8px}.controls button{flex:1 1 104px}canvas{max-height:52vh}}
+@media(max-width:700px){body{padding:10px 8px 16px}.shell{gap:7px}.brand{display:none}.help{text-align:left;font-size:11px}.pill{min-width:62px;padding:6px}.value{font-size:15px}.routebar{grid-template-columns:1fr;gap:6px}.routechip{padding:7px 8px}.routeText{font-size:12px;white-space:normal}button{font-size:11px;padding:8px}.controls button{flex:1 1 104px}canvas{max-height:52vh}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -87,6 +88,10 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   </section>
   <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Inkline Courier route drawing puzzle canvas. Draw one route through pickup and delivery nodes while avoiding moving hazards and one-way lanes."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Draw from the depot or add keyboard points.</div>
+  <section class="routebar" aria-label="Route readiness">
+    <div class="routechip" id="routeCue" data-state="need"><span class="label">Route</span><span class="routeText" id="routeCueValue">Need first pickup</span></div>
+    <div class="routechip" id="routeNext" data-state="need"><span class="label">Next stop</span><span class="routeText" id="routeNextValue">Pickup A before drop A</span></div>
+  </section>
   <section class="controls" aria-label="Inkline Courier controls">
     <button class="primary" id="runBtn" type="button">Run Route</button>
     <button id="restartBtn" type="button">Restart</button>
@@ -108,6 +113,7 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const round = (v) => Math.round(v * 100) / 100;
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const routeHitRadius = 29;
 
   const stages = [
     {
@@ -182,6 +188,10 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
     mode: document.getElementById("modeValue"),
     modePill: document.getElementById("modePill"),
     status: document.getElementById("statusLine"),
+    routeCue: document.getElementById("routeCue"),
+    routeCueValue: document.getElementById("routeCueValue"),
+    routeNext: document.getElementById("routeNext"),
+    routeNextValue: document.getElementById("routeNextValue"),
     run: document.getElementById("runBtn"),
     restart: document.getElementById("restartBtn"),
     sound: document.getElementById("soundBtn"),
@@ -247,8 +257,99 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
       drops: nodes.filter((n) => n.kind === "drop").length
     };
   }
+  function nodeName(node) {
+    return `${node.kind === "pickup" ? "Pickup" : "Drop"} ${node.pair}`;
+  }
+  function routeProgressFor(point) {
+    if (state.route.length < 2) return null;
+    let best = { distance: Infinity, progress: Infinity };
+    for (let i = 1; i < state.route.length; i += 1) {
+      const a = state.route[i - 1];
+      const b = state.route[i];
+      const vx = b.x - a.x;
+      const vy = b.y - a.y;
+      const lenSq = vx * vx + vy * vy;
+      const t = lenSq ? clamp(((point.x - a.x) * vx + (point.y - a.y) * vy) / lenSq, 0, 1) : 0;
+      const px = a.x + vx * t;
+      const py = a.y + vy * t;
+      const distance = Math.hypot(point.x - px, point.y - py);
+      if (distance < best.distance) best = { distance, progress: i - 1 + t };
+    }
+    return best.distance <= routeHitRadius ? best.progress : null;
+  }
+  function analyzeRoute() {
+    const nodes = stageDef().nodes.map((node) => ({ ...node, progress: routeProgressFor(node) }));
+    const pairs = Array.from(new Set(nodes.map((node) => node.pair))).sort();
+    const sequence = nodes
+      .filter((node) => node.progress !== null)
+      .sort((a, b) => a.progress - b.progress)
+      .map((node) => `${node.kind === "pickup" ? "P" : "D"}${node.pair}`);
+    const byPair = {};
+    for (const pair of pairs) {
+      byPair[pair] = {
+        pickup: nodes.find((node) => node.pair === pair && node.kind === "pickup"),
+        drop: nodes.find((node) => node.pair === pair && node.kind === "drop")
+      };
+    }
+    const blocked = pairs.find((pair) => {
+      const pickup = byPair[pair].pickup;
+      const drop = byPair[pair].drop;
+      return drop.progress !== null && (pickup.progress === null || pickup.progress > drop.progress);
+    });
+    const missingPickup = nodes.find((node) => node.kind === "pickup" && node.progress === null);
+    const missingDrop = nodes.find((node) => node.kind === "drop" && node.progress === null);
+    const canRun = state.route.length >= 2;
+    let stateName = "need";
+    let label = "Draw from depot";
+    let next = missingPickup ? `${nodeName(missingPickup)} before matching drop` : "Add route point";
+
+    if (state.mode === "running") {
+      stateName = "running";
+      label = `Running: ${state.drops}/${nodeTotals().drops} drops`;
+      next = state.routeIndex < state.route.length ? `Following route ${state.routeIndex}/${state.route.length - 1}` : "Checking deliveries";
+    } else if (state.mode === "fail") {
+      stateName = "fail";
+      label = "Route failed";
+      next = state.failReason || "Restart and redraw";
+    } else if (state.mode === "complete") {
+      stateName = "ready";
+      label = "All routes complete";
+      next = "Restart for a new run";
+    } else if (!canRun) {
+      label = state.mode === "drawing" ? "Add first route point" : "Start route from depot";
+      next = missingPickup ? `${nodeName(missingPickup)} first` : "Add a route point";
+    } else if (blocked) {
+      const pair = byPair[blocked];
+      stateName = "blocked";
+      label = `${nodeName(pair.drop)} before pickup`;
+      next = `${nodeName(pair.pickup)} must come first`;
+    } else if (missingPickup) {
+      label = `${nodeName(missingPickup)} not on route`;
+      next = `${nodeName(missingPickup)} before drop ${missingPickup.pair}`;
+    } else if (missingDrop) {
+      label = `${nodeName(missingDrop)} not on route`;
+      next = `${nodeName(missingDrop)} after pickup ${missingDrop.pair}`;
+    } else {
+      stateName = "ready";
+      label = "Pickup/drop route ready";
+      next = "Run route";
+    }
+
+    return {
+      state: stateName,
+      canRun,
+      viable: stateName === "ready" && canRun && !state.complete,
+      label,
+      next,
+      sequence,
+      missingPickups: nodes.filter((node) => node.kind === "pickup" && node.progress === null).map((node) => node.pair),
+      missingDrops: nodes.filter((node) => node.kind === "drop" && node.progress === null).map((node) => node.pair),
+      blockedPair: blocked || null
+    };
+  }
   function resetStage(keepScore) {
     const s = stageDef();
+    const firstPickup = s.nodes.find((node) => node.kind === "pickup");
     const score = keepScore ? state.score : 0;
     state.mode = "planning";
     state.score = score;
@@ -262,7 +363,7 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
     state.drops = 0;
     state.time = 0;
     state.runTime = 0;
-    state.feedback = `Plan ${s.name}.`;
+    state.feedback = firstPickup ? `Plan ${s.name}: route to pickup ${firstPickup.pair} first.` : `Plan ${s.name}.`;
     state.pointerDown = false;
     state.complete = false;
     state.failed = false;
@@ -346,6 +447,7 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
     const p = pointerPos(ev);
     state.cursor = p;
     addPoint(p);
+    updateRouteGuidance();
     render();
   }
   function endPointer(ev) {
@@ -565,8 +667,9 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   }
   function drawRoute() {
     if (state.route.length < 2) return;
+    const plan = analyzeRoute();
     ctx.save();
-    ctx.strokeStyle = state.mode === "fail" ? "#fb7185" : "#7df9ff";
+    ctx.strokeStyle = state.mode === "fail" ? "#fb7185" : plan.state === "ready" ? "#86efac" : plan.state === "blocked" ? "#fb7185" : plan.state === "need" ? "#facc15" : "#7df9ff";
     ctx.lineWidth = 5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -669,8 +772,19 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   }
   function render() { draw(); }
 
+  function updateRouteGuidance() {
+    const routePlan = analyzeRoute();
+    els.routeCue.dataset.state = routePlan.state;
+    els.routeNext.dataset.state = routePlan.state;
+    els.routeCueValue.textContent = routePlan.label;
+    els.routeNextValue.textContent = routePlan.next;
+    els.run.textContent = state.mode === "running" ? "Running..." : routePlan.viable ? "Run Viable Route" : "Run Route";
+    els.run.setAttribute("aria-label", `Run Route. ${routePlan.label}. ${routePlan.next}.`);
+    return routePlan;
+  }
   function updateHud() {
     const totals = nodeTotals();
+    updateRouteGuidance();
     els.stage.textContent = `${state.stage + 1}/${stages.length}`;
     els.score.textContent = String(Math.floor(state.score));
     els.best.textContent = String(Math.floor(state.best));
@@ -744,31 +858,48 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
     render();
   });
 
-  window.render_game_to_text = () => JSON.stringify({
-    mode: state.mode,
-    stage: state.stage + 1,
-    score: Math.floor(state.score),
-    best: Math.floor(state.best),
-    route: {
-      points: state.route.length,
-      first: state.route[0] ? { x: round(state.route[0].x), y: round(state.route[0].y) } : null,
-      last: state.route[state.route.length - 1] ? { x: round(state.route[state.route.length - 1].x), y: round(state.route[state.route.length - 1].y) } : null,
-      activeIndex: state.routeIndex
-    },
-    courier: { x: round(state.courier.x), y: round(state.courier.y), vx: round(state.courier.vx), vy: round(state.courier.vy) },
-    pickups: { count: state.pickups, inventory: Object.keys(state.inventory).sort() },
-    deliveries: { count: state.drops, delivered: Object.keys(state.delivered).sort() },
-    hazards: hazardPositions().map((h) => ({ x: round(h.x), y: round(h.y), r: h.r })),
-    activeCursor: { x: round(state.cursor.x), y: round(state.cursor.y) },
-    activeInput: state.activeInput,
-    feedback: state.feedback,
-    soundEnabled: state.soundEnabled,
-    lastSound: state.lastSound,
-    fullscreen: Boolean(document.fullscreenElement),
-    complete: state.complete,
-    fail: state.failed,
-    failReason: state.failReason
-  });
+  window.render_game_to_text = () => {
+    const routePlan = analyzeRoute();
+    return JSON.stringify({
+      mode: state.mode,
+      stage: state.stage + 1,
+      score: Math.floor(state.score),
+      best: Math.floor(state.best),
+      route: {
+        points: state.route.length,
+        first: state.route[0] ? { x: round(state.route[0].x), y: round(state.route[0].y) } : null,
+        last: state.route[state.route.length - 1] ? { x: round(state.route[state.route.length - 1].x), y: round(state.route[state.route.length - 1].y) } : null,
+        activeIndex: state.routeIndex,
+        planState: routePlan.state,
+        canRun: routePlan.canRun,
+        viable: routePlan.viable,
+        sequence: routePlan.sequence,
+        missingPickups: routePlan.missingPickups,
+        missingDrops: routePlan.missingDrops,
+        blockedPair: routePlan.blockedPair
+      },
+      routeGuidance: {
+        cue: routePlan.label,
+        next: routePlan.next,
+        visibleCue: els.routeCueValue.textContent,
+        visibleNext: els.routeNextValue.textContent,
+        runButton: els.run.textContent
+      },
+      courier: { x: round(state.courier.x), y: round(state.courier.y), vx: round(state.courier.vx), vy: round(state.courier.vy) },
+      pickups: { count: state.pickups, inventory: Object.keys(state.inventory).sort() },
+      deliveries: { count: state.drops, delivered: Object.keys(state.delivered).sort() },
+      hazards: hazardPositions().map((h) => ({ x: round(h.x), y: round(h.y), r: h.r })),
+      activeCursor: { x: round(state.cursor.x), y: round(state.cursor.y) },
+      activeInput: state.activeInput,
+      feedback: state.feedback,
+      soundEnabled: state.soundEnabled,
+      lastSound: state.lastSound,
+      fullscreen: Boolean(document.fullscreenElement),
+      complete: state.complete,
+      fail: state.failed,
+      failReason: state.failReason
+    });
+  };
   window.advanceTime = (ms) => {
     const steps = Math.max(1, Math.round(ms / (1000 / 60)));
     for (let i = 0; i < steps; i++) update(1 / 60);

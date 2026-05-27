@@ -60,7 +60,57 @@
 <!-- workshop-jsonld:end -->
 <link rel="icon" href="data:," />
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#070b12;color:#e9f2ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;overflow-x:hidden;background:radial-gradient(760px 420px at 8% -8%,rgba(45,212,191,.17),transparent 64%),radial-gradient(680px 420px at 95% 2%,rgba(251,191,36,.13),transparent 62%),linear-gradient(180deg,#070b12,#0b111d 82%)}.shell{width:min(1080px,100%);display:grid;gap:9px}.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.18em}.title{display:block;margin-top:3px;color:#f8fbff;font-size:clamp(22px,4vw,31px);font-weight:1000;text-transform:uppercase;letter-spacing:.04em}.hud,.controls{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.pill{min-width:74px;border:1px solid rgba(103,232,249,.22);border-radius:8px;background:linear-gradient(180deg,rgba(19,31,49,.96),rgba(9,16,29,.96));padding:7px 9px;text-align:center;box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}.label{display:block;color:#9fb3c7;font-size:9px;font-weight:950;text-transform:uppercase}.value{display:block;margin-top:2px;font-size:17px;font-weight:1000;font-variant-numeric:tabular-nums}.stage{border:1px solid rgba(103,232,249,.24);border-radius:9px;overflow:hidden;background:#08111d;box-shadow:0 22px 60px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:68vh;background:#08111d;touch-action:none}canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}.status{min-height:20px;color:#67e8f9;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.btn{border:1px solid rgba(103,232,249,.24);border-radius:8px;background:linear-gradient(180deg,rgba(19,31,49,.96),rgba(9,16,29,.96));color:#e9f2ff;font:inherit;font-size:12px;font-weight:950;text-transform:uppercase;padding:8px 10px;cursor:pointer}.btn:hover{border-color:rgba(251,191,36,.65)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8cf7e8,#22d3ee);color:#06242d}.help{color:#9fb3c7;text-align:center;font-size:12px;line-height:1.45}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;margin:0 1px;padding:0 5px;border:1px solid rgba(103,232,249,.25);border-radius:6px;background:#08111d;color:#f8fbff;font-weight:950}.sr{position:absolute;left:-10000px}@media(max-width:720px){body{padding:8px}.shell{gap:7px}.top{align-items:start}.pill{min-width:62px;padding:6px}.value{font-size:15px}.help{font-size:11px}.btn{flex:1 1 96px;padding:8px;font-size:11px}canvas{max-height:57vh}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#070b12;color:#e9f2ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;padding:12px;overflow-x:hidden;background:radial-gradient(760px 420px at 8% -8%,rgba(45,212,191,.17),transparent 64%),radial-gradient(680px 420px at 95% 2%,rgba(251,191,36,.13),transparent 62%),linear-gradient(180deg,#070b12,#0b111d 82%)}
+.shell{width:min(1080px,100%);display:grid;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}
+.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.18em}
+.title{display:block;margin-top:3px;color:#f8fbff;font-size:clamp(22px,4vw,31px);font-weight:1000;text-transform:uppercase;letter-spacing:.04em}
+.hud,.controls{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.pill{min-width:74px;border:1px solid rgba(103,232,249,.22);border-radius:8px;background:linear-gradient(180deg,rgba(19,31,49,.96),rgba(9,16,29,.96));padding:7px 9px;text-align:center;box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}
+.label{display:block;color:#9fb3c7;font-size:9px;font-weight:950;text-transform:uppercase}
+.value{display:block;margin-top:2px;font-size:17px;font-weight:1000;font-variant-numeric:tabular-nums}
+.stage{display:grid;place-items:center;border:1px solid rgba(103,232,249,.24);border-radius:9px;overflow:hidden;background:#08111d;box-shadow:0 22px 60px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.04)}
+canvas{display:block;width:auto;max-width:100%;height:auto;aspect-ratio:16/9;max-height:68vh;background:#08111d;touch-action:none}
+canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}
+.status{min-height:20px;color:#67e8f9;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.selection{min-height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(103,232,249,.22);border-radius:8px;background:rgba(5,12,22,.56);color:#e9f2ff;padding:6px 10px;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.selection[data-state=ready]{border-color:rgba(52,211,153,.55);box-shadow:0 0 0 1px rgba(52,211,153,.12) inset}
+.selection[data-state=blocked]{border-color:rgba(251,113,133,.66);color:#fecdd3;box-shadow:0 0 0 1px rgba(251,113,133,.14) inset}
+.selection[data-state=clear]{border-color:rgba(251,191,36,.66);color:#fde68a}
+.btn{border:1px solid rgba(103,232,249,.24);border-radius:8px;background:linear-gradient(180deg,rgba(19,31,49,.96),rgba(9,16,29,.96));color:#e9f2ff;font:inherit;font-size:12px;font-weight:950;text-transform:uppercase;padding:8px 10px;cursor:pointer}
+.btn:hover{border-color:rgba(251,191,36,.65)}
+.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8cf7e8,#22d3ee);color:#06242d}
+.help{color:#9fb3c7;text-align:center;font-size:12px;line-height:1.45}
+.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;margin:0 1px;padding:0 5px;border:1px solid rgba(103,232,249,.25);border-radius:6px;background:#08111d;color:#f8fbff;font-weight:950}
+.sr{position:absolute;left:-10000px}
+@media(max-width:720px){
+  body{align-items:start;padding:6px}
+  .shell{gap:5px}
+  .top{align-items:start;gap:5px}
+  .brand{display:flex;align-items:end;gap:7px;flex-wrap:wrap}
+  .eyebrow{font-size:8px;letter-spacing:.12em}
+  .title{margin-top:0;font-size:20px;letter-spacing:.02em}
+  .hud{width:100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .pill{min-width:0;padding:4px 3px;border-radius:7px}
+  .label{font-size:8px}
+  .value{font-size:14px;margin-top:1px}
+  .stage{border-radius:8px}
+  canvas{width:auto;max-width:100%;max-height:calc(100svh - 188px)}
+  .status{min-height:16px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .selection{min-height:24px;padding:4px 6px;font-size:10px;line-height:1.2}
+  .controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+  .btn{min-width:0;padding:7px 2px;font-size:9px;line-height:1.1;white-space:normal}
+  .help{font-size:10px;line-height:1.25}
+  .kbd{min-width:17px;height:16px;padding:0 3px;font-size:9px;border-radius:5px}
+}
+@media(max-width:420px){
+  .hud{gap:3px}
+  canvas{max-height:calc(100svh - 202px)}
+  .help{font-size:9px}
+}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -78,6 +128,7 @@
   </div>
   <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Patchwork Foundry board. Select, rotate, and place polyomino machine plates to connect every power port without covering vent cells."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Select a plate and bridge the first power bus.</div>
+  <div class="selection" id="selectionLine" aria-live="polite" data-state="ready">Plate ready</div>
   <div class="controls" aria-label="Game controls">
     <button class="btn primary" id="rotateLeftBtn" type="button">Rotate Q</button>
     <button class="btn primary" id="rotateRightBtn" type="button">Rotate E</button>
@@ -126,6 +177,7 @@
   const els = {
     stage: document.getElementById("stageValue"), moves: document.getElementById("movesValue"), ports: document.getElementById("portsValue"),
     score: document.getElementById("scoreValue"), best: document.getElementById("bestValue"), status: document.getElementById("statusLine"),
+    selection: document.getElementById("selectionLine"),
     left: document.getElementById("rotateLeftBtn"), right: document.getElementById("rotateRightBtn"), restart: document.getElementById("restartBtn"),
     sound: document.getElementById("soundBtn"), full: document.getElementById("fullBtn")
   };
@@ -153,7 +205,7 @@
     mode:"playing", stage:0, score:0, best:Number(read(BEST_KEY, "0")) || 0, movesLeft:0, placed:[], selectedPiece:0,
     cursor:{ x:0, y:0 }, hover:null, dragging:false, soundEnabled:readSound(), lastSound:"none", userGesture:false,
     feedback:"Select a plate and bridge the first power bus.", feedbackMs:1200, complete:false, fail:false,
-    lastConnected:0, lastBlocked:0, timeMs:0
+    lastConnected:0, lastBlocked:0, timeMs:0, selectionPulseMs:900, rotationPulseMs:0
   };
   let boardRect = { x:52, y:66, size:52 };
   let trayRects = [];
@@ -161,13 +213,25 @@
   function board() { return BOARDS[state.stage]; }
   function stagePieces() { return board().pieces; }
   function placedIds() { return new Set(state.placed.map((p) => p.id)); }
+  function openPieces() {
+    const ids = placedIds();
+    return stagePieces().filter((p) => !ids.has(p.id));
+  }
   function pieceById(id) { return stagePieces().find((p) => p.id === id); }
   function selectedBase() {
-    const ids = placedIds();
-    const open = stagePieces().filter((p) => !ids.has(p.id));
+    const open = openPieces();
     if (!open.length) return null;
     state.selectedPiece = clamp(state.selectedPiece, 0, open.length - 1);
     return open[state.selectedPiece];
+  }
+  function pieceLabel(piece) {
+    return piece ? piece.id.replace(/-/g, " ").toUpperCase() : "NO PLATE";
+  }
+  function issueLabel(issue) {
+    if (issue === "vent") return "Vent conflict";
+    if (issue === "overlap") return "Overlap";
+    if (issue === "outside") return "Outside grid";
+    return "Ready";
   }
   function rotatedCells(cells, rot) {
     let out = cells.map(([x, y]) => ({ x, y }));
@@ -285,6 +349,8 @@
     state.dragging = false;
     state.complete = false;
     state.fail = false;
+    state.selectionPulseMs = 900;
+    state.rotationPulseMs = 0;
     if (!keepScore) state.score = 0;
     setFeedback(board().name + ": place plates, keep vents open.", 1300);
     sync();
@@ -329,6 +395,7 @@
     const rot = piece.rot || 0;
     const issue = placementIssue(piece, x, y, rot);
     if (issue) {
+      state.selectionPulseMs = 800;
       setFeedback(issue === "vent" ? "Vent blocked. Leave blue grate cells open." : issue === "overlap" ? "Plate overlaps installed machinery." : "Plate hangs outside the foundry frame.", 1100);
       sound("bad");
       sync();
@@ -338,6 +405,7 @@
     state.placed.push({ id:piece.id, x, y, rot });
     state.movesLeft -= 1;
     state.cursor = { x, y };
+    state.selectionPulseMs = 900;
     const stats = connectionStats();
     const stageGain = stats.connected * 30 + state.movesLeft * 4 + state.placed.length * 3;
     setFeedback("Plate installed. Power ports online " + stats.connected + "/" + stats.total + ".", 1000);
@@ -362,13 +430,18 @@
     const piece = selectedBase();
     if (!piece || state.complete || state.fail) return;
     piece.rot = ((piece.rot || 0) + dir + 4) % 4;
-    setFeedback("Rotated " + piece.id.replace(/-/g, " ") + ".", 500);
+    state.selectionPulseMs = 900;
+    state.rotationPulseMs = 900;
+    setFeedback("Rotated " + piece.id.replace(/-/g, " ") + " to " + ((piece.rot || 0) * 90) + " deg.", 700);
     sound("rotate");
+    sync();
     render();
   }
   function selectPiece(index) {
     state.selectedPiece = index;
-    setFeedback("Selected plate " + (index + 1) + ".", 500);
+    const piece = selectedBase();
+    state.selectionPulseMs = 900;
+    setFeedback(piece ? "Selected " + piece.id.replace(/-/g, " ") + "." : "All plates installed.", 700);
     sound("select");
     sync();
     render();
@@ -428,6 +501,7 @@
       const dy = key === "arrowup" || key === "w" ? -1 : key === "arrowdown" || key === "s" ? 1 : 0;
       state.cursor.x = clamp(state.cursor.x + dx, 0, board().w - 1);
       state.cursor.y = clamp(state.cursor.y + dy, 0, board().h - 1);
+      sync();
       render();
     }
   }
@@ -450,9 +524,14 @@
   function update(ms) {
     state.timeMs += ms;
     state.feedbackMs = Math.max(0, state.feedbackMs - ms);
+    state.selectionPulseMs = Math.max(0, state.selectionPulseMs - ms);
+    state.rotationPulseMs = Math.max(0, state.rotationPulseMs - ms);
   }
   function sync() {
     const stats = connectionStats();
+    const selected = selectedBase();
+    const issue = selected && !state.complete && !state.fail ? placementIssue(selected, state.cursor.x, state.cursor.y, selected.rot || 0) : "";
+    const rotation = selected ? (selected.rot || 0) * 90 : 0;
     state.lastConnected = stats.connected;
     state.lastBlocked = stats.ventsBlocked;
     els.stage.textContent = (state.stage + 1) + "/" + BOARDS.length;
@@ -461,6 +540,22 @@
     els.score.textContent = String(state.score);
     els.best.textContent = String(state.best);
     els.status.textContent = state.feedbackMs > 0 || state.complete || state.fail ? state.feedback : "Patch plates between ports. Vents must stay open.";
+    if (state.mode === "run-complete") {
+      els.selection.textContent = "Run complete | score " + state.score + " | best " + state.best;
+      els.selection.dataset.state = "clear";
+    } else if (state.complete) {
+      els.selection.textContent = board().name + " clear | press Enter or click board";
+      els.selection.dataset.state = "clear";
+    } else if (state.fail) {
+      els.selection.textContent = "Retry " + board().name + " | " + state.feedback;
+      els.selection.dataset.state = "blocked";
+    } else if (selected) {
+      els.selection.textContent = "Plate " + pieceLabel(selected) + " | rot " + rotation + " deg | " + issueLabel(issue) + " at " + state.cursor.x + "," + state.cursor.y;
+      els.selection.dataset.state = issue ? "blocked" : "ready";
+    } else {
+      els.selection.textContent = "All plates installed";
+      els.selection.dataset.state = "clear";
+    }
     els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", String(state.soundEnabled));
     els.full.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
@@ -472,17 +567,22 @@
     ctx.fill();
     if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
   }
+  function compactCanvasLayout() {
+    return Boolean(window.matchMedia && window.matchMedia("(max-width: 720px)").matches);
+  }
   function drawGrid() {
     const b = board();
-    const size = Math.min(58, Math.floor(Math.min(560 / b.w, 390 / b.h)));
-    boardRect = { x:54, y:72, size };
+    const compact = compactCanvasLayout();
+    const size = Math.min(compact ? 68 : 72, Math.floor(Math.min((compact ? 760 : 560) / b.w, (compact ? 372 : 410) / b.h)));
+    boardRect = { x:compact ? Math.round((W - b.w * size) / 2) : 54, y:compact ? 76 : 72, size };
     const bw = b.w * size, bh = b.h * size;
-    drawRound(boardRect.x - 14, boardRect.y - 14, bw + 28, bh + 28, 12, "rgba(5,12,22,.84)", "rgba(103,232,249,.2)");
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
+    drawRound(boardRect.x - 14, boardRect.y - 14, bw + 28, bh + 28, 12, "rgba(5,12,22,.88)", "rgba(103,232,249,.28)");
+    ctx.lineWidth = 1.25;
     for (let y = 0; y < b.h; y += 1) {
       for (let x = 0; x < b.w; x += 1) {
         const px = boardRect.x + x * size, py = boardRect.y + y * size;
-        drawRound(px + 2, py + 2, size - 4, size - 4, 7, "rgba(16,31,49,.88)", "rgba(103,232,249,.1)");
+        drawRound(px + 2, py + 2, size - 4, size - 4, 7, "rgba(16,31,49,.9)", "rgba(103,232,249,.18)");
       }
     }
     b.vents.forEach(([x, y]) => {
@@ -507,14 +607,27 @@
     });
     drawPlaced(size);
     drawGhost(size);
-    ctx.strokeStyle = "#fbbf24";
-    ctx.lineWidth = 3;
+    const selected = selectedBase();
+    const issue = selected ? placementIssue(selected, state.cursor.x, state.cursor.y, selected.rot || 0) : "";
+    ctx.save();
+    ctx.strokeStyle = issue ? "#fb7185" : "#fbbf24";
+    ctx.lineWidth = compact ? 5 : 4;
+    if (issue) ctx.setLineDash([8, 5]);
     ctx.strokeRect(boardRect.x + state.cursor.x * size + 4, boardRect.y + state.cursor.y * size + 4, size - 8, size - 8);
+    if (state.selectionPulseMs > 0) {
+      ctx.setLineDash([]);
+      ctx.globalAlpha = Math.min(.55, state.selectionPulseMs / 900);
+      ctx.lineWidth = compact ? 8 : 6;
+      ctx.strokeStyle = state.rotationPulseMs > 0 ? "#fbbf24" : "rgba(103,232,249,.9)";
+      ctx.strokeRect(boardRect.x + state.cursor.x * size + 1, boardRect.y + state.cursor.y * size + 1, size - 2, size - 2);
+    }
+    ctx.restore();
   }
   function drawCell(x, y, size, color, alpha = 1) {
     const px = boardRect.x + x * size, py = boardRect.y + y * size;
     ctx.save();
     ctx.globalAlpha = alpha;
+    ctx.lineWidth = Math.max(1.5, size * .045);
     drawRound(px + 5, py + 5, size - 10, size - 10, 8, color, "rgba(255,255,255,.45)");
     ctx.fillStyle = "rgba(7,16,24,.25)";
     ctx.fillRect(px + size * .22, py + size * .45, size * .56, size * .1);
@@ -531,43 +644,102 @@
     const p = selectedBase();
     if (!p || state.complete || state.fail) return;
     const issue = placementIssue(p, state.cursor.x, state.cursor.y, p.rot || 0);
-    cellsFor(p, state.cursor.x, state.cursor.y, p.rot || 0).forEach((c) => drawCell(c.x, c.y, size, issue ? "#fb7185" : "#e2e8f0", .46));
+    const color = issue ? "#fb7185" : state.rotationPulseMs > 0 ? "#fbbf24" : "#e2e8f0";
+    cellsFor(p, state.cursor.x, state.cursor.y, p.rot || 0).forEach((c) => drawCell(c.x, c.y, size, color, issue ? .52 : .58));
+  }
+  function drawPieceMini(piece, x, y, unit, color) {
+    rotatedCells(piece.cells, piece.rot || 0).forEach((c) => {
+      ctx.lineWidth = 1;
+      drawRound(x + c.x * unit, y + c.y * unit, unit - 2, unit - 2, 3, color, "rgba(255,255,255,.4)");
+    });
   }
   function drawTray() {
-    const open = stagePieces().filter((p) => !placedIds().has(p.id));
+    const open = openPieces();
+    const compact = compactCanvasLayout();
     trayRects = [];
     ctx.fillStyle = "#e9f2ff";
     ctx.font = "1000 18px system-ui";
     ctx.textAlign = "left";
-    ctx.fillText("MACHINE PLATES", 670, 84);
+    if (compact) {
+      const y = 462, h = 58, gap = 8;
+      const x0 = 36;
+      const w = open.length ? Math.floor((W - x0 * 2 - gap * (open.length - 1)) / open.length) : 240;
+      ctx.fillStyle = "#e9f2ff";
+      ctx.font = "1000 16px system-ui";
+      ctx.fillText("PLATES", x0, y - 10);
+      open.forEach((piece, index) => {
+        const x = x0 + index * (w + gap);
+        const active = index === state.selectedPiece;
+        const pulse = active ? Math.min(1, state.selectionPulseMs / 900) : 0;
+        trayRects.push({ x, y, w, h });
+        ctx.lineWidth = active ? 3 : 1.5;
+        drawRound(x, y, w, h, 9, active ? "rgba(251,191,36," + (.17 + pulse * .13) + ")" : "rgba(15,27,43,.94)", active ? "#fbbf24" : "rgba(103,232,249,.28)");
+        ctx.fillStyle = COLORS[index % COLORS.length];
+        ctx.font = "1000 12px system-ui";
+        ctx.fillText(String(index + 1) + " " + piece.id.split("-")[0].toUpperCase(), x + 8, y + 18);
+        drawPieceMini(piece, x + 9, y + 29, 9, COLORS[index % COLORS.length]);
+        ctx.fillStyle = active && state.rotationPulseMs > 0 ? "#fbbf24" : "#9fb3c7";
+        ctx.font = "900 10px system-ui";
+        ctx.textAlign = "right";
+        ctx.fillText(((piece.rot || 0) * 90) + " deg", x + w - 7, y + h - 8);
+        ctx.textAlign = "left";
+      });
+      if (!open.length) {
+        drawRound(x0, y, 240, 58, 9, "rgba(15,27,43,.94)", "rgba(103,232,249,.28)");
+        ctx.fillStyle = "#9fb3c7";
+        ctx.font = "900 13px system-ui";
+        ctx.fillText("All plates installed", x0 + 12, y + 34);
+      }
+      return;
+    }
+    ctx.fillText("MACHINE PLATES", 660, 84);
     open.forEach((piece, index) => {
-      const x = 670, y = 104 + index * 62, w = 236, h = 52;
+      const x = 660, y = 104 + index * 58, w = 250, h = 54;
+      const active = index === state.selectedPiece;
+      const pulse = active ? Math.min(1, state.selectionPulseMs / 900) : 0;
       trayRects.push({ x, y, w, h });
-      drawRound(x, y, w, h, 8, index === state.selectedPiece ? "rgba(251,191,36,.18)" : "rgba(15,27,43,.92)", index === state.selectedPiece ? "#fbbf24" : "rgba(103,232,249,.24)");
+      ctx.lineWidth = active ? 3 : 1.5;
+      drawRound(x, y, w, h, 8, active ? "rgba(251,191,36," + (.18 + pulse * .14) + ")" : "rgba(15,27,43,.92)", active ? "#fbbf24" : "rgba(103,232,249,.24)");
       ctx.fillStyle = COLORS[index % COLORS.length];
       ctx.font = "1000 12px system-ui";
       ctx.fillText(String(index + 1) + " " + piece.id.toUpperCase().replace(/-/g, " "), x + 10, y + 20);
-      const cells = rotatedCells(piece.cells, piece.rot || 0);
-      const ox = x + 12, oy = y + 29;
-      cells.forEach((c) => {
-        ctx.fillStyle = COLORS[index % COLORS.length];
-        ctx.fillRect(ox + c.x * 13, oy + c.y * 13, 11, 11);
-      });
-      ctx.fillStyle = "#9fb3c7";
+      drawPieceMini(piece, x + 12, y + 30, 13, COLORS[index % COLORS.length]);
+      if (active) {
+        drawRound(x + w - 70, y + 7, 58, 18, 6, "rgba(251,191,36,.92)", "");
+        ctx.fillStyle = "#321a05";
+        ctx.font = "1000 10px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("ACTIVE", x + w - 41, y + 20);
+        ctx.textAlign = "left";
+      }
+      ctx.fillStyle = active && state.rotationPulseMs > 0 ? "#fbbf24" : "#9fb3c7";
       ctx.font = "800 11px system-ui";
       ctx.textAlign = "right";
       ctx.fillText("rot " + ((piece.rot || 0) * 90) + " deg", x + w - 10, y + 32);
       ctx.textAlign = "left";
     });
     if (!open.length) {
-      drawRound(670, 104, 236, 54, 8, "rgba(15,27,43,.92)", "rgba(103,232,249,.24)");
+      drawRound(660, 104, 250, 54, 8, "rgba(15,27,43,.92)", "rgba(103,232,249,.24)");
       ctx.fillStyle = "#9fb3c7";
       ctx.font = "900 13px system-ui";
-      ctx.fillText("All plates installed", 684, 136);
+      ctx.fillText("All plates installed", 674, 136);
     }
   }
   function drawTraceOverlay() {
     const stats = connectionStats();
+    if (compactCanvasLayout()) {
+      drawRound(54, 20, W - 108, 38, 9, "rgba(5,12,22,.78)", "rgba(103,232,249,.22)");
+      ctx.fillStyle = "#e9f2ff";
+      ctx.font = "1000 15px system-ui";
+      ctx.textAlign = "left";
+      ctx.fillText(board().name, 72, 45);
+      ctx.fillStyle = "#67e8f9";
+      ctx.font = "900 13px system-ui";
+      ctx.textAlign = "right";
+      ctx.fillText("Ports " + stats.connected + "/" + stats.total + " | Moves " + state.movesLeft + " | Vents " + stats.ventsBlocked, W - 72, 45);
+      ctx.textAlign = "left";
+      return;
+    }
     ctx.fillStyle = "#9fb3c7";
     ctx.font = "900 13px system-ui";
     ctx.textAlign = "left";
@@ -619,6 +791,7 @@
     const b = board();
     const stats = connectionStats();
     const selected = selectedBase();
+    const issue = selected && !state.complete && !state.fail ? placementIssue(selected, state.cursor.x, state.cursor.y, selected.rot || 0) : "";
     return JSON.stringify({
       mode: state.mode,
       stage: state.stage + 1,
@@ -631,6 +804,8 @@
       "placed pieces": state.placed.length,
       selectedPiece: selected ? { id:selected.id, rotation:selected.rot || 0, cells:rotatedCells(selected.cells, selected.rot || 0) } : null,
       "selected piece": selected ? selected.id : null,
+      selectedRotationDegrees: selected ? (selected.rot || 0) * 90 : 0,
+      selectedPlacement: selected ? { status:issue || "ready", label:issueLabel(issue), cursor:{ x:state.cursor.x, y:state.cursor.y } } : null,
       cursor: { x:state.cursor.x, y:state.cursor.y },
       powerConnectedCount: stats.connected,
       "power connected count": stats.connected,
@@ -639,6 +814,9 @@
       "vents blocked": stats.ventsBlocked,
       movesLeft: state.movesLeft,
       feedback: state.feedback,
+      visibleFeedback: els.status.textContent,
+      selectionFeedback: els.selection.textContent,
+      feedbackActive: state.feedbackMs > 0 || state.selectionPulseMs > 0 || state.rotationPulseMs > 0,
       soundEnabled: state.soundEnabled,
       lastSound: state.lastSound,
       fullscreen: Boolean(document.fullscreenElement),
@@ -654,6 +832,7 @@
     const c = boardCellFromPoint(p.x, p.y);
     if (c.x >= 0 && c.y >= 0 && c.x < board().w && c.y < board().h) {
       state.cursor = c;
+      sync();
       render();
     }
   });

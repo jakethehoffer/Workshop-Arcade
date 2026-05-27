@@ -12,6 +12,8 @@ import { chromium } from 'playwright';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(await readFile(resolve(repoRoot, 'websites', 'manifest.json'), 'utf8'));
+const localServiceWorkerText = await readFile(resolve(repoRoot, 'sw.js'), 'utf8');
+const localServiceWorker = parseServiceWorkerIdentity(localServiceWorkerText);
 const baseUrl = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || 'https://jakethehoffer.github.io/Workshop-Arcade/');
 const requestedSlugs = parseSlugs(process.env.WORKSHOP_ARCADE_LIVE_SLUGS || process.env.WORKSHOP_ARCADE_TOUCHED_SLUGS);
 const defaultSlugs = newestManifestSlugs(3);
@@ -20,6 +22,10 @@ const issues = [];
 const startedAt = new Date().toISOString();
 const summaryDir = resolve(repoRoot, 'test-results', 'live-pages-smoke', startedAt.replace(/[:.]/g, '-'));
 const summaryPath = resolve(summaryDir, 'summary.json');
+const skipServiceWorkerRevision = parseBooleanFlag(process.env.WORKSHOP_ARCADE_SKIP_SW_REVISION);
+const expectedServiceWorkerRevision = skipServiceWorkerRevision
+  ? null
+  : process.env.WORKSHOP_ARCADE_EXPECTED_SW_REVISION || localServiceWorker.shellRevision;
 const summary = {
   status: 'running',
   startedAt,
@@ -31,6 +37,19 @@ const summary = {
   slugsChecked: [],
   fetches: [],
   pages: [],
+  serviceWorker: {
+    expectedShellRevision: expectedServiceWorkerRevision,
+    expectedSource: skipServiceWorkerRevision
+      ? 'skipped'
+      : process.env.WORKSHOP_ARCADE_EXPECTED_SW_REVISION
+        ? 'WORKSHOP_ARCADE_EXPECTED_SW_REVISION'
+        : 'local sw.js',
+    localShellRevision: localServiceWorker.shellRevision,
+    localVersion: localServiceWorker.version,
+    remoteShellRevision: null,
+    remoteVersion: null,
+    revisionCheck: skipServiceWorkerRevision ? 'skipped' : 'pending',
+  },
   issues,
 };
 
@@ -51,6 +70,17 @@ function newestManifestSlugs(count) {
     .map((game) => game?.slug || game?.id)
     .filter(Boolean)
     .slice(0, count);
+}
+
+function parseBooleanFlag(value) {
+  return /^(1|true|yes)$/i.test(String(value || '').trim());
+}
+
+function parseServiceWorkerIdentity(text) {
+  return {
+    shellRevision: text.match(/const\s+SHELL_REVISION\s*=\s*['"`]([^'"`]+)['"`]/)?.[1] || null,
+    version: text.match(/const\s+VERSION\s*=\s*['"`]([^'"`]+)['"`]/)?.[1] || null,
+  };
 }
 
 function fail(label, message) {
@@ -356,8 +386,29 @@ try {
   });
 
   await assertFetchOk('sw.js', 'service worker', ({ text }) => {
+    const remoteServiceWorker = parseServiceWorkerIdentity(text);
+    summary.serviceWorker.remoteShellRevision = remoteServiceWorker.shellRevision;
+    summary.serviceWorker.remoteVersion = remoteServiceWorker.version;
+
     if (!/addEventListener\(['"`]fetch['"`]/.test(text)) fail('service worker', 'missing fetch listener');
     if (!/RUNTIME_CACHE_MAX_ENTRIES/.test(text)) fail('service worker', 'missing runtime cache cap');
+    if (!remoteServiceWorker.shellRevision) fail('service worker', 'missing SHELL_REVISION');
+    if (!remoteServiceWorker.version) fail('service worker', 'missing VERSION');
+    if (skipServiceWorkerRevision) return;
+
+    if (!expectedServiceWorkerRevision) {
+      summary.serviceWorker.revisionCheck = 'failed';
+      fail('service worker', 'missing expected SHELL_REVISION; set WORKSHOP_ARCADE_EXPECTED_SW_REVISION or WORKSHOP_ARCADE_SKIP_SW_REVISION=1');
+      return;
+    }
+
+    if (remoteServiceWorker.shellRevision !== expectedServiceWorkerRevision) {
+      summary.serviceWorker.revisionCheck = 'failed';
+      fail('service worker', `expected SHELL_REVISION ${expectedServiceWorkerRevision}, got ${remoteServiceWorker.shellRevision || 'missing'}`);
+      return;
+    }
+
+    summary.serviceWorker.revisionCheck = 'passed';
   });
 
   await assertFetchOk('offline.html', 'offline page', ({ text, contentType }) => {

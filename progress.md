@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-05-27 Codex pass 90
+
+- Implemented on `codex/deploy-evidence-game-polish-2026-05-27`: coordinator-owned live Pages deploy-evidence hardening plus isolated Inkline Courier, Starline Strafe, and Patchwork Foundry polish lanes.
+- Coordinator lane now compares the deployed `sw.js` `SHELL_REVISION` with the local or `WORKSHOP_ARCADE_EXPECTED_SW_REVISION` value during `npm run test:live-pages`, with `WORKSHOP_ARCADE_SKIP_SW_REVISION=1` reserved for intentional historical checks. The live-smoke JSON summary records local/remote service-worker revision and version evidence.
+- Polished three existing games without changing rules/scoring/storage keys/manifest/generated surfaces/service worker behavior: Inkline Courier adds route readiness and next-stop diagnostics; Starline Strafe adds visible move/fire/dash touch cues and feedback diagnostics; Patchwork Foundry tightens mobile board framing and exposes selected-plate/rotation feedback.
+- Verification passed: focused game contract/a11y/a11y-polish/keyboard-help/runtime-storage checks for the three touched games; desktop/mobile Playwright probes with inspected screenshots and no overflow/errors; local live-smoke mismatch check failed as expected for `WORKSHOP_ARCADE_EXPECTED_SW_REVISION=shell-000000000000`; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 WORKSHOP_ARCADE_LIVE_SLUGS=inkline-courier,starline-strafe,patchwork-foundry npm run test:live-pages`; `validate-catalog.ps1 -Fix`; `validate-catalog.ps1`; `npm test`; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games`; `npm run capture:games:ci` with max score 0; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`; `git diff --check`.
+
 ## 2026-05-27 Codex pass 89
 
 - Implemented the runtime-cache + live-smoke + targeted polish pass on `codex/runtime-cache-live-polish`: coordinator-owned service-worker runtime cache cap, live Pages smoke hardening, and isolated Pinball Foundry, Prism Relay, and Typeforge Cipher polish lanes.
