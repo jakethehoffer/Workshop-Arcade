@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-05-27 Codex pass 89
+
+- Implemented the runtime-cache + live-smoke + targeted polish pass on `codex/runtime-cache-live-polish`: coordinator-owned service-worker runtime cache cap, live Pages smoke hardening, and isolated Pinball Foundry, Prism Relay, and Typeforge Cipher polish lanes.
+- Added a bounded `RUNTIME_CACHE_MAX_ENTRIES` path in `sw.js`, serializing runtime writes so same-origin GETs are cached and trimmed deterministically while preserving offline replay for recently visited pages. `test:pwa` and `test:pwa-runtime` now lock the cap and overflow pruning.
+- Expanded `npm run test:live-pages` so it defaults to the three newest manifest slugs unless overridden, checks catalog root, manifest, feed, sitemap, PWA/fallback/robots surfaces, selected games, browser errors, mobile overflow, and no catalog startup GitHub API calls, then writes `test-results/live-pages-smoke/<timestamp>/summary.json`. Local preview serving now includes `.xml` and `.txt` MIME types.
+- Polished three existing games without changing rules/scoring/storage keys/manifest/generated surfaces/capture recipes: Pinball Foundry adds a visible hold-launch control and charge cue; Prism Relay moves Rotate Selected into the first mobile action area with receiver progress feedback; Typeforge Cipher moves Start before the canvas with active column/token cues and compact column labels.
+- Verification passed: focused game contract/a11y/a11y-polish/keyboard-help/runtime-storage checks for the three touched games; desktop/mobile Playwright probes with screenshots and no overflow/errors; `validate-catalog.ps1`; `npm test`; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games`; `npm run capture:games:ci` with max score 0; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 WORKSHOP_ARCADE_LIVE_SLUGS=pinball-foundry,prism-relay,typeforge-cipher npm run test:live-pages`; `git diff --check`.
+- Review note addressed: the live-smoke GitHub API route is now awaited before page navigation so startup API calls cannot race past the detector.
+
 ## 2026-05-26 Codex pass 88
 
 - Implemented the live Pages smoke + legacy polish pass on `codex/live-smoke-and-legacy-polish`: coordinator-owned `npm run test:live-pages` plus isolated Lumen Lander, Relay Choir, and Block Drop polish lanes.

@@ -20,6 +20,8 @@ const SHELL_REVISION = 'shell-444540748fe7';
 const VERSION = 'wa-v9-shell-444540748fe7';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
+const RUNTIME_CACHE_MAX_ENTRIES = 96;
+let runtimeWriteQueue = Promise.resolve();
 
 // Match the desktop branch of index.html's aboveFoldCoverCount(). The
 // SW doesn't know the visitor's viewport at install time, so we hedge
@@ -54,6 +56,24 @@ async function cachePut(cache, url) {
   } catch {
     // Network unavailable during install; runtime cache will fill in later.
   }
+}
+
+async function trimRuntimeCache(cache) {
+  const keys = await cache.keys();
+  const overflow = keys.length - RUNTIME_CACHE_MAX_ENTRIES;
+  if (overflow <= 0) return;
+  await Promise.all(keys.slice(0, overflow).map((request) => cache.delete(request)));
+}
+
+async function putRuntime(request, response) {
+  if (!response || !response.ok) return;
+  const copy = response.clone();
+  runtimeWriteQueue = runtimeWriteQueue.catch(() => {}).then(async () => {
+    const cache = await caches.open(RUNTIME_CACHE);
+    await cache.put(request, copy);
+    await trimRuntimeCache(cache);
+  });
+  await runtimeWriteQueue;
 }
 
 // Read the manifest and pick the cover URLs for the newest
@@ -103,6 +123,8 @@ self.addEventListener('activate', (event) => {
       }
       return undefined;
     }));
+    const runtimeCache = await caches.open(RUNTIME_CACHE);
+    await trimRuntimeCache(runtimeCache);
     await self.clients.claim();
   })());
 });
@@ -123,8 +145,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(request);
-        const cache = await caches.open(RUNTIME_CACHE);
-        cache.put(request, fresh.clone()).catch(() => {});
+        event.waitUntil(putRuntime(request, fresh).catch(() => {}));
         return fresh;
       } catch {
         const cached = await caches.match(request);
@@ -143,8 +164,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cached = await caches.match(request);
     const fetchPromise = fetch(request).then((response) => {
-      if (response && response.ok && response.type === 'basic') {
-        caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, response.clone())).catch(() => {});
+      if (response && response.ok) {
+        event.waitUntil(putRuntime(request, response).catch(() => {}));
       }
       return response;
     }).catch(() => null);

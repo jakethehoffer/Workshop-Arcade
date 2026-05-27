@@ -81,6 +81,20 @@
   }
   .pill .label{display:block;font-size:9px;color:rgba(94,234,212,.86);font-weight:900;text-transform:uppercase}
   .pill .value{display:block;margin-top:2px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
+  .charge-cue{
+    display:grid;grid-template-columns:auto minmax(110px,1fr);gap:8px;align-items:center;padding:8px 10px;
+    border:1px solid rgba(251,191,36,.24);border-radius:8px;background:rgba(11,17,32,.82);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .cue-label{font-size:11px;font-weight:950;text-transform:uppercase;color:#fde68a;white-space:nowrap}
+  .charge-track{height:10px;border-radius:999px;background:rgba(148,163,184,.2);overflow:hidden}
+  .charge-fill{
+    display:block;width:8%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5eead4,#fbbf24);
+    transition:width .08s linear,background-color .12s ease;
+  }
+  .charge-cue[data-state="ready"] .charge-fill{background:#5eead4}
+  .charge-cue[data-state="launched"] .charge-fill{background:#7c9eff}
+  .charge-cue[data-state="locked"] .charge-fill{background:#64748b}
   .stage{border:1px solid rgba(94,234,212,.3);border-radius:14px;overflow:hidden;background:#07101a;box-shadow:0 18px 38px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04)}
   canvas{display:block;width:100%;aspect-ratio:72/98;max-height:72vh;background:#07101a;touch-action:none}
   canvas:focus-visible{outline:3px solid rgba(251,191,36,.82);outline-offset:-4px}
@@ -91,6 +105,8 @@
     box-shadow:0 6px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04);
   }
   .btn[aria-pressed="true"],.btn.primary{background:linear-gradient(180deg,#fde68a,#f59e0b);color:#1d1303;border-color:transparent}
+  #launchBtn{min-width:150px;touch-action:none}
+  #launchBtn:disabled{opacity:.68;cursor:not-allowed}
   .help{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
   @media (max-width:560px){
     body{padding:11px 7px 18px}
@@ -98,6 +114,15 @@
     .panel{gap:7px}
     .pill{min-width:58px;padding:6px 7px}
     .pill .value{font-size:15px}
+    .charge-cue{grid-template-columns:1fr;gap:6px;padding:7px 8px}
+    .cue-label{text-align:center}
+    .toolbar{order:3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+    .toolbar .btn{width:100%;min-height:42px}
+    #launchBtn{grid-column:1/-1;min-width:0;font-size:12px}
+    .stage{order:4}
+    canvas{max-height:63vh}
+    .status{order:5}
+    .help{order:6}
     .btn{padding:8px 8px;font-size:11px}
     .help{font-size:11px}
   }
@@ -114,14 +139,19 @@
     <div class="pill"><span class="label">Multi</span><span class="value" id="multiValue">1x</span></div>
     <div class="pill"><span class="label">Plunger</span><span class="value" id="chargeValue">0%</span></div>
   </div>
-  <div class="stage"><canvas id="game" width="720" height="980" tabindex="0" aria-label="Pinball Foundry canvas. Hold Space or Arrow Down to charge the plunger, release to launch. A and D or Arrow keys move flippers."></canvas></div>
-  <div class="status" id="statusLine" aria-live="polite">Hold Space or Arrow Down to charge the plunger.</div>
+  <div class="charge-cue" id="launchCue" data-state="ready" aria-label="Launch charge">
+    <span class="cue-label" id="launchCueText">Ready to launch</span>
+    <span class="charge-track" aria-hidden="true"><span class="charge-fill" id="chargeMeter"></span></span>
+  </div>
+  <div class="stage"><canvas id="game" width="720" height="980" tabindex="0" aria-label="Pinball Foundry canvas. Hold the Hold Launch button, Space, Enter, or Arrow Down to charge the plunger, release to launch. A and D or Arrow keys move flippers."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Hold Launch, Space, or Enter to charge the plunger.</div>
   <div class="toolbar" aria-label="Pinball controls">
-    <button class="btn primary" type="button" id="restartBtn">Reset</button>
+    <button class="btn primary launch-btn" type="button" id="launchBtn" aria-pressed="false">Hold Launch</button>
+    <button class="btn" type="button" id="restartBtn">Reset</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
     <button class="btn" type="button" id="fullBtn">Fullscreen</button>
   </div>
-  <div class="help">A/Left and D/Right flip. Hold/release Space or ArrowDown launches. R restarts, F fullscreen. Touch lower-left/right for flippers and the right lane for plunger.</div>
+  <div class="help">Hold Launch, Space, Enter, or ArrowDown charges the plunger; release to launch. A/Left and D/Right flip. R resets, F fullscreen.</div>
 </main>
 <script>
 (() => {
@@ -139,7 +169,11 @@
     balls: document.getElementById("ballsValue"),
     multi: document.getElementById("multiValue"),
     charge: document.getElementById("chargeValue"),
+    cue: document.getElementById("launchCue"),
+    cueText: document.getElementById("launchCueText"),
+    chargeMeter: document.getElementById("chargeMeter"),
     status: document.getElementById("statusLine"),
+    launch: document.getElementById("launchBtn"),
     restart: document.getElementById("restartBtn"),
     sound: document.getElementById("soundBtn"),
     full: document.getElementById("fullBtn")
@@ -176,10 +210,15 @@
     plungerCharge: 0,
     charging: false,
     ballSave: 0,
-    feedback: "Hold Space or Arrow Down to charge the plunger.",
+    feedback: "Hold Launch, Space, or Enter to charge the plunger.",
     feedbackTime: 1.8,
     bumperHits: 0,
     laneHits: 0,
+    launchCount: 0,
+    lastLaunchPower: 0,
+    lastLaunchAt: 0,
+    lastLaunchFeedback: "Ready to launch",
+    launchSource: "",
     now: 0,
     sound: storage.get(keys.sound, "1") !== "0",
     gameOver: false
@@ -194,13 +233,33 @@
     state.feedback = text;
     state.feedbackTime = seconds;
   }
+  function launchAvailable(){
+    return ball.stuck && !state.gameOver;
+  }
+  function launchCueState(){
+    if (state.gameOver) return { state: "locked", label: "Game over", fill: 0 };
+    if (state.charging && launchAvailable()) {
+      return { state: "charging", label: "Charging " + Math.round(state.plungerCharge * 100) + "%", fill: Math.max(8, state.plungerCharge * 100) };
+    }
+    if (launchAvailable()) return { state: "ready", label: "Ready to launch", fill: 8 };
+    return { state: "launched", label: state.lastLaunchFeedback || "Ball launched", fill: 100 };
+  }
   function updateHud(){
+    const cue = launchCueState();
+    const canLaunch = launchAvailable();
     els.score.textContent = String(state.score);
     els.best.textContent = String(state.best);
     els.balls.textContent = String(state.balls);
     els.multi.textContent = state.multiplier + "x";
     els.charge.textContent = Math.round(state.plungerCharge * 100) + "%";
+    els.cue.dataset.state = cue.state;
+    els.cueText.textContent = cue.label;
+    els.chargeMeter.style.width = clamp(cue.fill, 0, 100) + "%";
     els.status.textContent = state.feedback;
+    els.launch.disabled = !canLaunch && !state.charging;
+    els.launch.textContent = state.charging ? "Release Launch" : canLaunch ? "Hold Launch" : state.gameOver ? "Reset to Launch" : "Ball Launched";
+    els.launch.setAttribute("aria-pressed", state.charging ? "true" : "false");
+    els.launch.setAttribute("aria-disabled", els.launch.disabled ? "true" : "false");
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", state.sound ? "true" : "false");
   }
@@ -235,6 +294,27 @@
     setFeedback(text + " +" + gained);
     if (tone) beep(tone, .07, .04, "square");
   }
+  function beginLaunchCharge(source = "input"){
+    if (!launchAvailable()) {
+      setFeedback(state.gameOver ? "Reset to play again." : "Ball already launched.", 1);
+      updateHud();
+      return false;
+    }
+    state.charging = true;
+    state.launchSource = source;
+    setFeedback("Release to launch.", .8);
+    updateHud();
+    return true;
+  }
+  function releaseLaunchCharge(source = "input"){
+    if (!state.charging) return false;
+    state.launchSource = source;
+    if (launchAvailable()) launch();
+    else state.charging = false;
+    updateHud();
+    render();
+    return true;
+  }
   function resetBall(saveBall){
     ball.x = 634;
     ball.y = 836;
@@ -244,9 +324,10 @@
     ball.trail.length = 0;
     state.mode = saveBall ? "ready" : state.balls > 0 ? "ready" : "gameover";
     state.charging = false;
+    state.launchSource = "";
     state.plungerCharge = 0;
     state.ballSave = 0;
-    setFeedback(state.mode === "ready" ? "Hold Space or Arrow Down to charge the plunger." : "Game over. Press R to restart.", 2);
+    setFeedback(state.mode === "ready" ? "Hold Launch, Space, or Enter to charge the plunger." : "Game over. Press R to restart.", 2);
   }
   function restart(){
     state.mode = "ready";
@@ -255,6 +336,11 @@
     state.multiplier = 1;
     state.bumperHits = 0;
     state.laneHits = 0;
+    state.launchCount = 0;
+    state.lastLaunchPower = 0;
+    state.lastLaunchAt = 0;
+    state.lastLaunchFeedback = "Ready to launch";
+    state.launchSource = "";
     state.gameOver = false;
     for (const bumper of bumpers) bumper.hits = 0;
     for (const lane of lanes) lane.lit = false;
@@ -266,6 +352,10 @@
   function launch(){
     if (state.gameOver || !ball.stuck) return;
     const power = .38 + state.plungerCharge * .62;
+    state.launchCount += 1;
+    state.lastLaunchPower = power;
+    state.lastLaunchAt = state.now;
+    state.lastLaunchFeedback = "Launched " + Math.round(power * 100) + "%";
     ball.stuck = false;
     ball.vx = -42 - state.plungerCharge * 34;
     ball.vy = -720 * power;
@@ -273,7 +363,7 @@
     state.ballSave = 6;
     state.charging = false;
     state.plungerCharge = 0;
-    setFeedback("Ball save is lit.");
+    setFeedback(state.lastLaunchFeedback + ". Ball save is lit.");
     beep(220 + power * 260, .12, .045, "sawtooth");
   }
   function drain(){
@@ -583,23 +673,30 @@
   function keyName(event){
     if (event.key === "ArrowLeft" || event.key === "a" || event.key === "A") return "left";
     if (event.key === "ArrowRight" || event.key === "d" || event.key === "D") return "right";
-    if (event.key === " " || event.key === "ArrowDown") return "plunger";
+    if (event.key === " " || event.key === "Enter" || event.key === "ArrowDown") return "plunger";
     return "";
   }
+  function isUiControl(event){
+    const target = event.target;
+    return target && target !== document && target !== canvas && target.closest?.("button,input,textarea,select,[contenteditable='true']");
+  }
   document.addEventListener("keydown", (event) => {
+    if (isUiControl(event)) return;
     if (event.repeat && event.key !== " " && event.key !== "ArrowDown") return;
     const name = keyName(event);
     if (name) event.preventDefault();
+    if (event.repeat && name === "plunger") return;
     if (name === "left" || name === "right") setFlipper(name, true);
-    if (name === "plunger" && ball.stuck && !state.gameOver) state.charging = true;
+    if (name === "plunger") beginLaunchCharge("keyboard");
     if (event.key === "r" || event.key === "R") restart();
     if (event.key === "f" || event.key === "F") toggleFullscreen();
   });
   document.addEventListener("keyup", (event) => {
+    if (isUiControl(event)) return;
     const name = keyName(event);
     if (name) event.preventDefault();
     if (name === "left" || name === "right") setFlipper(name, false);
-    if (name === "plunger") launch();
+    if (name === "plunger") releaseLaunchCharge("keyboard");
   });
   function canvasPoint(event){
     const rect = canvas.getBoundingClientRect();
@@ -611,25 +708,60 @@
     const p = canvasPoint(event);
     const zone = p.x > 560 && p.y > 610 ? "plunger" : p.x < W / 2 ? "left" : "right";
     pointers.set(event.pointerId, zone);
-    if (zone === "plunger" && ball.stuck && !state.gameOver) state.charging = true;
+    if (zone === "plunger") beginLaunchCharge("canvas");
     else setFlipper(zone, true);
   });
-  canvas.addEventListener("pointerup", (event) => {
+  function finishCanvasPointer(event){
     const zone = pointers.get(event.pointerId);
+    if (!zone) return;
     pointers.delete(event.pointerId);
-    if (zone === "plunger") launch();
+    try { canvas.releasePointerCapture?.(event.pointerId); } catch (_) {}
+    if (zone === "plunger") releaseLaunchCharge("canvas");
     else setFlipper(zone, false);
-  });
-  canvas.addEventListener("pointercancel", (event) => {
-    const zone = pointers.get(event.pointerId);
-    pointers.delete(event.pointerId);
-    if (zone === "left" || zone === "right") setFlipper(zone, false);
-    if (zone === "plunger") state.charging = false;
-  });
+  }
+  canvas.addEventListener("pointerup", finishCanvasPointer);
+  canvas.addEventListener("pointercancel", finishCanvasPointer);
+  canvas.addEventListener("pointerleave", finishCanvasPointer);
   function toggleFullscreen(){
     if (document.fullscreenElement) document.exitFullscreen?.();
     else document.documentElement.requestFullscreen?.();
   }
+  let launchPointerId = null;
+  function launchButtonRelease(event){
+    if (launchPointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    launchPointerId = null;
+    releaseLaunchCharge("button");
+  }
+  els.launch.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!beginLaunchCharge("button")) return;
+    launchPointerId = event.pointerId;
+    els.launch.setPointerCapture?.(event.pointerId);
+  });
+  els.launch.addEventListener("pointerup", launchButtonRelease);
+  els.launch.addEventListener("pointercancel", launchButtonRelease);
+  els.launch.addEventListener("pointerleave", (event) => {
+    if (event.buttons) launchButtonRelease(event);
+  });
+  els.launch.addEventListener("keydown", (event) => {
+    if (event.key !== " " && event.key !== "Enter") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat) beginLaunchCharge("button-key");
+  });
+  els.launch.addEventListener("keyup", (event) => {
+    if (event.key !== " " && event.key !== "Enter") return;
+    event.preventDefault();
+    event.stopPropagation();
+    releaseLaunchCharge("button-key");
+  });
+  els.launch.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
   els.restart.addEventListener("click", restart);
   els.full.addEventListener("click", toggleFullscreen);
   els.sound.addEventListener("click", () => {
@@ -639,6 +771,9 @@
     updateHud();
   });
   function snapshot(){
+    const launchRect = els.launch.getBoundingClientRect();
+    const launchControlVisible = launchRect.width > 0 && launchRect.height > 0;
+    const recentLaunch = state.lastLaunchAt > 0 && state.now - state.lastLaunchAt < 2.4;
     return {
       mode: state.mode,
       score: state.score,
@@ -647,6 +782,23 @@
       ball: { x: Math.round(ball.x), y: Math.round(ball.y), vx: Math.round(ball.vx), vy: Math.round(ball.vy), stuck: ball.stuck },
       flipperAngles: { left: Number(flippers.left.angle.toFixed(3)), right: Number(flippers.right.angle.toFixed(3)) },
       plungerCharge: Number(state.plungerCharge.toFixed(3)),
+      plungerActive: state.charging,
+      launchCount: state.launchCount,
+      launchControl: {
+        present: Boolean(els.launch),
+        visible: launchControlVisible,
+        beforeReset: Boolean(els.launch.compareDocumentPosition(els.restart) & Node.DOCUMENT_POSITION_FOLLOWING),
+        label: els.launch.textContent,
+        disabled: els.launch.disabled,
+        cue: els.cueText.textContent,
+        charge: Number(state.plungerCharge.toFixed(3)),
+        active: state.charging,
+        available: launchAvailable(),
+        launches: state.launchCount,
+        lastPower: Number(state.lastLaunchPower.toFixed(3)),
+        recentLaunch,
+        recentFeedback: recentLaunch ? state.lastLaunchFeedback : ""
+      },
       multiplier: state.multiplier,
       litLanes: {
         rollovers: rollovers.map((item) => item.lit),

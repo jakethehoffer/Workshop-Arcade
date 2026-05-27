@@ -160,6 +160,27 @@ async function checkServiceWorker() {
   if (!/caches\.keys\(\)/.test(src) || !/caches\.delete\(/.test(src)) {
     fail(`${swPath}: must clean up old caches on activate (caches.keys() + caches.delete)`);
   }
+  const runtimeCapMatch = src.match(/const\s+RUNTIME_CACHE_MAX_ENTRIES\s*=\s*(\d+)/);
+  if (!runtimeCapMatch) {
+    fail(`${swPath}: missing RUNTIME_CACHE_MAX_ENTRIES cap for same-origin runtime cache growth`);
+  } else {
+    const runtimeCap = parseInt(runtimeCapMatch[1], 10);
+    if (runtimeCap < 32 || runtimeCap > 256) {
+      fail(`${swPath}: RUNTIME_CACHE_MAX_ENTRIES = ${runtimeCap} is outside the expected range (32..256)`);
+    }
+  }
+  if (!/function\s+trimRuntimeCache\s*\(/.test(src)) {
+    fail(`${swPath}: missing trimRuntimeCache() helper to prune runtime cache overflow`);
+  }
+  if (!/function\s+putRuntime\s*\(/.test(src)) {
+    fail(`${swPath}: missing putRuntime() helper so all runtime writes share pruning behavior`);
+  }
+  if (!/trimRuntimeCache\(runtimeCache\)/.test(src)) {
+    fail(`${swPath}: activate handler must trim the existing runtime cache`);
+  }
+  if (!/putRuntime\(request,\s*fresh\)/.test(src) || !/putRuntime\(request,\s*response\)/.test(src)) {
+    fail(`${swPath}: navigation and static fetch handlers must write through putRuntime()`);
+  }
 
   // Wiring contract for the offline fallback page. The SW must (1) pre-cache
   // offline.html as part of its install-time shell list, and (2) reference

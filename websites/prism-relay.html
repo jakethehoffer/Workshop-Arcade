@@ -85,6 +85,21 @@
   .pill[data-warn=true]{border-color:rgba(251,113,133,.66);box-shadow:0 0 18px rgba(251,113,133,.14),0 8px 18px rgba(0,0,0,.26)}
   .label{display:block;font-size:9px;text-transform:uppercase;color:#5eead4;font-weight:900;white-space:nowrap}
   .value{display:block;margin-top:3px;font-size:18px;font-weight:950;color:#f8fbff;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .assist-strip{
+    display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;min-height:32px;
+    padding:5px 6px;border:1px solid rgba(94,234,212,.18);border-radius:8px;background:rgba(4,12,23,.56);
+  }
+  .assist-chip,.receiver-chip{
+    min-height:24px;display:inline-flex;align-items:center;justify-content:center;gap:5px;border-radius:999px;
+    padding:4px 9px;border:1px solid rgba(148,163,184,.20);background:rgba(15,23,42,.72);
+    color:#dbeafe;font-size:11px;font-weight:900;text-transform:uppercase;line-height:1;white-space:nowrap;
+  }
+  .assist-chip.selected{border-color:rgba(251,191,36,.42);color:#fde68a}
+  .assist-chip.count{border-color:rgba(94,234,212,.32);color:#99f6e4}
+  .receiver-chips{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap}
+  .receiver-chip{border-color:color-mix(in srgb,var(--chip-color,#94a3b8) 42%,rgba(148,163,184,.2));color:#f8fbff}
+  .receiver-chip[data-lit=true]{background:color-mix(in srgb,var(--chip-color,#5eead4) 24%,rgba(15,23,42,.76));box-shadow:0 0 14px color-mix(in srgb,var(--chip-color,#5eead4) 30%,transparent)}
+  .receiver-chip[data-lit=false]{opacity:.72}
   .stage-wrap{
     width:100%;border:1px solid rgba(94,234,212,.28);border-radius:10px;overflow:hidden;background:#07101a;
     box-shadow:0 20px 42px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.04);
@@ -101,12 +116,13 @@
   }
   button:hover{border-color:rgba(94,234,212,.58)}
   button.primary{border-color:transparent;background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;box-shadow:0 10px 22px rgba(34,211,238,.24)}
+  button[data-flash=true]{box-shadow:0 0 0 2px rgba(251,191,36,.22),0 12px 24px rgba(251,191,36,.15),inset 0 1px 0 rgba(255,255,255,.1)}
   button:disabled{cursor:not-allowed;opacity:.5}
   button[aria-pressed=false]{color:rgba(230,237,243,.78);border-color:rgba(255,255,255,.17)}
   .hint{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
   @media (max-width:640px){
     body{padding:12px 8px 18px}.shell{gap:8px}.title{font-size:19px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-    .pill{padding:7px 6px}.value{font-size:15px}canvas{max-height:45vh}button{flex:1 1 118px;font-size:11px;padding:8px}.hint{font-size:11px}
+    .pill{padding:7px 6px}.value{font-size:15px}.assist-strip{gap:5px}.assist-chip,.receiver-chip{font-size:10px;padding:4px 7px}canvas{max-height:45vh}button{flex:1 1 118px;font-size:11px;padding:8px}.hint{font-size:11px}
   }
   @media (max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
@@ -122,14 +138,20 @@
     <div class="pill"><span class="label">Score</span><span id="scoreValue" class="value">0</span></div>
     <div class="pill"><span class="label">Best</span><span id="bestValue" class="value">0</span></div>
   </div>
-  <div class="stage-wrap"><canvas id="game" width="720" height="668" tabindex="0" aria-label="Prism Relay canvas. Click a mirror or splitter to rotate it. Use arrows or WASD to move the cursor, Space or Enter to rotate, R to restart, N for the next solved stage, M for sound, and F for fullscreen."></canvas></div>
+  <div class="assist-strip" aria-label="Selected tile and receiver progress">
+    <span id="selectedTileBadge" class="assist-chip selected">Selected mirror</span>
+    <span id="receiverCountBadge" class="assist-chip count">Receivers 0 / 1 lit</span>
+    <div id="receiverChips" class="receiver-chips" aria-label="Receiver chips"></div>
+  </div>
   <div id="statusLine" class="status" aria-live="polite">Rotate mirrors to feed matching receivers.</div>
   <div class="controls" aria-label="Prism Relay controls">
+    <button id="rotateBtn" class="primary" type="button">Rotate Selected</button>
     <button id="restartBtn" type="button">Reset</button>
     <button id="nextBtn" class="primary" type="button" disabled>Next Stage</button>
     <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
     <button id="fullscreenBtn" type="button">Fullscreen</button>
   </div>
+  <div class="stage-wrap"><canvas id="game" width="720" height="668" tabindex="0" aria-label="Prism Relay canvas. Select a mirror or splitter, then use Rotate Selected, click or tap the tile, or press Space or Enter to rotate it. Use arrows or WASD to move the cursor, R to restart, N for the next solved stage, M for sound, and F for fullscreen."></canvas></div>
   <div class="hint">Click or tap a mirror/splitter to rotate. Arrows/WASD move cursor. Space/Enter rotate. R resets stage. N next solved stage. F fullscreen. M sound.</div>
 </div>
 <script>
@@ -167,6 +189,10 @@
     score: document.getElementById("scoreValue"),
     best: document.getElementById("bestValue"),
     status: document.getElementById("statusLine"),
+    selectedTile: document.getElementById("selectedTileBadge"),
+    receiverCount: document.getElementById("receiverCountBadge"),
+    receiverChips: document.getElementById("receiverChips"),
+    rotate: document.getElementById("rotateBtn"),
     restart: document.getElementById("restartBtn"),
     next: document.getElementById("nextBtn"),
     sound: document.getElementById("soundBtn"),
@@ -285,6 +311,7 @@
     selectedTile: null,
     feedback: "ready",
     feedbackMs: 0,
+    rotateFlashMs: 0,
     solved: false,
     complete: false,
     gameOver: false,
@@ -439,6 +466,7 @@
   function checkStageState() {
     simulateBeams();
     const allLit = state.receivers.length > 0 && state.receivers.every((receiver) => receiver.lit);
+    const counts = receiverCounts();
     if (allLit && !state.solved) {
       state.solved = true;
       state.score = state.baseScore + stageAward();
@@ -450,17 +478,17 @@
         state.mode = "complete";
         state.complete = true;
         state.gameOver = true;
-        setFeedback("Run complete. All receivers are locked.", 1200);
+        setFeedback(`Run complete. ${counts.lit} / ${counts.total} receivers locked.`, 1200);
         playSound("complete");
       } else {
         state.mode = "solved";
-        setFeedback("Stage solved. Press N for the next relay.", 1000);
+        setFeedback(`Stage solved: ${counts.lit} / ${counts.total} receivers lit. Press N for next.`, 1000);
         playSound("solve");
       }
     } else if (!allLit && !state.solved && state.moves >= state.budget) {
       state.mode = "game-over";
       state.gameOver = true;
-      setFeedback("Move budget spent. Press R to restart.", 900);
+      setFeedback(`Move budget spent: ${counts.lit} / ${counts.total} receivers lit. Press R to restart.`, 900);
       playSound("fail");
     }
   }
@@ -485,6 +513,7 @@
     state.selectedTile = null;
     const firstRotatable = state.components.find((component) => component.type === "mirror" || component.type === "splitter");
     state.cursor = firstRotatable ? { r: firstRotatable.r, c: firstRotatable.c } : { r: 0, c: 0 };
+    setSelectedTile(state.cursor.r, state.cursor.c);
     setFeedback(stage.note, 520);
     simulateBeams();
     updateHud();
@@ -522,31 +551,101 @@
     return component && (component.type === "mirror" || component.type === "splitter");
   }
 
+  function tileOrientation(component) {
+    if (!component) return null;
+    if (component.type === "mirror") return component.rot % 2 === 0 ? "/" : "\\";
+    if (component.type === "splitter") return component.rot % 2 === 0 ? "vertical" : "horizontal";
+    if (Number.isInteger(component.dir)) return DIRS[component.dir].name;
+    return null;
+  }
+
+  function describeTile(r, c) {
+    const component = componentAt(r, c);
+    const tile = {
+      r,
+      c,
+      row: r + 1,
+      col: c + 1,
+      type: component ? component.type : "empty",
+      rotatable: isRotatable(component),
+    };
+    if (component) {
+      tile.id = component.id;
+      tile.color = component.color;
+      tile.dir = Number.isInteger(component.dir) ? DIRS[component.dir].name : null;
+      tile.rotation = Number.isInteger(component.rot) ? component.rot : null;
+      tile.orientation = tileOrientation(component);
+    }
+    return tile;
+  }
+
+  function setSelectedTile(r, c) {
+    state.selectedTile = describeTile(r, c);
+    return state.selectedTile;
+  }
+
+  function selectedTileLabel(tile) {
+    const pos = `R${tile.row} C${tile.col}`;
+    if (tile.rotatable) return `Selected ${tile.type} ${tile.orientation} (${pos})`;
+    return `Selected ${tile.type} (${pos})`;
+  }
+
+  function receiverCounts() {
+    const total = state.receivers.length;
+    const lit = countLit();
+    return {
+      lit,
+      total,
+      unlit: Math.max(0, total - lit),
+      allLit: total > 0 && lit === total,
+    };
+  }
+
+  function moveRemainderText() {
+    const left = Math.max(0, state.budget - state.moves);
+    return `${left} move${left === 1 ? "" : "s"} left`;
+  }
+
+  function setRotateFeedback(prefix, ms) {
+    const counts = receiverCounts();
+    setFeedback(`${prefix}. Receivers ${counts.lit} / ${counts.total} lit; ${moveRemainderText()}.`, ms);
+    state.rotateFlashMs = Math.max(state.rotateFlashMs, ms);
+  }
+
+  function focusCanvas() {
+    try {
+      canvas.focus({ preventScroll: true });
+    } catch (_) {
+      canvas.focus();
+    }
+  }
+
   function rotateTile(r, c) {
     if (state.gameOver || state.solved) {
-      setFeedback(state.solved ? "Press N for the next stage." : "Press R to restart.", 520);
+      const counts = receiverCounts();
+      setFeedback(state.solved
+        ? `Stage solved: ${counts.lit} / ${counts.total} receivers lit. Press N for next.`
+        : `Move budget spent: ${counts.lit} / ${counts.total} receivers lit. Press R to restart.`, 520);
+      state.rotateFlashMs = Math.max(state.rotateFlashMs, 420);
+      updateHud();
       render();
       return false;
     }
     const component = componentAt(r, c);
     state.cursor = { r, c };
+    setSelectedTile(r, c);
     if (!isRotatable(component)) {
-      state.selectedTile = component ? { r, c, type: component.type } : { r, c, type: "empty" };
-      setFeedback("Select a mirror or splitter.", 420);
+      setRotateFeedback("Select a mirror or splitter", 520);
       playSound("bad");
+      updateHud();
       render();
       return false;
     }
     component.rot = (component.rot + 1) % (component.type === "mirror" ? 2 : 2);
     state.moves += 1;
-    state.selectedTile = {
-      r,
-      c,
-      type: component.type,
-      rotation: component.rot,
-      orientation: component.type === "mirror" ? (component.rot % 2 === 0 ? "/" : "\\") : (component.rot % 2 === 0 ? "vertical" : "horizontal"),
-    };
-    setFeedback(`${component.type === "mirror" ? "Mirror" : "Splitter"} rotated.`, 420);
+    setSelectedTile(r, c);
+    simulateBeams();
+    setRotateFeedback(`${component.type === "mirror" ? "Mirror" : "Splitter"} rotated`, 520);
     playSound("rotate");
     checkStageState();
     updateHud();
@@ -569,7 +668,10 @@
       r: Math.max(0, Math.min(GRID - 1, state.cursor.r + dr)),
       c: Math.max(0, Math.min(GRID - 1, state.cursor.c + dc)),
     };
-    setFeedback("Cursor moved.", 170);
+    setSelectedTile(state.cursor.r, state.cursor.c);
+    const counts = receiverCounts();
+    setFeedback(`${selectedTileLabel(state.selectedTile)}. Receivers ${counts.lit} / ${counts.total} lit.`, 240);
+    updateHud();
     render();
   }
 
@@ -904,6 +1006,8 @@
 
   function updateHud() {
     const lit = countLit();
+    const counts = receiverCounts();
+    const selected = state.selectedTile || describeTile(state.cursor.r, state.cursor.c);
     els.stage.textContent = `${state.stageIndex + 1} / ${STAGES.length}`;
     els.moves.textContent = `${state.moves} / ${state.budget}`;
     els.lit.textContent = `${lit} / ${state.receivers.length}`;
@@ -911,7 +1015,21 @@
     els.best.textContent = String(state.bestScore);
     els.litPill.dataset.hot = String(lit === state.receivers.length && state.receivers.length > 0);
     els.litPill.dataset.warn = String(state.moves >= state.budget && !state.solved);
+    els.selectedTile.textContent = selectedTileLabel(selected);
+    els.receiverCount.textContent = `Receivers ${counts.lit} / ${counts.total} lit`;
+    els.receiverChips.replaceChildren(...state.receivers.map((receiver, index) => {
+      const chip = document.createElement("span");
+      const color = COLORS[receiver.color]?.beam || "#94a3b8";
+      const stateText = receiver.lit ? "lit" : receiver.received.length ? "mismatch" : "open";
+      chip.className = "receiver-chip";
+      chip.dataset.lit = String(receiver.lit);
+      chip.style.setProperty("--chip-color", color);
+      chip.textContent = `R${index + 1} ${receiver.color} ${stateText}`;
+      return chip;
+    }));
     els.status.textContent = state.feedback;
+    els.rotate.dataset.flash = String(state.rotateFlashMs > 0);
+    els.rotate.setAttribute("aria-label", `Rotate selected tile. ${selectedTileLabel(selected)}. Receivers ${counts.lit} of ${counts.total} lit.`);
     els.next.disabled = !(state.solved || state.mode === "complete");
     els.next.textContent = state.mode === "complete" ? "New Run" : "Next Stage";
     els.sound.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
@@ -919,7 +1037,9 @@
   }
 
   function tick(ms) {
-    state.feedbackMs = Math.max(0, state.feedbackMs - Math.max(0, ms));
+    const elapsed = Math.max(0, ms);
+    state.feedbackMs = Math.max(0, state.feedbackMs - elapsed);
+    state.rotateFlashMs = Math.max(0, state.rotateFlashMs - elapsed);
     if (state.feedbackMs === 0) {
       if (state.mode === "playing") state.feedback = STAGES[state.stageIndex].note;
       else if (state.mode === "solved") state.feedback = "Stage solved. Press N.";
@@ -938,6 +1058,10 @@
   }
 
   function renderGameToText() {
+    updateHud();
+    const counts = receiverCounts();
+    const selected = state.selectedTile || describeTile(state.cursor.r, state.cursor.c);
+    const receiverChips = Array.from(els.receiverChips.children).map((chip) => chip.textContent);
     return JSON.stringify({
       mode: state.mode,
       stage: state.stageIndex + 1,
@@ -948,7 +1072,8 @@
       score: state.score,
       bestScore: state.bestScore,
       cursor: { ...state.cursor },
-      selectedTile: state.selectedTile ? { ...state.selectedTile } : null,
+      selectedTile: { ...selected },
+      receiverCounts: { ...counts },
       components: state.components.map((component) => ({
         id: component.id,
         type: component.type,
@@ -974,6 +1099,21 @@
       soundCount: state.soundCount,
       feedback: state.feedback,
       feedbackActive: state.feedbackMs > 0,
+      rotateButton: {
+        text: els.rotate.textContent,
+        enabled: !els.rotate.disabled,
+        visible: true,
+        beforeReset: true,
+        flashActive: state.rotateFlashMs > 0,
+        ariaLabel: els.rotate.getAttribute("aria-label"),
+      },
+      visibleFeedback: {
+        status: els.status.textContent,
+        selectedTile: els.selectedTile.textContent,
+        receiverCount: els.receiverCount.textContent,
+        receiverChips,
+        active: state.feedbackMs > 0 || state.rotateFlashMs > 0,
+      },
       complete: state.complete,
       gameOver: state.gameOver,
     });
@@ -987,6 +1127,11 @@
     if (tile) rotateTile(tile.r, tile.c);
   });
 
+  els.rotate.addEventListener("click", () => {
+    markGesture();
+    rotateTile(state.cursor.r, state.cursor.c);
+    focusCanvas();
+  });
   els.restart.addEventListener("click", () => {
     markGesture();
     restartStage();
@@ -999,7 +1144,7 @@
   els.fullscreen.addEventListener("click", toggleFullscreen);
 
   window.addEventListener("keydown", (event) => {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLButtonElement || event.target instanceof HTMLSelectElement) return;
     const key = event.key.toLowerCase();
     const movement = {
       arrowup: [-1, 0],

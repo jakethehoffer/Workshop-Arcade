@@ -48,7 +48,7 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 | **Asset/runtime/perf contracts** | `test:cover-assets` · `test:storage-contract` · `test:runtime-storage` · `test:page-weight` · `test:pwa-install-budget` |
 | **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:random-game` · `test:keyboard-help` · `test:sw-update-toast` |
 | **Accessibility** | `test:a11y` · `test:a11y-polish` |
-| **PWA + fallback pages** | `test:pwa` · `test:pwa-runtime` · `test:fallback-pages` |
+| **PWA + fallback pages** | `test:pwa` · `test:pwa-runtime` (includes bounded runtime-cache trim) · `test:fallback-pages` |
 | **OSS hygiene** | `test:meta-files` · `test:security-workflows` · `test:contributor-onboarding` |
 | **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:capture-recipes` · `test:docs` · `test:performance-baseline` · `test:validator-fixtures` |
 | **Live game smoke** | `test:games` (local Playwright, slow — run via `npm run test:games` or `npm run test:all`) · `test:live-pages` (explicit post-deploy GitHub Pages smoke) |
@@ -64,7 +64,7 @@ The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `RE
 3. **`performance-audit`** — boots the static server on port 4173 and runs `npm run audit:perf:ci` against it. Strict mode fails if any page exceeds its publish budget (Catalog ≤ 200 KB / ≤ 18 requests; Lexica ≤ 160 KB / ≤ 4 requests; Idle Tycoon ≤ 170 KB / ≤ 4 requests; Arcade Jump ≤ 110 KB / ≤ 4 requests; Brick Breaker ≤ 120 KB / ≤ 4 requests; everything else ≤ 100 KB / ≤ 3 requests).
 4. **`render-capture`** — runs `npm run capture:games:ci` to take desktop + mobile screenshots of every game and score them against a render-quality bar. Strict mode fails if any surface scores above 0.
 
-After a `main` push deploys, run `npm run test:live-pages` against GitHub Pages. It checks the deployed catalog, manifest, feed, sitemap, selected direct game pages, browser errors, mobile overflow, and verifies the catalog does not call the GitHub API during startup. Set `WORKSHOP_ARCADE_URL` for a preview deployment and `WORKSHOP_ARCADE_LIVE_SLUGS` for the game pages touched by the release.
+After a `main` push deploys, run `npm run test:live-pages` against GitHub Pages. It checks the deployed catalog, manifest, feed, sitemap, PWA/fallback surfaces, selected direct game pages, browser errors, mobile overflow, and verifies the catalog does not call the GitHub API during startup. Set `WORKSHOP_ARCADE_URL` for a preview deployment and `WORKSHOP_ARCADE_LIVE_SLUGS` for the game pages touched by the release; without a slug override the smoke checks the three newest manifest entries. Each run writes `test-results/live-pages-smoke/<timestamp>/summary.json` for handoff evidence.
 
 Two additional workflows live alongside:
 

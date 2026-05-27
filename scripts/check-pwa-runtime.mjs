@@ -148,6 +148,61 @@ try {
   }
 
   await context.setOffline(false);
+  const runtimeTrimTruth = await page.evaluate(async (rootUrl) => {
+    const swText = await (await fetch(new URL('sw.js', rootUrl).href, { cache: 'no-store' })).text();
+    const maxEntries = Number(swText.match(/const\s+RUNTIME_CACHE_MAX_ENTRIES\s*=\s*(\d+)/)?.[1] || 0);
+    if (!Number.isFinite(maxEntries) || maxEntries < 16) {
+      return { error: `invalid runtime cache max entries: ${maxEntries || 'missing'}` };
+    }
+
+    const probeUrls = [];
+    for (let index = 0; index < maxEntries + 8; index += 1) {
+      const probeUrl = new URL(`websites/manifest.json?runtime-cache-probe=${index}`, rootUrl).href;
+      const response = await fetch(probeUrl);
+      if (!response.ok) return { error: `probe fetch ${index} returned ${response.status}` };
+      probeUrls.push(probeUrl);
+    }
+
+    let runtimeName = '';
+    let runtimeUrls = [];
+    let probeKeys = [];
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      runtimeName = (await caches.keys()).find((name) => name.endsWith('-runtime')) || '';
+      if (runtimeName) {
+        const runtimeCache = await caches.open(runtimeName);
+        runtimeUrls = (await runtimeCache.keys()).map((request) => request.url);
+        probeKeys = runtimeUrls.filter((url) => url.includes('runtime-cache-probe='));
+        if (probeKeys.includes(probeUrls[probeUrls.length - 1])) break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!runtimeName) return { error: 'runtime cache missing after probe fetches' };
+    return {
+      maxEntries,
+      runtimeName,
+      runtimeCount: runtimeUrls.length,
+      probeCount: probeKeys.length,
+      oldestProbeCached: probeKeys.includes(probeUrls[0]),
+      newestProbeCached: probeKeys.includes(probeUrls[probeUrls.length - 1]),
+    };
+  }, baseUrl);
+  if (runtimeTrimTruth.error) {
+    fail(runtimeTrimTruth.error);
+  } else {
+    if (runtimeTrimTruth.runtimeCount > runtimeTrimTruth.maxEntries) {
+      fail(`runtime cache contains ${runtimeTrimTruth.runtimeCount} entries, exceeding cap ${runtimeTrimTruth.maxEntries}`);
+    }
+    if (runtimeTrimTruth.probeCount > runtimeTrimTruth.maxEntries) {
+      fail(`runtime cache contains ${runtimeTrimTruth.probeCount} probe entries, exceeding cap ${runtimeTrimTruth.maxEntries}`);
+    }
+    if (runtimeTrimTruth.oldestProbeCached) {
+      fail('runtime cache did not prune the oldest overflow probe entry');
+    }
+    if (!runtimeTrimTruth.newestProbeCached) {
+      fail('runtime cache pruned the newest probe entry instead of retaining recent runtime content');
+    }
+  }
+
   await page.evaluate(async (rootUrl) => {
     for (const cache of await caches.keys()) {
       const opened = await caches.open(cache);

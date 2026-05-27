@@ -96,9 +96,11 @@
   canvas{display:block;width:100%;aspect-ratio:3/2;max-height:68vh;background:#07101a;touch-action:none}
   canvas:focus-visible{outline:3px solid rgba(124,158,255,0.78);outline-offset:-4px}
   .rail{
-    display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;
     background:rgba(8,14,25,0.78);border:1px solid rgba(94,234,212,0.18);border-radius:8px;padding:8px 10px;
   }
+  .run-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
+  .active-cue{min-width:0;color:#e6edf3;font-size:13px;font-weight:900;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .typed{min-width:0;color:#e6edf3;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .typed span{color:#5eead4}
   .status{font-size:12px;text-transform:uppercase;color:rgba(94,234,212,0.86);font-weight:800;text-align:right;white-space:nowrap}
@@ -124,8 +126,10 @@
     .pill{padding:7px 7px}
     .value{font-size:16px}
     canvas{max-height:54vh}
-    .rail{grid-template-columns:1fr;gap:4px}
-    .status{text-align:left;white-space:normal;min-height:16px}
+    .rail{grid-template-columns:auto minmax(0,1fr);gap:6px}
+    .rail #startBtn{min-width:86px;padding:8px 10px}
+    .status{grid-column:1/-1;text-align:left;white-space:normal;min-height:16px}
+    .active-cue{font-size:12px}
     .hint{font-size:11px}
     .controls button{flex:1 1 108px}
   }
@@ -150,22 +154,25 @@
     <div class="pill" id="integrityPill"><span class="label">Integrity</span><span class="value" id="integrityValue">100</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
   </section>
+  <div class="rail" aria-live="polite" aria-atomic="true">
+    <button class="primary" type="button" id="startBtn">Start</button>
+    <div class="run-copy">
+      <div class="active-cue" id="activeCue">Col 1 standing by</div>
+      <div class="typed" id="typedValue">Column <span>1</span>: waiting for token</div>
+    </div>
+    <div class="status" id="statusLine">Press Enter or Start.</div>
+  </div>
   <div class="stage-wrap">
     <canvas id="game" width="900" height="600" tabindex="0" aria-label="Type falling cipher fragments. Use Tab, arrows, or column buttons to focus columns, then type the active fragment."></canvas>
   </div>
   <input id="typingBridge" class="type-bridge" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Type cipher fragment" />
-  <div class="rail" aria-live="polite">
-    <div class="typed" id="typedValue">Column <span>1</span>: waiting for token</div>
-    <div class="status" id="statusLine">Press Enter or Start.</div>
-  </div>
   <div class="columns" aria-label="Column focus controls">
-    <button class="column-btn" type="button" data-column="0">1 Column</button>
-    <button class="column-btn" type="button" data-column="1">2 Column</button>
-    <button class="column-btn" type="button" data-column="2">3 Column</button>
-    <button class="column-btn" type="button" data-column="3">4 Column</button>
+    <button class="column-btn" type="button" data-column="0" aria-label="Focus Column 1">Col 1</button>
+    <button class="column-btn" type="button" data-column="1" aria-label="Focus Column 2">Col 2</button>
+    <button class="column-btn" type="button" data-column="2" aria-label="Focus Column 3">Col 3</button>
+    <button class="column-btn" type="button" data-column="3" aria-label="Focus Column 4">Col 4</button>
   </div>
   <div class="controls">
-    <button class="primary" type="button" id="startBtn">Start</button>
     <button type="button" id="soundBtn" aria-pressed="true">Sound On</button>
     <button type="button" id="fullscreenBtn">Fullscreen</button>
   </div>
@@ -188,6 +195,7 @@
     integrity: document.getElementById("integrityValue"),
     integrityPill: document.getElementById("integrityPill"),
     best: document.getElementById("bestValue"),
+    activeCue: document.getElementById("activeCue"),
     typed: document.getElementById("typedValue"),
     status: document.getElementById("statusLine"),
     start: document.getElementById("startBtn"),
@@ -624,6 +632,16 @@
   function markGesture(){
     state.userGesture = true;
   }
+  function cueText(active){
+    const column = state.focusedColumn + 1;
+    if (state.mode === "complete") return "Run complete: start a new run";
+    if (state.mode === "gameOver") return "Integrity lost: start a new run";
+    if (state.mode === "ready") return "Col " + column + " ready: press Start";
+    if (!active) return "Col " + column + " active: waiting for token";
+    const typed = state.currentInput || "";
+    const remaining = active.text.slice(typed.length);
+    return "Col " + column + " active: type " + (remaining || active.text);
+  }
 
   function update(dt){
     if (state.mode !== "playing") return;
@@ -762,6 +780,7 @@
     els.best.textContent = String(Math.max(state.bestScore, state.score));
     els.comboPill.dataset.hot = state.combo >= 4 ? "true" : "false";
     els.integrityPill.dataset.warn = state.integrity <= 32 ? "true" : "false";
+    els.activeCue.textContent = cueText(active);
     els.status.textContent = state.message;
     els.start.textContent = state.mode === "playing" ? "Restart" : state.mode === "ready" ? "Start" : "New Run";
     els.sound.textContent = state.soundEnabled ? "Sound On" : "Muted";
@@ -913,6 +932,7 @@
       integrity: Math.round(state.integrity),
       currentInput: state.currentInput,
       focusedColumn: state.focusedColumn,
+      activeCue: cueText(active),
       activeToken: active ? { text: active.text, lane: active.lane, y: Math.round(tokenY(active)), state: "active" } : null,
       visibleTokens: visibleTokens().slice(0, 12).map(function(token){
         const isActive = active && active.id === token.id;
@@ -935,6 +955,13 @@
         flashKind: state.flashKind,
         flashRemaining: Math.max(0, state.flashUntil - state.time),
         lastMessage: state.message
+      },
+      visibleFeedback: {
+        activeCue: els.activeCue.textContent,
+        typed: els.typed.textContent,
+        status: els.status.textContent,
+        startLabel: els.start.textContent,
+        activeColumnLabel: els.columns[state.focusedColumn] ? els.columns[state.focusedColumn].textContent : ""
       },
       feedbackActive:
         state.flashUntil > state.time ||
