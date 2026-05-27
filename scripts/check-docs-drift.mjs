@@ -36,6 +36,21 @@ const generatorSurfaces = [
   'ARCHITECTURE.md'
 ];
 
+const liveSmokeSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md'
+];
+
+const liveSmokeRequiredText = [
+  'WORKSHOP_ARCADE_LIVE_SLUGS',
+  'WORKSHOP_ARCADE_TOUCHED_SLUGS',
+  'WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS',
+  'WORKSHOP_ARCADE_SKIP_CONTENT_HASH',
+  'WORKSHOP_ARCADE_EXPECTED_SW_REVISION',
+  'WORKSHOP_ARCADE_SKIP_SW_REVISION',
+  'test-results/live-pages-smoke/<timestamp>/summary.json'
+];
+
 const issues = [];
 
 function readText(file) {
@@ -64,6 +79,16 @@ for (const file of humanValidationSurfaces) {
 
 for (const file of generatorSurfaces) {
   requireCommands(file, generatorCommands, 'generator');
+}
+
+for (const file of liveSmokeSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of liveSmokeRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing live-smoke contract text "${requiredText}"`);
+    }
+  }
 }
 
 const packageJson = JSON.parse(readText('package.json') || '{}');

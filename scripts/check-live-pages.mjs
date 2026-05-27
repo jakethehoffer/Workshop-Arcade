@@ -5,8 +5,9 @@
 // so it should run after Pages finishes or when explicitly pointed at a local
 // preview with WORKSHOP_ARCADE_URL.
 
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -15,14 +16,22 @@ const manifest = JSON.parse(await readFile(resolve(repoRoot, 'websites', 'manife
 const localServiceWorkerText = await readFile(resolve(repoRoot, 'sw.js'), 'utf8');
 const localServiceWorker = parseServiceWorkerIdentity(localServiceWorkerText);
 const baseUrl = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || 'https://jakethehoffer.github.io/Workshop-Arcade/');
-const requestedSlugs = parseSlugs(process.env.WORKSHOP_ARCADE_LIVE_SLUGS || process.env.WORKSHOP_ARCADE_TOUCHED_SLUGS);
+const requestedSlugEnv = process.env.WORKSHOP_ARCADE_LIVE_SLUGS || process.env.WORKSHOP_ARCADE_TOUCHED_SLUGS;
+const requestedSlugSource = process.env.WORKSHOP_ARCADE_LIVE_SLUGS
+  ? 'WORKSHOP_ARCADE_LIVE_SLUGS'
+  : process.env.WORKSHOP_ARCADE_TOUCHED_SLUGS
+    ? 'WORKSHOP_ARCADE_TOUCHED_SLUGS'
+    : null;
+const requestedSlugs = parseSlugs(requestedSlugEnv);
 const defaultSlugs = newestManifestSlugs(3);
 const slugsToCheck = requestedSlugs.length ? requestedSlugs : defaultSlugs;
 const issues = [];
 const startedAt = new Date().toISOString();
 const summaryDir = resolve(repoRoot, 'test-results', 'live-pages-smoke', startedAt.replace(/[:.]/g, '-'));
 const summaryPath = resolve(summaryDir, 'summary.json');
+const requireLiveSlugs = parseBooleanFlag(process.env.WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS);
 const skipServiceWorkerRevision = parseBooleanFlag(process.env.WORKSHOP_ARCADE_SKIP_SW_REVISION);
+const skipContentHash = parseBooleanFlag(process.env.WORKSHOP_ARCADE_SKIP_CONTENT_HASH);
 const expectedServiceWorkerRevision = skipServiceWorkerRevision
   ? null
   : process.env.WORKSHOP_ARCADE_EXPECTED_SW_REVISION || localServiceWorker.shellRevision;
@@ -31,12 +40,18 @@ const summary = {
   startedAt,
   finishedAt: null,
   baseUrl,
+  requireLiveSlugs,
+  slugSource: requestedSlugSource || 'newest manifest entries',
   requestedSlugs,
   defaultSlugs,
   slugsToCheck,
   slugsChecked: [],
   fetches: [],
   pages: [],
+  contentHash: {
+    skipped: skipContentHash,
+    normalizedLineEndings: true,
+  },
   serviceWorker: {
     expectedShellRevision: expectedServiceWorkerRevision,
     expectedSource: skipServiceWorkerRevision
@@ -81,6 +96,22 @@ function parseServiceWorkerIdentity(text) {
     shellRevision: text.match(/const\s+SHELL_REVISION\s*=\s*['"`]([^'"`]+)['"`]/)?.[1] || null,
     version: text.match(/const\s+VERSION\s*=\s*['"`]([^'"`]+)['"`]/)?.[1] || null,
   };
+}
+
+function normalizedForHash(text) {
+  return String(text).replace(/\r\n/g, '\n');
+}
+
+function sha256Text(text) {
+  return createHash('sha256').update(normalizedForHash(text), 'utf8').digest('hex');
+}
+
+function relativeArtifactPath(file) {
+  return relative(repoRoot, file).replace(/\\/g, '/');
+}
+
+function safeArtifactName(label) {
+  return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'page';
 }
 
 function fail(label, message) {
@@ -137,12 +168,44 @@ async function assertFetchOk(relativePath, label, validate) {
   record.bytes = Buffer.byteLength(text);
   if (validate) {
     try {
-      await validate({ text, contentType: record.contentType, url });
+      await validate({ text, contentType: record.contentType, url, record, relativePath, label });
     } catch (error) {
       fail(label, `validation failed: ${error.message}`);
     }
   }
   return text;
+}
+
+async function assertGameContentHash(game, remoteText, record, label) {
+  const remoteSha256 = sha256Text(remoteText);
+  record.contentHash = {
+    check: skipContentHash ? 'skipped' : 'pending',
+    localPath: game.url,
+    normalizedLineEndings: true,
+    localSha256: null,
+    remoteSha256,
+  };
+
+  if (skipContentHash) return;
+
+  let localText;
+  try {
+    localText = await readFile(resolve(repoRoot, game.url), 'utf8');
+  } catch (error) {
+    record.contentHash.check = 'failed';
+    fail(label, `unable to read local ${game.url} for content hash: ${error.message}`);
+    return;
+  }
+
+  const localSha256 = sha256Text(localText);
+  record.contentHash.localSha256 = localSha256;
+  if (localSha256 !== remoteSha256) {
+    record.contentHash.check = 'failed';
+    fail(label, `content hash mismatch for ${game.url}: local ${localSha256}, remote ${remoteSha256}`);
+    return;
+  }
+
+  record.contentHash.check = 'passed';
 }
 
 function gameForSlug(slug) {
@@ -203,6 +266,98 @@ async function assertNoOverflow(page, label) {
     fail(label, `horizontal overflow ${overflow}px`);
   }
   return overflow;
+}
+
+async function captureRenderSnapshot(page, label) {
+  const render = await page.evaluate(() => {
+    if (typeof window.render_game_to_text !== 'function') {
+      return { available: false, text: null, bytes: 0, error: null };
+    }
+    try {
+      const text = String(window.render_game_to_text());
+      return {
+        available: true,
+        text: text.length > 4000 ? `${text.slice(0, 4000)}...[truncated]` : text,
+        bytes: text.length,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        available: true,
+        text: null,
+        bytes: 0,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  if (render.error) {
+    fail(label, `render_game_to_text failed: ${render.error}`);
+  }
+  return render;
+}
+
+async function captureCanvasEvidence(page, label) {
+  const evidence = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) {
+      return { hasCanvas: false, width: 0, height: 0, nonblank: null, sampleCount: 0, uniqueSamples: 0, coloredSamples: 0, error: null };
+    }
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return { hasCanvas: true, width: canvas.width, height: canvas.height, nonblank: false, sampleCount: 0, uniqueSamples: 0, coloredSamples: 0, error: '2d context unavailable' };
+    }
+    const samples = new Set();
+    let coloredSamples = 0;
+    let sampleCount = 0;
+    try {
+      for (let row = 1; row <= 5; row += 1) {
+        for (let column = 1; column <= 7; column += 1) {
+          const x = Math.max(0, Math.min(canvas.width - 1, Math.floor((canvas.width * column) / 8)));
+          const y = Math.max(0, Math.min(canvas.height - 1, Math.floor((canvas.height * row) / 6)));
+          const [red, green, blue, alpha] = context.getImageData(x, y, 1, 1).data;
+          samples.add(`${red},${green},${blue},${alpha}`);
+          if (alpha > 0 && red + green + blue > 16) coloredSamples += 1;
+          sampleCount += 1;
+        }
+      }
+    } catch (error) {
+      return {
+        hasCanvas: true,
+        width: canvas.width,
+        height: canvas.height,
+        nonblank: false,
+        sampleCount,
+        uniqueSamples: samples.size,
+        coloredSamples,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+    return {
+      hasCanvas: true,
+      width: canvas.width,
+      height: canvas.height,
+      nonblank: samples.size > 1 || coloredSamples > 0,
+      sampleCount,
+      uniqueSamples: samples.size,
+      coloredSamples,
+      error: null,
+    };
+  });
+
+  if (evidence.error) {
+    fail(label, `canvas evidence failed: ${evidence.error}`);
+  } else if (evidence.hasCanvas && !evidence.nonblank) {
+    fail(label, 'canvas appears blank');
+  }
+  return evidence;
+}
+
+async function captureScreenshot(page, label) {
+  await mkdir(summaryDir, { recursive: true });
+  const screenshotPath = resolve(summaryDir, `${safeArtifactName(label)}.png`);
+  await page.screenshot({ path: screenshotPath });
+  return relativeArtifactPath(screenshotPath);
 }
 
 async function checkCatalog(browser) {
@@ -284,6 +439,9 @@ async function checkGame(browser, game) {
       loaded: false,
       hasRender: false,
       hasAdvance: false,
+      render: null,
+      canvas: null,
+      screenshot: null,
       overflow: null,
       githubRequests,
     };
@@ -312,6 +470,9 @@ async function checkGame(browser, game) {
     pageRecord.hasAdvance = diagnostics.hasAdvance;
     if (!diagnostics.hasRender) fail(label, 'missing render_game_to_text()');
     if (!diagnostics.hasAdvance) fail(label, 'missing advanceTime(ms)');
+    pageRecord.render = await captureRenderSnapshot(page, label);
+    pageRecord.canvas = await captureCanvasEvidence(page, label);
+    pageRecord.screenshot = await captureScreenshot(page, label);
     pageRecord.overflow = await assertNoOverflow(page, label);
     if (githubRequests.length) {
       fail(label, `unexpected GitHub API request: ${githubRequests.join(', ')}`);
@@ -331,6 +492,10 @@ async function writeSummary() {
 
 let browser;
 try {
+  if (requireLiveSlugs && !requestedSlugs.length) {
+    fail('config', 'WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS=1 requires WORKSHOP_ARCADE_LIVE_SLUGS or WORKSHOP_ARCADE_TOUCHED_SLUGS');
+  }
+
   await assertFetchOk('', 'catalog root', ({ text, contentType }) => {
     if (!/html/i.test(contentType)) fail('catalog root', `unexpected content-type ${contentType}`);
     if (!/Workshop Arcade/i.test(text)) fail('catalog root', 'missing Workshop Arcade text');
@@ -434,7 +599,9 @@ try {
   summary.slugsChecked = games.map((game) => game.slug);
 
   for (const game of games) {
-    await assertFetchOk(game.url, game.slug);
+    await assertFetchOk(game.url, game.slug, async ({ text, record, label }) => {
+      await assertGameContentHash(game, text, record, label);
+    });
   }
 
   browser = await chromium.launch({ headless: !process.env.HEADED });

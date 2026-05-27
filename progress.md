@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-05-27 Codex pass 91
+
+- Implemented on `codex/nonconflicting-quality-pass-2026-05-27`: coordinator-owned live Pages evidence hardening plus isolated Circuit Draft, Market Minute, and Tempo Forge polish lanes.
+- Coordinator lane now records selected-game SHA-256 content hash evidence during `npm run test:live-pages`, supports `WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS=1` for release checks, and writes per-game rendered diagnostics, screenshot paths, overflow, and canvas evidence into `test-results/live-pages-smoke/<timestamp>/summary.json`. `WORKSHOP_ARCADE_SKIP_CONTENT_HASH=1` is documented only for intentional historical/preview checks.
+- Polished three existing games without changing scoring/rules/storage keys/manifest/generated surfaces/capture recipes: Circuit Draft puts Install Card in the first mobile action flow with clearer lane/draft feedback; Market Minute keeps selected good, ready contracts, feedback, and Buy/Sell/Fulfill/End Turn above the goods grid; Tempo Forge moves Play/Check/status next to the pattern editor and exposes active-step feedback diagnostics.
+- Verification passed: focused game contract/a11y/a11y-polish/keyboard-help/runtime-storage checks for the three touched games; integrated desktop/mobile Playwright probes with inspected screenshots, changed diagnostics, no overflow/errors, and canvas nonblank evidence where applicable; live-smoke content-hash negative check failed as expected; `WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS=1` negative check failed as expected; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 WORKSHOP_ARCADE_LIVE_SLUGS=circuit-draft,market-minute,tempo-forge WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS=1 npm run test:live-pages`; `validate-catalog.ps1 -Fix`; `validate-catalog.ps1`; `npm test`; `npm run test:runtime-storage`; `npm run test:pwa-runtime`; `npm run test:games`; `npm run capture:games:ci` with max score 0; local `WORKSHOP_ARCADE_URL=http://127.0.0.1:4173 npm run audit:perf:ci`; `git diff --check`.
+
 ## 2026-05-27 Codex pass 90
 
 - Implemented on `codex/deploy-evidence-game-polish-2026-05-27`: coordinator-owned live Pages deploy-evidence hardening plus isolated Inkline Courier, Starline Strafe, and Patchwork Foundry polish lanes.
