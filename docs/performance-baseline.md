@@ -22,6 +22,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Flux Reversi board-game addition (pass 83)
+
+Captured 2026-05-28 against a disposable local static server after adding **Flux Reversi**, a deterministic Reversi/Othello game played against a positional-weight CPU. It fills the Board/Strategy gap alongside Chess and Checkers with the standard 8×8 disc-flip ruleset, a keyboard cursor plus tap placement, legal-move hints, automatic pass handling, persisted best margin, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 65 manifest games, 66 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 344 ms | 106 ms | 🟢 111 ms | 🟢 157.7 KB | 10 | 0 |
+| Flux Reversi | 🟢 40 ms | 27 ms | 🟢 27 ms | 🟢 22.2 KB | 2 | 0 |
+| Lexica | 🟢 36 ms | 39 ms | 🟢 39 ms | 🟢 151.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 472 ms | 12 ms | 🟢 14 ms | 🟢 165.0 KB | 2 | 0 |
+| Arcade Jump | 🟢 80 ms | 52 ms | 🟢 53 ms | 🟢 103.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 128 ms | 110 ms | 🟢 110 ms | 🟢 109.7 KB | 2 | 0 |
+
+Flux Reversi lands at 22.2 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog stays well within its 200 KB / 18 request budget at 157.7 KB / 10 requests, with the lazy cover pipeline keeping first-paint requests bounded at 65 games. Every named exception remains below its CI budget, no console/page errors appeared across the 66 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Catalog deferral + legacy polish pass (pass 82)
 
 Captured 2026-05-23 against `http://127.0.0.1:4173` after moving the catalog's GitHub issue queue and recent-commit widgets behind explicit `Refresh Queue` / `Load Updates` controls, while preserving fresh session-cache hydration and local fallback links on first load. The same pass polished Brick Breaker, Metro Dash, and Neon Snake UI density without changing gameplay rules or manifest/generated surfaces. The strict audit covered the catalog plus 64 manifest games, 65 pages total.

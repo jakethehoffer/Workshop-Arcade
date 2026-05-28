@@ -1598,6 +1598,22 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "flux-reversi": {
+      name: "place the opening dark disc and let the CPU reply",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(140);
+          };
+          press("Enter", "Enter");
+          window.advanceTime(700);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;
