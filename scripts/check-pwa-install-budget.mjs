@@ -15,6 +15,8 @@ const repoRoot = process.env.WORKSHOP_ARCADE_REPO_ROOT
   ? resolve(process.env.WORKSHOP_ARCADE_REPO_ROOT)
   : resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+const MIN_INSTALL_HEADROOM_KB = 15;
+const MIN_INSTALL_REQUEST_HEADROOM = 5;
 const issues = [];
 
 function fail(message) {
@@ -182,11 +184,19 @@ const requestCount = installFiles.length;
 
 if (budget) {
   const byteBudget = budget.transferKb * 1024;
+  const transferHeadroomKb = budget.transferKb - (totalBytes / 1024);
+  const requestHeadroom = budget.requests - requestCount;
   if (totalBytes > byteBudget) {
     fail(`PWA install payload: ${fmtKb(totalBytes)} exceeds ${budget.transferKb} KB Catalog budget (${installFiles.join(', ')})`);
   }
   if (requestCount > budget.requests) {
     fail(`PWA install payload: ${requestCount} local request(s) exceeds ${budget.requests} Catalog request budget (${installFiles.join(', ')})`);
+  }
+  if (transferHeadroomKb < MIN_INSTALL_HEADROOM_KB) {
+    fail(`PWA install payload: ${fmtKb(totalBytes)} leaves ${transferHeadroomKb.toFixed(1)} KB install headroom, below ${MIN_INSTALL_HEADROOM_KB} KB minimum (${installFiles.join(', ')})`);
+  }
+  if (requestHeadroom < MIN_INSTALL_REQUEST_HEADROOM) {
+    fail(`PWA install payload: ${requestCount} local request(s) leaves ${requestHeadroom} install request headroom, below ${MIN_INSTALL_REQUEST_HEADROOM} minimum (${installFiles.join(', ')})`);
   }
 }
 
@@ -196,4 +206,6 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log(`PWA install budget check passed: ${fmtKb(totalBytes)} / ${budget.transferKb} KB across ${requestCount}/${budget.requests} files (${installFiles.join(', ')}).`);
+const transferHeadroomKb = budget.transferKb - (totalBytes / 1024);
+const requestHeadroom = budget.requests - requestCount;
+console.log(`PWA install budget check passed: ${fmtKb(totalBytes)} / ${budget.transferKb} KB across ${requestCount}/${budget.requests} files; headroom ${transferHeadroomKb.toFixed(1)} KB / ${requestHeadroom} files (${installFiles.join(', ')}).`);

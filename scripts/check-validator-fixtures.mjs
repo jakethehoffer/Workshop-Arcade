@@ -216,6 +216,59 @@ const shellAssets = [
       fail(`check-pwa-install-budget fixture: expected oversized install payload message, got ${JSON.stringify(combined.trim())}`);
     }
   });
+
+  await withFixture('pwa-install-headroom', async (root) => {
+    await writeFixture(root, 'scripts/audit-pagespeed.mjs', `
+const BUDGETS = {
+  Catalog: { transferKb: 20, requests: 12 },
+  default: { transferKb: 100, requests: 3 }
+};
+`);
+    await writeFixture(root, 'sw.js', `
+const COVER_PREFETCH_COUNT = 1;
+const shellAssets = [
+  '',
+  'websites/manifest.json',
+  'covers/app-icon.svg',
+  'app.webmanifest',
+  'offline.html',
+  '404.html',
+].map((relative) => relative);
+`);
+    await writeFixture(root, 'websites/manifest.json', JSON.stringify([{
+      id: 'fixture-game',
+      slug: 'fixture-game',
+      title: 'Fixture Game',
+      subtitle: 'Fixture.',
+      url: 'websites/fixture-game.html',
+      cover: 'covers/fixture-game.svg',
+      tags: ['Puzzle'],
+      addedAt: '2026-05-23',
+      popularity: 1,
+    }], null, 2));
+    await writeFixture(root, 'app.webmanifest', JSON.stringify({
+      name: 'Fixture',
+      icons: [
+        { src: 'covers/app-icon.svg', sizes: 'any', type: 'image/svg+xml' },
+        { src: 'covers/headroom-maskable.svg', sizes: 'any', type: 'image/svg+xml' },
+      ],
+    }));
+    await writeFixture(root, 'index.html', '<!doctype html><title>Fixture</title>');
+    await writeFixture(root, 'offline.html', '<!doctype html><title>Offline</title>');
+    await writeFixture(root, '404.html', '<!doctype html><title>Not found</title>');
+    await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'covers/fixture-game.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'covers/headroom-maskable.svg', `<svg xmlns="http://www.w3.org/2000/svg"><text>${'x'.repeat(7000)}</text></svg>`);
+
+    const result = runValidator('scripts/check-pwa-install-budget.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0) {
+      fail('check-pwa-install-budget fixture: expected failure for low PWA install headroom, got success');
+    }
+    if (!/install headroom/.test(combined) || !/install request headroom/.test(combined)) {
+      fail(`check-pwa-install-budget fixture: expected install headroom messages, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
 }
 
 await checkGeneratedSurfaceNegative();
