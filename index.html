@@ -144,6 +144,15 @@
       background:linear-gradient(180deg,#0e1a2b,#0b1220);border-bottom:1px solid rgba(94,234,212,0.10);
       overflow:hidden;text-align:inherit}
     .thumb img{width:100%;height:100%;object-fit:cover}
+    .fav{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;display:grid;place-items:center;
+      border-radius:999px;border:1px solid rgba(94,234,212,0.22);background:rgba(6,12,22,0.62);
+      color:#9fb3c8;cursor:pointer;padding:0;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+      transition:color 0.15s ease,border-color 0.15s ease,background 0.15s ease}
+    .fav svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+    .fav:hover{border-color:rgba(94,234,212,0.5);color:#e6edf3}
+    .fav:focus-visible{outline:3px solid rgba(94,234,212,0.6);outline-offset:2px}
+    .fav[aria-pressed="true"]{color:#facc15;border-color:rgba(250,204,21,0.55);background:rgba(250,204,21,0.13)}
+    .fav[aria-pressed="true"] svg{fill:#facc15;stroke:#facc15}
     .meta{padding:12px 12px 14px;display:grid;gap:8px}
     .title{font-weight:800;font-size:16px;letter-spacing:.2px}
     .subtitle{font-size:12.5px;color:var(--muted);line-height:1.2}
@@ -456,6 +465,7 @@
     <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
     <template id="cardT">
       <article class="card">
+        <button class="fav" type="button" aria-pressed="false" aria-label="Toggle favorite" title="Save to favorites (this device)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.6l2.47 5.01 5.53.8-4 3.9.94 5.5L12 16.2l-4.95 2.6.94-5.5-4-3.9 5.53-.8z"/></svg></button>
         <button class="thumb" type="button"><img alt="" width="640" height="360" decoding="async" /></button>
         <div class="meta">
           <div class="title"></div>
@@ -650,7 +660,8 @@ const state = {
   category: "All",
   sort: "new",
   drafts: [],
-  recentPlays: []
+  recentPlays: [],
+  favorites: []
 };
 
 const RECENT_PLAYS_KEY = 'workshop-arcade:recentPlays:v1';
@@ -670,6 +681,33 @@ function pushRecentPlay(slug){
   const plays = [slug, ...state.recentPlays.filter(s => s !== slug)].slice(0, RECENT_PLAYS_MAX);
   state.recentPlays = plays;
   try { localStorage.setItem(RECENT_PLAYS_KEY, JSON.stringify(plays)); } catch {}
+}
+
+// Favorites: a player-curated set of game slugs, persisted on the device.
+// Mirrors the recent-plays pattern and surfaces as a dynamic "Favorites"
+// filter chip (only shown when at least one favorite exists), just like
+// "Recently". Defensive against blocked/opaque localStorage.
+const FAVORITES_KEY = 'workshop-arcade:favorites:v1';
+
+function loadFavorites(){
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if(!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(s => typeof s === 'string') : [];
+  } catch { return []; }
+}
+
+function isFavorite(slug){
+  return typeof slug === 'string' && state.favorites.includes(slug);
+}
+
+function toggleFavorite(slug){
+  if(typeof slug !== 'string' || !slug) return;
+  state.favorites = isFavorite(slug)
+    ? state.favorites.filter(s => s !== slug)
+    : [slug, ...state.favorites];
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(state.favorites)); } catch {}
 }
 
 const els = {
@@ -832,6 +870,7 @@ function trapModalFocus(e){
     state.games = normalizeGames(FALLBACK_GAMES);
   }
   state.recentPlays = loadRecentPlays();
+  state.favorites = loadFavorites();
   // Honor ?q=, ?tag=, ?sort= from the URL on cold load so bookmarked
   // and shared filter URLs land on the right view. Defaults silently
   // restore to "All" / no query / newest when params are missing.
@@ -865,8 +904,13 @@ function buildFilters(){
   const ordered = CATEGORY_ORDER.filter(name => name === 'All' || found.has(name));
   const extras = [...found].filter(name => !CATEGORY_ORDER.includes(name)).sort((a,b)=>a.localeCompare(b));
   const baseCategories = [...ordered, ...extras];
-  const categories = state.recentPlays.length
-    ? [baseCategories[0], 'Recently', ...baseCategories.slice(1)]
+  // Dynamic pseudo-categories sit right after "All": Favorites (player-curated)
+  // then Recently (auto-tracked). Each appears only when it has entries.
+  const dynamic = [];
+  if(categoryCount('Favorites') > 0) dynamic.push('Favorites');
+  if(state.recentPlays.length) dynamic.push('Recently');
+  const categories = dynamic.length
+    ? [baseCategories[0], ...dynamic, ...baseCategories.slice(1)]
     : baseCategories;
   if(!categories.includes(state.category)) state.category = 'All';
 
@@ -896,6 +940,10 @@ function buildFilters(){
 
 function categoryCount(category){
   if(category === 'All') return state.games.length;
+  if(category === 'Favorites'){
+    const slugs = new Set(state.games.map(g => g.slug));
+    return state.favorites.filter(slug => slugs.has(slug)).length;
+  }
   if(category === 'Recently'){
     const slugs = new Set(state.games.map(g => g.slug));
     return state.recentPlays.filter(slug => slugs.has(slug)).length;
@@ -974,7 +1022,7 @@ function applyUrlStateFromLocation(){
   state.query = typeof q === 'string' ? q.trim().toLowerCase() : '';
   if (els.q) els.q.value = q || '';
   const tag = params.get('tag');
-  if (tag && (tag === 'Recently' || CATEGORY_ORDER.includes(tag) || state.games.some(g => (g.tags||[]).includes(tag)))) {
+  if (tag && (tag === 'Recently' || tag === 'Favorites' || CATEGORY_ORDER.includes(tag) || state.games.some(g => (g.tags||[]).includes(tag)))) {
     state.category = tag;
   } else {
     state.category = 'All';
@@ -1085,7 +1133,8 @@ function update(){
       .filter(Boolean);
   } else {
     list = [...state.games];
-    if(cat !== 'All') list = list.filter(g => (g.tags||[]).includes(cat));
+    if(cat === 'Favorites') list = list.filter(g => isFavorite(g.slug));
+    else if(cat !== 'All') list = list.filter(g => (g.tags||[]).includes(cat));
     // sort (Recently keeps its implicit recency order)
     if(state.sort === 'az') list.sort((a,b)=>a.title.localeCompare(b.title));
     else if(state.sort === 'pop') list.sort((a,b)=>(b.popularity||0)-(a.popularity||0));
@@ -1196,6 +1245,20 @@ function render(){
     playBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
     improveBtn.addEventListener('click', e => openWorkshop(g.id, e.currentTarget));
     thumbBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
+
+    const favBtn = card.querySelector('.fav');
+    if(favBtn){
+      const fav = isFavorite(g.slug);
+      favBtn.setAttribute('aria-pressed', fav ? 'true' : 'false');
+      favBtn.setAttribute('aria-label', fav ? `Remove ${g.title} from favorites` : `Add ${g.title} to favorites`);
+      favBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFavorite(g.slug);
+        buildFilters();
+        update();
+      });
+    }
 
     frag.appendChild(card);
   }
