@@ -1678,6 +1678,24 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "floodgate": {
+      name: "flood the board with a few colors",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(120);
+          };
+          press("2", "Digit2");
+          press("3", "Digit3");
+          press("4", "Digit4");
+          window.advanceTime(260);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

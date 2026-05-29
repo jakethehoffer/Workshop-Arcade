@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Floodgate - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Flood the board from the corner until every cell is one color, in as few moves as you can." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/floodgate.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Floodgate — Workshop Arcade" />
+<meta property="og:description" content="Flood the board from the corner until every cell is one color, in as few moves as you can." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/floodgate.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/floodgate.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Floodgate — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Floodgate — Workshop Arcade" />
+<meta name="twitter:description" content="Flood the board from the corner until every cell is one color, in as few moves as you can." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/floodgate.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Floodgate",
+  "description": "Flood the board from the corner until every cell is one color, in as few moves as you can.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/floodgate.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/floodgate.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eaf6ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 440px at 8% -8%,rgba(45,212,191,.17),transparent 62%),radial-gradient(680px 420px at 96% 0%,rgba(99,102,241,.16),transparent 64%),linear-gradient(180deg,#071018,#050713 88%)}
+button{font:inherit}
+.app{width:min(980px,100%);display:grid;grid-template-rows:auto auto auto auto auto auto;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
+.help{max-width:560px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
+.swatches{display:grid;grid-template-columns:repeat(6,minmax(0,72px));justify-content:center;gap:8px}
+.swatch{min-height:46px;border-radius:10px;border:2px solid rgba(255,255,255,.18);cursor:pointer;font-size:14px;font-weight:950;display:flex;align-items:center;justify-content:center;gap:4px;touch-action:manipulation;box-shadow:0 8px 18px rgba(0,0,0,.3)}
+.swatch:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.swatches{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.swatch{min-height:44px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Floodgate flood-fill puzzle">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Floodgate</span></div>
+    <div class="help">Pick a color (the swatches below, or keys 1-6) to flood the region from the top-left corner. Make the whole board one color in as few moves as you can. N starts a new game, R reshuffles.</div>
+  </header>
+  <section class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Level</span><span class="value" id="levelValue">1/3</span></div>
+    <div class="pill"><span class="label">Size</span><span class="value" id="sizeValue">9×9</span></div>
+    <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
+    <div class="pill"><span class="label">Par</span><span class="value" id="parValue">14</span></div>
+    <div class="pill"><span class="label">Filled</span><span class="value" id="filledValue">1%</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Floodgate board. Flood the region from the top-left corner until the whole board is one color."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Flood from the top-left corner until the whole board is one color.</div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Floodgate ready.</div>
+  <section class="bar" aria-label="Actions">
+    <button class="btn primary" id="newBtn" type="button">New Game</button>
+    <button class="btn" id="resetBtn" type="button">Reshuffle</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+  </section>
+  <section class="swatches" id="swatches" aria-label="Flood colors">
+    <button class="swatch" type="button" data-color="0"></button><button class="swatch" type="button" data-color="1"></button><button class="swatch" type="button" data-color="2"></button><button class="swatch" type="button" data-color="3"></button><button class="swatch" type="button" data-color="4"></button><button class="swatch" type="button" data-color="5"></button>
+  </section>
+</main>
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const STATS_KEY="floodgate.stats.v1",SOUND_KEY="floodgate.sound.v1";
+const PALETTE=["#eef2ff","#22d3ee","#6366f1","#fbbf24","#fb7185","#4ade80"];
+const TEXTCOL=["#0b1220","#053038","#f3fbff","#3a2606","#3c0d16","#06301c"];
+const GLYPHS=["●","◆","▲","■","★","✦"];
+const LEVELS=[{n:9,colors:5,seed:7321,par:14},{n:12,colors:6,seed:48207,par:21},{n:14,colors:6,seed:90534,par:25}];
+const TOTAL=LEVELS.length;
+const $=id=>document.getElementById(id);
+const els={level:$("levelValue"),size:$("sizeValue"),moves:$("movesValue"),par:$("parValue"),filled:$("filledValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),reset:$("resetBtn"),swatches:$("swatches")};
+const saved=readStats();
+const state={idx:0,n:9,colors:5,grid:[],moves:0,mode:"playing",best:saved.best,solved:saved.solved,sound:readSound(),feedback:"Flood from the top-left corner until the whole board is one color.",flash:0,time:0,nextAt:null,clearWait:0};
+let audio=null;
+
+function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
+function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(v.best&&typeof v.best==="object")?v.best:{},solved:Array.isArray(v.solved)?v.solved.filter(n=>typeof n==="number"):[]}}catch(_){}return{best:{},solved:[]}}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best,solved:state.solved}))}catch(_){}}
+function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
+function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
+function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={flood:300,clear:520,win:660,bad:150}[kind]||260;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.06,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.16);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.18)}catch(_){}}
+
+function level(){return LEVELS[state.idx]}
+function par(){return level().par}
+function makeGrid(n,colors,seed){const g=new Array(n*n);let s=seed>>>0;for(let i=0;i<n*n;i++){s=(s*1103515245+12345)&0x7fffffff;g[i]=s%colors}return g}
+function cornerRegion(color){const n=state.n,seen=new Set();if(state.grid[0]!==color)return seen;seen.add(0);const stack=[0];while(stack.length){const idx=stack.pop(),r=Math.floor(idx/n),c=idx%n,nb=[];if(r>0)nb.push(idx-n);if(r<n-1)nb.push(idx+n);if(c>0)nb.push(idx-1);if(c<n-1)nb.push(idx+1);for(const j of nb)if(!seen.has(j)&&state.grid[j]===color){seen.add(j);stack.push(j)}}return seen}
+function filledCount(){return cornerRegion(state.grid[0]).size}
+
+function applyColor(ci){if(state.mode!=="playing")return;if(ci<0||ci>=state.colors)return;const cur=state.grid[0];
+  if(ci===cur){say("Pick a different color to flood.");tone("bad");vibe(4);draw();return}
+  const region=cornerRegion(cur);for(const idx of region)state.grid[idx]=ci;state.moves++;state.flash=1;tone("flood");vibe(8);
+  const filled=cornerRegion(ci).size,total=state.n*state.n;
+  if(filled===total){solveLevel();return}
+  say(Math.round(filled/total*100)+"% flooded · "+state.moves+" move"+(state.moves===1?"":"s")+" (par "+par()+").");update();draw()}
+
+function solveLevel(){const key=String(state.idx),prev=state.best[key];if(prev==null||state.moves<prev)state.best[key]=state.moves;if(!state.solved.includes(state.idx))state.solved.push(state.idx);saveStats();
+  const under=state.moves<=par();
+  if(state.idx<TOTAL-1){state.mode="clear";state.nextAt=state.idx+1;state.clearWait=0;tone("clear");vibe([22,22]);say("Flooded in "+state.moves+" moves"+(under?" — under par!":"")+" Loading level "+(state.idx+2)+"…")}
+  else{state.mode="allclear";tone("win");vibe([30,30,40]);say("Whole catalog flooded — Floodgate complete! Press New Game.")}
+  update();draw()}
+
+function loadLevel(i){state.idx=i;state.n=LEVELS[i].n;state.colors=LEVELS[i].colors;state.grid=makeGrid(state.n,state.colors,LEVELS[i].seed);state.moves=0;state.mode="playing";update();draw()}
+function reset(){loadLevel(state.idx);say("Level "+(state.idx+1)+" reshuffled.");tone("flood")}
+function newGame(){loadLevel(0);say("New run — flood each board to a single color.");tone("flood")}
+
+function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.size.textContent=state.n+"×"+state.n;els.moves.textContent=String(state.moves);els.par.textContent=String(par());const total=state.n*state.n;els.filled.textContent=Math.round(filledCount()/total*100)+"%";const b=state.best[String(state.idx)];els.best.textContent=b==null?"—":String(b);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
+  const btns=els.swatches.querySelectorAll(".swatch");btns.forEach((btn,i)=>{if(i<state.colors){btn.hidden=false;btn.style.background=PALETTE[i];btn.style.color=TEXTCOL[i];btn.textContent=(i+1)+" "+GLYPHS[i];btn.setAttribute("aria-label","Flood with color "+(i+1))}else btn.hidden=true})}
+
+function gridRect(){const n=state.n,cell=Math.min((canvas.width-250)/n,(canvas.height-104)/n);return{cell,n,x:46,y:Math.round((canvas.height-cell*n)/2)+8}}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+  const g=gridRect(),cell=g.cell,n=g.n,gap=Math.max(1,cell*.04),sz=cell-gap*2;
+  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Floodgate",30,36);
+  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Pick a color to flood the region from the top-left corner. Fill the board to win.",30,54);
+  ctx.save();ctx.translate(g.x,g.y);
+  const region=cornerRegion(state.grid[0]);
+  ctx.font="700 "+Math.round(cell*.42)+"px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
+  for(let i=0;i<n*n;i++){const r=Math.floor(i/n),c=i%n,ci=state.grid[i],lx=c*cell+gap,ly=r*cell+gap;ctx.fillStyle=PALETTE[ci];roundRect(lx,ly,sz,sz,Math.min(7,cell*.14),true,false);
+    ctx.globalAlpha=.4;ctx.fillStyle=TEXTCOL[ci];ctx.fillText(GLYPHS[ci],lx+sz/2,ly+sz/2+1);ctx.globalAlpha=1}
+  ctx.textAlign="left";ctx.textBaseline="alphabetic";
+  // outline the flooded corner region
+  ctx.strokeStyle="rgba(255,255,255,.85)";ctx.lineWidth=Math.max(2,cell*.06);
+  for(const idx of region){const r=Math.floor(idx/n),c=idx%n,x=c*cell+gap,y=r*cell+gap;if(!region.has(idx-1)||c===0){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+sz);ctx.stroke()}if(!region.has(idx+1)||c===n-1){ctx.beginPath();ctx.moveTo(x+sz,y);ctx.lineTo(x+sz,y+sz);ctx.stroke()}if(!region.has(idx-n)||r===0){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+sz,y);ctx.stroke()}if(!region.has(idx+n)||r===n-1){ctx.beginPath();ctx.moveTo(x,y+sz);ctx.lineTo(x+sz,y+sz);ctx.stroke()}}
+  ctx.restore();
+  drawSide(g);
+  if(state.mode==="allclear"){ctx.fillStyle="rgba(3,7,18,.80)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 46px system-ui";ctx.fillText("ALL CLEAR",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
+function drawSide(g){const px=g.x+g.cell*g.n+34;let py=g.y+10;ctx.textAlign="left";
+  const block=(label,val,color)=>{ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,px,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 27px system-ui";ctx.fillText(val,px,py+34);py+=62};
+  block("LEVEL",(state.idx+1)+" / "+TOTAL);
+  block("GRID",state.n+"×"+state.n+" · "+state.colors+"c");
+  const total=state.n*state.n,f=filledCount();
+  block("FLOODED",Math.round(f/total*100)+"%",f===total?"#5eead4":"#7ef9ff");
+  block("MOVES · PAR",state.moves+" · "+par(),state.moves<=par()?"#5eead4":"#fbbf24")}
+
+function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/220);if(state.mode==="clear"&&state.nextAt!=null){state.clearWait+=dt;if(state.clearWait>=620){const ni=state.nextAt;state.nextAt=null;loadLevel(ni);say("Level "+(ni+1)+" — flood the "+LEVELS[ni].n+"×"+LEVELS[ni].n+" board.")}}draw()}
+window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){const total=state.n*state.n;return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,size:state.n,colors:state.colors,moves:state.moves,par:par(),filled:filledCount(),cells:total,cornerColor:state.grid[0],best:state.best[String(state.idx)]??null,solved:state.solved.length,sound:state.sound,feedback:state.feedback,board:state.grid.slice(),coordinateSystem:"grid is row-major length size*size of color indices 0.."+(state.colors-1)+"; flood region starts at index 0 (top-left); win when all one color"})};
+
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if([" "].includes(k))e.preventDefault();
+  if(k>="1"&&k<="6")applyColor(Number(k)-1);else if(k==="n")newGame();else if(k==="r")reset()});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=gridRect(),c=Math.floor((px-g.x)/g.cell),r=Math.floor((py-g.y)/g.cell);if(c>=0&&r>=0&&c<g.n&&r<g.n)applyColor(state.grid[r*g.n+c])});
+els.neww.addEventListener("click",newGame);
+els.reset.addEventListener("click",reset);
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("flood")});
+els.swatches.querySelectorAll(".swatch").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();applyColor(Number(btn.dataset.color))}));
+loadLevel(0);
+let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

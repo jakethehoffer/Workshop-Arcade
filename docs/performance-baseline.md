@@ -22,6 +22,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Floodgate flood-fill addition (pass 88)
+
+Captured 2026-05-29 against a disposable local static server after adding **Floodgate**, a deterministic Flood-It color puzzle — the catalog's first flood-fill mechanic. Pick a color to recolor the region anchored at the top-left corner; absorb adjacent matches and repeat until the whole board is one color. Three levels (9×9/5 → 14×14/6) use fixed-seed grids for reproducibility, numbered color picks plus tap-a-cell, subtle per-color glyphs for colorblind distinction, per-level best-move tracking, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 70 manifest games, 71 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 144 ms | 122 ms | 🟢 123 ms | 🟢 169.2 KB | 10 | 0 |
+| Floodgate | 🟢 68 ms | 58 ms | 🟢 58 ms | 🟢 20.3 KB | 2 | 0 |
+| Lexica | 🟢 40 ms | 50 ms | 🟢 50 ms | 🟢 151.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 496 ms | 14 ms | 🟢 17 ms | 🟢 165.0 KB | 2 | 0 |
+| Arcade Jump | 🟢 108 ms | 75 ms | 🟢 75 ms | 🟢 103.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 196 ms | 204 ms | 🟢 204 ms | 🟢 109.7 KB | 2 | 0 |
+
+Floodgate lands at 20.3 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog stays well within its 200 KB / 18 request budget at 169.2 KB / 10 requests, with the lazy cover pipeline keeping first-paint requests bounded at 70 games. Every named exception remains below its CI budget, no console/page errors appeared across the 71 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Seedline mancala addition (pass 87)
 
 Captured 2026-05-29 against a disposable local static server after adding **Seedline**, a deterministic Mancala (Kalah 6,4) against an alpha-beta minimax CPU — the catalog's first sowing-and-capturing mechanic. Sow seeds counterclockwise, earn an extra turn by landing your last seed in your store, capture across by ending in an empty pit of your own, and bank the most before a side empties. Keyboard pit cursor + number keys + tap-a-pit, scheduled AI that chains its extra turns, persisted win/streak/best stats, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 69 manifest games, 70 pages total.
