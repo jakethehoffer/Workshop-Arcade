@@ -1696,6 +1696,25 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "last-light": {
+      name: "select a peg and jump it into the center",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(110);
+          };
+          press("Enter", "Enter");
+          press("ArrowDown", "ArrowDown");
+          press("ArrowDown", "ArrowDown");
+          press("Enter", "Enter");
+          window.advanceTime(260);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

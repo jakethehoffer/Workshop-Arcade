@@ -22,6 +22,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Last Light peg-solitaire addition (pass 89)
+
+Captured 2026-05-29 against a disposable local static server after adding **Last Light**, a Peg Solitaire on the iconic 33-hole English cross — the catalog's first jump-and-remove mechanic. Jump a glowing peg over a neighbor into the empty hole beyond (the jumped peg goes dark); clear down to one last light, ideally dead center. Ships with Undo (essential for the genre), Reset, fewest-pegs/solves/perfect tracking, keyboard select-then-jump + tap, colorblind-safe lit/dark contrast, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 71 manifest games, 72 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 88 ms | 69 ms | 🟢 71 ms | 🟢 170.2 KB | 10 | 0 |
+| Last Light | 🟢 60 ms | 47 ms | 🟢 47 ms | 🟢 21.5 KB | 2 | 0 |
+| Lexica | 🟢 36 ms | 36 ms | 🟢 37 ms | 🟢 151.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 452 ms | 12 ms | 🟢 14 ms | 🟢 165.0 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 55 ms | 🟢 55 ms | 🟢 103.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 128 ms | 127 ms | 🟢 127 ms | 🟢 109.7 KB | 2 | 0 |
+
+Last Light lands at 21.5 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog stays well within its 200 KB / 18 request budget at 170.2 KB / 10 requests, with the lazy cover pipeline keeping first-paint requests bounded at 71 games. Every named exception remains below its CI budget, no console/page errors appeared across the 72 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Floodgate flood-fill addition (pass 88)
 
 Captured 2026-05-29 against a disposable local static server after adding **Floodgate**, a deterministic Flood-It color puzzle — the catalog's first flood-fill mechanic. Pick a color to recolor the region anchored at the top-left corner; absorb adjacent matches and repeat until the whole board is one color. Three levels (9×9/5 → 14×14/6) use fixed-seed grids for reproducibility, numbered color picks plus tap-a-cell, subtle per-color glyphs for colorblind distinction, per-level best-move tracking, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 70 manifest games, 71 pages total.
