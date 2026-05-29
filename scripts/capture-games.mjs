@@ -1630,6 +1630,23 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "eclipse-grid": {
+      name: "toggle a tile and flip its neighbors",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(140);
+          };
+          press("ArrowRight", "ArrowRight");
+          press("Enter", "Enter");
+          window.advanceTime(300);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;
