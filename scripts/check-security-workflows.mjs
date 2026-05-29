@@ -168,6 +168,9 @@ async function checkPagesDeploy() {
   if (!/path:\s*_site\b/.test(src)) {
     fail(`${path}: upload-pages-artifact must publish the curated "_site" directory, not the repo root`);
   }
+  if (!/include-hidden-files:\s*true\b/.test(src)) {
+    fail(`${path}: upload-pages-artifact must set include-hidden-files: true so .well-known/security.txt reaches the live site`);
+  }
   if (!/environment:\s*[\s\S]*?name:\s*github-pages/.test(src)) {
     fail(`${path}: deploy job must target the "github-pages" environment`);
   }
