@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Supply-chain hygiene contract check.
 //
-// Locks in the two security-adjacent workflows the repo ships:
+// Locks in the security-adjacent automation the repo ships:
 //
 //   1. .github/dependabot.yml — keeps the small dependency surface
 //      (Playwright + GitHub Actions) automatically up to date so the
@@ -12,9 +12,12 @@
 //      least-privilege permissions and the security-extended query
 //      pack so XSS/SSRF/prototype-pollution patterns surface as PR
 //      checks instead of going to production.
+//   3. .github/workflows/deploy-pages.yml — deploys GitHub Pages from
+//      a curated Actions artifact so the public site is explicit,
+//      least-privilege, and free of generated legacy Pages workflows.
 //
 // The check is intentionally structural (file presence + required
-// directives) rather than semantic — Dependabot and CodeQL evolve their
+// directives) rather than semantic — GitHub's workflow schemas evolve their
 // own schemas, and we want to update tooling configs without having to
 // rewrite the validator at the same time.
 
@@ -121,8 +124,101 @@ async function checkCodeql() {
   }
 }
 
+async function checkPagesDeploy() {
+  const path = '.github/workflows/deploy-pages.yml';
+  if (!(await exists(path))) {
+    fail(`${path}: file missing — GitHub Pages must deploy from the repo-owned Actions workflow`);
+    return;
+  }
+  const src = await readFile(join(repoRoot, path), 'utf8');
+
+  if (!/^name:\s*Deploy Pages\b/m.test(src)) {
+    fail(`${path}: workflow name must be "Deploy Pages" so the Actions tab and Pages deployment history are easy to target`);
+  }
+  if (!/on:\s*[\s\S]*?\bpush:\s*[\s\S]*?branches:\s*\[\s*main\s*\]/m.test(src)) {
+    fail(`${path}: must trigger on push: branches: [main] so every main commit can publish`);
+  }
+  if (!/\bworkflow_dispatch:\s*/.test(src)) {
+    fail(`${path}: must include workflow_dispatch so a Pages deploy can be retried without a content change`);
+  }
+
+  const topPermissions = src.match(/^permissions:\s*([\s\S]*?)(?=^\S|\Z)/m);
+  const permissionBlock = topPermissions?.[1] || '';
+  for (const permission of ['contents: read', 'pages: write', 'id-token: write']) {
+    if (!permissionBlock.includes(permission)) {
+      fail(`${path}: top-level permissions must include "${permission}" for least-privilege Pages deployment`);
+    }
+  }
+
+  if (!/concurrency:\s*[\s\S]*?group:\s*pages/.test(src) || !/cancel-in-progress:\s*false/.test(src)) {
+    fail(`${path}: must serialize Pages deploys with concurrency group "pages" and cancel-in-progress: false`);
+  }
+
+  const requiredActions = [
+    'actions/checkout@v6',
+    'actions/configure-pages@v6',
+    'actions/upload-pages-artifact@v5',
+    'actions/deploy-pages@v5'
+  ];
+  for (const action of requiredActions) {
+    if (!src.includes(`uses: ${action}`)) {
+      fail(`${path}: must use ${action}`);
+    }
+  }
+  if (!/path:\s*_site\b/.test(src)) {
+    fail(`${path}: upload-pages-artifact must publish the curated "_site" directory, not the repo root`);
+  }
+  if (!/environment:\s*[\s\S]*?name:\s*github-pages/.test(src)) {
+    fail(`${path}: deploy job must target the "github-pages" environment`);
+  }
+
+  const requiredPublicPaths = [
+    'index.html',
+    '404.html',
+    'offline.html',
+    'app.webmanifest',
+    'sw.js',
+    'robots.txt',
+    'sitemap.xml',
+    'feed.json',
+    'humans.txt',
+    'LICENSE',
+    'README.md',
+    'SECURITY.md',
+    'package.json',
+    'package-lock.json',
+    'covers',
+    'docs',
+    'schemas',
+    'scripts',
+    'websites',
+    '.well-known'
+  ];
+  for (const publicPath of requiredPublicPaths) {
+    if (!src.includes(publicPath)) {
+      fail(`${path}: static artifact assembly must include "${publicPath}"`);
+    }
+  }
+
+  const forbiddenRootPublishPatterns = [
+    /\bpath:\s*\.\s*$/m,
+    /\bcp\s+-R\s+\\?\s*\.\s/m,
+    /\brsync\b[\s\S]*\s\.\s+_site\b/
+  ];
+  if (forbiddenRootPublishPatterns.some((pattern) => pattern.test(src))) {
+    fail(`${path}: must not publish the repository root; publish only the curated "_site" artifact`);
+  }
+
+  for (const internalPath of ['.git', '.github', '.codex', '.ai-sync', '.devcontainer', '.vscode', 'node_modules', 'output', 'test-results']) {
+    if (!src.includes(internalPath)) {
+      fail(`${path}: artifact assembly must explicitly guard against publishing "${internalPath}"`);
+    }
+  }
+}
+
 await checkDependabot();
 await checkCodeql();
+await checkPagesDeploy();
 
 if (issues.length > 0) {
   console.error(`Security workflows check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -132,4 +228,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Security workflows check passed: .github/dependabot.yml + .github/workflows/codeql.yml both intact.');
+console.log('Security workflows check passed: Dependabot, CodeQL, and Deploy Pages automation are intact.');
