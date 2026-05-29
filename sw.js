@@ -17,7 +17,7 @@
 // COVER_PREFETCH_COUNT manifest covers. check-pwa.mjs recomputes it so shell
 // asset changes must also move the cache namespace.
 const SHELL_REVISION = 'shell-a0107a443982';
-const VERSION = 'wa-v17-shell-a0107a443982';
+const VERSION = 'wa-v18-shell-a0107a443982';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const RUNTIME_CACHE_MAX_ENTRIES = 96;
@@ -58,9 +58,9 @@ async function cachePut(cache, url) {
   }
 }
 
-async function trimRuntimeCache(cache) {
+async function trimRuntimeCache(cache, max = RUNTIME_CACHE_MAX_ENTRIES) {
   const keys = await cache.keys();
-  const overflow = keys.length - RUNTIME_CACHE_MAX_ENTRIES;
+  const overflow = keys.length - max;
   if (overflow <= 0) return;
   await Promise.all(keys.slice(0, overflow).map((request) => cache.delete(request)));
 }
@@ -70,8 +70,12 @@ async function putRuntime(request, response) {
   const copy = response.clone();
   runtimeWriteQueue = runtimeWriteQueue.catch(() => {}).then(async () => {
     const cache = await caches.open(RUNTIME_CACHE);
+    // Trim to make room BEFORE inserting so the runtime cache is never
+    // observably over the cap. With "put then trim", many writes draining
+    // concurrently let a reader catch a transient cap+1 entry between a put
+    // and its trim; trimming to cap-1 first keeps every observable state <= cap.
+    await trimRuntimeCache(cache, RUNTIME_CACHE_MAX_ENTRIES - 1);
     await cache.put(request, copy);
-    await trimRuntimeCache(cache);
   });
   await runtimeWriteQueue;
 }
