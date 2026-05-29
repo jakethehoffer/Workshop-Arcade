@@ -460,6 +460,7 @@
         <button class="btn subtle" type="button" data-view="new" aria-pressed="true">Newest</button>
         <button class="btn subtle" type="button" data-view="pop" aria-pressed="false">Popular</button>
         <button class="btn subtle" type="button" data-view="recent" id="continueViewBtn" aria-pressed="false" hidden>Continue</button>
+        <button class="btn subtle" type="button" data-view="fav" id="favoriteViewBtn" aria-pressed="false" hidden>★ Favorites</button>
       </div>
     </section>
     <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
@@ -749,6 +750,7 @@ const els = {
   randomGameBtn: document.getElementById('randomGameBtn'),
   catalogDiscovery: document.getElementById('catalogDiscovery'),
   continueViewBtn: document.getElementById('continueViewBtn'),
+  favoriteViewBtn: document.getElementById('favoriteViewBtn'),
   helpBtn: document.getElementById('helpBtn'),
   installAppBtn: document.getElementById('installAppBtn'),
   helpDialog: document.getElementById('helpDialog'),
@@ -966,6 +968,8 @@ function setDiscoveryView(view){
   resetDiscoverySearch();
   if(view === 'recent' && state.recentPlays.length){
     state.category = 'Recently';
+  } else if(view === 'fav' && categoryCount('Favorites') > 0){
+    state.category = 'Favorites';
   } else {
     state.category = 'All';
     state.sort = view === 'pop' ? 'pop' : 'new';
@@ -978,11 +982,14 @@ function setDiscoveryView(view){
 function syncDiscoveryActions(){
   if(!els.catalogDiscovery) return;
   if(els.continueViewBtn) els.continueViewBtn.hidden = state.recentPlays.length === 0;
+  if(els.favoriteViewBtn) els.favoriteViewBtn.hidden = categoryCount('Favorites') === 0;
   for(const button of els.catalogDiscovery.querySelectorAll('[data-view]')){
     const view = button.dataset.view;
     const active = view === 'recent'
       ? state.category === 'Recently'
-      : state.category !== 'Recently' && state.sort === view && state.category === 'All';
+      : view === 'fav'
+        ? state.category === 'Favorites'
+        : state.category !== 'Recently' && state.category !== 'Favorites' && state.sort === view && state.category === 'All';
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
 }
@@ -1271,6 +1278,11 @@ function render(){
       ? `${n} recently played`
       : 'No recent plays';
     els.empty.textContent = 'No recently played games yet. Open any game and it will appear here.';
+  } else if(state.category === 'Favorites'){
+    els.resultCount.textContent = n
+      ? `${n} favorite${n===1?'':'s'}`
+      : 'No favorites';
+    els.empty.textContent = 'No favorites yet. Tap the star on any game to save it here.';
   } else {
     els.resultCount.textContent = `${n} game${n===1?'':'s'}`;
     els.empty.textContent = 'No results. Try a different search or filter.';
