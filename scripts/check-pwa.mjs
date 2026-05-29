@@ -197,11 +197,9 @@ async function checkServiceWorker() {
   }
 
   // Cover pre-cache contract: at install time the SW reads the manifest
-  // and pre-caches the newest COVER_PREFETCH_COUNT cover SVGs so the
-  // catalog's above-the-fold cards paint without any cover network
-  // fetches on return visits. The count must match index.html's
-  // aboveFoldCoverCount() desktop branch (currently 6) so the pre-cache
-  // and eager-load hint stay aligned.
+  // and pre-caches a small newest-cover set. Keep this lower than the
+  // desktop eager-cover count so PWA install stays comfortably below the
+  // catalog payload budget; runtime caching fills the rest after use.
   let coverPrefetchCount = 0;
   if (!/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/.test(src)) {
     fail(`${swPath}: missing COVER_PREFETCH_COUNT constant — needed to pre-cache the newest catalog covers on install`);
@@ -209,7 +207,7 @@ async function checkServiceWorker() {
     const match = src.match(/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/);
     coverPrefetchCount = match ? parseInt(match[1], 10) : 0;
     if (coverPrefetchCount < 1 || coverPrefetchCount > 12) {
-      fail(`${swPath}: COVER_PREFETCH_COUNT = ${coverPrefetchCount} is outside the sane range (1..12). Match it to the desktop aboveFoldCoverCount() return value (currently 6).`);
+      fail(`${swPath}: COVER_PREFETCH_COUNT = ${coverPrefetchCount} is outside the sane range (1..12). Keep it small enough that the install payload stays within the Catalog budget.`);
     }
   }
   if (revisionMatch && /^shell-[a-f0-9]{12}$/.test(revisionMatch[1]) && coverPrefetchCount > 0) {

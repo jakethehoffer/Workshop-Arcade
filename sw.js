@@ -16,20 +16,18 @@
 // Deterministic hash of the install-time shell assets below plus the newest
 // COVER_PREFETCH_COUNT manifest covers. check-pwa.mjs recomputes it so shell
 // asset changes must also move the cache namespace.
-const SHELL_REVISION = 'shell-2388e318f7f9';
-const VERSION = 'wa-v19-shell-2388e318f7f9';
+const SHELL_REVISION = 'shell-3312aa16be73';
+const VERSION = 'wa-v20-shell-3312aa16be73';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const RUNTIME_CACHE_MAX_ENTRIES = 96;
 let runtimeWriteQueue = Promise.resolve();
 
-// Match the desktop branch of index.html's aboveFoldCoverCount(). The
-// SW doesn't know the visitor's viewport at install time, so we hedge
-// toward the desktop max — mobile visitors will see at most 6 covers
-// pre-cached instead of 3, which is wasted bandwidth ONCE on first
-// install but pays for itself the moment they scroll past the fold or
-// share the install with a desktop session.
-const COVER_PREFETCH_COUNT = 6;
+// Keep install lean by pre-caching the mobile/small-screen first viewport.
+// The catalog still eagerly loads the desktop above-fold covers during a
+// normal online page load, and runtime caching fills additional covers as
+// visitors scroll or replay games.
+const COVER_PREFETCH_COUNT = 3;
 
 // Resolve scope-relative paths so the SW works at any deploy prefix
 // (GitHub Pages serves this site under /Workshop-Arcade/).
@@ -81,11 +79,9 @@ async function putRuntime(request, response) {
 }
 
 // Read the manifest and pick the cover URLs for the newest
-// COVER_PREFETCH_COUNT games (which is what index.html shows
-// above the fold in its default "newest first" sort). The SW
-// fetches manifest.json itself rather than waiting for the page to
-// hand it over, because install runs in a worker context with no
-// access to the document.
+// COVER_PREFETCH_COUNT games. The SW fetches manifest.json itself rather
+// than waiting for the page to hand it over, because install runs in a
+// worker context with no access to the document.
 async function newestCoverUrls() {
   try {
     const response = await fetch(MANIFEST_URL, { cache: 'reload' });
@@ -108,10 +104,9 @@ self.addEventListener('install', (event) => {
     const cache = await caches.open(SHELL_CACHE);
     // Use individual put() calls so one missing asset cannot fail the install.
     await Promise.all(shellAssets.map((url) => cachePut(cache, url)));
-    // Pre-cache the newest catalog covers so returning visitors get
-    // instant above-the-fold paint with zero cover network fetches.
+    // Pre-cache a small newest-cover set for offline/install polish.
     // Failure is non-fatal — the runtime stale-while-revalidate cache
-    // picks them up on first paint as a fallback.
+    // picks covers up on first paint as a fallback.
     const coverUrls = await newestCoverUrls();
     await Promise.all(coverUrls.map((url) => cachePut(cache, url)));
     await self.skipWaiting();
