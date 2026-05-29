@@ -1647,6 +1647,25 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "slipsort": {
+      name: "slide tiles into the gap",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(120);
+          };
+          press("ArrowRight", "ArrowRight");
+          press("ArrowDown", "ArrowDown");
+          press("ArrowLeft", "ArrowLeft");
+          press("ArrowUp", "ArrowUp");
+          window.advanceTime(260);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

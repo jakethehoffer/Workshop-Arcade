@@ -22,6 +22,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Slipsort sliding-puzzle addition (pass 86)
+
+Captured 2026-05-29 against a disposable local static server after adding **Slipsort**, a deterministic sliding 15-puzzle — the first slide-to-order mechanic in the catalog (distinct from 2048's merge). Three levels (3×3 → 5×5) are each scrambled from the solved board with legal gap-slides using a fixed per-level seed, which guarantees solvability and reproducibility. Keyboard gap-moves + tap-a-tile row/column slides, tiles tint teal as they reach home, per-size best-move tracking, lifetime solved count, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 68 manifest games, 69 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 60 ms | 44 ms | 🟢 44 ms | 🟢 165.9 KB | 10 | 0 |
+| Slipsort | 🟢 64 ms | 44 ms | 🟢 44 ms | 🟢 21.1 KB | 2 | 0 |
+| Lexica | 🟢 36 ms | 33 ms | 🟢 34 ms | 🟢 151.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 464 ms | 11 ms | 🟢 13 ms | 🟢 165.0 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 57 ms | 🟢 57 ms | 🟢 103.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 120 ms | 119 ms | 🟢 119 ms | 🟢 109.7 KB | 2 | 0 |
+
+Slipsort lands at 21.1 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog stays well within its 200 KB / 18 request budget at 165.9 KB / 10 requests, with the lazy cover pipeline keeping first-paint requests bounded at 68 games. Every named exception remains below its CI budget, no console/page errors appeared across the 69 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Eclipse Grid lights-out addition (pass 85)
 
 Captured 2026-05-28 against a disposable local static server after adding **Eclipse Grid**, a deterministic Lights Out puzzle — the first toggle-propagation mechanic in the catalog. Pressing a tile flips it and its four orthogonal neighbors; the goal is to darken every tile. Six levels (3×3 → 5×5) are each defined as a scramble applied to an all-off board, which guarantees solvability and yields a known par. Keyboard cursor + tap placement, per-level best-move tracking, lifetime solved count, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 67 manifest games, 68 pages total.
