@@ -22,6 +22,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Fourfall connect-four addition (pass 84)
+
+Captured 2026-05-28 against a disposable local static server after adding **Fourfall**, a deterministic Connect Four game against a depth-limited alpha-beta minimax CPU. It fills the last obvious abstract-classic gap alongside Chess, Checkers, and Reversi with a 7×6 gravity drop board, keyboard column cursor + number keys + tap-a-column placement, a translucent drop preview, winning-line highlight, persisted win/streak/best stats, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 66 manifest games, 67 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 220 ms | 190 ms | 🟢 194 ms | 🟢 159.4 KB | 10 | 0 |
+| Fourfall | 🟢 44 ms | 18 ms | 🟢 18 ms | 🟢 21.9 KB | 2 | 0 |
+| Lexica | 🟢 36 ms | 36 ms | 🟢 37 ms | 🟢 151.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 460 ms | 14 ms | 🟢 16 ms | 🟢 165.0 KB | 2 | 0 |
+| Arcade Jump | 🟢 108 ms | 76 ms | 🟢 76 ms | 🟢 103.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 196 ms | 202 ms | 🟢 202 ms | 🟢 109.7 KB | 2 | 0 |
+
+Fourfall lands at 21.9 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog stays well within its 200 KB / 18 request budget at 159.4 KB / 10 requests, with the lazy cover pipeline keeping first-paint requests bounded at 66 games. Every named exception remains below its CI budget, no console/page errors appeared across the 67 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Flux Reversi board-game addition (pass 83)
 
 Captured 2026-05-28 against a disposable local static server after adding **Flux Reversi**, a deterministic Reversi/Othello game played against a positional-weight CPU. It fills the Board/Strategy gap alongside Chess and Checkers with the standard 8×8 disc-flip ruleset, a keyboard cursor plus tap placement, legal-move hints, automatic pass handling, persisted best margin, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 65 manifest games, 66 pages total.
