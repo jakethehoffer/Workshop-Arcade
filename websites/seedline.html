@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Seedline - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Sow seeds around the pits, capture, and bank the most before the board empties." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/seedline.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Seedline — Workshop Arcade" />
+<meta property="og:description" content="Sow seeds around the pits, capture, and bank the most before the board empties." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/seedline.html" />
+<meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/seedline.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Seedline — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Seedline — Workshop Arcade" />
+<meta name="twitter:description" content="Sow seeds around the pits, capture, and bank the most before the board empties." />
+<meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og/seedline.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Seedline",
+  "description": "Sow seeds around the pits, capture, and bank the most before the board empties.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/seedline.html",
+  "image": "https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/seedline.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Board",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eaf6ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 440px at 8% -8%,rgba(45,212,191,.17),transparent 62%),radial-gradient(680px 420px at 96% 0%,rgba(99,102,241,.16),transparent 64%),linear-gradient(180deg,#071018,#050713 88%)}
+button{font:inherit}
+.app{width:min(980px,100%);display:grid;grid-template-rows:auto auto auto auto auto auto;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
+.help{max-width:560px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
+.touch{display:grid;grid-template-columns:repeat(6,minmax(0,60px));justify-content:center;gap:6px}.touch button{min-height:44px;padding:8px}
+.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.touch button{font-size:12px;min-height:42px;padding:6px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Seedline mancala game">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Seedline</span></div>
+    <div class="help">Arrow keys or 1-6 pick one of your pits (bottom row). Enter, or tap a pit, sows its seeds counterclockwise. Land your last seed in your store for an extra turn; in an empty pit of yours to capture across. N starts a new game.</div>
+  </header>
+  <section class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Turn</span><span class="value" id="turnValue">You</span></div>
+    <div class="pill"><span class="label">You</span><span class="value" id="youValue">0</span></div>
+    <div class="pill"><span class="label">CPU</span><span class="value" id="cpuValue">0</span></div>
+    <div class="pill"><span class="label">Wins</span><span class="value" id="winsValue">0</span></div>
+    <div class="pill"><span class="label">Streak</span><span class="value" id="streakValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Seedline mancala board. Sow seeds from your bottom-row pits counterclockwise into your store on the right."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Your move — pick a pit and sow its seeds.</div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Seedline ready.</div>
+  <section class="bar" aria-label="Actions">
+    <button class="btn primary" id="newBtn" type="button">New Game</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+  </section>
+  <section class="touch" aria-label="Touch controls — your pits 1 to 6">
+    <button type="button" data-pit="0">1</button><button type="button" data-pit="1">2</button><button type="button" data-pit="2">3</button><button type="button" data-pit="3">4</button><button type="button" data-pit="4">5</button><button type="button" data-pit="5">6</button>
+  </section>
+</main>
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const STATS_KEY="seedline.stats.v1",SOUND_KEY="seedline.sound.v1",AI_DELAY=520,DEPTH=7;
+const P_STORE=6,C_STORE=13,P_PITS=[0,1,2,3,4,5],C_PITS=[7,8,9,10,11,12];
+const $=id=>document.getElementById(id);
+const els={turn:$("turnValue"),you:$("youValue"),cpu:$("cpuValue"),wins:$("winsValue"),streak:$("streakValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn")};
+const stats=readStats();
+const state={board:[],turn:1,mode:"playing",result:null,cursor:2,lastMove:null,lastCapture:0,cpuThinking:false,aiTimer:0,wins:stats.wins,streak:stats.streak,best:stats.best,sound:readSound(),feedback:"Your move — pick a pit and sow its seeds.",flash:0,time:0};
+let audio=null;
+
+function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
+function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{wins:v.wins|0,streak:v.streak|0,best:v.best|0}}catch(_){}return{wins:0,streak:0,best:0}}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({wins:state.wins,streak:state.streak,best:state.best}))}catch(_){}}
+function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
+function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
+function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={sow:300,store:430,capture:560,again:500,cpu:230,win:660,loss:120,draw:200,bad:150}[kind]||260;o.type=kind==="loss"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
+
+function newBoard(){const b=new Array(14).fill(0);for(const p of P_PITS)b[p]=4;for(const p of C_PITS)b[p]=4;return b}
+function sideEmpty(b,player){const pits=player===1?P_PITS:C_PITS;return pits.every(p=>b[p]===0)}
+function applyEnd(b){b=b.slice();if(sideEmpty(b,1)){for(const p of C_PITS){b[C_STORE]+=b[p];b[p]=0}}else if(sideEmpty(b,2)){for(const p of P_PITS){b[P_STORE]+=b[p];b[p]=0}}return b}
+function sow(b,pit,player){b=b.slice();let seeds=b[pit];b[pit]=0;let idx=pit;const own=player===1?P_STORE:C_STORE,opp=player===1?C_STORE:P_STORE;
+  while(seeds>0){idx=(idx+1)%14;if(idx===opp)continue;b[idx]++;seeds--}
+  let again=false,captured=0;const ownPits=player===1?P_PITS:C_PITS;
+  if(idx===own)again=true;
+  else if(ownPits.includes(idx)&&b[idx]===1){const across=12-idx;if(b[across]>0){captured=b[across]+1;b[own]+=captured;b[across]=0;b[idx]=0}}
+  return{board:b,again,captured,last:idx,ended:sideEmpty(b,1)||sideEmpty(b,2)}}
+function evalAI(b){return (b[C_STORE]-b[P_STORE])*2+(C_PITS.reduce((s,p)=>s+b[p],0)-P_PITS.reduce((s,p)=>s+b[p],0))*0.08}
+function minimax(b,depth,player,alpha,beta){if(sideEmpty(b,1)||sideEmpty(b,2))return evalAI(applyEnd(b));if(depth<=0)return evalAI(b);
+  const pits=(player===2?C_PITS:P_PITS).filter(p=>b[p]>0);if(!pits.length)return evalAI(applyEnd(b));
+  if(player===2){let best=-Infinity;for(const p of pits){const r=sow(b,p,2);const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,depth-1,2,alpha,beta):minimax(r.board,depth-1,1,alpha,beta));if(v>best)best=v;if(best>alpha)alpha=best;if(alpha>=beta)break}return best}
+  let best=Infinity;for(const p of pits){const r=sow(b,p,1);const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,depth-1,1,alpha,beta):minimax(r.board,depth-1,2,alpha,beta));if(v<best)best=v;if(best<beta)beta=best;if(alpha>=beta)break}return best}
+function bestCpuPit(){const pits=C_PITS.filter(p=>state.board[p]>0);let best=pits[0],bv=-Infinity;for(const p of pits){const r=sow(state.board,p,2);const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,DEPTH-1,2,-Infinity,Infinity):minimax(r.board,DEPTH-1,1,-Infinity,Infinity));if(v>bv){bv=v;best=p}}return best}
+
+function pitLabel(i){return i<=5?"pit "+(i+1):"a CPU pit"}
+function applyResult(){state.board=applyEnd(state.board);state.mode="over";const you=state.board[P_STORE],cpu=state.board[C_STORE];
+  if(you>cpu){state.result="win";state.wins++;state.streak++;if(state.streak>state.best)state.best=state.streak;say("You win "+you+"–"+cpu+"! Press New Game.");tone("win");vibe([26,26,40])}
+  else if(you<cpu){state.result="loss";state.streak=0;say("CPU wins "+cpu+"–"+you+". Press New Game.");tone("loss");vibe(50)}
+  else{state.result="draw";state.streak=0;say("Draw "+you+"–"+cpu+". Press New Game.");tone("draw");vibe(20)}
+  saveStats();update();draw()}
+
+function playerSow(pit){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking)return;
+  if(!P_PITS.includes(pit)||state.board[pit]===0){say("Pick one of your non-empty pits (bottom row).");tone("bad");vibe(4);draw();return}
+  state.cursor=pit;const r=sow(state.board,pit,1);state.board=r.board;state.lastMove={pit,by:1};state.lastCapture=r.captured;state.flash=1;
+  if(r.captured>0){tone("capture");vibe(16);say("Captured "+r.captured+"! You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".")}
+  else if(r.again){tone("again");vibe([10,10]);say("Last seed in your store — extra turn!")}
+  else{tone("sow");vibe(8);say("Sowed "+pitLabel(pit)+".")}
+  if(r.ended){applyResult();return}
+  if(r.again){update();draw();return}
+  state.turn=2;scheduleCpu()}
+
+function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;update();draw()}
+function doCpu(){if(state.mode!=="playing")return;const pit=bestCpuPit();const r=sow(state.board,pit,2);state.board=r.board;state.lastMove={pit,by:2};state.lastCapture=r.captured;state.flash=1;
+  if(r.captured>0){tone("capture");say("CPU captured "+r.captured+". You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".")}
+  else{tone("cpu");say("CPU sowed. You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".")}
+  vibe(8);
+  if(r.ended){applyResult();return}
+  if(r.again){scheduleCpu();return}
+  state.turn=1;update();draw()}
+
+function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;state.lastMove=null;state.lastCapture=0;state.cpuThinking=false;state.aiTimer=0;state.cursor=2;say("New game — sow seeds counterclockwise and bank the most in your store.");update();draw()}
+function moveCursor(d){let c=state.cursor;for(let i=0;i<6;i++){c=Math.max(0,Math.min(5,c+d));if(state.board[c]>0)break;if(c===0||c===5)break}state.cursor=Math.max(0,Math.min(5,c));draw()}
+
+function update(){els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));els.you.textContent=String(state.board[P_STORE]||0);els.cpu.textContent=String(state.board[C_STORE]||0);els.wins.textContent=String(state.wins);els.streak.textContent=String(state.streak);els.best.textContent=String(state.best);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+
+// Layout: left store = CPU(13), right store = You(6). Bottom row pits 0..5 left->right,
+// top row pits 12..7 left->right (so the loop reads counterclockwise).
+function pitX(c){return 196+c*114}
+function pitGeom(){return{r:46,by:352,ty:172,storeW:74,storeH:300,lx:78,rx:882,sy:240}}
+function pitCenter(i){const g=pitGeom();if(i>=0&&i<=5)return{x:pitX(i),y:g.by};if(i>=7&&i<=12)return{x:pitX(12-i),y:g.ty};if(i===P_STORE)return{x:g.rx,y:g.sy+g.storeH/2-30};if(i===C_STORE)return{x:g.lx,y:g.sy+g.storeH/2-30};return{x:0,y:0}}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function drawPit(x,y,r,count,opts){opts=opts||{};ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);const gr=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.2,x,y,r);gr.addColorStop(0,opts.fill0||"#13314e");gr.addColorStop(1,opts.fill1||"#0a1726");ctx.fillStyle=gr;ctx.fill();ctx.lineWidth=opts.sel?4:2;ctx.strokeStyle=opts.sel?"#f8fafc":(opts.mine?"rgba(94,234,212,.45)":"rgba(148,163,184,.34)");ctx.stroke();
+  // seed dots
+  const dots=Math.min(count,12);for(let i=0;i<dots;i++){const a=i/Math.max(1,dots)*Math.PI*2,rr=r*.5;ctx.fillStyle=opts.seed||"#7ef9ff";ctx.beginPath();ctx.arc(x+Math.cos(a)*rr,y+Math.sin(a)*rr,r*.085,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle="#f3fbff";ctx.font="950 "+Math.round(r*.62)+"px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(count),x,y+1);ctx.textAlign="left";ctx.textBaseline="alphabetic"}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+  const g=pitGeom();
+  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Seedline",30,36);
+  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Your pits are the bottom row; your store is on the right. Sow counterclockwise.",30,54);
+  // board slab
+  ctx.fillStyle="#0c2233";roundRect(40,90,880,360,26,true,false);
+  // stores
+  const youTurnHi=state.mode==="playing"&&state.turn===1&&!state.cpuThinking;
+  roundStore(g.rx-g.storeW/2,g.sy,g.storeW,g.storeH,state.board[P_STORE],"YOU",youTurnHi,true);
+  roundStore(g.lx-g.storeW/2,g.sy,g.storeW,g.storeH,state.board[C_STORE],"CPU",!youTurnHi&&state.mode==="playing",false);
+  // pits
+  for(let i=0;i<=5;i++){const c=pitCenter(i),sel=youTurnHi&&state.cursor===i;drawPit(c.x,c.y,g.r,state.board[i],{mine:true,sel,seed:"#7ef9ff",fill0:"#15384f",fill1:"#0a1a2c"})}
+  for(let i=7;i<=12;i++){const c=pitCenter(i);drawPit(c.x,c.y,g.r,state.board[i],{mine:false,seed:"#fbbf66",fill0:"#2a2438",fill1:"#161224"})}
+  // last move marker
+  if(state.lastMove){const c=pitCenter(state.lastMove.pit);ctx.strokeStyle="#facc15";ctx.lineWidth=3;ctx.beginPath();ctx.arc(c.x,c.y,g.r+5,0,Math.PI*2);ctx.stroke()}
+  if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";ctx.font="950 46px system-ui";ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
+function roundStore(x,y,w,h,count,label,hi,mine){const gr=ctx.createLinearGradient(x,y,x,y+h);gr.addColorStop(0,mine?"#15384f":"#2a2438");gr.addColorStop(1,mine?"#0a1a2c":"#161224");ctx.fillStyle=gr;roundRect(x,y,w,h,18,true,false);ctx.lineWidth=hi?4:2;ctx.strokeStyle=hi?"#5eead4":(mine?"rgba(94,234,212,.4)":"rgba(148,163,184,.34)");roundRect(x+.5,y+.5,w-1,h-1,18,false,true);
+  ctx.fillStyle=mine?"#5eead4":"#cbd5e1";ctx.font="900 12px system-ui";ctx.textAlign="center";ctx.fillText(label,x+w/2,y+24);
+  const dots=Math.min(count,16);for(let i=0;i<dots;i++){const col=i%3,row=Math.floor(i/3);ctx.fillStyle=mine?"#7ef9ff":"#fbbf66";ctx.beginPath();ctx.arc(x+w/2+(col-1)*16,y+58+row*16,5,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle="#f3fbff";ctx.font="950 30px system-ui";ctx.fillText(String(count),x+w/2,y+h-20);ctx.textAlign="left";ctx.textBaseline="alphabetic"}
+
+function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}draw()}
+window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,result:state.result,turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),cpuThinking:state.cpuThinking,you:state.board[P_STORE]||0,cpu:state.board[C_STORE]||0,seeds:state.board.reduce((s,v)=>s+v,0),cursor:state.cursor,lastMove:state.lastMove,lastCapture:state.lastCapture,wins:state.wins,streak:state.streak,best:state.best,sound:state.sound,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"14-pit board: 0-5 your pits, 6 your store, 7-12 CPU pits, 13 CPU store; sow counterclockwise"})};
+
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+  if(k==="ArrowLeft"||k==="a")moveCursor(-1);else if(k==="ArrowRight"||k==="d")moveCursor(1);else if(k==="Enter"||k===" ")playerSow(state.cursor);else if(k==="n"||k==="r")reset();else if(k>="1"&&k<="6")playerSow(Number(k)-1)});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=pitGeom();for(let i=0;i<=5;i++){const c=pitCenter(i);if((px-c.x)**2+(py-c.y)**2<=(g.r+6)**2){playerSow(i);return}}});
+els.neww.addEventListener("click",()=>{reset();tone("sow")});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("sow")});
+document.querySelectorAll("[data-pit]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();playerSow(Number(btn.dataset.pit))}));
+reset();
+let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

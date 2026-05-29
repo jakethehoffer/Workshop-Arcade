@@ -1666,6 +1666,18 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "seedline": {
+      name: "sow a pit and let the CPU reply",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "1", code: "Digit1", bubbles: true, cancelable: true }));
+          document.dispatchEvent(new KeyboardEvent("keyup", { key: "1", code: "Digit1", bubbles: true, cancelable: true }));
+          window.advanceTime(900);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

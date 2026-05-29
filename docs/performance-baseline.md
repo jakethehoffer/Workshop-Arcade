@@ -22,6 +22,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Seedline mancala addition (pass 87)
+
+Captured 2026-05-29 against a disposable local static server after adding **Seedline**, a deterministic Mancala (Kalah 6,4) against an alpha-beta minimax CPU — the catalog's first sowing-and-capturing mechanic. Sow seeds counterclockwise, earn an extra turn by landing your last seed in your store, capture across by ending in an empty pit of your own, and bank the most before a side empties. Keyboard pit cursor + number keys + tap-a-pit, scheduled AI that chains its extra turns, persisted win/streak/best stats, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 69 manifest games, 70 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 1464 ms | 1521 ms | 🟢 1525 ms | 🟢 167.7 KB | 10 | 0 |
+| Seedline | 🟢 44 ms | 30 ms | 🟢 30 ms | 🟢 23.0 KB | 2 | 0 |
+| Lexica | 🟢 84 ms | 29 ms | 🟢 31 ms | 🟢 151.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 508 ms | 18 ms | 🟢 22 ms | 🟢 165.0 KB | 2 | 0 |
+| Arcade Jump | 🟢 116 ms | 78 ms | 🟢 78 ms | 🟢 103.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 128 ms | 130 ms | 🟢 130 ms | 🟢 109.7 KB | 2 | 0 |
+
+Seedline lands at 23.0 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog stays well within its 200 KB / 18 request budget at 167.7 KB / 10 requests (the elevated Catalog FCP is a first-page cold-cache artifact — informational only, not part of the strict gate). Every named exception remains below its CI budget, no console/page errors appeared across the 70 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Slipsort sliding-puzzle addition (pass 86)
 
 Captured 2026-05-29 against a disposable local static server after adding **Slipsort**, a deterministic sliding 15-puzzle — the first slide-to-order mechanic in the catalog (distinct from 2048's merge). Three levels (3×3 → 5×5) are each scrambled from the solved board with legal gap-slides using a fixed per-level seed, which guarantees solvability and reproducibility. Keyboard gap-moves + tap-a-tile row/column slides, tiles tint teal as they reach home, per-size best-move tracking, lifetime solved count, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 68 manifest games, 69 pages total.
