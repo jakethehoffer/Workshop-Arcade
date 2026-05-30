@@ -422,8 +422,11 @@ async function checkSecuritySurfaces() {
   if (!/WORKSHOP_ARCADE_REPO:\s*\$\{\{\s*github\.repository\s*\}\}/.test(src)) {
     fail(`${path}: must pass WORKSHOP_ARCADE_REPO from \${{ github.repository }} to the checker`);
   }
-  if (!/SECURITY_SURFACES_TOKEN\s*!=\s*''/.test(src) || !/SECURITY_SURFACES_TOKEN\s*==\s*''/.test(src)) {
-    fail(`${path}: must branch on SECURITY_SURFACES_TOKEN presence so a maintainer token makes the workflow strict and default-token limits are explicit`);
+  if (!/HAS_SECURITY_SURFACES_TOKEN:\s*\$\{\{\s*secrets\.SECURITY_SURFACES_TOKEN\s*!=\s*''\s*\}\}/.test(src)) {
+    fail(`${path}: must derive HAS_SECURITY_SURFACES_TOKEN from SECURITY_SURFACES_TOKEN presence because secrets cannot be used directly in step if expressions`);
+  }
+  if (!/HAS_SECURITY_SURFACES_TOKEN\s*==\s*'true'/.test(src) || !/HAS_SECURITY_SURFACES_TOKEN\s*!=\s*'true'/.test(src)) {
+    fail(`${path}: must branch on HAS_SECURITY_SURFACES_TOKEN so a maintainer token makes the workflow strict and default-token limits are explicit`);
   }
   if (!/continue-on-error:\s*true\b/.test(src) || !/steps\.github-token-probe\.outcome\s*!=\s*'success'/.test(src)) {
     fail(`${path}: must allow the default GITHUB_TOKEN probe to record API limitations without making main red when no maintainer token is configured`);
