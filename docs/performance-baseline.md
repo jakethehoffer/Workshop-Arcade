@@ -22,6 +22,20 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Page-weight headroom refresh (pass 90)
+
+Captured 2026-05-30 against a disposable local static server after mechanically compacting inline CSS presentation whitespace in **Idle Tycoon** and **Arcade Jump**. No gameplay code, storage keys, manifest entries, generated surfaces, service-worker behavior, or capture recipes changed. The strict audit covered the catalog plus 71 manifest games, 72 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 88 ms | 66 ms | 🟢 67 ms | 🟢 170.2 KB | 10 | 0 |
+| Lexica | 🟢 60 ms | 19 ms | 🟢 20 ms | 🟢 152.6 KB | 4 | 0 |
+| Idle Tycoon | 🟢 464 ms | 11 ms | 🟢 13 ms | 🟢 153.5 KB | 2 | 0 |
+| Arcade Jump | 🟢 96 ms | 64 ms | 🟢 64 ms | 🟢 101.8 KB | 2 | 0 |
+| Brick Breaker | 🟢 96 ms | 79 ms | 🟢 79 ms | 🟢 109.8 KB | 2 | 0 |
+
+The catalog stays within its 200 KB / 18 request budget at 170.2 KB / 10 requests. Idle Tycoon drops from 165.0 KB to 153.5 KB under its 170 KB / 4 request exception, and Arcade Jump drops from 103.7 KB to 101.8 KB under its 110 KB / 4 request exception. Lexica and Brick Breaker remain below their named budgets, no console/page errors appeared across the 72 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Last Light peg-solitaire addition (pass 89)
 
 Captured 2026-05-29 against a disposable local static server after adding **Last Light**, a Peg Solitaire on the iconic 33-hole English cross — the catalog's first jump-and-remove mechanic. Jump a glowing peg over a neighbor into the empty hole beyond (the jumped peg goes dark); clear down to one last light, ideally dead center. Ships with Undo (essential for the genre), Reset, fewest-pegs/solves/perfect tracking, keyboard select-then-jump + tap, colorblind-safe lit/dark contrast, lazy oscillator SFX, and `render_game_to_text()` / `advanceTime(ms)` diagnostics. The strict audit covered the catalog plus 71 manifest games, 72 pages total.

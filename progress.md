@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-05-30 Codex page-weight headroom refresh
+
+- Mechanically compacted inline CSS presentation whitespace in `websites/idle-tycoon.html` and `websites/doodle-jump.html` without changing gameplay code, storage keys, manifest entries, generated surfaces, service-worker behavior, or capture recipes.
+- Reclaimed measured page-weight headroom: Idle Tycoon moved from 165.0 KB to 153.5 KB under its 170 KB exception, and Arcade Jump moved from 103.7 KB to 101.8 KB under its 110 KB exception.
+- Verification passed so far: `npm run test:page-weight`, `npm run test:game-contract`, `npm run test:a11y`, `npm run test:a11y-polish`, `npm run test:games`, `npm run capture:games:ci` with max score 0, and `npm run audit:perf:local`.
+
 ## 2026-05-27 Codex pass 92
 
 - Implemented on `codex/live-shell-evidence-mobile-polish-2026-05-27`: coordinator-owned shell/live evidence broadening plus isolated Bloomkeeper Grid, Cipher Rooms, and Rail Yard Relay polish lanes.
