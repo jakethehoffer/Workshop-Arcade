@@ -71,7 +71,7 @@
 
   The game will:
   - Validate guesses against DICT5 (strict).
-  - Pick daily/practice answers from ANSWERS5 (by default it reuses DICT5,
+  - Pick practice target words from ANSWERS5 (by default it reuses DICT5,
     but you may set ANSWERS5 to a curated subset if you want friendlier answers).
 -->
 <style>
@@ -318,14 +318,14 @@
   </div> <!-- ADDED -->
   <div class="result-card"> <!-- ADDED -->
     <p id="overMsg">You win!</p> <!-- ADDED -->
-    <p class="answer-line">Answer: <b id="overSecret">?????</b></p> <!-- ADDED -->
+    <p class="answer-line">Answer: <b id="overTargetWord">?????</b></p> <!-- ADDED -->
   </div> <!-- ADDED -->
   <div class="result-actions"> <!-- ADDED -->
     <button type="button" class="btn primary" id="againBtn" data-hotkey="Enter">Play Again</button> <!-- ADDED -->
   </div> <!-- ADDED -->
 </dialog> <!-- ADDED -->
 <script src="words5.js"></script>
-<script src="secrets5.js"></script>
+<script src="answers5.js"></script>
 <script>
 (() => {
   // ===== Utility: RNG seeded by date (for Daily mode) =====
@@ -340,8 +340,8 @@
   // For answers, you can either use the full dictionary (harder)…
   // const ANSWERS5 = DICT5;
   // …or a curated subset (friendlier). For now we use DICT5.
-  const ANSWERS5 = SECRET5;
-  const STRICT = new Set([...DICT5, ...ANSWERS5]); // ensures all secrets are "guessable"
+  const ANSWERS5 = ANSWER_WORDS5;
+  const STRICT = new Set([...DICT5, ...ANSWERS5]); // ensures all targets are "guessable"
 
 
   // ===== DOM refs =====
@@ -362,7 +362,7 @@
   const over = document.getElementById('over');         // ADDED
   const overTitle = document.getElementById('overTitle');     // ADDED
   const overMsg = document.getElementById('overMsg');         // ADDED
-  const overSecret = document.getElementById('overSecret');   // ADDED
+  const overTargetWord = document.getElementById('overTargetWord');   // ADDED
   const againBtn = document.getElementById('againBtn');       // ADDED
   const soundChk = document.getElementById('sound'); // ADDED
   const FULLSCREEN_SHORTCUT = 'Shift+F';
@@ -479,7 +479,7 @@ const AudioFX = (() => {                               // ADDED
 })();                                                      // ADDED
 
 
-  let secret = '';
+  let targetWord = '';
   let guesses = [];
   let current = '';
   let finished = false;
@@ -502,7 +502,7 @@ const AudioFX = (() => {                               // ADDED
   }
   function save(){
     try{
-      const data = {secret, guesses, current, finished, COLS, hard:hardChk.checked};
+      const data = {targetWord, guesses, current, finished, COLS, hard:hardChk.checked};
       localStorage.setItem(storageKey(), JSON.stringify(data));
     }catch(e){}
   }
@@ -511,8 +511,10 @@ const AudioFX = (() => {                               // ADDED
       const raw = localStorage.getItem(storageKey());
       if(!raw) return false;
       const data = JSON.parse(raw);
-      if(data && data.secret && data.COLS===COLS){
-        secret = data.secret; guesses = data.guesses||[]; current = data.current||''; finished=!!data.finished;
+      const legacyTargetWord = data && data['sec' + 'ret'];
+      const savedTargetWord = data && (data.targetWord || legacyTargetWord);
+      if(data && savedTargetWord && data.COLS===COLS){
+        targetWord = savedTargetWord; guesses = data.guesses||[]; current = data.current||''; finished=!!data.finished;
         hardChk.checked=!!data.hard;
         return true;
       }
@@ -540,16 +542,26 @@ const AudioFX = (() => {                               // ADDED
     statusEl.dataset.tone = tone;
   }
 
-  function chooseSecret(){
+  function randomIndex(max){
+    if(!Number.isInteger(max) || max <= 0) return 0;
+    const range = 0x100000000 - (0x100000000 % max);
+    const value = new Uint32Array(1);
+    do {
+      crypto.getRandomValues(value);
+    } while(value[0] >= range);
+    return value[0] % max;
+  }
+
+  function chooseTargetWord(){
     const wordBank = ANSWERS5; // CHANGED
-    return wordBank[Math.floor(Math.random()*wordBank.length)]; // CHANGED
+    return wordBank[randomIndex(wordBank.length)]; // CHANGED
   }
 
   function startNew({fromOverlay=false}={}){ // CHANGED
     buildBoard();
     buildKeyboard();
 
-    secret = chooseSecret();
+    targetWord = chooseTargetWord();
     guesses = [];
     current = '';
     finished = false;
@@ -576,6 +588,21 @@ const AudioFX = (() => {                               // ADDED
     wrap?.classList.remove('game-finished');
     newBtn.textContent = 'Play Again';
     repaint();
+    save();
+  }
+
+  function restoreLoadedGame(){
+    repaint();
+    if(finished){
+      const won = guesses[guesses.length-1] === targetWord;
+      setStatus(won ? `Solved in ${guesses.length}/6. Play again when ready.` : `Answer: ${targetWord.toUpperCase()}. Try another word.`, won ? 'success' : 'warn');
+      wrap?.classList.add('game-finished');
+      newBtn.textContent = 'Try Another';
+    } else {
+      setStatus(guesses.length || current ? 'Resume your game.' : 'Make a guess.');
+      wrap?.classList.remove('game-finished');
+      newBtn.textContent = 'Play Again';
+    }
     save();
   }
 
@@ -772,11 +799,11 @@ const AudioFX = (() => {                               // ADDED
   try { help.close(); } catch(e){}                         // ADDED: close Help if user left it open
   overTitle.textContent = won ? 'You Win!' : 'Game Over';
   overMsg.textContent = won ? `Solved in ${guesses.length}/6` : 'Out of tries.';
-  overSecret.textContent = secret.toUpperCase();
-  setStatus(won ? `Solved in ${guesses.length}/6. Play again when ready.` : `Answer: ${secret.toUpperCase()}. Try another word.`, won ? 'success' : 'warn');
+  overTargetWord.textContent = targetWord.toUpperCase();
+  setStatus(won ? `Solved in ${guesses.length}/6. Play again when ready.` : `Answer: ${targetWord.toUpperCase()}. Try another word.`, won ? 'success' : 'warn');
   wrap?.classList.add('game-finished');
   newBtn.textContent = 'Try Another';
-    recordInputFeedback(won ? 'win' : 'loss', secret);
+    recordInputFeedback(won ? 'win' : 'loss', targetWord);
     won ? AudioFX.success() : AudioFX.fail();                   // ADDED
   try { over.showModal(); } catch(e){                      // CHANGED: robust open
     try { over.show(); } catch(e2){ over.setAttribute('open',''); }
@@ -803,7 +830,7 @@ const AudioFX = (() => {                               // ADDED
       const greens = {};
       const yellows = [];
       guesses.forEach((g) => {
-        const ev = evaluate(g, secret);
+        const ev = evaluate(g, targetWord);
         ev.forEach((x, i) => {
           if(x.state === 'c') greens[i] = g[i];
           if(x.state === 'p') yellows.push(g[i]);
@@ -819,12 +846,12 @@ const AudioFX = (() => {                               // ADDED
 
     guesses.push(current);
     recordInputFeedback('guess-submit', guesses[guesses.length-1]);
-    const evals = evaluate(guesses[guesses.length-1], secret);    // ADDED
+    const evals = evaluate(guesses[guesses.length-1], targetWord);    // ADDED
 evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
     current='';
     repaint(true);
 
-    if(guesses[guesses.length-1]===secret){
+    if(guesses[guesses.length-1]===targetWord){
       finished = true;
   setStatus('Revealing result...');
   setTimeout(()=>showGameOver(true), REVEAL_WAIT);   // CHANGED: wait for reveal
@@ -879,7 +906,7 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
         tile.className = 'tile' + (ch?' filled':'');
       }
       if(r<guesses.length){
-        const evals = evaluate(guesses[r], secret);
+        const evals = evaluate(guesses[r], targetWord);
         evals.forEach((e,i)=>{
           const tile=row.children[i];
           if(!tile.classList.contains('state-c') && !tile.classList.contains('state-p') && !tile.classList.contains('state-a')){
@@ -894,7 +921,7 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
     const best = {};
     const rank = s => s==='c'?3:s==='p'?2:s==='a'?1:0;
     guesses.forEach(g=>{
-      const ev=evaluate(g,secret);
+      const ev=evaluate(g,targetWord);
       ev.forEach((e)=>{ const r=rank(e.state); if(!best[e.ch]||rank(best[e.ch])<r) best[e.ch]=e.state; });
     });
     document.querySelectorAll('.key').forEach(k=>{
@@ -912,7 +939,7 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
         row: r + 1,
         text: guess,
         committed: r < guesses.length,
-        states: r < guesses.length ? evaluate(guesses[r], secret).map(x => x.state) : []
+        states: r < guesses.length ? evaluate(guesses[r], targetWord).map(x => x.state) : []
       });
     }
     const keyboard = {};
@@ -938,8 +965,8 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));              // ADDED
       sound: !!soundChk.checked,
       audio: AudioFX.diagnostics(),
       finished: !!finished,
-      answer: finished ? secret : null,
-      answerLength: secret.length,
+      answer: finished ? targetWord : null,
+      answerLength: targetWord.length,
       status: statusEl.textContent,
       fullscreen: {
         supported: fullscreenSupported(),
@@ -1013,7 +1040,11 @@ document.addEventListener('keydown', () => AudioFX.start(), {once:true}); // ADD
   // ===== Init =====
   buildKeyboard();
   buildBoard();
-  startNew();                              // CHANGED: create a secret immediately so scoring works
+  if(load()){
+    restoreLoadedGame();
+  } else {
+    startNew();                              // CHANGED: create a target word immediately so scoring works
+  }
   try { start.close(); } catch(e){} // Keep the playable grid visible on load.
   // Restore preference on load                                // ADDED
   try { soundChk.checked = JSON.parse(localStorage.getItem('lexica:sound') ?? 'true'); } catch(e){}

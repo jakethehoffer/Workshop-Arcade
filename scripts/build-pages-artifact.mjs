@@ -131,24 +131,20 @@ async function pathExists(absolutePath) {
   }
 }
 
-async function requireSourcePath(relativePath) {
-  const absolutePath = join(repoRoot, relativePath);
-  if (!(await pathExists(absolutePath))) {
-    throw new Error(`Required public path is missing from repo: ${relativePath}`);
-  }
-}
-
 async function assembleArtifact(outDir) {
   await removeManagedOutput(outDir);
   await mkdir(outDir, { recursive: true });
 
   for (const publicPath of PUBLIC_PATHS) {
-    await requireSourcePath(publicPath);
-    await cp(join(repoRoot, publicPath), join(outDir, publicPath), {
-      recursive: true,
-      force: true,
-      errorOnExist: false
-    });
+    try {
+      await cp(join(repoRoot, publicPath), join(outDir, publicPath), {
+        recursive: true,
+        force: true,
+        errorOnExist: false
+      });
+    } catch (error) {
+      throw new Error(`Required public path is missing or unreadable: ${publicPath} (${error.message})`);
+    }
   }
 
   await writeFile(join(outDir, '.nojekyll'), '');

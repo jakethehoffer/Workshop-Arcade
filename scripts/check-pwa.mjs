@@ -181,6 +181,9 @@ async function checkServiceWorker() {
   if (!/putRuntime\(request,\s*fresh\)/.test(src) || !/putRuntime\(request,\s*response\)/.test(src)) {
     fail(`${swPath}: navigation and static fetch handlers must write through putRuntime()`);
   }
+  if (/addEventListener\(['"`]message['"`]/.test(src) && !/event\.origin\s*!==\s*self\.location\.origin/.test(src)) {
+    fail(`${swPath}: message handler must ignore messages whose origin does not match self.location.origin`);
+  }
 
   // Wiring contract for the offline fallback page. The SW must (1) pre-cache
   // offline.html as part of its install-time shell list, and (2) reference

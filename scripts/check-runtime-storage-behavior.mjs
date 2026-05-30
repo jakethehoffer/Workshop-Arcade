@@ -8,7 +8,7 @@
 // `sandbox="allow-scripts"` shape the catalog player uses.
 
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -38,11 +38,21 @@ async function startServer() {
   const server = createServer(async (request, response) => {
     try {
       const filePath = resolveRequestPath(request.url || '/');
-      if (!filePath || !(await stat(filePath)).isFile()) {
+      if (!filePath) {
         response.writeHead(404).end('Not found');
         return;
       }
-      const content = await readFile(filePath);
+      const handle = await open(filePath, 'r');
+      let content;
+      try {
+        if (!(await handle.stat()).isFile()) {
+          response.writeHead(404).end('Not found');
+          return;
+        }
+        content = await handle.readFile();
+      } finally {
+        await handle.close();
+      }
       response.writeHead(200, {
         'cache-control': 'no-store',
         'content-type': mimeTypes.get(extname(filePath).toLowerCase()) || 'application/octet-stream',

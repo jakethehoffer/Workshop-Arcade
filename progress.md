@@ -109,7 +109,7 @@ Original prompt: Do this for me
 - Implemented the max-parallel bundle on `codex/max-parallel-2026-05-19` with worker-separated changes: four new standalone games, five fullscreen legacy polish passes, Lexica payload compaction, Brick Breaker and Arcade Jump trims, and stricter docs-budget drift checking.
 - Added Gridline Tactics, Service Shift, Letter Foundry, and Penalty Circuit with SVG covers, manifest entries, catalog fallback data, per-game meta, sitemap/feed/OG generation, and capture recipes.
 - Added fullscreen buttons/guarded shortcuts plus additive diagnostics to 2048, Sky Hopper, Slope Runner, Idle Tycoon, and Block Drop. Idle Tycoon uses `Shift+F` for fullscreen to preserve the existing `F` Surge hotkey; the shortcut checks verified fullscreen keys do not count as flap/start/steer/move/drop input.
-- Compacted Lexica word payloads without changing strict word rules, trimming about 72.9 KB from `words5.js` + `secrets5.js`. Arcade Jump and Brick Breaker received conservative payload trims.
+- Compacted Lexica word payloads without changing strict word rules, trimming about 72.9 KB from `words5.js` + `answers5.js`. Arcade Jump and Brick Breaker received conservative payload trims.
 - Local verification: `npm test` passed 27 fast gates; `npm run test:games` passed for 44 games after one transient no-output retry; `npm run capture:games:ci` passed with 88 surfaces and max score 0; strict local `audit:perf:ci` passed across 45 pages with the four new games at 23.1-26.8 KB and Lexica down to 144.7 KB transfer.
 - Suggested next pass: review the now-44-game catalog by subjective contact-sheet quality, then decide whether to tighten Lexica's named perf exception or keep the extra CI headroom.
 

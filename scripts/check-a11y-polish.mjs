@@ -70,7 +70,7 @@ async function checkIndex() {
     if (!/JavaScript|javascript/i.test(noscriptBlock)) {
       fail(`${path}: <noscript> block must mention JavaScript so visitors understand why the catalog is empty`);
     }
-    if (!/github\.com\/jakethehoffer\/Workshop-Arcade/i.test(noscriptBlock)) {
+    if (!hasRepositoryHref(noscriptBlock)) {
       fail(`${path}: <noscript> block should link to the GitHub repo so visitors have a path forward without enabling JS`);
     }
   }
@@ -112,6 +112,24 @@ async function checkIndex() {
       fail(`${path}: reduced-motion block must neutralize .card:hover transform (transform: none)`);
     }
   }
+}
+
+function hasRepositoryHref(markup) {
+  for (const match of markup.matchAll(/\bhref\s*=\s*(["'])(.*?)\1/gi)) {
+    try {
+      const href = new URL(match[2]);
+      if (
+        href.protocol === 'https:' &&
+        href.hostname === 'github.com' &&
+        href.pathname === '/jakethehoffer/Workshop-Arcade'
+      ) {
+        return true;
+      }
+    } catch {
+      // Ignore non-absolute hrefs in this specific external-link check.
+    }
+  }
+  return false;
 }
 
 await checkIndex();

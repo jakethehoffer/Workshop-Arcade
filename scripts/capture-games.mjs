@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
@@ -2258,12 +2258,18 @@ function startServer() {
         response.writeHead(403).end("Forbidden");
         return;
       }
-      const info = await stat(filePath);
-      if (!info.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
+      const handle = await open(filePath, "r");
+      let content;
+      try {
+        const info = await handle.stat();
+        if (!info.isFile()) {
+          response.writeHead(404).end("Not found");
+          return;
+        }
+        content = await handle.readFile();
+      } finally {
+        await handle.close();
       }
-      const content = await readFile(filePath);
       response.writeHead(200, {
         "content-type": mimeTypes.get(path.extname(filePath).toLowerCase()) || "application/octet-stream",
         "cache-control": "no-store",

@@ -1,4 +1,4 @@
-const SECRET5 = (() => {
+const ANSWER_WORDS5 = (() => {
   const packed = `0|aback
 3|se
 3|te

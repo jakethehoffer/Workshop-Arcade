@@ -5,7 +5,7 @@
 // small, local, script-free SVGs. This deliberately checks only manifest
 // covers; generated OG cards and app icons have different dimensions.
 
-import { readFile, stat } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -79,14 +79,20 @@ if (!Array.isArray(manifest)) {
     let info;
     let svg;
     try {
-      info = await stat(absolute);
-      svg = await readFile(absolute, 'utf8');
+      const handle = await open(absolute, 'r');
+      try {
+        info = await handle.stat();
+        if (!info.isFile()) {
+          fail(`${cover}: cover path is not a file`);
+          continue;
+        }
+        svg = await handle.readFile('utf8');
+      } finally {
+        await handle.close();
+      }
     } catch (error) {
       fail(`${label}: unable to read ${cover} (${error.message})`);
       continue;
-    }
-    if (!info.isFile()) {
-      fail(`${cover}: cover path is not a file`);
     }
     if (info.size > MAX_COVER_BYTES) {
       fail(`${cover}: ${info.size} bytes exceeds ${MAX_COVER_BYTES} byte cover budget`);

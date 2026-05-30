@@ -36,10 +36,44 @@ function stripNonMarkup(src) {
   // Replace script/style/comment bodies with blanks while preserving newlines
   // so byte offsets and line numbers stay aligned with the raw source.
   const blankPreservingNewlines = (s) => s.replace(/[^\n]/g, " ");
-  return src
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (m) => blankPreservingNewlines(m))
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (m) => blankPreservingNewlines(m))
+  const withoutScripts = stripElementBlocks(src, "script", blankPreservingNewlines);
+  const withoutStyles = stripElementBlocks(withoutScripts, "style", blankPreservingNewlines);
+  return withoutStyles
     .replace(/<!--[\s\S]*?-->/g, (m) => blankPreservingNewlines(m));
+}
+
+function stripElementBlocks(src, tagName, blank) {
+  const lower = src.toLowerCase();
+  let cursor = 0;
+  let output = "";
+
+  while (cursor < src.length) {
+    const start = findTag(lower, tagName, cursor, false);
+    if (start === -1) break;
+    const openEnd = lower.indexOf(">", start);
+    if (openEnd === -1) break;
+    const closeStart = findTag(lower, tagName, openEnd + 1, true);
+    if (closeStart === -1) break;
+    const closeEnd = lower.indexOf(">", closeStart);
+    if (closeEnd === -1) break;
+
+    output += src.slice(cursor, start);
+    output += blank(src.slice(start, closeEnd + 1));
+    cursor = closeEnd + 1;
+  }
+
+  return output + src.slice(cursor);
+}
+
+function findTag(lower, tagName, from, closing) {
+  const needle = closing ? `</${tagName}` : `<${tagName}`;
+  let index = lower.indexOf(needle, from);
+  while (index !== -1) {
+    const next = lower[index + needle.length] || "";
+    if (next === ">" || next === "/" || /\s/.test(next)) return index;
+    index = lower.indexOf(needle, index + 1);
+  }
+  return -1;
 }
 
 function lineOf(src, index) {

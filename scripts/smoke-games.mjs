@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -104,12 +104,18 @@ function startServer() {
         res.writeHead(403).end("Forbidden");
         return;
       }
-      const info = await stat(filePath);
-      if (!info.isFile()) {
-        res.writeHead(404).end("Not found");
-        return;
+      const handle = await open(filePath, "r");
+      let content;
+      try {
+        const info = await handle.stat();
+        if (!info.isFile()) {
+          res.writeHead(404).end("Not found");
+          return;
+        }
+        content = await handle.readFile();
+      } finally {
+        await handle.close();
       }
-      const content = await readFile(filePath);
       res.writeHead(200, {
         "content-type": mimeTypes.get(path.extname(filePath).toLowerCase()) || "application/octet-stream",
         "cache-control": "no-store"
@@ -133,8 +139,8 @@ function observePage(page, baseUrl, label) {
     if (message.type() !== "error") return;
     const text = message.text();
     const locationUrl = message.location()?.url || "";
-    if (/favicon\.ico/i.test(text)) return;
-    if (/api\.github\.com/i.test(text) || /api\.github\.com/i.test(locationUrl)) return;
+    if (text.toLowerCase().includes("favicon.ico")) return;
+    if (isGitHubApiUrl(locationUrl)) return;
     addFailure(label, `console error: ${text}`);
   });
   page.on("pageerror", (error) => {
@@ -154,6 +160,14 @@ function observePage(page, baseUrl, label) {
     if (failure && /ERR_ABORTED|NS_BINDING_ABORTED/i.test(failure.errorText || "")) return;
     addFailure(label, `request failed: ${url}`);
   });
+}
+
+function isGitHubApiUrl(value) {
+  try {
+    return new URL(value).hostname === "api.github.com";
+  } catch {
+    return false;
+  }
 }
 
 function recordPageRequests(page) {

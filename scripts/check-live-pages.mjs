@@ -254,8 +254,8 @@ async function observePage(page, label, githubRequests) {
     if (message.type() !== 'error') return;
     const text = message.text();
     const locationUrl = message.location()?.url || '';
-    if (/favicon\.ico/i.test(text)) return;
-    if (/api\.github\.com/i.test(text) || /api\.github\.com/i.test(locationUrl)) return;
+    if (text.toLowerCase().includes('favicon.ico')) return;
+    if (isGitHubApiUrl(locationUrl)) return;
     fail(label, `console error: ${text}`);
   });
 
@@ -290,6 +290,14 @@ async function observePage(page, label, githubRequests) {
       body: '[]',
     });
   });
+}
+
+function isGitHubApiUrl(value) {
+  try {
+    return new URL(value).hostname === 'api.github.com';
+  } catch {
+    return false;
+  }
 }
 
 async function assertNoOverflow(page, label) {
@@ -524,7 +532,9 @@ async function writeSummary() {
   summary.issues = [...issues];
   summary.report = relativeArtifactPath(reportPath);
   await mkdir(summaryDir, { recursive: true });
+  // codeql[js/http-to-file-access] Live-smoke fetch metadata is intentionally written as release evidence under test-results/live-pages-smoke/.
   await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  // codeql[js/http-to-file-access] The Markdown report mirrors the bounded summary above for local handoff/release evidence.
   await writeFile(reportPath, buildReport(), 'utf8');
 }
 

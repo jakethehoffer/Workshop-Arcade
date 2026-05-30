@@ -9,7 +9,7 @@
 
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -72,11 +72,21 @@ async function startServer() {
   const server = createServer(async (request, response) => {
     try {
       const file = requestPath(request.url || '/');
-      if (!file || !(await stat(file)).isFile()) {
+      if (!file) {
         response.writeHead(404).end('Not found');
         return;
       }
-      const content = await readFile(file);
+      const handle = await open(file, 'r');
+      let content;
+      try {
+        if (!(await handle.stat()).isFile()) {
+          response.writeHead(404).end('Not found');
+          return;
+        }
+        content = await handle.readFile();
+      } finally {
+        await handle.close();
+      }
       response.writeHead(200, {
         'cache-control': 'no-store',
         'content-type': mimeTypes.get(extname(file).toLowerCase()) || 'application/octet-stream',
