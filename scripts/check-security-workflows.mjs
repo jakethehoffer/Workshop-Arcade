@@ -131,6 +131,13 @@ async function checkPagesDeploy() {
     return;
   }
   const src = await readFile(join(repoRoot, path), 'utf8');
+  const builderPath = 'scripts/build-pages-artifact.mjs';
+  const builderSrc = await exists(builderPath)
+    ? await readFile(join(repoRoot, builderPath), 'utf8')
+    : '';
+  if (!builderSrc) {
+    fail(`${builderPath}: file missing — Deploy Pages artifact assembly must live in a shared local checker`);
+  }
 
   if (!/^name:\s*Deploy Pages\b/m.test(src)) {
     fail(`${path}: workflow name must be "Deploy Pages" so the Actions tab and Pages deployment history are easy to target`);
@@ -157,6 +164,7 @@ async function checkPagesDeploy() {
   const requiredActions = [
     'actions/checkout@v6',
     'actions/configure-pages@v6',
+    'actions/setup-node@v6',
     'actions/upload-pages-artifact@v5',
     'actions/deploy-pages@v5'
   ];
@@ -164,6 +172,12 @@ async function checkPagesDeploy() {
     if (!src.includes(`uses: ${action}`)) {
       fail(`${path}: must use ${action}`);
     }
+  }
+  if (!/node-version:\s*24\b/.test(src)) {
+    fail(`${path}: must run the Pages artifact builder under Node 24`);
+  }
+  if (!/run:\s*node scripts\/build-pages-artifact\.mjs --out _site\b/.test(src)) {
+    fail(`${path}: must assemble Pages with "node scripts/build-pages-artifact.mjs --out _site"`);
   }
   if (!/path:\s*_site\b/.test(src)) {
     fail(`${path}: upload-pages-artifact must publish the curated "_site" directory, not the repo root`);
@@ -198,8 +212,13 @@ async function checkPagesDeploy() {
     '.well-known'
   ];
   for (const publicPath of requiredPublicPaths) {
-    if (!src.includes(publicPath)) {
-      fail(`${path}: static artifact assembly must include "${publicPath}"`);
+    if (!builderSrc.includes(publicPath)) {
+      fail(`${builderPath}: static artifact assembly must include "${publicPath}"`);
+    }
+  }
+  for (const artifactPath of ['.nojekyll', '.well-known/security.txt', '--check']) {
+    if (!builderSrc.includes(artifactPath)) {
+      fail(`${builderPath}: static artifact checker must include "${artifactPath}"`);
     }
   }
 
@@ -212,9 +231,9 @@ async function checkPagesDeploy() {
     fail(`${path}: must not publish the repository root; publish only the curated "_site" artifact`);
   }
 
-  for (const internalPath of ['.git', '.github', '.codex', '.ai-sync', '.devcontainer', '.vscode', 'node_modules', 'output', 'test-results']) {
-    if (!src.includes(internalPath)) {
-      fail(`${path}: artifact assembly must explicitly guard against publishing "${internalPath}"`);
+  for (const internalPath of ['.git', '.github', '.codex', '.ai-sync', '.devcontainer', '.vscode', 'node_modules', 'output', 'test-results', '_site']) {
+    if (!builderSrc.includes(internalPath)) {
+      fail(`${builderPath}: artifact assembly must explicitly guard against publishing "${internalPath}"`);
     }
   }
 }
