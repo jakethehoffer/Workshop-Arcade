@@ -13,8 +13,8 @@
 //      pack so XSS/SSRF/prototype-pollution patterns surface as PR
 //      checks instead of going to production.
 //   3. .github/workflows/deploy-pages.yml — deploys GitHub Pages from
-//      a curated Actions artifact so the public site is explicit,
-//      least-privilege, and free of generated legacy Pages workflows.
+//      a curated Actions artifact, then runs the deployed-site smoke so
+//      the public site is explicit, least-privilege, and verified.
 //
 // The check is intentionally structural (file presence + required
 // directives) rather than semantic — GitHub's workflow schemas evolve their
@@ -39,6 +39,24 @@ async function exists(relative) {
   } catch {
     return false;
   }
+}
+
+function getWorkflowJobBlock(src, jobId) {
+  const lines = src.split(/\r?\n/);
+  const start = lines.findIndex((line) => line === `  ${jobId}:`);
+  if (start === -1) {
+    return '';
+  }
+
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^  [A-Za-z0-9_-]+:\s*$/.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+
+  return lines.slice(start, end).join('\n');
 }
 
 async function checkDependabot() {
@@ -131,6 +149,8 @@ async function checkPagesDeploy() {
     return;
   }
   const src = await readFile(join(repoRoot, path), 'utf8');
+  const deployJob = getWorkflowJobBlock(src, 'deploy');
+  const liveSmokeJob = getWorkflowJobBlock(src, 'live-smoke');
   const builderPath = 'scripts/build-pages-artifact.mjs';
   const builderSrc = await exists(builderPath)
     ? await readFile(join(repoRoot, builderPath), 'utf8')
@@ -166,7 +186,8 @@ async function checkPagesDeploy() {
     'actions/configure-pages@v6',
     'actions/setup-node@v6',
     'actions/upload-pages-artifact@v5',
-    'actions/deploy-pages@v5'
+    'actions/deploy-pages@v5',
+    'actions/upload-artifact@v7'
   ];
   for (const action of requiredActions) {
     if (!src.includes(`uses: ${action}`)) {
@@ -187,6 +208,69 @@ async function checkPagesDeploy() {
   }
   if (!/environment:\s*[\s\S]*?name:\s*github-pages/.test(src)) {
     fail(`${path}: deploy job must target the "github-pages" environment`);
+  }
+  if (!deployJob.includes('outputs:') || !deployJob.includes('page_url: ${{ steps.deployment.outputs.page_url }}')) {
+    fail(`${path}: deploy job must expose the Pages deployment page_url output for post-deploy smoke tests`);
+  }
+
+  if (!liveSmokeJob) {
+    fail(`${path}: must include a "live-smoke" job that verifies the deployed Pages URL`);
+  } else {
+    if (!/\n    needs:\s*deploy\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke job must depend on the deploy job`);
+    }
+
+    const livePermissions = liveSmokeJob.match(/^    permissions:\s*([\s\S]*?)(?=^    [^\s]|\Z)/m)?.[1] || '';
+    if (!livePermissions.includes('contents: read')) {
+      fail(`${path}: live-smoke job permissions must include "contents: read"`);
+    }
+    for (const forbiddenPermission of ['pages: write', 'id-token: write']) {
+      if (livePermissions.includes(forbiddenPermission)) {
+        fail(`${path}: live-smoke job must not grant "${forbiddenPermission}"`);
+      }
+    }
+
+    for (const action of ['actions/checkout@v6', 'actions/setup-node@v6', 'actions/upload-artifact@v7']) {
+      if (!liveSmokeJob.includes(`uses: ${action}`)) {
+        fail(`${path}: live-smoke job must use ${action}`);
+      }
+    }
+    if (!/node-version:\s*24\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke job must run under Node 24`);
+    }
+    if (!/\bcache:\s*npm\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke job should enable setup-node npm cache for post-deploy checks`);
+    }
+    if (!/run:\s*npm ci\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke job must install dependencies with npm ci`);
+    }
+    if (!/run:\s*npx playwright install --with-deps chromium\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke job must install Playwright Chromium before running the deployed-site smoke`);
+    }
+    if (!liveSmokeJob.includes('WORKSHOP_ARCADE_URL: ${{ needs.deploy.outputs.page_url }}')) {
+      fail(`${path}: live-smoke job must pass WORKSHOP_ARCADE_URL from needs.deploy.outputs.page_url`);
+    }
+    if (!liveSmokeJob.includes('npm run test:live-pages')) {
+      fail(`${path}: live-smoke job must run npm run test:live-pages`);
+    }
+    if (!liveSmokeJob.includes('for attempt in 1 2 3') || !liveSmokeJob.includes('sleep 15') || !liveSmokeJob.includes('Live smoke failed after 3 attempts.')) {
+      fail(`${path}: live-smoke job must retry live smoke before failing to absorb short Pages propagation delays`);
+    }
+    if (!liveSmokeJob.includes('if: always()')) {
+      fail(`${path}: live-smoke job must upload report artifacts even when live smoke fails`);
+    }
+    if (!/name:\s*live-pages-smoke\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke artifact must be named "live-pages-smoke"`);
+    }
+    if (!/path:\s*test-results\/live-pages-smoke\/\*\*/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke artifact must upload test-results/live-pages-smoke/**`);
+    }
+    if (!/if-no-files-found:\s*ignore\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke artifact upload must ignore missing files so setup failures still surface clearly`);
+    }
+    if (!/retention-days:\s*14\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke artifact retention must be 14 days`);
+    }
   }
 
   const requiredPublicPaths = [
