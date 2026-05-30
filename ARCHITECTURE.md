@@ -49,7 +49,7 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 | **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:url-filters` · `test:random-game` · `test:keyboard-help` · `test:favorites` · `test:sw-update-toast` |
 | **Accessibility** | `test:a11y` · `test:a11y-polish` |
 | **PWA + fallback pages** | `test:pwa` · `test:pwa-runtime` (includes bounded runtime-cache trim) · `test:fallback-pages` |
-| **OSS hygiene** | `test:meta-files` · `test:security-workflows` · `test:pages-artifact` · `test:contributor-onboarding` |
+| **OSS hygiene** | `test:meta-files` · `test:security-workflows` · `test:github-security-settings` (explicit authenticated remote gate) · `test:pages-artifact` · `test:contributor-onboarding` |
 | **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:capture-recipes` · `test:docs` · `test:performance-baseline` · `test:validator-fixtures` |
 | **Live game smoke** | `test:live-smoke-slugs` (fast fixture for Deploy Pages touched-slug derivation) · `test:live-canvas-evidence` (local Playwright fixture for live-smoke canvas aggregation) · `test:games` (local Playwright, slow — run via `npm run test:games` or `npm run test:all`) · `test:live-pages` (Deploy Pages post-deploy smoke with auto-selected touched slugs plus explicit preview checks) |
 
@@ -70,6 +70,7 @@ Three additional workflows live alongside:
 
 - [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml) — CodeQL `javascript-typescript` analysis with the `security-extended` query pack on every push/PR plus a Monday cron.
 - [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) — GitHub Pages deployment from the curated `scripts/build-pages-artifact.mjs` Actions artifact with modern Pages actions, least-privilege permissions, explicit `.well-known/security.txt` publication, touched-slug post-deploy `test:live-pages`, and a retained `live-pages-smoke` evidence artifact.
+- [`.github/workflows/security-surfaces.yml`](.github/workflows/security-surfaces.yml) — Security Surfaces drift check for GitHub-native vulnerability alerts, Dependabot security updates, private vulnerability reporting, secret scanning, secret scanning push protection, and open security alert backlogs via `npm run test:github-security-settings` on push, weekly, and manual dispatch.
 - [`.github/dependabot.yml`](.github/dependabot.yml) — weekly Monday npm + github-actions update PRs, scoped commit prefixes (`deps:` / `ci:`), and a `playwright` group so the `@playwright/*` family lands in one PR.
 
 ## Adding a new game

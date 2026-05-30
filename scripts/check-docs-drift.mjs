@@ -41,6 +41,19 @@ const liveSmokeSurfaces = [
   'ARCHITECTURE.md'
 ];
 
+const githubSecuritySettingsSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md'
+];
+
+const githubSecuritySettingsRequiredText = [
+  'npm run test:github-security-settings',
+  '.github/workflows/security-surfaces.yml',
+  'Security Surfaces',
+  'vulnerability alerts',
+  'secret scanning push protection'
+];
+
 const liveSmokeRequiredText = [
   'WORKSHOP_ARCADE_LIVE_SLUGS',
   'WORKSHOP_ARCADE_TOUCHED_SLUGS',
@@ -101,6 +114,16 @@ for (const file of liveSmokeSurfaces) {
   }
 }
 
+for (const file of githubSecuritySettingsSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of githubSecuritySettingsRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing GitHub security settings contract text "${requiredText}"`);
+    }
+  }
+}
+
 for (const file of localPerfSurfaces) {
   const text = readText(file);
   if (!text) continue;
@@ -111,7 +134,7 @@ for (const file of localPerfSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
+const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();

@@ -87,10 +87,10 @@ function extractExcludedScripts(runnerSrc) {
 
 async function checkCoverage(pkg, runnerSrc) {
   const excluded = extractExcludedScripts(runnerSrc);
-  const allowedExcluded = new Set(['test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
+  const allowedExcluded = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
   for (const required of allowedExcluded) {
     if (!excluded.has(required)) {
-      fail(`scripts/run-fast-tests.mjs: EXCLUDED_SCRIPTS must list "${required}" (browser-backed slow gate / would recurse)`);
+      fail(`scripts/run-fast-tests.mjs: EXCLUDED_SCRIPTS must list "${required}" (explicit remote/browser-backed gate or recursive aggregate)`);
     }
   }
   const candidates = Object.keys(pkg.scripts || {}).filter((name) => name.startsWith('test:'));

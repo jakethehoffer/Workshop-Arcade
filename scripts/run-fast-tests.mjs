@@ -29,6 +29,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // needs a short reason so it's obvious why and a follow-up author can
 // add or remove entries deliberately.
 const EXCLUDED_SCRIPTS = new Map([
+  ['test:github-security-settings', 'Authenticated remote GitHub API drift check — requires maintainer/security settings access. Run via `npm run test:github-security-settings`.'],
   ['test:games', 'Playwright smoke test — needs browsers installed and takes minutes. Run via `npm run test:games` or `npm run test:all`.'],
   ['test:live-canvas-evidence', 'Browser-backed live-smoke canvas evidence fixture — needs Chromium. Run via `npm run test:live-canvas-evidence`.'],
   ['test:pwa-runtime', 'Browser-backed PWA runtime probe — needs Chromium/service worker support. Run via `npm run test:pwa-runtime`.'],

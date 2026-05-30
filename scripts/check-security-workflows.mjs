@@ -15,6 +15,9 @@
 //   3. .github/workflows/deploy-pages.yml — deploys GitHub Pages from
 //      a curated Actions artifact, then runs the deployed-site smoke so
 //      the public site is explicit, least-privilege, and verified.
+//   4. .github/workflows/security-surfaces.yml — periodically checks the
+//      GitHub-native security settings and alert backlogs that cannot be
+//      represented by repository files alone.
 //
 // The check is intentionally structural (file presence + required
 // directives) rather than semantic — GitHub's workflow schemas evolve their
@@ -361,9 +364,90 @@ async function checkPagesDeploy() {
   }
 }
 
+async function checkSecuritySurfaces() {
+  const path = '.github/workflows/security-surfaces.yml';
+  const checkerPath = 'scripts/check-github-security-settings.mjs';
+  if (!(await exists(path))) {
+    fail(`${path}: file missing — GitHub-native security settings need an authenticated drift workflow`);
+    return;
+  }
+  if (!(await exists(checkerPath))) {
+    fail(`${checkerPath}: file missing — GitHub-native security settings need a local authenticated checker`);
+    return;
+  }
+
+  const src = await readFile(join(repoRoot, path), 'utf8');
+  const checkerSrc = await readFile(join(repoRoot, checkerPath), 'utf8');
+
+  if (!/^name:\s*Security Surfaces\b/m.test(src)) {
+    fail(`${path}: workflow name must be "Security Surfaces" so GitHub-native settings drift is easy to find`);
+  }
+  if (!/on:\s*[\s\S]*?\bpush:\s*[\s\S]*?branches:\s*\[\s*main\s*\]/m.test(src)) {
+    fail(`${path}: must trigger on push: branches: [main] so settings drift is checked after every main publish`);
+  }
+  if (!/schedule:\s*[\s\S]*?cron:\s*["'][^"']+["']/m.test(src)) {
+    fail(`${path}: must declare a schedule: cron entry so GitHub-native settings drift is checked even when code is quiet`);
+  }
+  if (!/\bworkflow_dispatch:\s*/.test(src)) {
+    fail(`${path}: must include workflow_dispatch so security-surface checks can be retried manually`);
+  }
+
+  const topPermissions = src.match(/^permissions:\s*([\s\S]*?)(?=^\S|\Z)/m);
+  const permissions = topPermissions?.[1] || '';
+  for (const permission of ['contents: read', 'security-events: read']) {
+    if (!permissions.includes(permission)) {
+      fail(`${path}: top-level permissions must include "${permission}"`);
+    }
+  }
+  for (const forbiddenPermission of ['contents: write', 'security-events: write', 'pages: write', 'id-token: write']) {
+    if (permissions.includes(forbiddenPermission)) {
+      fail(`${path}: top-level permissions must not include "${forbiddenPermission}"`);
+    }
+  }
+
+  for (const action of ['actions/checkout@v6', 'actions/setup-node@v6']) {
+    if (!src.includes(`uses: ${action}`)) {
+      fail(`${path}: must use ${action}`);
+    }
+  }
+  if (!/node-version:\s*24\b/.test(src)) {
+    fail(`${path}: must run the GitHub-native security checker under Node 24`);
+  }
+  if (!/GH_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/.test(src)) {
+    fail(`${path}: must pass GH_TOKEN from \${{ github.token }} to the checker`);
+  }
+  if (!/WORKSHOP_ARCADE_REPO:\s*\$\{\{\s*github\.repository\s*\}\}/.test(src)) {
+    fail(`${path}: must pass WORKSHOP_ARCADE_REPO from \${{ github.repository }} to the checker`);
+  }
+  if (!/run:\s*npm run test:github-security-settings\b/.test(src)) {
+    fail(`${path}: must run npm run test:github-security-settings`);
+  }
+
+  for (const checkerNeedle of [
+    'GH_TOKEN',
+    'GITHUB_TOKEN',
+    'auth',
+    'token',
+    '/vulnerability-alerts',
+    '/automated-security-fixes',
+    '/private-vulnerability-reporting',
+    'secret_scanning_push_protection',
+    '/dependabot/alerts',
+    '/secret-scanning/alerts',
+    '/code-scanning/alerts',
+    'secret_scanning_non_provider_patterns',
+    'secret_scanning_validity_checks'
+  ]) {
+    if (!checkerSrc.includes(checkerNeedle)) {
+      fail(`${checkerPath}: checker must contain "${checkerNeedle}" so GitHub-native security settings and alert backlogs stay covered`);
+    }
+  }
+}
+
 await checkDependabot();
 await checkCodeql();
 await checkPagesDeploy();
+await checkSecuritySurfaces();
 
 if (issues.length > 0) {
   console.error(`Security workflows check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -373,4 +457,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Security workflows check passed: Dependabot, CodeQL, and Deploy Pages automation are intact.');
+console.log('Security workflows check passed: Dependabot, CodeQL, Deploy Pages, and Security Surfaces automation are intact.');
