@@ -49,6 +49,7 @@ const liveSmokeRequiredText = [
   'WORKSHOP_ARCADE_EXPECTED_SW_REVISION',
   'WORKSHOP_ARCADE_SKIP_SW_REVISION',
   '.well-known/security.txt',
+  'npm run test:live-canvas-evidence',
   'test-results/live-pages-smoke/<timestamp>/summary.json',
   'test-results/live-pages-smoke/<timestamp>/report.md'
 ];
@@ -109,7 +110,7 @@ for (const file of localPerfSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:games', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
+const fastGateExclusions = new Set(['test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();
@@ -182,7 +183,7 @@ const requiredWorkflowJobs = [
   {
     id: 'game-smoke',
     label: 'game smoke',
-    commands: ['npm run test:games']
+    commands: ['npm run test:live-canvas-evidence', 'npm run test:games']
   },
   {
     id: 'performance-audit',
