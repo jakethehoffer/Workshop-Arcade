@@ -50,6 +50,7 @@ const githubSecuritySettingsRequiredText = [
   'npm run test:github-security-settings',
   '.github/workflows/security-surfaces.yml',
   'Security Surfaces',
+  'SECURITY_SURFACES_TOKEN',
   'vulnerability alerts',
   'secret scanning push protection'
 ];

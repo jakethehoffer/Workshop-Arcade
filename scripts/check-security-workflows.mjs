@@ -413,11 +413,23 @@ async function checkSecuritySurfaces() {
   if (!/node-version:\s*24\b/.test(src)) {
     fail(`${path}: must run the GitHub-native security checker under Node 24`);
   }
+  if (!/GH_TOKEN:\s*\$\{\{\s*secrets\.SECURITY_SURFACES_TOKEN\s*\}\}/.test(src)) {
+    fail(`${path}: must pass GH_TOKEN from \${{ secrets.SECURITY_SURFACES_TOKEN }} for the strict remote gate when configured`);
+  }
   if (!/GH_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/.test(src)) {
-    fail(`${path}: must pass GH_TOKEN from \${{ github.token }} to the checker`);
+    fail(`${path}: must also probe GH_TOKEN from \${{ github.token }} so CI records GitHub's default-token limitation when no maintainer token is configured`);
   }
   if (!/WORKSHOP_ARCADE_REPO:\s*\$\{\{\s*github\.repository\s*\}\}/.test(src)) {
     fail(`${path}: must pass WORKSHOP_ARCADE_REPO from \${{ github.repository }} to the checker`);
+  }
+  if (!/SECURITY_SURFACES_TOKEN\s*!=\s*''/.test(src) || !/SECURITY_SURFACES_TOKEN\s*==\s*''/.test(src)) {
+    fail(`${path}: must branch on SECURITY_SURFACES_TOKEN presence so a maintainer token makes the workflow strict and default-token limits are explicit`);
+  }
+  if (!/continue-on-error:\s*true\b/.test(src) || !/steps\.github-token-probe\.outcome\s*!=\s*'success'/.test(src)) {
+    fail(`${path}: must allow the default GITHUB_TOKEN probe to record API limitations without making main red when no maintainer token is configured`);
+  }
+  if (!/::warning title=GitHub security settings token limitation::/.test(src)) {
+    fail(`${path}: must emit an Actions warning that records the exact GITHUB_TOKEN limitation and SECURITY_SURFACES_TOKEN follow-up`);
   }
   if (!/run:\s*npm run test:github-security-settings\b/.test(src)) {
     fail(`${path}: must run npm run test:github-security-settings`);
