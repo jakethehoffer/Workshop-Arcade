@@ -2,9 +2,9 @@ Original prompt: Do this for me
 
 ## 2026-05-30 Codex page-weight headroom refresh
 
-- Mechanically compacted inline CSS presentation whitespace in `websites/idle-tycoon.html` and `websites/doodle-jump.html` without changing gameplay code, storage keys, manifest entries, generated surfaces, service-worker behavior, or capture recipes.
+- Mechanically compacted inline CSS presentation whitespace in `websites/idle-tycoon.html` and `websites/doodle-jump.html`, then initialized Arcade Jump's existing menu backdrop canvas so live-smoke canvas evidence is nonblank before a run starts, without changing gameplay code, storage keys, manifest entries, generated surfaces, service-worker behavior, or capture recipes.
 - Reclaimed measured page-weight headroom: Idle Tycoon moved from 165.0 KB to 153.5 KB under its 170 KB exception, and Arcade Jump moved from 103.7 KB to 101.8 KB under its 110 KB exception.
-- Verification passed so far: `npm run test:page-weight`, `npm run test:game-contract`, `npm run test:a11y`, `npm run test:a11y-polish`, `npm run test:games`, `npm run capture:games:ci` with max score 0, and `npm run audit:perf:local`.
+- Verification passed so far: `npm run test:page-weight`, `npm run test:game-contract`, `npm run test:a11y`, `npm run test:a11y-polish`, local `WORKSHOP_ARCADE_TOUCHED_SLUGS=idle-tycoon,doodle-jump npm run test:live-pages`, `npm run test:games`, `npm run capture:games:ci` with max score 0, and `npm run audit:perf:local`.
 
 ## 2026-05-27 Codex pass 92
 
