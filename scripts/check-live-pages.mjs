@@ -708,6 +708,30 @@ try {
     await assertLocalContentHash('robots.txt', text, record, 'robots', 'shellAssets');
   });
 
+  await assertFetchOk('.well-known/security.txt', 'security.txt', async ({ text, contentType, record }) => {
+    if (!/text|plain/i.test(contentType)) fail('security.txt', `unexpected content-type ${contentType}`);
+    if (!/^Contact:\s+\S+/m.test(text)) fail('security.txt', 'missing Contact line');
+
+    const expiresMatch = text.match(/^Expires:\s*([^\s]+)/m);
+    if (!expiresMatch) {
+      fail('security.txt', 'missing Expires timestamp');
+    } else {
+      const expires = new Date(expiresMatch[1]);
+      if (Number.isNaN(expires.getTime())) {
+        fail('security.txt', `invalid Expires timestamp "${expiresMatch[1]}"`);
+      } else if (expires.getTime() <= Date.now()) {
+        fail('security.txt', `Expires timestamp is not in the future: ${expiresMatch[1]}`);
+      }
+    }
+
+    const expectedCanonical = 'Canonical: https://jakethehoffer.github.io/Workshop-Arcade/.well-known/security.txt';
+    if (!text.includes(expectedCanonical)) {
+      fail('security.txt', `missing canonical line "${expectedCanonical}"`);
+    }
+
+    await assertLocalContentHash('.well-known/security.txt', text, record, 'security.txt', 'shellAssets');
+  });
+
   const games = slugsToCheck.map((slug) => {
     const game = gameForSlug(slug);
     if (!game) fail('config', `unknown game slug "${slug}"`);
@@ -740,5 +764,5 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log(`Live Pages smoke passed against ${baseUrl}: catalog, manifest, feed, sitemap, runtime/PWA surfaces, and ${summary.slugsChecked.join(', ')}.`);
+console.log(`Live Pages smoke passed against ${baseUrl}: catalog, manifest, feed, sitemap, runtime/PWA/security surfaces, and ${summary.slugsChecked.join(', ')}.`);
 console.log(`Summary: ${summaryPath}`);

@@ -48,6 +48,7 @@ const liveSmokeRequiredText = [
   'WORKSHOP_ARCADE_SKIP_CONTENT_HASH',
   'WORKSHOP_ARCADE_EXPECTED_SW_REVISION',
   'WORKSHOP_ARCADE_SKIP_SW_REVISION',
+  '.well-known/security.txt',
   'test-results/live-pages-smoke/<timestamp>/summary.json',
   'test-results/live-pages-smoke/<timestamp>/report.md'
 ];
