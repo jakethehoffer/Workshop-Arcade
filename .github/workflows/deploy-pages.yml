@@ -62,6 +62,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -71,6 +73,9 @@ jobs:
 
       - name: Install Node dependencies
         run: npm ci
+
+      - name: Select touched live smoke slugs
+        run: node scripts/derive-live-smoke-slugs.mjs --event-name "${{ github.event_name }}" --base "${{ github.event.before }}" --head "${{ github.sha }}" --github-env "$GITHUB_ENV"
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium

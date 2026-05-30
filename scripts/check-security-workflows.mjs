@@ -152,11 +152,18 @@ async function checkPagesDeploy() {
   const deployJob = getWorkflowJobBlock(src, 'deploy');
   const liveSmokeJob = getWorkflowJobBlock(src, 'live-smoke');
   const builderPath = 'scripts/build-pages-artifact.mjs';
+  const smokeSlugHelperPath = 'scripts/derive-live-smoke-slugs.mjs';
   const builderSrc = await exists(builderPath)
     ? await readFile(join(repoRoot, builderPath), 'utf8')
     : '';
+  const smokeSlugHelperSrc = await exists(smokeSlugHelperPath)
+    ? await readFile(join(repoRoot, smokeSlugHelperPath), 'utf8')
+    : '';
   if (!builderSrc) {
     fail(`${builderPath}: file missing — Deploy Pages artifact assembly must live in a shared local checker`);
+  }
+  if (!smokeSlugHelperSrc) {
+    fail(`${smokeSlugHelperPath}: file missing — Deploy Pages live smoke must derive touched game slugs with a shared helper`);
   }
 
   if (!/^name:\s*Deploy Pages\b/m.test(src)) {
@@ -235,6 +242,9 @@ async function checkPagesDeploy() {
         fail(`${path}: live-smoke job must use ${action}`);
       }
     }
+    if (!/fetch-depth:\s*0\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke checkout must use fetch-depth: 0 so push diffs can derive touched slugs across multi-commit pushes`);
+    }
     if (!/node-version:\s*24\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke job must run under Node 24`);
     }
@@ -243,6 +253,19 @@ async function checkPagesDeploy() {
     }
     if (!/run:\s*npm ci\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke job must install dependencies with npm ci`);
+    }
+    if (!liveSmokeJob.includes('node scripts/derive-live-smoke-slugs.mjs')) {
+      fail(`${path}: live-smoke job must derive touched game slugs before running test:live-pages`);
+    }
+    for (const helperArg of [
+      '--event-name "${{ github.event_name }}"',
+      '--base "${{ github.event.before }}"',
+      '--head "${{ github.sha }}"',
+      '--github-env "$GITHUB_ENV"'
+    ]) {
+      if (!liveSmokeJob.includes(helperArg)) {
+        fail(`${path}: live-smoke slug helper call must include ${helperArg}`);
+      }
     }
     if (!/run:\s*npx playwright install --with-deps chromium\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke job must install Playwright Chromium before running the deployed-site smoke`);
@@ -270,6 +293,22 @@ async function checkPagesDeploy() {
     }
     if (!/retention-days:\s*14\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke artifact retention must be 14 days`);
+    }
+  }
+
+  if (smokeSlugHelperSrc) {
+    for (const helperNeedle of [
+      'WORKSHOP_ARCADE_TOUCHED_SLUGS',
+      'GITHUB_ENV',
+      'git',
+      'diff',
+      'LOCAL_SCRIPT_SRC',
+      'covers/og/${slug}.svg',
+      'format === \'json\''
+    ]) {
+      if (!smokeSlugHelperSrc.includes(helperNeedle)) {
+        fail(`${smokeSlugHelperPath}: helper must contain "${helperNeedle}" so touched game slug derivation stays testable and deploy-aware`);
+      }
     }
   }
 
