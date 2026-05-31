@@ -85,6 +85,7 @@ npm run test:keyboard-help
 npm run test:pwa
 npm run test:sw-update-toast
 npm run test:fallback-pages
+npm run test:player-session
 npm run test:og-images
 npm run test:game-jsonld
 npm run test:seo
@@ -132,6 +133,7 @@ npm run audit:perf:ci
 - `npm run test:fallback-pages` enforces that `404.html` and `offline.html` exist, share the catalog theme tokens, are marked `noindex`, link back to the catalog home, and (for `404.html`) expose the manifest-aware did-you-mean search form.
 - `npm run test:install-prompt` locks in the PWA install affordance: a hidden header "Install" button with an aria-label naming the install action + inline SVG icon, an `els.installAppBtn` mapping, a `let deferredInstallPrompt = null` cache, a `beforeinstallprompt` listener that calls `preventDefault()` + stashes the event + reveals the button, an `appinstalled` listener that hides it, and a click handler that calls `.prompt()` on the cached event then clears the reference so stale events can't be re-prompted.
 - `npm run test:player-fullscreen` locks in the player-modal Fullscreen API toggle: a `#playerFullscreenBtn` with `aria-pressed` + enter/exit icon swap + (F) shortcut hint, the iframe declares both `allow="fullscreen"` and the legacy `allowfullscreen` attribute, `togglePlayerFullscreen()` exercises both `requestFullscreen()` and `exitFullscreen()`, a `fullscreenchange` listener re-syncs the icon when the user exits via browser chrome, `closePlayer()` calls `exitFullscreen()` first when the modal is currently fullscreen so closing from fullscreen doesn't wedge the page, and an "f"/"F" key shortcut toggles fullscreen while the player modal is visible.
+- `npm run test:player-session` locks in the player-modal continuity controls: `#playerSave` reuses the existing Favorites store with `aria-pressed`, `#playerNext` chooses a deterministic next game from the current filtered list or related fallback, and `#playerMore` toggles an accessible related-games panel with up to four current-game-aware options without shrinking the iframe until the player asks for it.
 - `npm run test:storage-contract` verifies every manifest game loads `workshop-runtime.js` before storage-touching game code so sandboxed play keeps the defensive storage fallback.
 - `npm run test:runtime-storage` opens a sandboxed game frame in Chromium and proves `workshop-runtime.js` still provides working storage fallback behavior when native `localStorage` is blocked.
 - `npm run test:live-canvas-evidence` runs focused Playwright fixtures for the live-smoke canvas evidence helper: hidden or zero-size canvases are recorded but ignored for aggregation, multiple visible canvases are sampled, the first nonblank visible canvas feeds the legacy top-level fields, and blank/no-visible-canvas failure paths keep useful messages.
@@ -149,7 +151,7 @@ npm run audit:perf:ci
 
 CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 37 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 38 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 

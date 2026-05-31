@@ -48,7 +48,7 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 | **Catalog source of truth** | `validate-catalog.ps1` (no npm wrapper) |
 | **Generator output mirrors manifest** | `test:seo` · `test:feed` · `test:og-images` · `test:game-jsonld` · `test:generated-surfaces` |
 | **Asset/runtime/perf contracts** | `test:cover-assets` · `test:storage-contract` · `test:runtime-storage` · `test:page-weight` · `test:pwa-install-budget` |
-| **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:url-filters` · `test:random-game` · `test:keyboard-help` · `test:favorites` · `test:sw-update-toast` |
+| **Catalog UI contracts** | `test:catalog-perf` · `test:deep-links` · `test:url-filters` · `test:random-game` · `test:keyboard-help` · `test:favorites` · `test:player-session` · `test:sw-update-toast` |
 | **Accessibility** | `test:a11y` · `test:a11y-polish` |
 | **PWA + fallback pages** | `test:pwa` · `test:pwa-runtime` (includes bounded runtime-cache trim) · `test:fallback-pages` |
 | **OSS hygiene** | `test:meta-files` · `test:security-workflows` · `test:github-security-settings` (explicit authenticated remote gate) · `test:pages-artifact` · `test:contributor-onboarding` |

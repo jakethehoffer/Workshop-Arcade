@@ -310,15 +310,24 @@
       border:1px solid var(--stroke);color:var(--accent);
       box-shadow:inset 0 -1px 0 rgba(0,0,0,0.5)}
     .help-dialog .help-hint{margin:0;font-size:12px;color:var(--muted);line-height:1.4}
-    .player-modal{position:fixed;inset:0;z-index:90;background:#050910;display:grid;grid-template-rows:auto 1fr}
+    .player-modal{position:fixed;inset:0;z-index:90;background:#050910;display:grid;grid-template-rows:auto auto 1fr}
     .player-modal[hidden]{display:none}
     .player-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;
       border-bottom:1px solid rgba(94,234,212,0.16);background:rgba(12,20,34,0.96);backdrop-filter:blur(8px)}
     .player-title{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
       letter-spacing:0.04em}
-    .player-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .player-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
     .player-status{font-size:12px;color:var(--accent);opacity:0;transition:opacity 0.15s ease}
     .player-status[data-visible="true"]{opacity:1}
+    .player-related{border-bottom:1px solid rgba(94,234,212,0.12);background:rgba(8,14,25,0.98);padding:10px 12px 12px}
+    .player-related[hidden]{display:none}
+    .player-related-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .player-related-title{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--accent);font-weight:800}
+    .player-related-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .related-game{border:1px solid rgba(94,234,212,0.16);background:rgba(148,163,184,0.08);color:var(--ink);border-radius:8px;padding:8px 9px;text-align:left;cursor:pointer;display:grid;gap:3px;min-width:0}
+    .related-game:hover{border-color:rgba(94,234,212,0.42);background:rgba(94,234,212,0.1)}
+    .related-game strong{font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .related-game span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .player-frame{width:100%;height:100%;border:0;background:#050910}
     @media (max-width: 820px){
       .workshop-body{grid-template-columns:1fr}
@@ -340,12 +349,17 @@
       .controls{padding-inline:12px;flex-wrap:wrap}
       .logo .eyebrow{display:none}
       .logo .name{font-size:14px;letter-spacing:0.16em}
+      .player-bar{align-items:flex-start;flex-wrap:wrap;gap:8px}
+      .player-title{flex:1 1 100%;font-size:13px}
+      .player-actions{margin-left:0;width:100%;justify-content:flex-start;gap:6px}
+      .player-actions .btn{padding:8px 9px;font-size:12px}
+      .player-related-list{grid-template-columns:1fr 1fr}
     }
 
     /* Focus outlines for accessibility */
     .chip:focus-visible, .tag:focus-visible, .btn:focus-visible, .play:focus-visible, .improve:focus-visible,
     .icon-btn:focus-visible, .mini-btn:focus-visible, .thumb:focus-visible,
-    .queue-row:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+    .queue-row:focus-visible, .related-game:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
 
     /* Skip link — visually hidden until keyboard-focused so screen-reader
        and keyboard users can jump past the sticky header straight to the
@@ -579,6 +593,9 @@
       <div class="player-title" id="playerTitle">Game</div>
       <div class="player-actions">
         <span class="player-status" id="playerStatus" aria-live="polite"></span>
+        <button class="btn subtle" type="button" id="playerSave" aria-pressed="false" aria-label="Save this game">★ Save</button>
+        <button class="btn subtle" type="button" id="playerNext" aria-label="Play next game">Next</button>
+        <button class="btn subtle" type="button" id="playerMore" aria-expanded="false" aria-controls="playerRelatedPanel">More</button>
         <button class="btn subtle" type="button" id="playerShare" aria-label="Share this game">Share</button>
         <button class="icon-btn" type="button" id="playerFullscreenBtn" aria-label="Enter fullscreen" aria-pressed="false" title="Enter fullscreen (F)">
           <svg class="player-fullscreen-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -588,6 +605,12 @@
         <button class="icon-btn" type="button" id="playerClose" aria-label="Close">×</button>
       </div>
     </div>
+    <section class="player-related" id="playerRelatedPanel" aria-labelledby="playerRelatedTitle" hidden>
+      <div class="player-related-head">
+        <div class="player-related-title" id="playerRelatedTitle">More like this</div>
+      </div>
+      <div class="player-related-list" id="playerRelatedList"></div>
+    </section>
     <iframe
       class="player-frame"
       id="playerFrame"
@@ -645,7 +668,8 @@ const state = {
   sort: "new",
   drafts: [],
   recentPlays: [],
-  favorites: []
+  favorites: [],
+  activeGameSlug: ""
 };
 
 const RECENT_PLAYS_KEY = 'workshop-arcade:recentPlays:v1';
@@ -735,6 +759,11 @@ const els = {
   installAppBtn: document.getElementById('installAppBtn'),
   helpDialog: document.getElementById('helpDialog'),
   playerModal: document.getElementById('playerModal'),
+  playerSave: document.getElementById('playerSave'),
+  playerNext: document.getElementById('playerNext'),
+  playerMore: document.getElementById('playerMore'),
+  playerRelatedPanel: document.getElementById('playerRelatedPanel'),
+  playerRelatedList: document.getElementById('playerRelatedList'),
   playerShare: document.getElementById('playerShare'),
   playerFullscreenBtn: document.getElementById('playerFullscreenBtn'),
   playerStatus: document.getElementById('playerStatus'),
@@ -1414,14 +1443,102 @@ function placeholderCover(title){
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='${c1}'/%3E%3Cstop offset='1' stop-color='${c2}'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='640' height='360' fill='url(%23g)'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial' font-size='36' font-weight='800' fill='white' opacity='.9'%3E${text}%3C/text%3E%3C/svg%3E`;
 }
 
+function compareNewest(a, b){
+  const diff = new Date(b.addedAt || 0) - new Date(a.addedAt || 0);
+  if(diff) return diff;
+  return String(a.title || '').localeCompare(String(b.title || ''));
+}
+
+function sharedTagCount(a, b){
+  const tags = new Set(a?.tags || []);
+  return (b?.tags || []).filter(tag => tags.has(tag)).length;
+}
+
+function rankedRelatedGames(current){
+  if(!current) return sortPopular(state.games).slice(0, 8);
+  return state.games
+    .filter(g => g && g.slug !== current.slug)
+    .sort((a, b) => {
+      const shared = sharedTagCount(current, b) - sharedTagCount(current, a);
+      if(shared) return shared;
+      const popularity = (b.popularity || 0) - (a.popularity || 0);
+      if(popularity) return popularity;
+      return compareNewest(a, b);
+    });
+}
+
+function nextSessionGame(current){
+  if(!current) return sortPopular(state.games)[0] || null;
+  const filtered = state.filtered && state.filtered.length ? state.filtered : [];
+  const index = filtered.findIndex(g => g.slug === current.slug);
+  if(index !== -1 && filtered.length > 1){
+    return filtered[(index + 1) % filtered.length];
+  }
+  return rankedRelatedGames(current)[0] || null;
+}
+
+function renderRelatedPanel(current){
+  if(!els.playerRelatedList) return;
+  els.playerRelatedList.innerHTML = '';
+  const related = rankedRelatedGames(current).slice(0, 4);
+  for(const game of related){
+    const button = document.createElement('button');
+    button.className = 'related-game';
+    button.type = 'button';
+    button.dataset.slug = game.slug;
+    button.setAttribute('aria-label', `Play ${game.title}`);
+    const title = document.createElement('strong');
+    title.textContent = game.title;
+    const tags = document.createElement('span');
+    tags.textContent = (game.tags || []).slice(0, 3).join(' · ') || 'Browser game';
+    button.append(title, tags);
+    els.playerRelatedList.appendChild(button);
+  }
+}
+
+function closeRelatedPanel(){
+  if(els.playerRelatedPanel) els.playerRelatedPanel.hidden = true;
+  if(els.playerMore) els.playerMore.setAttribute('aria-expanded', 'false');
+}
+
+function toggleRelatedPanel(){
+  if(!els.playerRelatedPanel || !els.playerMore) return;
+  const willOpen = els.playerRelatedPanel.hidden;
+  els.playerRelatedPanel.hidden = !willOpen;
+  els.playerMore.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  if(willOpen) renderRelatedPanel(currentlyOpenGame());
+}
+
+function syncPlayerSaveButton(g){
+  if(!els.playerSave || !g) return;
+  const saved = isFavorite(g.slug);
+  els.playerSave.setAttribute('aria-pressed', saved ? 'true' : 'false');
+  els.playerSave.setAttribute('aria-label', saved ? `Remove ${g.title} from saved games` : `Save ${g.title}`);
+  els.playerSave.textContent = saved ? '★ Saved' : '★ Save';
+}
+
+function syncPlayerSessionControls(g){
+  if(!g) return;
+  syncPlayerSaveButton(g);
+  renderRelatedPanel(g);
+  closeRelatedPanel();
+  if(els.playerNext){
+    const next = nextSessionGame(g);
+    els.playerNext.disabled = !next;
+    els.playerNext.setAttribute('aria-label', next ? `Play next game: ${next.title}` : 'No next game available');
+  }
+}
+
 function openPlayer(g, trigger = document.activeElement){
   if(!g || !isSafeGameUrl(g.url)) return;
   if(modalFocus.active === els.workshopModal) closeWorkshop({ restoreFocus: false });
   try { history.replaceState(null, '', `#play=${encodeURIComponent(g.slug)}`); } catch {}
+  state.activeGameSlug = g.slug;
   els.playerTitle.textContent = g.title;
   els.playerExternalLink.href = g.url;
   els.playerFrame.src = g.url;
   els.playerFrame.title = `${g.title} player`;
+  syncPlayerSessionControls(g);
   showManagedModal(els.playerModal, trigger, els.playerClose);
   pushRecentPlay(g.slug);
   // Refresh chip list so a freshly-played game can populate the Recently chip
@@ -1441,6 +1558,8 @@ function closePlayer(options = {}){
   hideManagedModal(els.playerModal, options);
   els.playerFrame.removeAttribute('src');
   els.playerFrame.title = 'Game player';
+  state.activeGameSlug = "";
+  closeRelatedPanel();
   if(location.hash.startsWith('#play=')) {
     try { history.replaceState(null, '', location.pathname + location.search); } catch {}
   }
@@ -1475,6 +1594,10 @@ function setPlayerStatus(message){
 }
 
 function currentlyOpenGame(){
+  if(state.activeGameSlug){
+    const active = state.games.find(x => x.slug === state.activeGameSlug);
+    if(active) return active;
+  }
   const m = location.hash.match(/play=([^&]+)/);
   if(!m) return null;
   const slug = decodeURIComponent(m[1]);
@@ -1515,6 +1638,39 @@ async function shareCurrentGame(){
 
 if (els.playerShare) {
   els.playerShare.addEventListener('click', shareCurrentGame);
+}
+
+if (els.playerSave) {
+  els.playerSave.addEventListener('click', () => {
+    const g = currentlyOpenGame();
+    if(!g) return;
+    toggleFavorite(g.slug);
+    buildFilters();
+    render();
+    syncPlayerSaveButton(g);
+    renderPlayerShelves();
+    setPlayerStatus(isFavorite(g.slug) ? 'Saved' : 'Removed');
+  });
+}
+
+if (els.playerNext) {
+  els.playerNext.addEventListener('click', () => {
+    const next = nextSessionGame(currentlyOpenGame());
+    if(next) openPlayer(next, els.playerNext);
+  });
+}
+
+if (els.playerMore) {
+  els.playerMore.addEventListener('click', toggleRelatedPanel);
+}
+
+if (els.playerRelatedList) {
+  els.playerRelatedList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-slug]');
+    if(!button) return;
+    const game = state.games.find(g => g.slug === button.dataset.slug);
+    if(game) openPlayer(game, button);
+  });
 }
 
 // Player fullscreen toggle — uses the Fullscreen API on the whole

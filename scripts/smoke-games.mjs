@@ -516,6 +516,68 @@ async function checkCatalog(browser, baseUrl) {
     addFailure("catalog", `external game link is not absolute: ${externalHref}`);
   }
 
+  setPhase("catalog", "check player session controls");
+  for (const selector of ["#playerSave", "#playerNext", "#playerMore", "#playerRelatedPanel", "#playerRelatedList"]) {
+    if (!(await page.locator(selector).count())) {
+      addFailure("catalog", `missing player session control ${selector}`);
+    }
+  }
+
+  const initialSaveState = await page.locator("#playerSave").getAttribute("aria-pressed");
+  await page.locator("#playerSave").click();
+  await page.waitForTimeout(100);
+  let savedState = await page.locator("#playerSave").getAttribute("aria-pressed");
+  if (savedState === initialSaveState) {
+    addFailure("catalog", "player Save control did not toggle aria-pressed");
+  }
+  if (savedState !== "true") {
+    await page.locator("#playerSave").click();
+    await page.waitForTimeout(100);
+    savedState = await page.locator("#playerSave").getAttribute("aria-pressed");
+  }
+  if (savedState !== "true") {
+    addFailure("catalog", "player Save control could not save the active game");
+  }
+
+  await page.locator("#playerMore").click();
+  await page.waitForFunction(() => !document.getElementById("playerRelatedPanel").hidden);
+  const moreExpanded = await page.locator("#playerMore").getAttribute("aria-expanded");
+  if (moreExpanded !== "true") {
+    addFailure("catalog", "player More control did not update aria-expanded");
+  }
+  const relatedCount = await page.locator("#playerRelatedList .related-game").count();
+  if (relatedCount < 1 || relatedCount > 4) {
+    addFailure("catalog", `related-games panel expected 1-4 choices, found ${relatedCount}`);
+  }
+  const currentTitle = await page.locator("#playerTitle").textContent();
+  const relatedTitles = await page.locator("#playerRelatedList .related-game strong").evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim()));
+  if (relatedTitles.includes(currentTitle?.trim())) {
+    addFailure("catalog", "related-games panel included the active game");
+  }
+  if (relatedCount > 0) {
+    await page.locator("#playerRelatedList .related-game").first().click();
+    await page.waitForTimeout(200);
+    const relatedTitle = await page.locator("#playerTitle").textContent();
+    if (!relatedTitle || relatedTitle.trim() === currentTitle?.trim()) {
+      addFailure("catalog", "clicking a related game did not open a different player session");
+    }
+    const relatedHash = await page.evaluate(() => location.hash);
+    if (!relatedHash.startsWith("#play=")) {
+      addFailure("catalog", `related game did not sync #play hash: ${relatedHash}`);
+    }
+    const panelClosed = await page.locator("#playerRelatedPanel").evaluate((panel) => panel.hidden);
+    if (!panelClosed) {
+      addFailure("catalog", "related panel stayed open after launching a related game");
+    }
+
+    await page.locator("#playerNext").click();
+    await page.waitForTimeout(200);
+    const nextTitle = await page.locator("#playerTitle").textContent();
+    if (!nextTitle || nextTitle.trim() === relatedTitle?.trim()) {
+      addFailure("catalog", "player Next control did not advance to a different game");
+    }
+  }
+
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => document.getElementById("playerModal").hidden);
 
