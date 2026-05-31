@@ -450,6 +450,67 @@ async function checkCatalogProductShelves(page, githubRequests) {
   }
 }
 
+async function checkSessionRailHidden(page, label) {
+  const rail = page.locator("#sessionRail");
+  if (!(await rail.count())) {
+    addFailure(label, "missing Continue playing session rail");
+    return;
+  }
+  const hidden = await rail.evaluate((element) => element.hidden);
+  if (!hidden) {
+    addFailure(label, "Continue playing session rail should stay hidden without recent or favorite state");
+  }
+}
+
+async function checkSessionRailPopulated(page, label, { openFirst = false } = {}) {
+  const rail = page.locator("#sessionRail");
+  if (!(await rail.count())) {
+    addFailure(label, "missing Continue playing session rail");
+    return;
+  }
+  const hidden = await rail.evaluate((element) => element.hidden);
+  if (hidden) {
+    addFailure(label, "Continue playing session rail should appear after recent/favorite state exists");
+    return;
+  }
+
+  const cards = page.locator("#sessionRailList .session-rail-card");
+  const count = await cards.count();
+  if (count < 2 || count > 3) {
+    addFailure(label, `Continue playing rail expected 2-3 actions, found ${count}`);
+  }
+  const text = await page.locator("#sessionRailList").textContent();
+  for (const expected of ["Resume", "Saved", "Next for you"]) {
+    if (!text || !text.includes(expected)) {
+      addFailure(label, `Continue playing rail missing "${expected}" action`);
+    }
+  }
+  const slots = await cards.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-session-slot")));
+  if (new Set(slots).size !== slots.length) {
+    addFailure(label, "Continue playing rail repeated a session slot");
+  }
+  const slugs = await cards.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")));
+  if (new Set(slugs).size !== slugs.length) {
+    addFailure(label, "Continue playing rail repeated a game slug");
+  }
+
+  if (openFirst && count > 0) {
+    const firstTitle = await cards.first().locator("strong").textContent();
+    await cards.first().click();
+    await page.waitForSelector("#playerModal:not([hidden])");
+    const playerTitle = await page.locator("#playerTitle").textContent();
+    if (!playerTitle || playerTitle.trim() !== firstTitle?.trim()) {
+      addFailure(label, `Continue playing rail opened "${playerTitle}" instead of "${firstTitle}"`);
+    }
+    const hash = await page.evaluate(() => location.hash);
+    if (!hash.startsWith("#play=")) {
+      addFailure(label, `Continue playing rail did not sync #play hash: ${hash}`);
+    }
+    await page.locator("#playerClose").click();
+    await page.waitForFunction(() => document.getElementById("playerModal").hidden);
+  }
+}
+
 async function checkCatalogMobileContainment(browser, baseUrl) {
   setPhase("catalog mobile", "open narrow catalog", { viewport: "mobile" });
   const page = await browser.newPage({
@@ -459,9 +520,20 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   const githubRequests = [];
   const requests = recordPageRequests(page);
   recordGithubApiRequests(page, githubRequests);
+  await page.addInitScript(({ recentSlug, favoriteSlug }) => {
+    try {
+      if (window.top !== window) return;
+      localStorage.setItem("workshop-arcade:recentPlays:v1", JSON.stringify([recentSlug]));
+      localStorage.setItem("workshop-arcade:favorites:v1", JSON.stringify([favoriteSlug]));
+    } catch {}
+  }, {
+    recentSlug: manifest[0]?.slug,
+    favoriteSlug: manifest[1]?.slug || manifest[0]?.slug,
+  });
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
   await checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, "catalog mobile");
+  await checkSessionRailPopulated(page, "catalog mobile");
 
   const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
   if (overflow > 2) {
@@ -495,6 +567,8 @@ async function checkCatalog(browser, baseUrl) {
   await checkCardTagFiltering(page);
   setPhase("catalog", "check discovery actions");
   await checkDiscoveryActions(page);
+  setPhase("catalog", "check first-visit session rail");
+  await checkSessionRailHidden(page, "catalog");
   setPhase("catalog", "check player product shelves");
   await checkCatalogProductShelves(page, githubRequests);
 
@@ -580,6 +654,8 @@ async function checkCatalog(browser, baseUrl) {
 
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => document.getElementById("playerModal").hidden);
+  setPhase("catalog", "check populated session rail");
+  await checkSessionRailPopulated(page, "catalog", { openFirst: true });
 
   setPhase("catalog", "workshop issue URL flow");
   await page.locator("#submitGameBtn").click();
