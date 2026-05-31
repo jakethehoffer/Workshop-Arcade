@@ -119,39 +119,44 @@ async function checkCatalog() {
     fail(`${indexPath}: render() must set a placeholder src (e.g. COVER_LAZY_PLACEHOLDER) on below-the-fold cards so the layout box is reserved without a broken-image flash before the observer swaps the real cover in`);
   }
 
-  // GitHub issue/commit widgets are useful secondary data, but they must not
-  // cost first paint or consume the catalog's request budget. The catalog can
-  // hydrate from sessionStorage immediately, and live GitHub API calls must be
-  // behind explicit controls.
+  // Product shelves are generated locally from the manifest, favorites, and
+  // recent-play state. Repository issue/commit widgets must not return to the
+  // player-facing catalog because remote API widgets cost first paint and move
+  // the page away from arcade discovery.
   const startupMatch = src.match(/\(async function load\(\)\{([\s\S]*?)\}\)\(\);/);
   if (!startupMatch) {
-    fail(`${indexPath}: unable to locate startup load() block for GitHub fetch deferral check`);
+    fail(`${indexPath}: unable to locate startup load() block for product-shelf check`);
   } else {
     const startupSrc = startupMatch[1];
-    if (/loadIssueQueue\s*\(/.test(startupSrc)) {
-      fail(`${indexPath}: startup load() must not call loadIssueQueue(); GitHub issue fetches must be user-triggered or cached`);
-    }
-    if (/loadRecentUpdates\s*\(/.test(startupSrc)) {
-      fail(`${indexPath}: startup load() must not call loadRecentUpdates(); GitHub commit fetches must be user-triggered or cached`);
-    }
-    if (!/primeIssueQueue\s*\(\s*\)/.test(startupSrc)) {
-      fail(`${indexPath}: startup load() should call primeIssueQueue() so cached/fallback queue content renders without a network request`);
-    }
-    if (!/primeRecentUpdates\s*\(\s*\)/.test(startupSrc)) {
-      fail(`${indexPath}: startup load() should call primeRecentUpdates() so cached/fallback update content renders without a network request`);
+    if (/loadIssueQueue\s*\(|loadRecentUpdates\s*\(|primeIssueQueue\s*\(|primeRecentUpdates\s*\(/.test(startupSrc)) {
+      fail(`${indexPath}: startup load() must not initialize repository issue/commit widgets`);
     }
   }
-  if (!/id=["']refreshQueueBtn["']/.test(src)) {
-    fail(`${indexPath}: missing explicit Refresh Queue control for user-triggered GitHub issue loading`);
+  const forbiddenRepoWidgets = [
+    'api.github.com',
+    'ISSUE_QUEUE_API',
+    'UPDATES_API',
+    'refreshQueueBtn',
+    'loadUpdatesBtn',
+    'Improvement Queue',
+    'Recent Updates',
+  ];
+  for (const needle of forbiddenRepoWidgets) {
+    if (src.includes(needle)) {
+      fail(`${indexPath}: repository widget surface "${needle}" should not appear in the player catalog`);
+    }
   }
-  if (!/id=["']loadUpdatesBtn["']/.test(src)) {
-    fail(`${indexPath}: missing explicit Load Updates control for user-triggered GitHub commit loading`);
+  if (!/id=["']playerShelvesList["']/.test(src)) {
+    fail(`${indexPath}: missing player shelves list for featured / quick-play / newest sections`);
   }
-  if (!/refreshQueueBtn[\s\S]*loadIssueQueue\s*\(\s*\{\s*force:\s*true\s*\}\s*\)/.test(src)) {
-    fail(`${indexPath}: Refresh Queue control must call loadIssueQueue({ force: true })`);
+  if (!/function\s+buildPlayerShelves\s*\(/.test(src) || !/Featured games/.test(src) || !/Quick plays/.test(src) || !/Newest arrivals/.test(src)) {
+    fail(`${indexPath}: product shelves must be generated from manifest data with featured, quick-play, and newest lanes`);
   }
-  if (!/loadUpdatesBtn[\s\S]*loadRecentUpdates\s*\(\s*\{\s*force:\s*true\s*\}\s*\)/.test(src)) {
-    fail(`${indexPath}: Load Updates control must call loadRecentUpdates({ force: true })`);
+  if (!/renderPlayerShelves\s*\(\s*\)/.test(src)) {
+    fail(`${indexPath}: render() must refresh player shelves when catalog state changes`);
+  }
+  if (!/id=["']suggestImprovementBtn["']/.test(src)) {
+    fail(`${indexPath}: missing quiet Suggest improvement action near player shelves`);
   }
 }
 

@@ -3,7 +3,7 @@
 //
 // The catalog ships a <meta http-equiv="Content-Security-Policy"> in
 // index.html so even if an attacker manages to inject markup (e.g. via
-// the Workshop flow's GitHub-issue intake), they can't smuggle in a
+// the Workshop brief form), they can't smuggle in a
 // <script src="https://evil.com/..."> or exfiltrate to a non-allowlisted
 // origin. The policy intentionally allows 'unsafe-inline' for scripts
 // and styles — refactoring the catalog's ~1900 lines of inline JS + CSS
@@ -16,8 +16,7 @@
 //      style-src, img-src, connect-src, frame-src, object-src,
 //      base-uri, form-action).
 //   3. Specific allowlist entries match the catalog's runtime contract:
-//      - connect-src includes https://api.github.com (issue queue +
-//        recent updates fetches)
+//      - connect-src is same-origin only (manifest / PWA shell fetches)
 //      - object-src is 'none' (block legacy plugins)
 //      - base-uri is 'self' (block <base> hijacking)
 //      - frame-src includes 'self' (the player modal iframes
@@ -113,13 +112,13 @@ async function checkIndex() {
     fail(`${path}: style-src must include 'self'`);
   }
 
-  // connect-src must allow the GitHub REST endpoints used by the
-  // issue queue + recent updates feed.
-  if (!directiveIncludes('connect-src', 'https://api.github.com')) {
-    fail(`${path}: connect-src must allow https://api.github.com (used by the issue queue and recent updates fetches)`);
-  }
   if (!directiveIncludes('connect-src', "'self'")) {
     fail(`${path}: connect-src must include 'self' so the manifest + sw.js + app.webmanifest fetches succeed`);
+  }
+  const connectSrc = directives.get('connect-src') || [];
+  const remoteConnectHosts = connectSrc.filter((entry) => /^https?:\/\//i.test(entry));
+  if (remoteConnectHosts.length > 0) {
+    fail(`${path}: connect-src should stay same-origin for the player catalog, got remote hosts (${remoteConnectHosts.join(', ')})`);
   }
 
   // frame-src must allow same-origin so the player modal's iframe

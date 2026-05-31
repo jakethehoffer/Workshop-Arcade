@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Workshop Arcade — Browser Games</title>
   <meta name="description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
@@ -15,7 +15,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Arcade" />
   <link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/" />
-  <link rel="alternate" type="application/atom+xml" title="Workshop Arcade — recent commits" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main.atom" />
   <link rel="alternate" type="application/feed+json" title="Workshop Arcade — new games" href="feed.json" />
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
@@ -23,7 +22,7 @@
   <meta property="og:title" content="Workshop Arcade — Browser Games" />
   <meta property="og:description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
   <meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/" />
-  <meta property="og:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og-image.svg" />
+  <meta property="og:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og-image.svg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="Workshop Arcade — Browser Games" />
@@ -31,7 +30,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Workshop Arcade — Browser Games" />
   <meta name="twitter:description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/covers/og-image.svg" />
+  <meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og-image.svg" />
   <meta name="twitter:image:alt" content="Workshop Arcade — Browser Games" />
   <style>
     :root{
@@ -220,6 +219,9 @@
     .queue-row.queue-empty.queue-actionable{cursor:pointer}
     .queue-row.queue-empty:hover{border-color:rgba(94,234,212,0.18)}
     .queue-state{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(94,234,212,0.78);min-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
+    .footer-link{border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}
+    .footer-link:hover{color:var(--ink)}
+    .footer-link:focus-visible{outline:3px solid var(--ring);outline-offset:4px;border-radius:4px}
 
     /* Workshop modal */
     [hidden]{display:none!important}
@@ -361,8 +363,7 @@
 
     /* Inline fallback when the page is loaded without JS — the catalog
        depends on the manifest fetch + render loop, so the grid would
-       otherwise sit forever on aria-busy. The visible block links
-       directly to the GitHub repo so visitors still have a path forward. */
+       otherwise sit forever on aria-busy. */
     .noscript-fallback{
       max-width:var(--maxw);margin:24px auto;padding:18px 20px;
       background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);
@@ -404,7 +405,7 @@
 <noscript>
   <div class="noscript-fallback" role="alert">
     <h2>JavaScript is disabled</h2>
-    <p>Workshop Arcade fetches the catalog and renders the player modal with client-side JavaScript, so you'll need to enable it to browse and play games here. The full source is on <a href="https://github.com/jakethehoffer/Workshop-Arcade" rel="noopener">GitHub</a> if you'd rather inspect it before turning JS back on.</p>
+    <p>Workshop Arcade fetches the catalog and opens games with client-side JavaScript. Enable JavaScript to browse, save favorites, and play instantly.</p>
   </div>
 </noscript>
 <div class="wrap">
@@ -413,7 +414,7 @@
       <a class="logo" href="#" aria-label="Home">
         <div class="dot" aria-hidden="true"></div>
         <div class="brand-mark">
-          <span class="eyebrow">Play &amp; Workshop</span>
+          <span class="eyebrow">Play instantly</span>
           <span class="name">Workshop Arcade</span>
         </div>
       </a>
@@ -431,7 +432,7 @@
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span>Install</span>
         </button>
-        <a class="btn primary" href="#" id="submitGameBtn">Workshop</a>
+        <a class="btn primary" href="#" id="submitGameBtn">Suggest</a>
       </div>
     </div>
     <div class="filters" id="filters" aria-label="Filters">
@@ -474,7 +475,7 @@
           <div class="row">
             <div class="tags"></div>
             <div class="card-actions">
-              <button class="improve" type="button">Improve</button>
+              <button class="improve" type="button">Suggest</button>
               <button class="play" type="button">Play</button>
             </div>
           </div>
@@ -482,34 +483,18 @@
       </article>
     </template>
     <div id="empty" class="empty" hidden>No results. Try a different search or filter.</div>
-    <section class="queue" aria-labelledby="queueTitle">
+    <section class="queue shelves" aria-labelledby="playerShelvesTitle">
       <div class="queue-head">
         <div class="queue-heading">
-          <span class="eyebrow">Workshop Arcade</span>
-          <h2 id="queueTitle">Improvement Queue</h2>
-          <div class="queue-state" id="queueStatus" aria-live="polite">Tracked in GitHub issues</div>
+          <span class="eyebrow">Player picks</span>
+          <h2 id="playerShelvesTitle">Arcade lanes</h2>
+          <div class="queue-state" id="playerShelvesStatus" aria-live="polite">Featured, quick plays, newest, and saved games</div>
         </div>
         <div class="queue-actions">
-          <button class="btn subtle" type="button" id="newQueueRequestBtn">New Request</button>
-          <button class="btn subtle" type="button" id="refreshQueueBtn">Refresh Queue</button>
-          <a class="btn" id="openQueueLink" href="https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request" target="_blank" rel="noopener">Open Queue</a>
+          <button class="btn subtle" type="button" id="suggestImprovementBtn">Suggest improvement</button>
         </div>
       </div>
-      <div class="queue-list" id="queueList"></div>
-    </section>
-    <section class="queue updates" id="updatesSection" aria-labelledby="updatesTitle" hidden>
-      <div class="queue-head">
-        <div class="queue-heading">
-          <span class="eyebrow">Workshop Arcade</span>
-          <h2 id="updatesTitle">Recent Updates</h2>
-          <div class="queue-state" id="updatesStatus" aria-live="polite"></div>
-        </div>
-        <div class="queue-actions">
-          <button class="btn subtle" type="button" id="loadUpdatesBtn">Load Updates</button>
-          <a class="btn" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main" target="_blank" rel="noopener">All Commits</a>
-        </div>
-      </div>
-      <div class="queue-list" id="updatesList"></div>
+      <div class="queue-list" id="playerShelvesList"></div>
     </section>
   </main>
 
@@ -518,8 +503,8 @@
     <section class="workshop-card">
       <div class="workshop-head">
         <div class="workshop-heading">
-          <span class="eyebrow">Workshop Arcade</span>
-          <h2 id="workshopTitle">Workshop</h2>
+          <span class="eyebrow">Player feedback</span>
+          <h2 id="workshopTitle">Suggest an improvement</h2>
         </div>
         <button class="icon-btn" type="button" id="workshopClose" aria-label="Close">×</button>
       </div>
@@ -560,7 +545,7 @@
           <div class="workshop-actions">
             <button class="btn primary" type="button" id="copyBriefBtn">Copy Brief</button>
             <button class="btn subtle" type="button" id="downloadBriefBtn">Download</button>
-            <button class="btn subtle" type="button" id="openIssueBtn">Open Issue</button>
+            <button class="btn subtle" type="button" id="openIssueBtn">Open Draft</button>
           </div>
           <div class="status-line" id="workshopStatus" aria-live="polite"></div>
           <div class="field" style="margin-top:18px">
@@ -633,11 +618,9 @@
 
   <footer>
     <div class="foot">
-      <div>© <span id="year"></span> Workshop Arcade Games</div>
+      <div>© <span id="year"></span> Workshop Arcade Games · <span id="gameCountFooter">71</span> browser games</div>
       <div style="display:flex;gap:14px;align-items:center">
-        <a id="aboutLink" href="https://github.com/jakethehoffer/Workshop-Arcade#readme" target="_blank" rel="noopener">About</a>
-        <a id="contactLink" href="https://github.com/jakethehoffer/Workshop-Arcade" target="_blank" rel="noopener">GitHub</a>
-        <a id="rssLink" href="https://github.com/jakethehoffer/Workshop-Arcade/commits/main.atom" target="_blank" rel="noopener" title="Atom feed of recent commits">RSS</a>
+        <button class="footer-link" type="button" id="footerSuggestBtn">Suggest improvement</button>
       </div>
     </div>
   </footer>
@@ -722,14 +705,11 @@ const els = {
   sort: document.getElementById('sort'),
   resultCount: document.getElementById('resultCount'),
   empty: document.getElementById('empty'),
-  queueStatus: document.getElementById('queueStatus'),
-  queueList: document.getElementById('queueList'),
-  updatesSection: document.getElementById('updatesSection'),
-  updatesStatus: document.getElementById('updatesStatus'),
-  updatesList: document.getElementById('updatesList'),
-  newQueueRequestBtn: document.getElementById('newQueueRequestBtn'),
-  refreshQueueBtn: document.getElementById('refreshQueueBtn'),
-  loadUpdatesBtn: document.getElementById('loadUpdatesBtn'),
+  playerShelvesStatus: document.getElementById('playerShelvesStatus'),
+  playerShelvesList: document.getElementById('playerShelvesList'),
+  suggestImprovementBtn: document.getElementById('suggestImprovementBtn'),
+  footerSuggestBtn: document.getElementById('footerSuggestBtn'),
+  gameCountFooter: document.getElementById('gameCountFooter'),
   workshopModal: document.getElementById('workshopModal'),
   workshopCard: document.querySelector('.workshop-card'),
   workshopForm: document.getElementById('workshopForm'),
@@ -880,8 +860,6 @@ function trapModalFocus(e){
   buildFilters();
   populateWorkshopGames();
   update();
-  primeIssueQueue();
-  primeRecentUpdates();
   // If the URL has #play=slug, auto-open in the sandboxed player.
   syncHash();
 })();
@@ -1247,7 +1225,7 @@ function render(){
     const improveBtn = card.querySelector('.improve');
     const thumbBtn = card.querySelector('.thumb');
     playBtn.setAttribute('aria-label', `Play ${g.title}`);
-    improveBtn.setAttribute('aria-label', `Improve ${g.title}`);
+    improveBtn.setAttribute('aria-label', `Suggest an improvement for ${g.title}`);
     thumbBtn.setAttribute('aria-label', `Play ${g.title}`);
     playBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
     improveBtn.addEventListener('click', e => openWorkshop(g.id, e.currentTarget));
@@ -1288,260 +1266,142 @@ function render(){
     els.empty.textContent = 'No results. Try a different search or filter.';
   }
   els.empty.hidden = n !== 0;
+  renderPlayerShelves();
 }
 
-const ISSUE_QUEUE_API = 'https://api.github.com/repos/jakethehoffer/Workshop-Arcade/issues?state=open&labels=workshop-request&per_page=10';
-const ISSUE_QUEUE_HTML = 'https://github.com/jakethehoffer/Workshop-Arcade/issues?q=is%3Aissue%20is%3Aopen%20label%3Aworkshop-request';
-const ISSUE_QUEUE_CACHE_KEY = 'workshop-arcade:issueQueue:v1';
-const ISSUE_QUEUE_CACHE_TTL_MS = 5 * 60 * 1000;
-const ISSUE_QUEUE_MAX_ROWS = 6;
-
-function relativeTime(iso){
-  const t = new Date(iso).getTime();
-  if(!Number.isFinite(t)) return '';
-  const diff = Math.max(0, Date.now() - t);
-  const min = 60 * 1000, hour = 60 * min, day = 24 * hour, week = 7 * day;
-  if(diff < hour) return `${Math.max(1, Math.round(diff/min))}m ago`;
-  if(diff < day) return `${Math.round(diff/hour)}h ago`;
-  if(diff < week) return `${Math.round(diff/day)}d ago`;
-  if(diff < 4*week) return `${Math.round(diff/week)}w ago`;
-  const months = Math.round(diff / (30*day));
-  if(months < 12) return `${months}mo ago`;
-  return `${Math.round(months/12)}y ago`;
-}
-
-function readIssueQueueCache(){
-  try {
-    const raw = sessionStorage.getItem(ISSUE_QUEUE_CACHE_KEY);
-    if(!raw) return null;
-    const parsed = JSON.parse(raw);
-    if(!parsed || typeof parsed.fetchedAt !== 'number' || !Array.isArray(parsed.issues)) return null;
-    if(Date.now() - parsed.fetchedAt > ISSUE_QUEUE_CACHE_TTL_MS) return null;
-    return parsed.issues;
-  } catch { return null; }
-}
-
-function writeIssueQueueCache(issues){
-  try {
-    sessionStorage.setItem(ISSUE_QUEUE_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), issues }));
-  } catch { /* storage unavailable */ }
-}
-
-function makeQueueRow(href, titleText, subtitleText, actionText){
-  const row = document.createElement('a');
+function makeShelfRow(shelf){
+  const row = document.createElement('button');
   row.className = 'queue-row';
-  row.href = href;
-  row.target = '_blank';
-  row.rel = 'noopener';
+  row.type = 'button';
+  row.dataset.shelf = shelf.id;
   const meta = document.createElement('div');
   const title = document.createElement('strong');
-  title.textContent = titleText;
+  title.textContent = shelf.title;
   meta.appendChild(title);
-  if(subtitleText){
+  if(shelf.subtitle){
     const sub = document.createElement('span');
-    sub.textContent = subtitleText;
+    sub.textContent = shelf.subtitle;
     meta.appendChild(sub);
   }
   const action = document.createElement('span');
   action.className = 'queue-action';
-  action.textContent = actionText;
+  action.textContent = shelf.action;
   row.append(meta, action);
   return row;
 }
 
-function renderQueueIssues(issues){
-  els.queueList.innerHTML = '';
-  const visible = issues.slice(0, ISSUE_QUEUE_MAX_ROWS);
-  for(const issue of visible){
-    const subtitle = `Opened ${relativeTime(issue.created_at)} · #${issue.number}`;
-    els.queueList.appendChild(makeQueueRow(issue.html_url, issue.title, subtitle, 'View →'));
+function sortNewest(games){
+  return [...games].sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
+}
+
+function sortPopular(games){
+  return [...games].sort((a,b)=>(b.popularity||0)-(a.popularity||0));
+}
+
+function gamesFromSlugs(slugs){
+  return (slugs || [])
+    .map(slug => state.games.find(g => g.slug === slug))
+    .filter(Boolean);
+}
+
+function summarizeGames(games, fallback){
+  const names = games.slice(0, 3).map(g => g.title);
+  if(!names.length) return fallback;
+  return names.join(' · ');
+}
+
+function buildPlayerShelves(){
+  const newest = sortNewest(state.games).slice(0, 5);
+  const popular = sortPopular(state.games).slice(0, 5);
+  const quick = sortPopular(state.games.filter(g => (g.tags||[]).some(tag => ['Arcade','Action','Endless'].includes(tag)))).slice(0, 5);
+  const recent = gamesFromSlugs(state.recentPlays).slice(0, 5);
+  const favorites = gamesFromSlugs(state.favorites).slice(0, 5);
+  const shelves = [];
+
+  if(recent.length){
+    shelves.push({
+      id: 'recent',
+      title: 'Continue playing',
+      subtitle: summarizeGames(recent, 'Your recently opened games stay on this device.'),
+      action: 'Resume →'
+    });
   }
-  if(issues.length > ISSUE_QUEUE_MAX_ROWS){
-    const remaining = issues.length - ISSUE_QUEUE_MAX_ROWS;
-    els.queueList.appendChild(makeQueueRow(ISSUE_QUEUE_HTML, `+${remaining} more open request${remaining===1?'':'s'}`, 'See the full queue on GitHub.', 'All →'));
+  if(favorites.length){
+    shelves.push({
+      id: 'favorites',
+      title: 'Saved favorites',
+      subtitle: summarizeGames(favorites, 'Games you starred on this device.'),
+      action: 'Open →'
+    });
   }
-  const n = issues.length;
-  els.queueStatus.textContent = `${n} open request${n===1?'':'s'}`;
-}
 
-function renderQueueEmpty(){
-  els.queueList.innerHTML = '';
-  els.queueStatus.textContent = 'Queue is clear';
-  const row = document.createElement('button');
-  row.type = 'button';
-  row.className = 'queue-row queue-empty queue-actionable';
-  row.setAttribute('aria-label', 'Create a new workshop request');
-  const meta = document.createElement('div');
-  const title = document.createElement('strong');
-  title.textContent = 'No open workshop requests yet';
-  const sub = document.createElement('span');
-  sub.textContent = 'Be the first — describe an upgrade and open a request.';
-  meta.append(title, sub);
-  const action = document.createElement('span');
-  action.className = 'queue-action';
-  action.textContent = 'New →';
-  row.append(meta, action);
-  row.addEventListener('click', () => {
-    if(els.newQueueRequestBtn) els.newQueueRequestBtn.click();
-  });
-  els.queueList.appendChild(row);
-}
-
-function renderQueueFallback(){
-  els.queueList.innerHTML = '';
-  els.queueStatus.textContent = 'Refresh on demand';
-  els.queueList.appendChild(makeQueueRow(
-    ISSUE_QUEUE_HTML,
-    'Open workshop-request issues',
-    'Use Refresh Queue for a live count without slowing catalog startup.',
-    'View →'
-  ));
-}
-
-async function fetchIssueQueue(){
-  const res = await fetch(ISSUE_QUEUE_API, { headers: { 'Accept': 'application/vnd.github+json' } });
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  if(!Array.isArray(data)) throw new Error('Unexpected response');
-  return data
-    .filter(it => !it.pull_request)
-    .map(it => ({ number: it.number, title: it.title, html_url: it.html_url, created_at: it.created_at }));
-}
-
-function primeIssueQueue(){
-  const cached = readIssueQueueCache();
-  if(cached){
-    if(cached.length) renderQueueIssues(cached); else renderQueueEmpty();
-    return;
-  }
-  renderQueueFallback();
-}
-
-async function loadIssueQueue({ force = false } = {}){
-  const cached = force ? null : readIssueQueueCache();
-  if(cached){
-    if(cached.length) renderQueueIssues(cached); else renderQueueEmpty();
-    return;
-  }
-  els.queueStatus.textContent = 'Loading queue…';
-  els.queueList.innerHTML = '';
-  if(els.refreshQueueBtn) els.refreshQueueBtn.disabled = true;
-  try {
-    const issues = await fetchIssueQueue();
-    writeIssueQueueCache(issues);
-    if(issues.length) renderQueueIssues(issues); else renderQueueEmpty();
-  } catch (err) {
-    console.warn('Issue queue fetch failed:', err);
-    renderQueueFallback();
-  } finally {
-    if(els.refreshQueueBtn) els.refreshQueueBtn.disabled = false;
-  }
-}
-
-const UPDATES_API = 'https://api.github.com/repos/jakethehoffer/Workshop-Arcade/commits?per_page=5';
-const UPDATES_CACHE_KEY = 'workshop-arcade:recentUpdates:v1';
-const UPDATES_CACHE_TTL_MS = 5 * 60 * 1000;
-
-function readUpdatesCache(){
-  try {
-    const raw = sessionStorage.getItem(UPDATES_CACHE_KEY);
-    if(!raw) return null;
-    const parsed = JSON.parse(raw);
-    if(!parsed || typeof parsed.fetchedAt !== 'number' || !Array.isArray(parsed.commits)) return null;
-    if(Date.now() - parsed.fetchedAt > UPDATES_CACHE_TTL_MS) return null;
-    return parsed.commits;
-  } catch { return null; }
-}
-
-function writeUpdatesCache(commits){
-  try {
-    sessionStorage.setItem(UPDATES_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), commits }));
-  } catch { /* storage unavailable */ }
-}
-
-function renderUpdates(commits){
-  els.updatesList.innerHTML = '';
-  for(const c of commits){
-    const row = document.createElement('a');
-    row.className = 'queue-row';
-    row.href = c.html_url;
-    row.target = '_blank';
-    row.rel = 'noopener';
-    const meta = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = c.title;
-    meta.appendChild(title);
-    const sub = document.createElement('span');
-    sub.textContent = `${relativeTime(c.date)} · ${c.sha.slice(0, 7)}`;
-    meta.appendChild(sub);
-    const action = document.createElement('span');
-    action.className = 'queue-action';
-    action.textContent = 'Diff →';
-    row.append(meta, action);
-    els.updatesList.appendChild(row);
-  }
-  els.updatesStatus.textContent = `${commits.length} recent update${commits.length===1?'':'s'}`;
-  els.updatesSection.hidden = false;
-}
-
-function renderUpdatesFallback(){
-  els.updatesList.innerHTML = '';
-  els.updatesStatus.textContent = 'Load on demand';
-  els.updatesSection.hidden = false;
-  els.updatesList.appendChild(makeQueueRow(
-    'https://github.com/jakethehoffer/Workshop-Arcade/commits/main',
-    'Recent commits stay on GitHub',
-    'Use Load Updates for a live list without slowing catalog startup.',
-    'Open →'
-  ));
-}
-
-async function fetchRecentUpdates(){
-  const res = await fetch(UPDATES_API, { headers: { 'Accept': 'application/vnd.github+json' } });
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  if(!Array.isArray(data)) throw new Error('Unexpected response');
-  return data.map(c => ({
-    sha: c.sha,
-    title: (c.commit?.message || '').split('\n')[0],
-    date: c.commit?.author?.date || c.commit?.committer?.date,
-    html_url: c.html_url
-  })).filter(c => c.sha && c.title && c.date);
-}
-
-function primeRecentUpdates(){
-  const cached = readUpdatesCache();
-  if(cached && cached.length){
-    renderUpdates(cached);
-    return;
-  }
-  renderUpdatesFallback();
-}
-
-async function loadRecentUpdates({ force = false } = {}){
-  const cached = force ? null : readUpdatesCache();
-  if(cached && cached.length){
-    renderUpdates(cached);
-    return;
-  }
-  els.updatesStatus.textContent = 'Loading updates…';
-  els.updatesList.innerHTML = '';
-  els.updatesSection.hidden = false;
-  if(els.loadUpdatesBtn) els.loadUpdatesBtn.disabled = true;
-  try {
-    const commits = await fetchRecentUpdates();
-    if(!commits.length){
-      renderUpdatesFallback();
-      return;
+  shelves.push(
+    {
+      id: 'featured',
+      title: 'Featured games',
+      subtitle: summarizeGames(popular, 'The strongest arcade entries by catalog score.'),
+      action: 'Browse →'
+    },
+    {
+      id: 'quick',
+      title: 'Quick plays',
+      subtitle: summarizeGames(quick, 'Fast-start games for a short session.'),
+      action: 'Start →'
+    },
+    {
+      id: 'newest',
+      title: 'Newest arrivals',
+      subtitle: summarizeGames(newest, 'Freshly added games from the catalog.'),
+      action: 'See new →'
     }
-    writeUpdatesCache(commits);
-    renderUpdates(commits);
-  } catch (err) {
-    console.warn('Recent updates fetch failed:', err);
-    renderUpdatesFallback();
-  } finally {
-    if(els.loadUpdatesBtn) els.loadUpdatesBtn.disabled = false;
+  );
+
+  return shelves;
+}
+
+function renderPlayerShelves(){
+  if(!els.playerShelvesList) return;
+  els.playerShelvesList.innerHTML = '';
+  const shelves = buildPlayerShelves();
+  for(const shelf of shelves){
+    els.playerShelvesList.appendChild(makeShelfRow(shelf));
   }
+  if(els.playerShelvesStatus){
+    els.playerShelvesStatus.textContent = `${state.games.length} games · ${categoryCount('Favorites')} saved · ${state.recentPlays.length} recent`;
+  }
+  if(els.gameCountFooter){
+    els.gameCountFooter.textContent = String(state.games.length || 71);
+  }
+}
+
+function openShelf(id){
+  resetDiscoverySearch();
+  if(id === 'recent' && state.recentPlays.length){
+    state.category = 'Recently';
+  } else if(id === 'favorites' && categoryCount('Favorites') > 0){
+    state.category = 'Favorites';
+  } else if(id === 'quick'){
+    state.category = state.games.some(g => (g.tags||[]).includes('Arcade')) ? 'Arcade' : 'All';
+    state.sort = 'pop';
+  } else if(id === 'featured'){
+    state.category = 'All';
+    state.sort = 'pop';
+  } else {
+    state.category = 'All';
+    state.sort = 'new';
+  }
+  if(els.sort) els.sort.value = state.sort;
+  syncStateToUrl();
+  update();
+  document.getElementById('grid')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+if(els.playerShelvesList){
+  els.playerShelvesList.addEventListener('click', (event) => {
+    const row = event.target.closest('[data-shelf]');
+    if(!row) return;
+    openShelf(row.dataset.shelf || 'newest');
+  });
 }
 
 function placeholderCover(title){
@@ -1567,6 +1427,7 @@ function openPlayer(g, trigger = document.activeElement){
   // Refresh chip list so a freshly-played game can populate the Recently chip
   // the next time the user returns to the catalog.
   buildFilters();
+  renderPlayerShelves();
 }
 
 function closePlayer(options = {}){
@@ -1813,7 +1674,7 @@ function generateBrief(){
     `Game: ${title}`,
     `File: ${file}`,
     `Catalog tags: ${tags}`,
-    'Labels: workshop-request, enhancement',
+    'Request type: player improvement',
     '',
     'Upgrade request:',
     goal,
@@ -1964,7 +1825,7 @@ function openGitHubIssue(){
     labels: 'workshop-request,enhancement'
   });
   window.open(`${GITHUB_ISSUE_URL}?${params.toString()}`, '_blank', 'noopener');
-  setStatus('GitHub issue draft opened.');
+  setStatus('Issue draft opened.');
 }
 
 function setStatus(message){
@@ -1974,6 +1835,12 @@ function setStatus(message){
 }
 
 els.submitGameBtn.addEventListener('click', e => { e.preventDefault(); openWorkshop('', e.currentTarget); });
+if(els.suggestImprovementBtn) {
+  els.suggestImprovementBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
+}
+if(els.footerSuggestBtn) {
+  els.footerSuggestBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
+}
 els.workshopClose.addEventListener('click', () => closeWorkshop());
 els.workshopModal.addEventListener('click', e => {
   if(e.target && e.target.hasAttribute('data-close-workshop')) closeWorkshop();
@@ -1984,9 +1851,6 @@ els.saveDraftBtn.addEventListener('click', saveDraft);
 els.copyBriefBtn.addEventListener('click', copyBrief);
 els.downloadBriefBtn.addEventListener('click', downloadBrief);
 els.openIssueBtn.addEventListener('click', openGitHubIssue);
-els.newQueueRequestBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
-if(els.refreshQueueBtn) els.refreshQueueBtn.addEventListener('click', () => loadIssueQueue({ force: true }));
-if(els.loadUpdatesBtn) els.loadUpdatesBtn.addEventListener('click', () => loadRecentUpdates({ force: true }));
 els.openSelectedGameBtn.addEventListener('click', () => {
   const game = selectedWorkshopGame();
   if(game) openPlayer(game, els.submitGameBtn);

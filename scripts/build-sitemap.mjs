@@ -14,9 +14,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SITE_URL, siteUrl } from './site-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade/';
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const FALLBACK_DATE = '2025-09-01';
 
@@ -80,7 +80,7 @@ export async function buildSitemap(manifestOverride) {
   });
 
   const catalogEntry = buildEntry({
-    loc: SITE,
+    loc: SITE_URL,
     lastmod: newestDate(manifest),
     priority: '1.0',
     changefreq: 'weekly',
@@ -91,7 +91,7 @@ export async function buildSitemap(manifestOverride) {
       throw new Error(`Manifest entry ${game.id || game.title || '<unknown>'} is missing url`);
     }
     return buildEntry({
-      loc: SITE + game.url.replace(/^\/+/, ''),
+      loc: siteUrl(game.url),
       lastmod: normalizeDate(game.addedAt),
       priority: '0.8',
       changefreq: 'monthly',
@@ -118,7 +118,7 @@ export function buildItemList(manifest) {
     itemListElement: manifest.map((game, index) => ({
       '@type': 'ListItem',
       position: index + 1,
-      url: SITE + String(game.url || '').replace(/^\/+/, ''),
+      url: siteUrl(game.url),
       name: game.title,
     })),
   };
@@ -155,19 +155,19 @@ export function buildWebSite() {
     '@type': 'WebSite',
     name: 'Workshop Arcade',
     alternateName: 'Workshop Arcade — Browser Games',
-    url: SITE,
+    url: SITE_URL,
     description: 'A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser.',
     inLanguage: 'en',
     publisher: {
       '@type': 'Organization',
       name: 'Workshop Arcade',
-      url: SITE,
+      url: SITE_URL,
     },
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${SITE}?q={search_term_string}`,
+        urlTemplate: `${SITE_URL}?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -206,6 +206,56 @@ export function injectWebSite(html, block) {
   return injectMarkerBlock(html, block, WEBSITE_MARK_START, WEBSITE_MARK_END);
 }
 
+export function buildRobotsTxt() {
+  return [
+    '# Workshop Arcade',
+    '# Static catalog of HTML5 browser games.',
+    '',
+    'User-agent: *',
+    'Allow: /',
+    '',
+    `Sitemap: ${siteUrl('sitemap.xml')}`,
+    '',
+  ].join('\n');
+}
+
+function replaceRequired(html, pattern, replacement, label) {
+  if (!pattern.test(html)) {
+    throw new Error(`index.html: unable to refresh ${label}`);
+  }
+  return html.replace(pattern, replacement);
+}
+
+export function refreshRootMetaUrls(html) {
+  let next = html;
+  next = replaceRequired(
+    next,
+    /(<link\s+rel=["']canonical["']\s+href=["'])[^"']+(["']\s*\/>)/i,
+    `$1${SITE_URL}$2`,
+    'root canonical URL'
+  );
+  next = replaceRequired(
+    next,
+    /(<meta\s+property=["']og:url["']\s+content=["'])[^"']+(["']\s*\/>)/i,
+    `$1${SITE_URL}$2`,
+    'root og:url'
+  );
+  const siteOgImage = siteUrl('covers/og-image.svg');
+  next = replaceRequired(
+    next,
+    /(<meta\s+property=["']og:image["']\s+content=["'])[^"']+(["']\s*\/>)/i,
+    `$1${siteOgImage}$2`,
+    'root og:image'
+  );
+  next = replaceRequired(
+    next,
+    /(<meta\s+name=["']twitter:image["']\s+content=["'])[^"']+(["']\s*\/>)/i,
+    `$1${siteOgImage}$2`,
+    'root twitter:image'
+  );
+  return next;
+}
+
 async function writeSitemap(manifest) {
   const body = await buildSitemap(manifest);
   await writeFile(join(repoRoot, 'sitemap.xml'), body, 'utf8');
@@ -213,12 +263,18 @@ async function writeSitemap(manifest) {
   console.log(`Wrote sitemap.xml with ${urlCount} URL entries.`);
 }
 
+async function writeRobots() {
+  await writeFile(join(repoRoot, 'robots.txt'), buildRobotsTxt(), 'utf8');
+  console.log(`Wrote robots.txt with sitemap ${siteUrl('sitemap.xml')}.`);
+}
+
 async function writeIndexJsonLd(manifest) {
   const indexPath = join(repoRoot, 'index.html');
   const html = await readFile(indexPath, 'utf8');
   const itemListBlock = renderItemListBlock(manifest);
   const webSiteBlock = renderWebSiteBlock();
-  let next = injectItemList(html, itemListBlock);
+  let next = refreshRootMetaUrls(html);
+  next = injectItemList(next, itemListBlock);
   next = injectWebSite(next, webSiteBlock);
   if (next !== html) {
     await writeFile(indexPath, next, 'utf8');
@@ -231,6 +287,7 @@ async function writeIndexJsonLd(manifest) {
 async function main() {
   const manifest = await loadManifest();
   await writeSitemap(manifest);
+  await writeRobots();
   await writeIndexJsonLd(manifest);
 }
 

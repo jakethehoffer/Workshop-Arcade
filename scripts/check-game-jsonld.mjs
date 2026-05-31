@@ -20,10 +20,9 @@ import {
   JSONLD_MARK_START,
   JSONLD_MARK_END,
 } from './inject-game-meta.mjs';
+import { siteUrl } from './site-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade';
-const RAW = 'https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main';
 const issues = [];
 
 function fail(message) {
@@ -112,11 +111,11 @@ async function checkGame(game) {
   if (parsed.name !== game.title) {
     fail(`${game.url}: JSON-LD name must be "${game.title}", got "${parsed.name}"`);
   }
-  const expectedUrl = `${SITE}/${game.url}`;
+  const expectedUrl = siteUrl(game.url);
   if (parsed.url !== expectedUrl) {
     fail(`${game.url}: JSON-LD url must be "${expectedUrl}", got "${parsed.url}"`);
   }
-  const expectedImage = `${RAW}/${game.cover}`;
+  const expectedImage = siteUrl(game.cover);
   if (parsed.image !== expectedImage) {
     fail(`${game.url}: JSON-LD image must be "${expectedImage}", got "${parsed.image}"`);
   }

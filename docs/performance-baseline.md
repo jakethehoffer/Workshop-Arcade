@@ -1,6 +1,6 @@
 # Workshop Arcade Performance & SEO Baseline
 
-This is a tracked set of performance and SEO audit snapshots for the live GitHub Pages deployment and local verification runs. Reproduce with:
+This is a tracked set of performance and SEO audit snapshots for local verification runs and the current preview deployment. Reproduce with:
 
 ```bash
 npm run audit:perf

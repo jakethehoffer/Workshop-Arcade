@@ -11,8 +11,7 @@
 //      that points at #grid, so keyboard and screen-reader users can
 //      jump past the sticky header straight to the game catalog.
 //   2. A <noscript> fallback explaining why the page is empty when JS
-//      is disabled, with a link to the GitHub source — without it the
-//      grid sits forever on aria-busy="true".
+//      is disabled — without it the grid sits forever on aria-busy="true".
 //   3. A `@media (prefers-reduced-motion: reduce)` block that collapses
 //      animation/transition durations and the card hover transform, so
 //      visitors with vestibular sensitivities aren't forced through the
@@ -70,8 +69,8 @@ async function checkIndex() {
     if (!/JavaScript|javascript/i.test(noscriptBlock)) {
       fail(`${path}: <noscript> block must mention JavaScript so visitors understand why the catalog is empty`);
     }
-    if (!hasRepositoryHref(noscriptBlock)) {
-      fail(`${path}: <noscript> block should link to the GitHub repo so visitors have a path forward without enabling JS`);
+    if (!/browse|play|games/i.test(noscriptBlock)) {
+      fail(`${path}: <noscript> block must explain that JavaScript is required to browse/play the arcade`);
     }
   }
 
@@ -112,24 +111,6 @@ async function checkIndex() {
       fail(`${path}: reduced-motion block must neutralize .card:hover transform (transform: none)`);
     }
   }
-}
-
-function hasRepositoryHref(markup) {
-  for (const match of markup.matchAll(/\bhref\s*=\s*(["'])(.*?)\1/gi)) {
-    try {
-      const href = new URL(match[2]);
-      if (
-        href.protocol === 'https:' &&
-        href.hostname === 'github.com' &&
-        href.pathname === '/jakethehoffer/Workshop-Arcade'
-      ) {
-        return true;
-      }
-    } catch {
-      // Ignore non-absolute hrefs in this specific external-link check.
-    }
-  }
-  return false;
 }
 
 await checkIndex();

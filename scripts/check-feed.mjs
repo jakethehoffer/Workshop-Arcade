@@ -20,9 +20,9 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFeed, loadManifest } from './build-feed.mjs';
+import { SITE_URL, siteUrl } from './site-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade/';
 const issues = [];
 
 function fail(message) {
@@ -68,11 +68,11 @@ async function checkFeed(manifest) {
   if (parsed.version !== 'https://jsonfeed.org/version/1.1') {
     fail(`feed.json: version must be "https://jsonfeed.org/version/1.1", got "${parsed.version}"`);
   }
-  if (parsed.feed_url !== `${SITE}feed.json`) {
-    fail(`feed.json: feed_url must be "${SITE}feed.json", got "${parsed.feed_url}"`);
+  if (parsed.feed_url !== siteUrl('feed.json')) {
+    fail(`feed.json: feed_url must be "${siteUrl('feed.json')}", got "${parsed.feed_url}"`);
   }
-  if (parsed.home_page_url !== SITE) {
-    fail(`feed.json: home_page_url must be "${SITE}", got "${parsed.home_page_url}"`);
+  if (parsed.home_page_url !== SITE_URL) {
+    fail(`feed.json: home_page_url must be "${SITE_URL}", got "${parsed.home_page_url}"`);
   }
   if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
     fail('feed.json: items must be a non-empty array');
@@ -82,7 +82,7 @@ async function checkFeed(manifest) {
     fail(`feed.json: items length ${parsed.items.length} does not match manifest length ${manifest.length}`);
   }
 
-  const gameUrls = new Set(manifest.map((game) => SITE + String(game.url || '').replace(/^\/+/, '')));
+  const gameUrls = new Set(manifest.map((game) => siteUrl(game.url)));
   let prevDate = null;
   for (const [index, item] of parsed.items.entries()) {
     if (!item || typeof item.id !== 'string' || !item.id) {

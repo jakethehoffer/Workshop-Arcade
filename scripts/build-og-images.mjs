@@ -130,7 +130,7 @@ export function buildSiteOgSvg(manifest) {
   <rect width="1200" height="630" fill="url(#glow-indigo)"/>
   <g transform="translate(110 230)">
     <circle cx="22" cy="22" r="22" fill="url(#dot)"/>
-    <text x="68" y="14" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="28" letter-spacing="10" fill="#5eead4" font-weight="700">PLAY &amp; WORKSHOP</text>
+  <text x="68" y="14" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="28" letter-spacing="10" fill="#5eead4" font-weight="700">PLAY INSTANTLY</text>
     <text x="68" y="78" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="92" letter-spacing="14" fill="#e6edf3" font-weight="800">WORKSHOP ARCADE</text>
   </g>
   <text x="110" y="400" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="32" fill="#9fb0c8">A clean, fast catalog of HTML5 browser games.</text>
@@ -138,10 +138,10 @@ export function buildSiteOgSvg(manifest) {
   <g transform="translate(110 510)" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="700" font-size="20" letter-spacing="4">
     <rect x="0" y="0" rx="22" ry="22" width="160" height="44" fill="#0f1522" stroke="#5eead4" stroke-opacity="0.55" stroke-width="1"/>
     <text x="80" y="29" text-anchor="middle" fill="#e6edf3">${countLabel}</text>
-    <rect x="176" y="0" rx="22" ry="22" width="180" height="44" fill="#0f1522" stroke="#5eead4" stroke-opacity="0.55" stroke-width="1"/>
-    <text x="266" y="29" text-anchor="middle" fill="#e6edf3">AI WORKSHOP</text>
-    <rect x="372" y="0" rx="22" ry="22" width="200" height="44" fill="#0f1522" stroke="#5eead4" stroke-opacity="0.55" stroke-width="1"/>
-    <text x="472" y="29" text-anchor="middle" fill="#e6edf3">OPEN SOURCE</text>
+    <rect x="176" y="0" rx="22" ry="22" width="188" height="44" fill="#0f1522" stroke="#5eead4" stroke-opacity="0.55" stroke-width="1"/>
+    <text x="270" y="29" text-anchor="middle" fill="#e6edf3">NO DOWNLOADS</text>
+    <rect x="380" y="0" rx="22" ry="22" width="224" height="44" fill="#0f1522" stroke="#5eead4" stroke-opacity="0.55" stroke-width="1"/>
+    <text x="492" y="29" text-anchor="middle" fill="#e6edf3">PLAYER FAVORITES</text>
   </g>
 </svg>
 `;
@@ -180,7 +180,7 @@ export function buildOgSvg(game) {
   <g transform="translate(110 110)">
     <circle cx="20" cy="20" r="20" fill="url(#dot)"/>
     <text x="56" y="12" font-family='${PILL_FONT}' font-size="22" letter-spacing="8" fill="#5eead4" font-weight="700">WORKSHOP ARCADE</text>
-    <text x="56" y="38" font-family='${PILL_FONT}' font-size="14" letter-spacing="6" fill="#9fb0c8" font-weight="600" text-transform="uppercase">PLAY &amp; WORKSHOP</text>
+    <text x="56" y="38" font-family='${PILL_FONT}' font-size="14" letter-spacing="6" fill="#9fb0c8" font-weight="600" text-transform="uppercase">PLAY INSTANTLY</text>
   </g>
   <text x="110" y="320" font-family='${PILL_FONT}' font-size="${titleFontSize}" letter-spacing="2" fill="#e6edf3" font-weight="800">${escapeXml(title)}</text>
   ${subtitleLines

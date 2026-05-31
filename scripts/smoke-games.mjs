@@ -181,6 +181,13 @@ function recordPageRequests(page) {
   return requests;
 }
 
+function recordGithubApiRequests(page, githubRequests) {
+  page.on("request", (request) => {
+    const url = request.url();
+    if (isGitHubApiUrl(url)) githubRequests.push(url);
+  });
+}
+
 function localRequestPath(requestUrl, baseUrl) {
   if (!requestUrl.startsWith(baseUrl)) return null;
   const pathname = decodeURIComponent(new URL(requestUrl).pathname);
@@ -407,70 +414,39 @@ async function checkDiscoveryActions(page) {
   }
 }
 
-async function installCatalogGithubApiStub(page, githubRequests) {
-  await page.route("https://api.github.com/**", async (route) => {
-    const url = route.request().url();
-    githubRequests.push(url);
-    let body = [];
-    if (/\/issues\?/i.test(url)) {
-      body = [{
-        number: 901,
-        title: "Mock workshop request",
-        html_url: "https://github.com/jakethehoffer/Workshop-Arcade/issues/901",
-        created_at: "2026-05-23T00:00:00Z"
-      }];
-    } else if (/\/commits\?/i.test(url)) {
-      body = [{
-        sha: "abcdef1234567890",
-        html_url: "https://github.com/jakethehoffer/Workshop-Arcade/commit/abcdef1234567890",
-        commit: {
-          message: "Mock catalog update\n\nBody",
-          author: { date: "2026-05-23T00:00:00Z" },
-          committer: { date: "2026-05-23T00:00:00Z" }
-        }
-      }];
-    }
-    await route.fulfill({
-      status: 200,
-      headers: {
-        "access-control-allow-origin": "*",
-        "content-type": "application/json; charset=utf-8"
-      },
-      body: JSON.stringify(body)
-    });
-  });
-}
-
-async function checkCatalogGithubDeferral(page, githubRequests) {
+async function checkCatalogProductShelves(page, githubRequests) {
   await page.waitForTimeout(300);
   if (githubRequests.length) {
     addFailure("catalog", `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
   }
 
-  const refreshQueue = page.locator("#refreshQueueBtn");
-  const loadUpdates = page.locator("#loadUpdatesBtn");
-  if (!(await refreshQueue.count())) {
-    addFailure("catalog", "missing Refresh Queue control for user-triggered issue loading");
-    return;
-  }
-  if (!(await loadUpdates.count())) {
-    addFailure("catalog", "missing Load Updates control for user-triggered commit loading");
+  const shelfRows = page.locator("#playerShelvesList .queue-row");
+  if ((await shelfRows.count()) < 3) {
+    addFailure("catalog", "player shelves should list featured, quick-play, and newest lanes");
     return;
   }
 
-  await refreshQueue.click();
-  await page.waitForFunction(() => (document.getElementById("queueStatus")?.textContent || "").includes("open request"));
-  const issueRequests = githubRequests.filter((url) => /\/issues\?/i.test(url));
-  if (issueRequests.length !== 1) {
-    addFailure("catalog", `Refresh Queue should make exactly one issue API request, found ${issueRequests.length}`);
+  const shelfText = await page.locator("#playerShelvesList").textContent();
+  for (const label of ["Featured games", "Quick plays", "Newest arrivals"]) {
+    if (!shelfText || !shelfText.includes(label)) {
+      addFailure("catalog", `player shelves missing "${label}"`);
+    }
   }
 
-  const beforeUpdates = githubRequests.length;
-  await loadUpdates.click();
-  await page.waitForFunction(() => (document.getElementById("updatesStatus")?.textContent || "").includes("recent update"));
-  const updateRequests = githubRequests.slice(beforeUpdates).filter((url) => /\/commits\?/i.test(url));
-  if (updateRequests.length !== 1) {
-    addFailure("catalog", `Load Updates should make exactly one commit API request, found ${updateRequests.length}`);
+  await page.locator('#playerShelvesList [data-shelf="featured"]').click();
+  await page.waitForTimeout(100);
+  if (await page.locator("#sort").inputValue() !== "pop") {
+    addFailure("catalog", "Featured shelf did not switch to popular sort");
+  }
+
+  await page.locator('#playerShelvesList [data-shelf="newest"]').click();
+  await page.waitForTimeout(100);
+  if (await page.locator("#sort").inputValue() !== "new") {
+    addFailure("catalog", "Newest shelf did not restore newest sort");
+  }
+
+  if (!(await page.locator("#suggestImprovementBtn").count())) {
+    addFailure("catalog", "missing quiet Suggest improvement action near player shelves");
   }
 }
 
@@ -482,7 +458,7 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   observePage(page, baseUrl, "catalog mobile");
   const githubRequests = [];
   const requests = recordPageRequests(page);
-  await installCatalogGithubApiStub(page, githubRequests);
+  recordGithubApiRequests(page, githubRequests);
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
   await checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, "catalog mobile");
@@ -500,7 +476,7 @@ async function checkCatalog(browser, baseUrl) {
   observePage(page, baseUrl, "catalog");
   const githubRequests = [];
   const requests = recordPageRequests(page);
-  await installCatalogGithubApiStub(page, githubRequests);
+  recordGithubApiRequests(page, githubRequests);
   setPhase("catalog", "navigate catalog");
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   setPhase("catalog", "wait for cards");
@@ -519,8 +495,8 @@ async function checkCatalog(browser, baseUrl) {
   await checkCardTagFiltering(page);
   setPhase("catalog", "check discovery actions");
   await checkDiscoveryActions(page);
-  setPhase("catalog", "check GitHub API deferral");
-  await checkCatalogGithubDeferral(page, githubRequests);
+  setPhase("catalog", "check player product shelves");
+  await checkCatalogProductShelves(page, githubRequests);
 
   const sandbox = await page.locator("#playerFrame").getAttribute("sandbox");
   if (sandbox !== "allow-scripts allow-forms allow-pointer-lock") {

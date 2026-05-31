@@ -18,17 +18,19 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildSitemap,
+  buildRobotsTxt,
   loadManifest,
   renderItemListBlock,
   renderWebSiteBlock,
+  refreshRootMetaUrls,
   JSONLD_MARK_START,
   JSONLD_MARK_END,
   WEBSITE_MARK_START,
   WEBSITE_MARK_END,
 } from './build-sitemap.mjs';
+import { SITE_URL, siteUrl } from './site-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade/';
 const issues = [];
 
 function fail(message) {
@@ -64,12 +66,12 @@ async function checkSitemap(manifest) {
     fail('sitemap.xml: no <loc> entries found');
     return;
   }
-  if (locs[0] !== SITE) {
-    fail(`sitemap.xml: first <loc> must be the catalog root "${SITE}", got "${locs[0]}"`);
+  if (locs[0] !== SITE_URL) {
+    fail(`sitemap.xml: first <loc> must be the catalog root "${SITE_URL}", got "${locs[0]}"`);
   }
 
-  const gameUrls = new Set(manifest.map((game) => SITE + String(game.url || '').replace(/^\/+/, '')));
-  const expectedSet = new Set([SITE, ...gameUrls]);
+  const gameUrls = new Set(manifest.map((game) => siteUrl(game.url)));
+  const expectedSet = new Set([SITE_URL, ...gameUrls]);
   const committedSet = new Set(locs);
   for (const loc of locs.slice(1)) {
     if (!gameUrls.has(loc)) {
@@ -89,14 +91,18 @@ async function checkRobots() {
     return;
   }
   const text = await readFile(join(repoRoot, 'robots.txt'), 'utf8');
+  const expected = buildRobotsTxt();
+  if (normalizeNewlines(text) !== normalizeNewlines(expected)) {
+    fail('robots.txt: drifted from canonical site config — run `npm run build:sitemap` to refresh');
+  }
   if (!/^\s*User-agent:\s*\*/m.test(text)) {
     fail('robots.txt: missing "User-agent: *" directive');
   }
   if (!/^\s*Allow:\s*\//m.test(text)) {
     fail('robots.txt: missing "Allow: /" directive (block-by-default is unsafe for static catalogs)');
   }
-  if (!text.includes(`${SITE}sitemap.xml`)) {
-    fail(`robots.txt: missing "Sitemap: ${SITE}sitemap.xml" line`);
+  if (!text.includes(siteUrl('sitemap.xml'))) {
+    fail(`robots.txt: missing "Sitemap: ${siteUrl('sitemap.xml')}" line`);
   }
 }
 
@@ -106,6 +112,10 @@ async function checkIndexJsonLd(manifest) {
     return;
   }
   const html = await readFile(join(repoRoot, 'index.html'), 'utf8');
+  const expectedHtml = refreshRootMetaUrls(html);
+  if (normalizeNewlines(html) !== normalizeNewlines(expectedHtml)) {
+    fail('index.html: root canonical/OG URLs drifted from canonical site config — run `npm run build:sitemap` to refresh');
+  }
 
   const startIndex = html.indexOf(JSONLD_MARK_START);
   const endIndex = html.indexOf(JSONLD_MARK_END);
@@ -173,8 +183,8 @@ async function checkIndexWebSiteJsonLd() {
   if (parsed['@type'] !== 'WebSite') {
     fail(`index.html: WebSite JSON-LD @type must be "WebSite", got "${parsed['@type']}"`);
   }
-  if (parsed.url !== SITE) {
-    fail(`index.html: WebSite JSON-LD url must be "${SITE}", got "${parsed.url}"`);
+  if (parsed.url !== SITE_URL) {
+    fail(`index.html: WebSite JSON-LD url must be "${SITE_URL}", got "${parsed.url}"`);
   }
   const action = parsed.potentialAction;
   if (!action || action['@type'] !== 'SearchAction') {

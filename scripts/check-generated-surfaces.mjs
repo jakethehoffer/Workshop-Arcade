@@ -10,9 +10,9 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { siteUrl } from './site-config.mjs';
 
 const repoRoot = resolve(process.env.WORKSHOP_ARCADE_REPO_ROOT || dirname(fileURLToPath(import.meta.url)), process.env.WORKSHOP_ARCADE_REPO_ROOT ? '.' : '..');
-const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade/';
 const issues = [];
 
 function fail(message) {
@@ -81,7 +81,7 @@ function checkFeed(feedText, manifest) {
   }
   const feedUrls = new Set((feed.items || []).map((item) => item && item.url));
   for (const game of manifest) {
-    const url = SITE + String(game.url || '').replace(/^\/+/, '');
+    const url = siteUrl(game.url);
     if (!feedUrls.has(url)) {
       fail(`feed.json: missing item for ${game.title} (${url})`);
     }
@@ -110,7 +110,7 @@ async function checkManifestClosure(manifest) {
 async function checkGame(game, surfaces) {
   const label = game.slug || game.id || game.title || '<unknown>';
   const gameUrl = String(game.url || '').replace(/^\/+/, '');
-  const canonical = SITE + gameUrl;
+  const canonical = siteUrl(gameUrl);
   const gamePath = game.url || '';
 
   if (!game.slug) {

@@ -13,10 +13,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SITE_URL, siteUrl } from './site-config.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = 'https://jakethehoffer.github.io/Workshop-Arcade/';
-const RAW = 'https://raw.githubusercontent.com/jakethehoffer/Workshop-Arcade/main/';
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const FALLBACK_DATE = '2025-09-01';
 
@@ -67,25 +66,25 @@ export function buildFeed(manifest) {
   return {
     version: 'https://jsonfeed.org/version/1.1',
     title: 'Workshop Arcade — New Games',
-    home_page_url: SITE,
-    feed_url: `${SITE}feed.json`,
+    home_page_url: SITE_URL,
+    feed_url: siteUrl('feed.json'),
     description: 'New and updated games in the Workshop Arcade catalog.',
     language: 'en',
-    icon: `${RAW}covers/app-icon.svg`,
-    favicon: `${RAW}covers/app-icon.svg`,
+    icon: siteUrl('covers/app-icon.svg'),
+    favicon: siteUrl('covers/app-icon.svg'),
     authors: [
       {
         name: 'Workshop Arcade',
-        url: SITE,
+        url: SITE_URL,
       },
     ],
     items: sorted.map((game) => {
       if (typeof game.url !== 'string' || !game.url.trim()) {
         throw new Error(`Manifest entry ${game.id || game.title || '<unknown>'} is missing url`);
       }
-      const canonical = SITE + game.url.replace(/^\/+/, '');
+      const canonical = siteUrl(game.url);
       const cover = typeof game.cover === 'string' && game.cover.trim()
-        ? RAW + game.cover.replace(/^\/+/, '')
+        ? siteUrl(game.cover)
         : null;
       const tags = Array.isArray(game.tags)
         ? game.tags.filter((tag) => typeof tag === 'string' && tag.trim())
