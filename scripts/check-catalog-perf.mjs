@@ -150,7 +150,7 @@ async function checkCatalog() {
     fail(`${indexPath}: redundant Browse shortcut strip should not reappear ahead of player shelves`);
   }
   if (!/id=["']playerShelvesList["']/.test(src)) {
-    fail(`${indexPath}: missing player shelves list for featured / quick-play / newest sections`);
+    fail(`${indexPath}: missing player shelves list for daily / quick-play / newest sections`);
   }
   const sessionRailIndex = src.search(/id=["']sessionRail["']/);
   const playerShelvesIndex = src.search(/id=["']playerShelvesList["']/);
@@ -160,8 +160,11 @@ async function checkCatalog() {
   } else if (!(sessionRailIndex < playerShelvesIndex && playerShelvesIndex < gridIndex)) {
     fail(`${indexPath}: player shelves must appear after the Continue rail and before the full catalog grid`);
   }
-  if (!/function\s+buildPlayerShelves\s*\(/.test(src) || !/Featured games/.test(src) || !/Quick plays/.test(src) || !/Newest arrivals/.test(src)) {
-    fail(`${indexPath}: product shelves must be generated from manifest data with featured, quick-play, and newest lanes`);
+  if (!/function\s+buildPlayerShelves\s*\(/.test(src) || !/Today['"]s picks/.test(src) || !/Quick plays/.test(src) || !/Newest arrivals/.test(src)) {
+    fail(`${indexPath}: product shelves must be generated from manifest data with daily, quick-play, and newest lanes`);
+  }
+  if (!/function\s+localDateKey\s*\(/.test(src) || !/function\s+dailyPicks\s*\(/.test(src) || !/hashPickKey\(`\$\{key\}:\$\{a\.slug\}`\)/.test(src)) {
+    fail(`${indexPath}: Today shelf must use deterministic visitor-local date helpers over manifest game slugs`);
   }
   if (!/dataset\.shelfPick\s*=/.test(src) || !/dataset\.slug\s*=\s*game\.slug/.test(src)) {
     fail(`${indexPath}: player shelves must expose direct game pick buttons with game slugs`);
@@ -170,15 +173,15 @@ async function checkCatalog() {
     fail(`${indexPath}: direct player shelf picks must reuse openPlayer()`);
   }
   if (!/dataset\.shelfAction\s*=/.test(src) || !/openShelf\(action\.dataset\.shelfAction/.test(src)) {
-    fail(`${indexPath}: player shelves must keep separate browse action buttons for featured / quick-play / newest views`);
+    fail(`${indexPath}: player shelves must keep separate browse action buttons for daily / quick-play / newest views`);
   }
   if (!/function\s+pickUniqueGames\s*\(/.test(src) || !/const\s+usedShelfPicks\s*=\s*new\s+Set\(\)/.test(src)) {
     fail(`${indexPath}: player shelves must de-dupe first-visit picks with deterministic shared state`);
   }
-  if (!/featuredPicks\s*=\s*pickUniqueGames\(popular,\s*3,\s*usedShelfPicks\)/.test(src)
+  if (!/todayPicks\s*=\s*pickUniqueGames\(dailyPicks\(state\.games,\s*3\),\s*3,\s*usedShelfPicks\)/.test(src)
     || !/quickPicks\s*=\s*pickUniqueGames\(quick,\s*3,\s*usedShelfPicks\)/.test(src)
     || !/newestPicks\s*=\s*pickUniqueGames\(newest,\s*3,\s*usedShelfPicks\)/.test(src)) {
-    fail(`${indexPath}: featured, quick-play, and newest shelves must each carry three de-duped direct picks`);
+    fail(`${indexPath}: daily, quick-play, and newest shelves must each carry three de-duped direct picks`);
   }
   if (!/\.queue-picks\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(src)) {
     fail(`${indexPath}: player shelf picks must use the compact three-column text-pill layout`);

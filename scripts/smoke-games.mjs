@@ -399,7 +399,7 @@ async function checkCatalogProductShelves(page, githubRequests) {
 
   const shelfRows = page.locator("#playerShelvesList .queue-row");
   if ((await shelfRows.count()) < 3) {
-    addFailure("catalog", "player shelves should list featured, quick-play, and newest lanes");
+    addFailure("catalog", "player shelves should list daily, quick-play, and newest lanes");
     return;
   }
 
@@ -427,7 +427,7 @@ async function checkCatalogProductShelves(page, githubRequests) {
   }
 
   const shelfText = await page.locator("#playerShelvesList").textContent();
-  for (const label of ["Featured games", "Quick plays", "Newest arrivals"]) {
+  for (const label of ["Today's picks", "Quick plays", "Newest arrivals"]) {
     if (!shelfText || !shelfText.includes(label)) {
       addFailure("catalog", `player shelves missing "${label}"`);
     }
@@ -438,13 +438,18 @@ async function checkCatalogProductShelves(page, githubRequests) {
   if (pickCount < 9) {
     addFailure("catalog", `player shelves should expose direct game picks, found ${pickCount}`);
   }
-  for (const shelf of ["featured", "quick", "newest"]) {
+  for (const shelf of ["today", "quick", "newest"]) {
     const shelfPickCount = await page.locator(`#playerShelvesList [data-shelf-pick="${shelf}"]`).count();
     if (shelfPickCount < 3) {
       addFailure("catalog", `${shelf} shelf should expose three direct game picks, found ${shelfPickCount}`);
     }
   }
-  const firstVisitSlugs = await page.locator('#playerShelvesList [data-shelf-pick="featured"], #playerShelvesList [data-shelf-pick="quick"], #playerShelvesList [data-shelf-pick="newest"]')
+  const todaySlugs = await page.locator('#playerShelvesList [data-shelf-pick="today"]')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
+  if (todaySlugs.length !== 3 || new Set(todaySlugs).size !== todaySlugs.length) {
+    addFailure("catalog", `Today shelf should expose three distinct daily picks, found: ${todaySlugs.join(", ")}`);
+  }
+  const firstVisitSlugs = await page.locator('#playerShelvesList [data-shelf-pick="today"], #playerShelvesList [data-shelf-pick="quick"], #playerShelvesList [data-shelf-pick="newest"]')
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
   if (firstVisitSlugs.length >= 9 && new Set(firstVisitSlugs).size !== firstVisitSlugs.length) {
     addFailure("catalog", `first-visit player shelves repeated direct picks: ${firstVisitSlugs.join(", ")}`);
@@ -467,10 +472,10 @@ async function checkCatalogProductShelves(page, githubRequests) {
     await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   }
 
-  await page.locator('#playerShelvesList [data-shelf-action="featured"]').click();
+  await page.locator('#playerShelvesList [data-shelf-action="today"]').click();
   await page.waitForTimeout(100);
   if (await page.locator("#sort").inputValue() !== "pop") {
-    addFailure("catalog", "Featured shelf did not switch to popular sort");
+    addFailure("catalog", "Today shelf did not switch to popular sort");
   }
 
   await page.locator('#playerShelvesList [data-shelf-action="quick"]').click();
@@ -595,7 +600,7 @@ async function checkCatalogMobileFirstVisitShelves(browser, baseUrl) {
   if (pickCount < 9) {
     addFailure("catalog mobile first visit", `player shelves should expose direct game picks, found ${pickCount}`);
   }
-  const firstVisitSlugs = await page.locator('#playerShelvesList [data-shelf-pick="featured"], #playerShelvesList [data-shelf-pick="quick"], #playerShelvesList [data-shelf-pick="newest"]')
+  const firstVisitSlugs = await page.locator('#playerShelvesList [data-shelf-pick="today"], #playerShelvesList [data-shelf-pick="quick"], #playerShelvesList [data-shelf-pick="newest"]')
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
   if (firstVisitSlugs.length >= 9 && new Set(firstVisitSlugs).size !== firstVisitSlugs.length) {
     addFailure("catalog mobile first visit", `first-visit player shelves repeated direct picks: ${firstVisitSlugs.join(", ")}`);
@@ -675,11 +680,11 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   if (pickCount < 9) {
     addFailure("catalog mobile", `player shelves should expose direct game picks after seeded session state, found ${pickCount}`);
   }
-  const featuredPick = page.locator('#playerShelvesList [data-shelf-pick="featured"]').first();
-  if (await featuredPick.count()) {
-    const pickSlug = await featuredPick.getAttribute("data-slug");
-    const pickTitle = await featuredPick.locator("strong").textContent();
-    await featuredPick.click();
+  const todayPick = page.locator('#playerShelvesList [data-shelf-pick="today"]').first();
+  if (await todayPick.count()) {
+    const pickSlug = await todayPick.getAttribute("data-slug");
+    const pickTitle = await todayPick.locator("strong").textContent();
+    await todayPick.click();
     await page.waitForSelector("#playerModal:not([hidden])");
     const playerTitle = await page.locator("#playerTitle").textContent();
     if (!pickTitle || playerTitle?.trim() !== pickTitle.trim()) {
@@ -692,7 +697,7 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
     await page.locator("#playerClose").click();
     await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   } else {
-    addFailure("catalog mobile", "missing featured direct shelf pick after seeded session state");
+    addFailure("catalog mobile", "missing Today direct shelf pick after seeded session state");
   }
 
   const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));

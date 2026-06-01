@@ -1350,6 +1350,34 @@ function pickUniqueGames(games, count = 3, used = new Set()){
   return unique;
 }
 
+function localDateKey(date = new Date()){
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function hashPickKey(value){
+  let hash = 2166136261;
+  for(let i = 0; i < value.length; i++){
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function dailyPicks(games, count = 3, date = new Date()){
+  const key = localDateKey(date);
+  return [...(games || [])]
+    .filter(Boolean)
+    .sort((a,b) => {
+      const score = hashPickKey(`${key}:${a.slug}`) - hashPickKey(`${key}:${b.slug}`);
+      if(score) return score;
+      return String(a.slug || '').localeCompare(String(b.slug || ''));
+    })
+    .slice(0, count);
+}
+
 function firstGameFromSlugs(slugs, excluded = new Set()){
   for(const slug of (slugs || [])){
     if(excluded.has(slug)) continue;
@@ -1440,9 +1468,8 @@ if(els.sessionRailList){
 function buildPlayerShelves(){
   const usedShelfPicks = new Set();
   const newest = sortNewest(state.games);
-  const popular = sortPopular(state.games);
   const quick = sortPopular(state.games.filter(g => (g.tags||[]).some(tag => ['Arcade','Action','Endless'].includes(tag))));
-  const featuredPicks = pickUniqueGames(popular, 3, usedShelfPicks);
+  const todayPicks = pickUniqueGames(dailyPicks(state.games, 3), 3, usedShelfPicks);
   const quickPicks = pickUniqueGames(quick, 3, usedShelfPicks);
   const newestPicks = pickUniqueGames(newest, 3, usedShelfPicks);
   const recent = gamesFromSlugs(state.recentPlays).slice(0, 5);
@@ -1470,11 +1497,11 @@ function buildPlayerShelves(){
 
   shelves.push(
     {
-      id: 'featured',
-      title: 'Featured games',
-      subtitle: 'Top-rated starting points.',
+      id: 'today',
+      title: "Today's picks",
+      subtitle: 'A fresh local-date mix from the arcade.',
       action: 'Browse →',
-      games: featuredPicks
+      games: todayPicks
     },
     {
       id: 'quick',
@@ -1519,7 +1546,7 @@ function openShelf(id){
   } else if(id === 'quick'){
     state.category = state.games.some(g => (g.tags||[]).includes('Arcade')) ? 'Arcade' : 'All';
     state.sort = 'pop';
-  } else if(id === 'featured'){
+  } else if(id === 'today'){
     state.category = 'All';
     state.sort = 'pop';
   } else {

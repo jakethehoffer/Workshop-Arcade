@@ -6,7 +6,7 @@
 
 Workshop Arcade is a player-facing static arcade: 71 browser games, instant play in a sandboxed modal, favorites, recent plays, random discovery, direct game links, share links, install/offline support, and a lightweight suggestion flow for improvement ideas.
 
-Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: featured games, quick plays, newest arrivals, continue playing, and saved favorites.
+Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: daily picks, quick plays, newest arrivals, continue playing, and saved favorites.
 
 The Workshop flow is a quiet "Suggest an improvement" action. It turns player feedback into an AI-ready brief that can be copied, downloaded, saved locally in the browser, or opened as a pre-filled maintenance draft.
 
