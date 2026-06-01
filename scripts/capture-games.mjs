@@ -1630,6 +1630,24 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "blackjack": {
+      name: "stand, deal, then play another hand",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(130);
+          };
+          press("s", "KeyS");
+          press("Enter", "Enter");
+          press("h", "KeyH");
+          press("s", "KeyS");
+        });
+      },
+    },
     "pylon-shift": {
       name: "shift discs across the pylons",
       freezePostAtEvent: true,

@@ -22,6 +22,20 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Blackjack card-game addition (pass 93)
+
+Captured 2026-06-01 against a disposable local static server after adding **Blackjack**, a casino card game (seeded shoe, hit/stand/double, dealer draws to 17, blackjack pays 3:2, chip-stack scoring), plus refreshing the generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumping the service-worker shell revision for the new newest-cover set. No existing gameplay code, storage keys, or capture recipes changed. The strict audit covered the catalog plus 74 manifest games, 75 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 80 ms | 48 ms | 🟢 49 ms | 🟢 179.1 KB | 10 | 0 |
+| Lexica | 🟢 36 ms | 38 ms | 🟢 39 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 464 ms | 14 ms | 🟢 17 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 92 ms | 64 ms | 🟢 64 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 172 ms | 155 ms | 🟢 155 ms | 🟢 109.7 KB | 2 | 0 |
+
+Blackjack lands at 21.8 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog holds at 179.1 KB / 10 requests, well within its 200 KB / 18 request budget. Every named exception remains below its CI budget, no console/page errors appeared across the 75 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Pylon Shift tower-of-Hanoi addition (pass 92)
 
 Captured 2026-06-01 against a disposable local static server after adding **Pylon Shift**, a Tower of Hanoi disc-stacking logic puzzle (three pylons, five levels of 3–7 discs, optimal-move par, best-move tracking), plus refreshing the generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumping the service-worker shell revision for the new newest-cover set. No existing gameplay code, storage keys, or capture recipes changed. The strict audit covered the catalog plus 73 manifest games, 74 pages total.
