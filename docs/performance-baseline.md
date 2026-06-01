@@ -22,6 +22,20 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Chromalock code-breaking addition (pass 91)
+
+Captured 2026-06-01 against a disposable local static server after adding **Chromalock**, a Mastermind-style color-code deduction game (seeded four-peg secret, six-color palette, ten guesses, exact/partial match clues), plus refreshing the generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumping the service-worker shell revision for the new newest-cover set. No existing gameplay code, storage keys, or capture recipes changed. The strict audit covered the catalog plus 72 manifest games, 73 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 80 ms | 52 ms | 🟢 52 ms | 🟢 180.0 KB | 10 | 0 |
+| Lexica | 🟢 40 ms | 42 ms | 🟢 43 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 460 ms | 11 ms | 🟢 13 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 60 ms | 🟢 60 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 124 ms | 100 ms | 🟢 100 ms | 🟢 109.7 KB | 2 | 0 |
+
+Chromalock lands at 22.1 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog grows to 180.0 KB / 10 requests as Chromalock's cover joins the newest-first first paint, still well within its 200 KB / 18 request budget. Every named exception remains below its CI budget, no console/page errors appeared across the 73 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Page-weight headroom refresh (pass 90)
 
 Captured 2026-05-30 against a disposable local static server after mechanically compacting inline CSS presentation whitespace in **Idle Tycoon** and **Arcade Jump**, then initializing Arcade Jump's existing menu backdrop canvas so live-smoke canvas evidence is nonblank before a run starts. No gameplay code, storage keys, manifest entries, generated surfaces, service-worker behavior, or capture recipes changed. The strict audit covered the catalog plus 71 manifest games, 72 pages total.

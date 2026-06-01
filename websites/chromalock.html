@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Chromalock - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Crack the hidden color code in ten guesses using exact and partial match clues." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/chromalock.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Chromalock — Workshop Arcade" />
+<meta property="og:description" content="Crack the hidden color code in ten guesses using exact and partial match clues." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/chromalock.html" />
+<meta property="og:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/chromalock.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Chromalock — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Chromalock — Workshop Arcade" />
+<meta name="twitter:description" content="Crack the hidden color code in ten guesses using exact and partial match clues." />
+<meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/chromalock.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Chromalock",
+  "description": "Crack the hidden color code in ten guesses using exact and partial match clues.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/chromalock.html",
+  "image": "https://jakethehoffer.github.io/Workshop-Arcade/covers/chromalock.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Puzzle",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eaf6ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 440px at 8% -8%,rgba(45,212,191,.17),transparent 62%),radial-gradient(680px 420px at 96% 0%,rgba(99,102,241,.16),transparent 64%),linear-gradient(180deg,#071018,#050713 88%)}
+button{font:inherit}
+.app{width:min(980px,100%);display:grid;grid-template-rows:auto auto auto auto auto auto;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
+.help{max-width:560px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
+.touch{display:grid;grid-template-columns:repeat(6,minmax(0,84px));justify-content:center;gap:7px}.touch button{min-height:46px;padding:8px;color:#06121f;font-size:13px}
+.touch .swatch[data-color="0"]{background:linear-gradient(180deg,#ff9a9a,#ff5d5d);border-color:rgba(255,107,107,.7)}
+.touch .swatch[data-color="1"]{background:linear-gradient(180deg,#ffe08a,#ffc233);border-color:rgba(255,209,102,.7)}
+.touch .swatch[data-color="2"]{background:linear-gradient(180deg,#7defc0,#06d6a0);border-color:rgba(6,214,160,.7)}
+.touch .swatch[data-color="3"]{background:linear-gradient(180deg,#8af0ff,#22d3ee);border-color:rgba(34,211,238,.7)}
+.touch .swatch[data-color="4"]{background:linear-gradient(180deg,#9aa2ff,#6366f1);border-color:rgba(99,102,241,.7);color:#eef0ff}
+.touch .swatch[data-color="5"]{background:linear-gradient(180deg,#ffa6dd,#f472b6);border-color:rgba(244,114,182,.7)}
+.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.touch button{font-size:12px;min-height:44px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(3,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.touch button{min-height:42px;padding:6px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Chromalock code-breaking deduction game">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Chromalock</span></div>
+    <div class="help">Press 1–6 or tap a swatch to place a peg. Backspace removes the last; Enter submits four pegs. Solid clue = right color and spot, ring clue = right color, wrong spot. N new code, R clears the row.</div>
+  </header>
+  <section class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Guess</span><span class="value" id="guessValue">1/10</span></div>
+    <div class="pill"><span class="label">Left</span><span class="value" id="remainValue">10</span></div>
+    <div class="pill"><span class="label">Exact</span><span class="value" id="exactValue">—</span></div>
+    <div class="pill"><span class="label">Partial</span><span class="value" id="partialValue">—</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
+    <div class="pill"><span class="label">Streak</span><span class="value" id="streakValue">0</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Chromalock board. Build a four-peg guess from six colors; clues mark exact and partial matches until you crack the hidden code."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Build a four-peg guess, then submit. Clues reveal exact and partial matches.</div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Chromalock ready.</div>
+  <section class="bar" aria-label="Actions">
+    <button class="btn primary" id="newBtn" type="button">New Game</button>
+    <button class="btn" id="submitBtn" type="button">Submit</button>
+    <button class="btn" id="undoBtn" type="button">Undo Peg</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+  </section>
+  <section class="touch" aria-label="Color palette">
+    <button type="button" class="swatch" data-color="0" aria-label="Place Coral, key 1">1</button>
+    <button type="button" class="swatch" data-color="1" aria-label="Place Amber, key 2">2</button>
+    <button type="button" class="swatch" data-color="2" aria-label="Place Mint, key 3">3</button>
+    <button type="button" class="swatch" data-color="3" aria-label="Place Cyan, key 4">4</button>
+    <button type="button" class="swatch" data-color="4" aria-label="Place Indigo, key 5">5</button>
+    <button type="button" class="swatch" data-color="5" aria-label="Place Rose, key 6">6</button>
+  </section>
+</main>
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const STATS_KEY="chromalock.stats.v1",SOUND_KEY="chromalock.sound.v1";
+const CODE=4,ROWS=10;
+// Six neon code colors. fill = [highlight, base] radial stops; dot = solid swatch tint.
+const COLORS=[
+  {name:"Coral",fill:["#ff9a9a","#ff5d5d"],dot:"#ff6b6b"},
+  {name:"Amber",fill:["#ffe08a","#ffc233"],dot:"#ffd166"},
+  {name:"Mint",fill:["#7defc0","#06d6a0"],dot:"#06d6a0"},
+  {name:"Cyan",fill:["#8af0ff","#22d3ee"],dot:"#22d3ee"},
+  {name:"Indigo",fill:["#9aa2ff","#6366f1"],dot:"#6366f1"},
+  {name:"Rose",fill:["#ffa6dd","#f472b6"],dot:"#f472b6"}
+];
+const K=COLORS.length;
+const $=id=>document.getElementById(id);
+const els={guess:$("guessValue"),remain:$("remainValue"),exact:$("exactValue"),partial:$("partialValue"),best:$("bestValue"),streak:$("streakValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn")};
+const saved=readStats();
+const state={secret:[],rows:[],draft:[],mode:"playing",games:0,best:saved.best,streak:saved.streak,sound:readSound(),feedback:"Build a four-peg guess, then submit. Clues reveal exact and partial matches.",time:0,flash:0};
+let audio=null;
+
+function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
+function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(typeof v.best==="number"?v.best:null),streak:(typeof v.streak==="number"?v.streak:0)}}catch(_){}return{best:null,streak:0}}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best,streak:state.streak}))}catch(_){}}
+function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
+function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
+function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={place:300,clear:240,submit:400,win:660,lose:150}[kind]||260;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
+
+// Deterministic seeded code so the smoke/render harness sees a stable board on load.
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeSecret(seed){const rng=mulberry32(seed);const out=[];for(let i=0;i<CODE;i++)out.push(Math.floor(rng()*K));return out}
+function scoreGuess(guess,secret){let exact=0;const sc=new Array(K).fill(0),gc=new Array(K).fill(0);for(let i=0;i<CODE;i++){if(guess[i]===secret[i])exact++;else{sc[secret[i]]++;gc[guess[i]]++}}let partial=0;for(let c=0;c<K;c++)partial+=Math.min(sc[c],gc[c]);return{exact,partial}}
+
+function loadGame(){state.secret=makeSecret((0x9e3779b9^Math.imul(state.games+1,0x85ebca6b))>>>0);state.rows=[];state.draft=[];state.mode="playing";state.flash=0;update();draw()}
+function newGame(){state.games++;loadGame();say("New code locked in. Crack it in "+ROWS+" guesses.");tone("clear")}
+function placeColor(ci){if(state.mode!=="playing")return;if(ci<0||ci>=K)return;if(state.draft.length>=CODE){say("Row full — submit or undo a peg.");return}state.draft.push(ci);state.flash=1;tone("place");vibe(8);say("Placed "+COLORS[ci].name+". "+(CODE-state.draft.length)+" peg"+(CODE-state.draft.length===1?"":"s")+" to go.");update();draw()}
+function undoPeg(){if(state.mode!=="playing")return;if(!state.draft.length){say("Nothing to undo.");return}const ci=state.draft.pop();say("Removed "+COLORS[ci].name+".");tone("clear");update();draw()}
+function clearRow(){if(state.mode!=="playing")return;if(!state.draft.length)return;state.draft=[];say("Row cleared.");tone("clear");update();draw()}
+function submitGuess(){if(state.mode!=="playing")return;if(state.draft.length!==CODE){say("Place all four pegs before submitting.");tone("lose");return}
+  const guess=state.draft.slice(),res=scoreGuess(guess,state.secret);
+  state.rows.push({pegs:guess,exact:res.exact,partial:res.partial});state.draft=[];state.flash=1;
+  if(res.exact===CODE){state.mode="won";const tries=state.rows.length;if(state.best==null||tries<state.best)state.best=tries;state.streak++;saveStats();tone("win");vibe([26,26,40]);say("Code cracked in "+tries+" guess"+(tries===1?"":"es")+"! Streak "+state.streak+". Press New Game.")}
+  else if(state.rows.length>=ROWS){state.mode="lost";state.streak=0;saveStats();tone("lose");vibe([60,40]);say("Out of guesses — the code is revealed. Press New Game.")}
+  else{tone("submit");vibe(12);say(res.exact+" exact · "+res.partial+" partial. "+(ROWS-state.rows.length)+" guess"+(ROWS-state.rows.length===1?"":"es")+" left.")}
+  update();draw()}
+
+function update(){const done=state.mode!=="playing";els.guess.textContent=Math.min(ROWS,state.rows.length+(done?0:1))+"/"+ROWS;els.remain.textContent=String(Math.max(0,ROWS-state.rows.length));const last=state.rows[state.rows.length-1];els.exact.textContent=last?String(last.exact):"—";els.partial.textContent=last?String(last.partial):"—";els.best.textContent=state.best==null?"—":String(state.best);els.streak.textContent=String(state.streak);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+
+const BX=44,BY=82,ROWH=42,PEGR=15,PEGDX=40,RIGHTX=348;
+function rowCenterY(i){return BY+i*ROWH+ROWH/2}
+function pegCenterX(j){return BX+22+j*PEGDX}
+function paletteChip(i){return{x:RIGHTX+i*64,y:300,w:56,h:46}}
+function draftSlot(j){return{x:362+j*46,y:398,r:16}}
+
+function discFill(cx,cy,ci,r){const c=COLORS[ci],g=ctx.createRadialGradient(cx-r*.35,cy-r*.35,2,cx,cy,r);g.addColorStop(0,c.fill[0]);g.addColorStop(1,c.fill[1]);ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,255,255,.34)";ctx.lineWidth=2;ctx.stroke()}
+function discEmpty(cx,cy,r){ctx.fillStyle="#0c1a2c";ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(94,234,212,.18)";ctx.lineWidth=2;ctx.stroke()}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+
+function drawFeedback(ox,cy,exact,partial){const fx=ox,positions=[[fx,cy-9],[fx+16,cy-9],[fx,cy+7],[fx+16,cy+7]];for(let i=0;i<CODE;i++){const[px,py]=positions[i];ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);if(i<exact){ctx.fillStyle="#f8fafc";ctx.fill();ctx.strokeStyle="rgba(94,234,212,.55)";ctx.lineWidth=1.5;ctx.stroke()}else if(i<exact+partial){ctx.fillStyle="rgba(8,18,30,.9)";ctx.fill();ctx.strokeStyle="#5eead4";ctx.lineWidth=2.5;ctx.stroke()}else{ctx.fillStyle="rgba(94,234,212,.10)";ctx.fill()}}}
+
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Chromalock",30,40);
+  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Deduce the hidden four-peg color code from the clues beside each guess.",30,58);
+  const activeRow=state.mode==="playing"?state.rows.length:-1;
+  for(let i=0;i<ROWS;i++){const cy=rowCenterY(i),isActive=i===activeRow;
+    ctx.fillStyle=isActive?"rgba(94,234,212,.10)":"rgba(255,255,255,.02)";roundRect(BX-12,cy-ROWH/2+3,272,ROWH-6,9,true,false);
+    if(isActive){ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;roundRect(BX-12,cy-ROWH/2+3,272,ROWH-6,9,false,true)}
+    ctx.fillStyle="#5f7790";ctx.font="800 11px system-ui";ctx.textAlign="right";ctx.fillText(String(i+1),BX-18,cy+4);ctx.textAlign="left";
+    const row=state.rows[i];
+    for(let j=0;j<CODE;j++){const cx=pegCenterX(j);
+      if(row)discFill(cx,cy,row.pegs[j],PEGR);
+      else if(isActive&&j<state.draft.length)discFill(cx,cy,state.draft[j],PEGR);
+      else discEmpty(cx,cy,PEGR)}
+    if(row)drawFeedback(BX+22+CODE*PEGDX+6,cy,row.exact,row.partial)}
+  // Right column: stats, palette, working guess.
+  const block=(label,val,color,py)=>{ctx.textAlign="left";ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,RIGHTX,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 26px system-ui";ctx.fillText(val,RIGHTX,py+34)};
+  const doneTries=state.mode==="won"?state.rows.length:null;
+  block("GUESS",Math.min(ROWS,state.rows.length+(state.mode==="playing"?1:0))+" / "+ROWS,null,86);
+  block("BEST CRACK",state.best==null?"—":state.best+" tries","#7ef9ff",144);
+  block("STREAK",String(state.streak),null,202);
+  block("CODE",CODE+" pegs · "+K+" colors",null,260);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("PALETTE",RIGHTX,294);
+  for(let i=0;i<K;i++){const c=paletteChip(i);ctx.fillStyle="rgba(0,0,0,.25)";roundRect(c.x,c.y,c.w,c.h,10,true,false);discFill(c.x+19,c.y+23,i,14);ctx.fillStyle="#cfe0f2";ctx.font="900 11px system-ui";ctx.textAlign="left";ctx.fillText(String(i+1),c.x+38,c.y+19);ctx.fillStyle="#8fa6bd";ctx.font="800 9px system-ui";ctx.fillText(COLORS[i].name.slice(0,4).toUpperCase(),c.x+34,c.y+34)}
+  ctx.textAlign="left";ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(state.mode==="playing"?"THIS GUESS":"THE CODE",RIGHTX,372);
+  for(let j=0;j<CODE;j++){const s=draftSlot(j);if(state.mode==="playing"){if(j<state.draft.length)discFill(s.x,s.y,state.draft[j],s.r);else discEmpty(s.x,s.y,s.r)}else discFill(s.x,s.y,state.secret[j],s.r)}
+  if(state.mode!=="playing"){const won=state.mode==="won";ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=won?"#5eead4":"#fca5a5";ctx.font="950 46px system-ui";ctx.fillText(won?"CODE CRACKED":"LOCKED OUT",canvas.width/2,canvas.height/2-44);
+    for(let j=0;j<CODE;j++)discFill(canvas.width/2-3*30+j*60,canvas.height/2+6,state.secret[j],24);
+    ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(won&&doneTries?("Solved in "+doneTries+" · streak "+state.streak):"The hidden code is shown above.",canvas.width/2,canvas.height/2+62);ctx.textAlign="left"}}
+
+function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);draw()}
+window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,codeLength:CODE,palette:K,maxGuesses:ROWS,guessNumber:Math.min(ROWS,state.rows.length+(state.mode==="playing"?1:0)),remaining:Math.max(0,ROWS-state.rows.length),draft:state.draft.slice(),rows:state.rows.map(r=>({pegs:r.pegs.slice(),exact:r.exact,partial:r.partial})),won:state.mode==="won",lost:state.mode==="lost",best:state.best,streak:state.streak,secret:state.mode==="playing"?null:state.secret.slice(),paletteNames:COLORS.map(c=>c.name),feedback:state.feedback,coordinateSystem:"rows oldest→newest top→bottom; pegs left→right; color index 0-5; exact=right color & position, partial=right color wrong position"})};
+
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;
+  if(k>="1"&&k<="6"){e.preventDefault();placeColor(Number(k)-1)}
+  else if(k==="Backspace"){e.preventDefault();undoPeg()}
+  else if(k==="Enter"){e.preventDefault();submitGuess()}
+  else if(k==="n"||k==="N")newGame();
+  else if(k==="r"||k==="R")clearRow()});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height;
+  for(let i=0;i<K;i++){const c=paletteChip(i);if(px>=c.x&&px<=c.x+c.w&&py>=c.y&&py<=c.y+c.h){placeColor(i);return}}
+  if(state.mode==="playing"&&px>=362-22&&px<=362+CODE*46&&py>=398-22&&py<=398+22){undoPeg();return}});
+$("newBtn").addEventListener("click",newGame);
+$("submitBtn").addEventListener("click",submitGuess);
+$("undoBtn").addEventListener("click",undoPeg);
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("place")});
+document.querySelectorAll("[data-color]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();placeColor(Number(btn.dataset.color))}));
+loadGame();
+let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
