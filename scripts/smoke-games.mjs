@@ -432,6 +432,9 @@ async function checkCatalogProductShelves(page, githubRequests) {
       addFailure("catalog", `player shelves missing "${label}"`);
     }
   }
+  if (await page.locator('#playerShelvesList [data-shelf="for-you"]').count()) {
+    addFailure("catalog", "For you shelf should stay hidden on a first visit with no recent or favorite state");
+  }
 
   const directPicks = page.locator("#playerShelvesList [data-shelf-pick][data-slug]");
   const pickCount = await directPicks.count();
@@ -571,6 +574,9 @@ async function checkCatalogMobileFirstVisitShelves(browser, baseUrl) {
     addFailure("catalog mobile first visit", `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
   }
   await checkSessionRailHidden(page, "catalog mobile first visit");
+  if (await page.locator('#playerShelvesList [data-shelf="for-you"]').count()) {
+    addFailure("catalog mobile first visit", "For you shelf should stay hidden without seeded recent/favorite state");
+  }
   const mobilePlacement = await page.evaluate(() => {
     const shelves = document.querySelector(".shelves");
     const grid = document.getElementById("grid");
@@ -679,6 +685,43 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   const pickCount = await directPicks.count();
   if (pickCount < 9) {
     addFailure("catalog mobile", `player shelves should expose direct game picks after seeded session state, found ${pickCount}`);
+  }
+  const forYouShelf = page.locator('#playerShelvesList [data-shelf="for-you"]');
+  if (!(await forYouShelf.count())) {
+    addFailure("catalog mobile", "For you shelf should appear after seeded recent/favorite state");
+  } else {
+    const forYouPicks = page.locator('#playerShelvesList [data-shelf-pick="for-you"]');
+    const forYouCount = await forYouPicks.count();
+    if (forYouCount !== 3) {
+      addFailure("catalog mobile", `For you shelf expected three direct recommendations, found ${forYouCount}`);
+    }
+    const forYouSlugs = await forYouPicks.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
+    if (new Set(forYouSlugs).size !== forYouSlugs.length) {
+      addFailure("catalog mobile", `For you shelf repeated recommendation slugs: ${forYouSlugs.join(", ")}`);
+    }
+    const explicitSessionSlugs = await page.locator('#playerShelvesList [data-shelf-pick="recent"], #playerShelvesList [data-shelf-pick="favorites"]')
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
+    const repeatedSessionSlugs = forYouSlugs.filter((slug) => explicitSessionSlugs.includes(slug));
+    if (repeatedSessionSlugs.length) {
+      addFailure("catalog mobile", `For you shelf duplicated recent/favorite picks: ${repeatedSessionSlugs.join(", ")}`);
+    }
+    if (forYouCount > 0) {
+      const pick = forYouPicks.first();
+      const pickSlug = await pick.getAttribute("data-slug");
+      const pickTitle = await pick.locator("strong").textContent();
+      await pick.click();
+      await page.waitForSelector("#playerModal:not([hidden])");
+      const playerTitle = await page.locator("#playerTitle").textContent();
+      if (!pickTitle || playerTitle?.trim() !== pickTitle.trim()) {
+        addFailure("catalog mobile", `For you direct pick opened "${playerTitle}" instead of "${pickTitle}"`);
+      }
+      const hash = await page.evaluate(() => location.hash);
+      if (!pickSlug || hash !== `#play=${encodeURIComponent(pickSlug)}`) {
+        addFailure("catalog mobile", `For you direct pick did not sync #play hash for ${pickSlug}: ${hash}`);
+      }
+      await page.locator("#playerClose").click();
+      await page.waitForFunction(() => document.getElementById("playerModal").hidden);
+    }
   }
   const todayPick = page.locator('#playerShelvesList [data-shelf-pick="today"]').first();
   if (await todayPick.count()) {

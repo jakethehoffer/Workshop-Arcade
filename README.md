@@ -6,7 +6,7 @@
 
 Workshop Arcade is a player-facing static arcade: 71 browser games, instant play in a sandboxed modal, favorites, recent plays, random discovery, direct game links, share links, install/offline support, and a lightweight suggestion flow for improvement ideas.
 
-Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: daily picks, quick plays, newest arrivals, continue playing, and saved favorites.
+Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: daily picks, for-you recommendations for returning players, quick plays, newest arrivals, continue playing, and saved favorites.
 
 The Workshop flow is a quiet "Suggest an improvement" action. It turns player feedback into an AI-ready brief that can be copied, downloaded, saved locally in the browser, or opened as a pre-filled maintenance draft.
 
@@ -15,7 +15,7 @@ The current preview is published at [https://jakethehoffer.github.io/Workshop-Ar
 ## Product Readiness Roadmap
 
 - **Discovery:** keep the catalog organized around player shelves, filters, search, random play, and direct game links instead of repository activity.
-- **Retention:** improve continue/favorites, install/offline behavior, and game-to-game browsing so repeat play feels natural on one device.
+- **Retention:** improve continue/favorites, for-you recommendations, install/offline behavior, and game-to-game browsing so repeat play feels natural on one device.
 - **Feedback:** keep suggestions lightweight for players, then convert the saved brief into maintainer work outside the main catalog surface.
 - **Custom domain:** set the final origin/base path in `scripts/site-config.mjs` environment variables, regenerate sitemap/feed/OG/JSON-LD/meta, and deploy without hand-editing game pages.
 - **Launch QA:** run the full local validation stack, rendered catalog checks, game smoke, page-weight/PWA budgets, and a post-deploy live smoke against the final domain.

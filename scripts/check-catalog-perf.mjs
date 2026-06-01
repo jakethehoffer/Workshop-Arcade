@@ -150,7 +150,7 @@ async function checkCatalog() {
     fail(`${indexPath}: redundant Browse shortcut strip should not reappear ahead of player shelves`);
   }
   if (!/id=["']playerShelvesList["']/.test(src)) {
-    fail(`${indexPath}: missing player shelves list for daily / quick-play / newest sections`);
+    fail(`${indexPath}: missing player shelves list for for-you / daily / quick-play / newest sections`);
   }
   const sessionRailIndex = src.search(/id=["']sessionRail["']/);
   const playerShelvesIndex = src.search(/id=["']playerShelvesList["']/);
@@ -177,6 +177,22 @@ async function checkCatalog() {
   }
   if (!/function\s+pickUniqueGames\s*\(/.test(src) || !/const\s+usedShelfPicks\s*=\s*new\s+Set\(\)/.test(src)) {
     fail(`${indexPath}: player shelves must de-dupe first-visit picks with deterministic shared state`);
+  }
+  if (!/function\s+uniqueGamesFromSlugs\s*\(/.test(src) || !/function\s+returningPlayerPicks\s*\(/.test(src)) {
+    fail(`${indexPath}: returning-player For you shelf must build recommendations from existing recent/favorite state`);
+  }
+  if (!/uniqueGamesFromSlugs\(\[\.\.\.\(state\.recentPlays \|\| \[\]\), \.\.\.\(state\.favorites \|\| \[\]\)\]\)/.test(src)
+    || !/rankedRelatedGames\(seed\)/.test(src)
+    || !/excluded\.has\(game\.slug\)/.test(src)) {
+    fail(`${indexPath}: For you recommendations must rank from recent plays first, then favorites, while excluding already-shown saved/recent games`);
+  }
+  if (!/for\(const game of \[\.\.\.recent, \.\.\.favorites\]\)\{[\s\S]*usedShelfPicks\.add\(game\.slug\)/.test(src)
+    || !/const\s+forYouPicks\s*=\s*returningPlayerPicks\(3,\s*usedShelfPicks\)/.test(src)
+    || !/if\(forYouPicks\.length\)\{[\s\S]*id:\s*['"]for-you['"][\s\S]*title:\s*['"]For you['"]/.test(src)) {
+    fail(`${indexPath}: For you shelf must appear only for returning players and avoid duplicating recent/favorite shelf picks`);
+  }
+  if (!/id\s*===\s*['"]today['"]\s*\|\|\s*id\s*===\s*['"]for-you['"]/.test(src)) {
+    fail(`${indexPath}: For you shelf action must stay on the existing local browse/openShelf flow`);
   }
   if (!/todayPicks\s*=\s*pickUniqueGames\(dailyPicks\(state\.games,\s*3\),\s*3,\s*usedShelfPicks\)/.test(src)
     || !/quickPicks\s*=\s*pickUniqueGames\(quick,\s*3,\s*usedShelfPicks\)/.test(src)

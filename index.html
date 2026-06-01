@@ -503,7 +503,7 @@
         <div class="queue-heading">
           <span class="eyebrow">Player picks</span>
           <h2 id="playerShelvesTitle">Arcade lanes</h2>
-          <div class="queue-state" id="playerShelvesStatus" aria-live="polite">Featured, quick plays, newest, and saved games</div>
+          <div class="queue-state" id="playerShelvesStatus" aria-live="polite">Daily picks, for-you picks, quick plays, newest, and saved games</div>
         </div>
         <div class="queue-actions">
           <button class="btn subtle" type="button" id="suggestImprovementBtn">Suggest improvement</button>
@@ -1332,6 +1332,17 @@ function gamesFromSlugs(slugs){
     .filter(Boolean);
 }
 
+function uniqueGamesFromSlugs(slugs){
+  const seen = new Set();
+  const games = [];
+  for(const game of gamesFromSlugs(slugs)){
+    if(seen.has(game.slug)) continue;
+    seen.add(game.slug);
+    games.push(game);
+  }
+  return games;
+}
+
 function pickUniqueGames(games, count = 3, used = new Set()){
   const unique = [];
   for(const game of games || []){
@@ -1385,6 +1396,19 @@ function firstGameFromSlugs(slugs, excluded = new Set()){
     if(game) return game;
   }
   return null;
+}
+
+function returningPlayerPicks(count = 3, excluded = new Set()){
+  const seeds = uniqueGamesFromSlugs([...(state.recentPlays || []), ...(state.favorites || [])]);
+  const picks = [];
+  for(const seed of seeds){
+    for(const game of rankedRelatedGames(seed)){
+      if(!game || excluded.has(game.slug) || picks.some(item => item.slug === game.slug)) continue;
+      picks.push(game);
+      if(picks.length === count) return picks;
+    }
+  }
+  return picks;
 }
 
 function buildSessionRailItems(){
@@ -1469,11 +1493,18 @@ function buildPlayerShelves(){
   const usedShelfPicks = new Set();
   const newest = sortNewest(state.games);
   const quick = sortPopular(state.games.filter(g => (g.tags||[]).some(tag => ['Arcade','Action','Endless'].includes(tag))));
+  const recent = gamesFromSlugs(state.recentPlays).slice(0, 5);
+  const favorites = gamesFromSlugs(state.favorites).slice(0, 5);
+  for(const game of [...recent, ...favorites]){
+    usedShelfPicks.add(game.slug);
+  }
+  const forYouPicks = returningPlayerPicks(3, usedShelfPicks);
+  for(const game of forYouPicks){
+    usedShelfPicks.add(game.slug);
+  }
   const todayPicks = pickUniqueGames(dailyPicks(state.games, 3), 3, usedShelfPicks);
   const quickPicks = pickUniqueGames(quick, 3, usedShelfPicks);
   const newestPicks = pickUniqueGames(newest, 3, usedShelfPicks);
-  const recent = gamesFromSlugs(state.recentPlays).slice(0, 5);
-  const favorites = gamesFromSlugs(state.favorites).slice(0, 5);
   const shelves = [];
 
   if(recent.length){
@@ -1492,6 +1523,15 @@ function buildPlayerShelves(){
       subtitle: 'Starred games ready to replay.',
       action: 'Open →',
       games: favorites
+    });
+  }
+  if(forYouPicks.length){
+    shelves.push({
+      id: 'for-you',
+      title: 'For you',
+      subtitle: 'Related to recent and saved games.',
+      action: 'Explore →',
+      games: forYouPicks
     });
   }
 
@@ -1546,7 +1586,7 @@ function openShelf(id){
   } else if(id === 'quick'){
     state.category = state.games.some(g => (g.tags||[]).includes('Arcade')) ? 'Arcade' : 'All';
     state.sort = 'pop';
-  } else if(id === 'today'){
+  } else if(id === 'today' || id === 'for-you'){
     state.category = 'All';
     state.sort = 'pop';
   } else {

@@ -6,7 +6,7 @@ If you're here to ship a new game, jump straight to [Adding a new game](#adding-
 
 ## The manifest is the source of truth
 
-Every generator and every validator reads from **[`websites/manifest.json`](websites/manifest.json)** — a JSON array of game entries shaped by [`schemas/manifest.schema.json`](schemas/manifest.schema.json). Editing the manifest is editing the catalog: player shelves, covers, sitemap, JSON-LD, OG share cards, feed entries, and the in-page `FALLBACK_GAMES` constant all derive from it. Canonical public URL settings live in [`scripts/site-config.mjs`](scripts/site-config.mjs), so sitemap/feed/OG/JSON-LD/meta can move from the current preview path to a root domain by setting `WORKSHOP_ARCADE_SITE_ORIGIN` and `WORKSHOP_ARCADE_SITE_BASE_PATH=/` before regeneration.
+Every generator and every validator reads from **[`websites/manifest.json`](websites/manifest.json)** — a JSON array of game entries shaped by [`schemas/manifest.schema.json`](schemas/manifest.schema.json). Editing the manifest is editing the catalog: daily and for-you player shelves, covers, sitemap, JSON-LD, OG share cards, feed entries, and the in-page `FALLBACK_GAMES` constant all derive from it. Canonical public URL settings live in [`scripts/site-config.mjs`](scripts/site-config.mjs), so sitemap/feed/OG/JSON-LD/meta can move from the current preview path to a root domain by setting `WORKSHOP_ARCADE_SITE_ORIGIN` and `WORKSHOP_ARCADE_SITE_BASE_PATH=/` before regeneration.
 
 ```
 websites/manifest.json   ← single source of truth
