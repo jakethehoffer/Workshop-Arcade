@@ -135,7 +135,7 @@ for (const file of localPerfSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:runtime-storage', 'test:live-pages', 'test:all']);
+const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();

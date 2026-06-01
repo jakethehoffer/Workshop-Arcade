@@ -53,7 +53,7 @@ npm ci
 npm test
 ```
 
-`npm test` invokes `scripts/run-fast-tests.mjs`, which auto-discovers every fast `test:*` npm script and runs them in sequence with a per-gate PASS/FAIL summary. Browser-backed runtime probes stay explicit (`npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`) alongside the slow `npm run test:games` Playwright suite. The deployed-site smoke (`npm run test:live-pages`) is also explicit for local preview and touched-slug checks because it hits GitHub Pages or `WORKSHOP_ARCADE_URL`; the Deploy Pages workflow runs it automatically after production deploys. The authenticated GitHub security settings check (`npm run test:github-security-settings`) stays explicit because it queries repository settings and alert APIs. `npm run test:all` adds `test:games` on top of the fast runner.
+`npm test` invokes `scripts/run-fast-tests.mjs`, which auto-discovers every fast `test:*` npm script and runs them in sequence with a per-gate PASS/FAIL summary. Browser-backed runtime probes stay explicit (`npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`) alongside the slow `npm run test:games` Playwright suite. The deployed-site smoke (`npm run test:live-pages`) is also explicit for local preview and touched-slug checks because it hits GitHub Pages or `WORKSHOP_ARCADE_URL`; the Deploy Pages workflow runs it automatically after production deploys. The authenticated GitHub security settings check (`npm run test:github-security-settings`) stays explicit because it queries repository settings and alert APIs. `npm run test:all` adds `test:games` on top of the fast runner, while `npm run test:publish-ready` runs the full local launch-QA stack and writes evidence under `test-results/publish-ready/<timestamp>/summary.json` plus `test-results/publish-ready/<timestamp>/report.md`.
 
 For a full publish-ready check (the same shape CI runs), step through individually so the per-stage CI feedback matches:
 
@@ -70,6 +70,7 @@ npm run test:live-smoke-slugs
 npm run test:pages-artifact
 npm run test:owned-domain-readiness
 npm run test:tools
+npm run test:publish-ready-contract
 npm run test:capture-recipes
 npm run test:generated-surfaces
 npm run test:validator-fixtures
@@ -101,6 +102,7 @@ npm run test:games
 npm run capture:games:ci
 npm run audit:perf:local
 npm run audit:perf:ci
+npm run test:publish-ready
 ```
 
 - `validate-catalog.ps1` checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, local subresources, no remote scripts/fonts, and a synchronized fallback catalog in `index.html`. The `-Fix` form regenerates `FALLBACK_GAMES` automatically.
@@ -113,6 +115,7 @@ npm run audit:perf:ci
 - `npm run test:pages-artifact` runs the same `scripts/build-pages-artifact.mjs` builder the Deploy Pages workflow uses, verifies the temporary artifact includes the intended public files plus `.well-known/security.txt`, creates `.nojekyll`, and rejects internal paths such as `.git`, `.github`, `.codex`, `.ai-sync`, `node_modules`, `output`, and `test-results`.
 - `npm run test:owned-domain-readiness` dry-runs the canonical URL generators with `WORKSHOP_ARCADE_SITE_ORIGIN=https://arcade.example.test` and `WORKSHOP_ARCADE_SITE_BASE_PATH=/`, proving sitemap/feed/root meta/game JSON-LD output can move to a root domain without `/Workshop-Arcade/` leakage or tracked-file rewrites.
 - `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly the browser-backed slow gates plus `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
+- `npm run test:publish-ready-contract` keeps the slow publish-readiness runner honest: confirms `npm run test:publish-ready` remains excluded from `npm test`, keeps the required release-stack commands, and writes JSON/Markdown evidence under `test-results/publish-ready/<timestamp>/`.
 - `npm run test:contributor-onboarding` keeps the first-time-setup story aligned: `npm run setup` exists and pins Playwright chromium, `.devcontainer/devcontainer.json` uses a Playwright image + runs `npm ci && npm run setup` on create + forwards at least one static-server port, and `README.md` mentions both `npm run setup` and Codespaces.
 - `npm run test:architecture-doc` keeps `ARCHITECTURE.md` honest: required sections (manifest, generators, validators, CI, add-a-game) are present, every generator script + every regeneration command in the add-a-game recipe is named, and the doc never references a script that no longer exists on disk.
 - `npm run test:tools` runs `node --check` across repository Node tooling before heavier Playwright jobs start.
@@ -152,10 +155,11 @@ npm run audit:perf:ci
 - `npm run capture:games:ci` runs the rendered-quality harness in strict mode and fails if any captured surface scores above 0. For optional local review, `npm run capture:games` writes the same ranked contact sheet under `test-results/render-ranking/<timestamp>/` without CI strictness.
 - `npm run audit:perf:local` starts a local static server, points the strict Pagespeed-style performance audit at it, and cleans up the server. Use this for local publish checks so the audit proves the current worktree instead of live Pages.
 - `npm run audit:perf:ci` runs the same strict Pagespeed-style performance audit against `WORKSHOP_ARCADE_URL` when set, otherwise the current hosted preview; CI sets the URL to its local static server.
+- `npm run test:publish-ready` runs the local launch-QA stack in order: catalog validation, `npm test`, runtime probes, game smoke, strict render capture, local performance audit, and `git diff --check`. It stops on the first failure but still writes `summary.json` and `report.md` under `test-results/publish-ready/<timestamp>/`.
 
-CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:owned-domain-readiness`, `npm run test:catalog-perf`, `npm run test:workshop-feedback`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
+CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:publish-ready-contract`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:owned-domain-readiness`, `npm run test:catalog-perf`, `npm run test:workshop-feedback`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 40 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 41 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 

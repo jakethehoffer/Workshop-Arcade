@@ -33,6 +33,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:games', 'Playwright smoke test — needs browsers installed and takes minutes. Run via `npm run test:games` or `npm run test:all`.'],
   ['test:live-canvas-evidence', 'Browser-backed live-smoke canvas evidence fixture — needs Chromium. Run via `npm run test:live-canvas-evidence`.'],
   ['test:pwa-runtime', 'Browser-backed PWA runtime probe — needs Chromium/service worker support. Run via `npm run test:pwa-runtime`.'],
+  ['test:publish-ready', 'Slow local publish-readiness aggregate — runs browser, render, and performance gates. Run via `npm run test:publish-ready`.'],
   ['test:runtime-storage', 'Browser-backed sandboxed runtime storage probe — needs Chromium. Run via `npm run test:runtime-storage`.'],
   ['test:live-pages', 'Post-deploy smoke test — hits GitHub Pages or WORKSHOP_ARCADE_URL. Run after Pages deploys via `npm run test:live-pages`.'],
   ['test:all', 'Composite that calls this runner + test:games; running it from inside the runner would recurse.'],
