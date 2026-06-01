@@ -17,7 +17,7 @@ The current preview is published at [https://jakethehoffer.github.io/Workshop-Ar
 - **Discovery:** keep the catalog organized around player shelves, filters, search, random play, and direct game links instead of repository activity.
 - **Retention:** improve continue/favorites, for-you recommendations, install/offline behavior, and game-to-game browsing so repeat play feels natural on one device.
 - **Feedback:** keep suggestions lightweight for players, then convert the saved brief into maintainer work outside the main catalog surface.
-- **Custom domain:** set the final origin/base path in `scripts/site-config.mjs` environment variables, regenerate sitemap/feed/OG/JSON-LD/meta, and deploy without hand-editing game pages.
+- **Custom domain:** keep `npm run test:owned-domain-readiness` green, then set the final origin/base path in `scripts/site-config.mjs` environment variables, regenerate sitemap/feed/OG/JSON-LD/meta, and deploy without hand-editing game pages.
 - **Launch QA:** run the full local validation stack, rendered catalog checks, game smoke, page-weight/PWA budgets, and a post-deploy live smoke against the final domain.
 
 ## First-time Setup
@@ -68,6 +68,7 @@ npm run test:security-workflows
 npm run test:github-security-settings
 npm run test:live-smoke-slugs
 npm run test:pages-artifact
+npm run test:owned-domain-readiness
 npm run test:tools
 npm run test:capture-recipes
 npm run test:generated-surfaces
@@ -109,6 +110,7 @@ npm run audit:perf:ci
 - `npm run test:github-security-settings` is an authenticated remote gate for GitHub-native security state: vulnerability alerts, Dependabot security updates, private vulnerability reporting, secret scanning, secret scanning push protection, and open Dependabot / secret-scanning / CodeQL alert backlogs. It reads `GH_TOKEN` / `GITHUB_TOKEN` or falls back to local `gh auth token`, and is intentionally excluded from `npm test`. In Actions, `.github/workflows/security-surfaces.yml` uses `SECURITY_SURFACES_TOKEN` as the strict remote gate token when configured; without it, the Security Surfaces workflow records the default `GITHUB_TOKEN` API limitation as a warning while the local command remains strict.
 - `npm run test:live-smoke-slugs` runs fast fixtures against `scripts/derive-live-smoke-slugs.mjs` so Deploy Pages touched-slug selection keeps mapping direct game pages, covers, OG covers, shared local scripts, docs-only fallbacks, de-duping, and `$GITHUB_ENV` output before production deploys.
 - `npm run test:pages-artifact` runs the same `scripts/build-pages-artifact.mjs` builder the Deploy Pages workflow uses, verifies the temporary artifact includes the intended public files plus `.well-known/security.txt`, creates `.nojekyll`, and rejects internal paths such as `.git`, `.github`, `.codex`, `.ai-sync`, `node_modules`, `output`, and `test-results`.
+- `npm run test:owned-domain-readiness` dry-runs the canonical URL generators with `WORKSHOP_ARCADE_SITE_ORIGIN=https://arcade.example.test` and `WORKSHOP_ARCADE_SITE_BASE_PATH=/`, proving sitemap/feed/root meta/game JSON-LD output can move to a root domain without `/Workshop-Arcade/` leakage or tracked-file rewrites.
 - `npm run test:test-aggregator` keeps the `npm test` wiring honest: confirms `package.json` exposes `test` → `scripts/run-fast-tests.mjs` and `test:all` → fast runner + `test:games`, that the runner's `EXCLUDED_SCRIPTS` map lists exactly the browser-backed slow gates plus `test:all` (would recurse), and that every other `test:*` script is picked up automatically so new gates never silently drop out of `npm test`.
 - `npm run test:contributor-onboarding` keeps the first-time-setup story aligned: `npm run setup` exists and pins Playwright chromium, `.devcontainer/devcontainer.json` uses a Playwright image + runs `npm ci && npm run setup` on create + forwards at least one static-server port, and `README.md` mentions both `npm run setup` and Codespaces.
 - `npm run test:architecture-doc` keeps `ARCHITECTURE.md` honest: required sections (manifest, generators, validators, CI, add-a-game) are present, every generator script + every regeneration command in the add-a-game recipe is named, and the doc never references a script that no longer exists on disk.
@@ -149,9 +151,9 @@ npm run audit:perf:ci
 - `npm run audit:perf:local` starts a local static server, points the strict Pagespeed-style performance audit at it, and cleans up the server. Use this for local publish checks so the audit proves the current worktree instead of live Pages.
 - `npm run audit:perf:ci` runs the same strict Pagespeed-style performance audit against `WORKSHOP_ARCADE_URL` when set, otherwise the current hosted preview; CI sets the URL to its local static server.
 
-CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
+CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:owned-domain-readiness`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 38 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 39 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 
@@ -168,7 +170,7 @@ The catalog is a progressive web app. Visiting the current preview or future own
 
 ## Discoverability (Sitemap + Structured Data)
 
-The catalog ships a few small static surfaces so search engines can index every game directly. Canonical URL generation lives in `scripts/site-config.mjs`; by default it targets `https://jakethehoffer.github.io/Workshop-Arcade/`, and a future owned-domain build can set `WORKSHOP_ARCADE_SITE_ORIGIN` plus `WORKSHOP_ARCADE_SITE_BASE_PATH=/` before regenerating.
+The catalog ships a few small static surfaces so search engines can index every game directly. Canonical URL generation lives in `scripts/site-config.mjs`; by default it targets `https://jakethehoffer.github.io/Workshop-Arcade/`, and a future owned-domain build can set `WORKSHOP_ARCADE_SITE_ORIGIN` plus `WORKSHOP_ARCADE_SITE_BASE_PATH=/` before regenerating. `npm run test:owned-domain-readiness` exercises that root-domain configuration in memory so the custom-domain path stays tested before a real domain is chosen.
 
 - `sitemap.xml` — one URL per manifest game plus the catalog root, with `lastmod` derived from each entry's `addedAt`. Generated from `websites/manifest.json`.
 - `robots.txt` — allows all crawlers and points at the configured canonical sitemap.
