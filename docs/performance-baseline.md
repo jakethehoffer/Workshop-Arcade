@@ -22,6 +22,20 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Pylon Shift tower-of-Hanoi addition (pass 92)
+
+Captured 2026-06-01 against a disposable local static server after adding **Pylon Shift**, a Tower of Hanoi disc-stacking logic puzzle (three pylons, five levels of 3–7 discs, optimal-move par, best-move tracking), plus refreshing the generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumping the service-worker shell revision for the new newest-cover set. No existing gameplay code, storage keys, or capture recipes changed. The strict audit covered the catalog plus 73 manifest games, 74 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 264 ms | 96 ms | 🟢 101 ms | 🟢 179.8 KB | 10 | 0 |
+| Lexica | 🟢 48 ms | 16 ms | 🟢 17 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 440 ms | 10 ms | 🟢 12 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 55 ms | 🟢 55 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 104 ms | 91 ms | 🟢 91 ms | 🟢 109.7 KB | 2 | 0 |
+
+Pylon Shift lands at 19.7 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog holds at 179.8 KB / 10 requests, well within its 200 KB / 18 request budget. Every named exception remains below its CI budget, no console/page errors appeared across the 74 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Chromalock code-breaking addition (pass 91)
 
 Captured 2026-06-01 against a disposable local static server after adding **Chromalock**, a Mastermind-style color-code deduction game (seeded four-peg secret, six-color palette, ten guesses, exact/partial match clues), plus refreshing the generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumping the service-worker shell revision for the new newest-cover set. No existing gameplay code, storage keys, or capture recipes changed. The strict audit covered the catalog plus 72 manifest games, 73 pages total.

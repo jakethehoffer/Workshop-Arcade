@@ -1630,6 +1630,26 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "pylon-shift": {
+      name: "shift discs across the pylons",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(130);
+          };
+          press("1", "Digit1");
+          press("3", "Digit3");
+          press("1", "Digit1");
+          press("2", "Digit2");
+          press("3", "Digit3");
+          press("2", "Digit2");
+        });
+      },
+    },
     "chromalock": {
       name: "build two guesses and read the clues",
       freezePostAtEvent: true,
