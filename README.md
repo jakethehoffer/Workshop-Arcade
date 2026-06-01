@@ -8,7 +8,7 @@ Workshop Arcade is a player-facing static arcade: 71 browser games, instant play
 
 Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: daily picks, for-you recommendations for returning players, quick plays, newest arrivals, continue playing, and saved favorites.
 
-The Workshop flow is a quiet "Suggest an improvement" action. It turns player feedback into an AI-ready brief that can be copied, downloaded, saved locally in the browser, or opened as a pre-filled maintenance draft.
+The Workshop flow is a quiet "Suggest an improvement" action. It turns player feedback into an AI-ready brief that can be copied, downloaded, saved locally in the browser, resumed later from Player picks, or opened as a pre-filled maintenance draft.
 
 The current preview is published at [https://jakethehoffer.github.io/Workshop-Arcade/](https://jakethehoffer.github.io/Workshop-Arcade/), but the product target is an owned-domain arcade. Canonical URLs and generated metadata come from `scripts/site-config.mjs`, defaulting to the current preview URL while supporting a future root-domain deploy through `WORKSHOP_ARCADE_SITE_ORIGIN` and `WORKSHOP_ARCADE_SITE_BASE_PATH=/`.
 
@@ -16,7 +16,7 @@ The current preview is published at [https://jakethehoffer.github.io/Workshop-Ar
 
 - **Discovery:** keep the catalog organized around player shelves, filters, search, random play, and direct game links instead of repository activity.
 - **Retention:** improve continue/favorites, for-you recommendations, install/offline behavior, and game-to-game browsing so repeat play feels natural on one device.
-- **Feedback:** keep suggestions lightweight for players, then convert the saved brief into maintainer work outside the main catalog surface.
+- **Feedback:** keep suggestions lightweight for players, let saved local drafts resume from the catalog, then convert the saved brief into maintainer work outside the main catalog surface.
 - **Custom domain:** keep `npm run test:owned-domain-readiness` green, then set the final origin/base path in `scripts/site-config.mjs` environment variables, regenerate sitemap/feed/OG/JSON-LD/meta, and deploy without hand-editing game pages.
 - **Launch QA:** run the full local validation stack, rendered catalog checks, game smoke, page-weight/PWA budgets, and a post-deploy live smoke against the final domain.
 
@@ -74,6 +74,7 @@ npm run test:capture-recipes
 npm run test:generated-surfaces
 npm run test:validator-fixtures
 npm run test:catalog-perf
+npm run test:workshop-feedback
 npm run test:performance-baseline
 npm run test:page-weight
 npm run test:pwa-install-budget
@@ -119,6 +120,7 @@ npm run audit:perf:ci
 - `npm run test:generated-surfaces` verifies every manifest game is represented across generated integration surfaces: per-game OG cards, sitemap, feed, game meta/JSON-LD, and capture recipes.
 - `npm run test:validator-fixtures` runs selected validators against throwaway broken repo fixtures so stale generated-surface and performance-baseline failures are proven without mutating tracked files.
 - `npm run test:catalog-perf` enforces the catalog cover-image perf contract: the card template ships explicit width/height + `decoding="async"`, and `render()` opts the first `ABOVE_FOLD_COVERS` cards into eager loading + `fetchpriority="high"` while lazy-loading the rest with `fetchpriority="low"` so the LCP candidate is fetched first and off-screen covers don't compete for bandwidth.
+- `npm run test:workshop-feedback` locks in the local feedback-draft contract: the Player picks header keeps "Suggest improvement" quiet, reveals a saved-draft count plus "Resume draft" only when `workshop_arcade_drafts_v1` contains valid drafts, loads the newest draft back into the Workshop modal, and avoids startup GitHub API calls.
 - `npm run test:performance-baseline` keeps `docs/performance-baseline.md` aligned with the current manifest count and the strict CI budgets defined in `scripts/audit-pagespeed.mjs`.
 - `npm run test:page-weight` statically sums the catalog local shell plus each manifest game's HTML and same-origin script dependencies, then compares those totals to the strict publish budgets before the slower browser performance audit runs.
 - `npm run test:pwa-install-budget` statically sums the service-worker install payload (`sw.js`, install shell assets, the small newest-cover pre-cache set, and local PWA manifest icons) against the Catalog performance budget and requires a 15 KB / 5 request headroom buffer so offline support cannot silently approach the publish contract.
@@ -151,9 +153,9 @@ npm run audit:perf:ci
 - `npm run audit:perf:local` starts a local static server, points the strict Pagespeed-style performance audit at it, and cleans up the server. Use this for local publish checks so the audit proves the current worktree instead of live Pages.
 - `npm run audit:perf:ci` runs the same strict Pagespeed-style performance audit against `WORKSHOP_ARCADE_URL` when set, otherwise the current hosted preview; CI sets the URL to its local static server.
 
-CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:owned-domain-readiness`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
+CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:capture-recipes`, `npm run test:validator-fixtures`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:owned-domain-readiness`, `npm run test:catalog-perf`, `npm run test:workshop-feedback`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The Validate Catalog workflow is split into catalog/docs/a11y, game smoke, performance audit, and render capture jobs, with compact performance and render-ranking artifacts uploaded for review. The current preview is still deployed by the repo-owned Deploy Pages workflow from a curated `_site` artifact assembled by `scripts/build-pages-artifact.mjs`; that workflow derives touched live-smoke slugs from the push diff, runs `npm run test:live-pages` with retry behavior, and uploads `live-pages-smoke` evidence for 14 days. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. These are maintenance surfaces, not the player-facing value proposition.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 39 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (4 generators, 40 fast validators, 4-job CI workflow) and ends with a step-by-step "Adding a new game" recipe.
 
 ## License & Security Reports
 

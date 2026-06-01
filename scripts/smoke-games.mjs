@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(repoRoot, "websites", "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+const WORKSHOP_DRAFTS_KEY = "workshop_arcade_drafts_v1";
 const failures = [];
 const startedAt = new Date().toISOString();
 const outputRoot = path.join(repoRoot, "test-results", "smoke-games", startedAt.replace(/[:.]/g, "-"));
@@ -168,6 +169,30 @@ function isGitHubApiUrl(value) {
   } catch {
     return false;
   }
+}
+
+function workshopDraftFixtures() {
+  const seededGame = manifest[0] || {};
+  return [
+    {
+      id: "1000",
+      gameId: seededGame.id || "__new__",
+      title: "Older seeded draft",
+      goal: "Older seeded feedback request.",
+      focus: ["Gameplay balance"],
+      brief: "Older seeded brief",
+      savedAt: "2026-05-30T10:00:00.000Z",
+    },
+    {
+      id: "2000",
+      gameId: "__new__",
+      title: "Newest seeded concept",
+      goal: "Newest seeded feedback request.",
+      focus: ["Mobile controls", "Clarity"],
+      brief: "Newest seeded brief",
+      savedAt: "2026-06-01T10:00:00.000Z",
+    },
+  ];
 }
 
 function recordPageRequests(page) {
@@ -497,6 +522,78 @@ async function checkCatalogProductShelves(page, githubRequests) {
   if (!(await page.locator("#suggestImprovementBtn").count())) {
     addFailure("catalog", "missing quiet Suggest improvement action near player shelves");
   }
+  await checkWorkshopDraftHidden(page, "catalog");
+}
+
+async function checkWorkshopDraftHidden(page, label) {
+  const resume = page.locator("#resumeDraftBtn");
+  if (!(await resume.count())) {
+    addFailure(label, "missing hidden Resume draft action");
+  } else if (await resume.isVisible()) {
+    addFailure(label, "Resume draft should stay hidden without saved local drafts");
+  }
+
+  const count = page.locator("#workshopDraftStatus");
+  if (!(await count.count())) {
+    addFailure(label, "missing saved draft count text");
+  } else {
+    if (await count.isVisible()) {
+      addFailure(label, "saved draft count should stay hidden without saved local drafts");
+    }
+    const countText = (await count.textContent())?.trim();
+    if (countText) {
+      addFailure(label, `saved draft count should be empty without drafts, got "${countText}"`);
+    }
+  }
+}
+
+async function seedWorkshopDrafts(page) {
+  await page.evaluate(({ key, drafts }) => {
+    localStorage.setItem(key, JSON.stringify(drafts));
+  }, {
+    key: WORKSHOP_DRAFTS_KEY,
+    drafts: workshopDraftFixtures(),
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
+}
+
+async function checkWorkshopDraftResume(page, label) {
+  const resume = page.locator("#resumeDraftBtn");
+  if (!(await resume.count())) {
+    addFailure(label, "missing Resume draft action after seeding saved drafts");
+    return;
+  }
+  if (!(await resume.isVisible())) {
+    addFailure(label, "Resume draft should appear after seeding saved local drafts");
+    return;
+  }
+  const countText = (await page.locator("#workshopDraftStatus").textContent())?.trim();
+  if (countText !== "2 saved drafts") {
+    addFailure(label, `saved draft count should show "2 saved drafts", got "${countText}"`);
+  }
+
+  await resume.click();
+  await page.waitForSelector("#workshopModal:not([hidden])");
+  const title = await page.locator("#newGameTitle").inputValue();
+  const goal = await page.locator("#workshopGoal").inputValue();
+  const brief = await page.locator("#briefOutput").inputValue();
+  if (title !== "Newest seeded concept") {
+    addFailure(label, `Resume draft loaded title "${title}" instead of newest seeded draft`);
+  }
+  if (goal !== "Newest seeded feedback request.") {
+    addFailure(label, `Resume draft loaded goal "${goal}" instead of newest seeded draft`);
+  }
+  if (!brief.includes("Newest seeded brief")) {
+    addFailure(label, "Resume draft did not restore the newest saved brief text");
+  }
+  await page.waitForTimeout(100);
+  const activeId = await page.evaluate(() => document.activeElement?.id || "");
+  if (activeId !== "workshopGoal") {
+    addFailure(label, `Resume draft should focus #workshopGoal, active element was "${activeId}"`);
+  }
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => document.getElementById("workshopModal").hidden);
 }
 
 async function checkSessionRailHidden(page, label) {
@@ -574,6 +671,7 @@ async function checkCatalogMobileFirstVisitShelves(browser, baseUrl) {
     addFailure("catalog mobile first visit", `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
   }
   await checkSessionRailHidden(page, "catalog mobile first visit");
+  await checkWorkshopDraftHidden(page, "catalog mobile first visit");
   if (await page.locator('#playerShelvesList [data-shelf="for-you"]').count()) {
     addFailure("catalog mobile first visit", "For you shelf should stay hidden without seeded recent/favorite state");
   }
@@ -644,20 +742,24 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   const githubRequests = [];
   const requests = recordPageRequests(page);
   recordGithubApiRequests(page, githubRequests);
-  await page.addInitScript(({ recentSlug, favoriteSlug }) => {
+  await page.addInitScript(({ recentSlug, favoriteSlug, draftKey, drafts }) => {
     try {
       if (window.top !== window) return;
       localStorage.setItem("workshop-arcade:recentPlays:v1", JSON.stringify([recentSlug]));
       localStorage.setItem("workshop-arcade:favorites:v1", JSON.stringify([favoriteSlug]));
+      localStorage.setItem(draftKey, JSON.stringify(drafts));
     } catch {}
   }, {
     recentSlug: manifest[0]?.slug,
     favoriteSlug: manifest[1]?.slug || manifest[0]?.slug,
+    draftKey: WORKSHOP_DRAFTS_KEY,
+    drafts: workshopDraftFixtures(),
   });
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
   await checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, "catalog mobile");
   await checkSessionRailPopulated(page, "catalog mobile");
+  await checkWorkshopDraftResume(page, "catalog mobile");
   const mobilePlacement = await page.evaluate(() => {
     const rail = document.getElementById("sessionRail");
     const shelves = document.querySelector(".shelves");
@@ -862,6 +964,13 @@ async function checkCatalog(browser, baseUrl) {
   await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   setPhase("catalog", "check populated session rail");
   await checkSessionRailPopulated(page, "catalog", { openFirst: true });
+
+  setPhase("catalog", "resume seeded workshop draft");
+  await seedWorkshopDrafts(page);
+  if (githubRequests.length) {
+    addFailure("catalog", `GitHub API was requested during draft-resume startup: ${githubRequests.join(", ")}`);
+  }
+  await checkWorkshopDraftResume(page, "catalog");
 
   setPhase("catalog", "workshop issue URL flow");
   await page.locator("#submitGameBtn").click();
