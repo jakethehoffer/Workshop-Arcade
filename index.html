@@ -224,16 +224,27 @@
     .queue-head h2{margin:0;font-size:18px;letter-spacing:0.04em}
     .queue-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .queue-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-    .queue-row{display:grid;grid-template-columns:1fr;gap:8px;align-items:center;width:100%;
+    .queue-row{display:grid;grid-template-rows:auto 1fr auto;gap:8px;align-items:stretch;width:100%;min-width:0;
       background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));
       border:1px solid rgba(94,234,212,0.16);border-radius:12px;padding:10px;
       box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
-      transition:border-color 0.15s ease;color:inherit;font:inherit;text-align:left}
+      transition:border-color 0.15s ease;color:inherit;text-align:left}
     .queue-row:hover{border-color:rgba(94,234,212,0.36)}
-    .queue-row strong{display:block;font-size:14px;line-height:1.3}
-    .queue-row span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
-    .queue-row .queue-action{align-self:center;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
-      font-weight:700;color:rgba(94,234,212,0.85);margin:0;white-space:nowrap}
+    .queue-row-header strong{display:block;font-size:14px;line-height:1.3}
+    .queue-row-header span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+    .queue-picks{display:grid;gap:6px;align-content:start}
+    .queue-pick{display:grid;gap:2px;width:100%;min-width:0;border:1px solid rgba(94,234,212,0.12);
+      border-radius:9px;background:rgba(148,163,184,0.07);color:var(--ink);padding:7px 8px;
+      cursor:pointer;font:inherit;text-align:left;transition:border-color 0.15s ease,background 0.15s ease}
+    .queue-pick:hover{border-color:rgba(94,234,212,0.38);background:rgba(94,234,212,0.09)}
+    .queue-pick strong{font-size:12.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .queue-pick span{color:var(--muted);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .queue-row .queue-action{justify-self:start;border:0;background:transparent;padding:0;color:rgba(94,234,212,0.85);
+      cursor:pointer;font:inherit;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+      font-weight:800;white-space:nowrap}
+    .queue-row .queue-action:hover{color:#e6edf3}
+    .queue-row .queue-action:focus-visible,.queue-pick:focus-visible{outline:3px solid rgba(94,234,212,0.55);outline-offset:2px}
     .queue-row.queue-empty{cursor:default;background:transparent;border-style:dashed;border-color:rgba(94,234,212,0.18);box-shadow:none}
     .queue-row.queue-empty.queue-actionable{cursor:pointer}
     .queue-row.queue-empty:hover{border-color:rgba(94,234,212,0.18)}
@@ -1334,11 +1345,11 @@ function render(){
 }
 
 function makeShelfRow(shelf){
-  const row = document.createElement('button');
+  const row = document.createElement('article');
   row.className = 'queue-row';
-  row.type = 'button';
   row.dataset.shelf = shelf.id;
   const meta = document.createElement('div');
+  meta.className = 'queue-row-header';
   const title = document.createElement('strong');
   title.textContent = shelf.title;
   meta.appendChild(title);
@@ -1347,10 +1358,29 @@ function makeShelfRow(shelf){
     sub.textContent = shelf.subtitle;
     meta.appendChild(sub);
   }
-  const action = document.createElement('span');
+  const picks = document.createElement('div');
+  picks.className = 'queue-picks';
+  for(const game of (shelf.games || []).slice(0, 3)){
+    const pick = document.createElement('button');
+    pick.className = 'queue-pick';
+    pick.type = 'button';
+    pick.dataset.shelfPick = shelf.id;
+    pick.dataset.slug = game.slug;
+    pick.setAttribute('aria-label', `Play ${game.title} from ${shelf.title}`);
+    const pickTitle = document.createElement('strong');
+    pickTitle.textContent = game.title;
+    const pickTags = document.createElement('span');
+    pickTags.textContent = (game.tags || []).slice(0, 2).join(' · ') || 'Game';
+    pick.append(pickTitle, pickTags);
+    picks.appendChild(pick);
+  }
+
+  const action = document.createElement('button');
   action.className = 'queue-action';
+  action.type = 'button';
+  action.dataset.shelfAction = shelf.id;
   action.textContent = shelf.action;
-  row.append(meta, action);
+  row.append(meta, picks, action);
   return row;
 }
 
@@ -1474,7 +1504,8 @@ function buildPlayerShelves(){
       id: 'recent',
       title: 'Continue playing',
       subtitle: summarizeGames(recent, 'Your recently opened games stay on this device.'),
-      action: 'Resume →'
+      action: 'Resume →',
+      games: recent
     });
   }
   if(favorites.length){
@@ -1482,7 +1513,8 @@ function buildPlayerShelves(){
       id: 'favorites',
       title: 'Saved favorites',
       subtitle: summarizeGames(favorites, 'Games you starred on this device.'),
-      action: 'Open →'
+      action: 'Open →',
+      games: favorites
     });
   }
 
@@ -1491,19 +1523,22 @@ function buildPlayerShelves(){
       id: 'featured',
       title: 'Featured games',
       subtitle: summarizeGames(popular, 'The strongest arcade entries by catalog score.'),
-      action: 'Browse →'
+      action: 'Browse →',
+      games: popular
     },
     {
       id: 'quick',
       title: 'Quick plays',
       subtitle: summarizeGames(quick, 'Fast-start games for a short session.'),
-      action: 'Start →'
+      action: 'Start →',
+      games: quick
     },
     {
       id: 'newest',
       title: 'Newest arrivals',
       subtitle: summarizeGames(newest, 'Freshly added games from the catalog.'),
-      action: 'See new →'
+      action: 'See new →',
+      games: newest
     }
   );
 
@@ -1549,9 +1584,14 @@ function openShelf(id){
 
 if(els.playerShelvesList){
   els.playerShelvesList.addEventListener('click', (event) => {
-    const row = event.target.closest('[data-shelf]');
-    if(!row) return;
-    openShelf(row.dataset.shelf || 'newest');
+    const pick = event.target.closest('[data-shelf-pick][data-slug]');
+    if(pick){
+      const game = state.games.find(g => g.slug === pick.dataset.slug);
+      if(game) openPlayer(game, pick);
+      return;
+    }
+    const action = event.target.closest('[data-shelf-action]');
+    if(action) openShelf(action.dataset.shelfAction || 'newest');
   });
 }
 

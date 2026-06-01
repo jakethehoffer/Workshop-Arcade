@@ -456,13 +456,49 @@ async function checkCatalogProductShelves(page, githubRequests) {
     }
   }
 
-  await page.locator('#playerShelvesList [data-shelf="featured"]').click();
+  const directPicks = page.locator("#playerShelvesList [data-shelf-pick][data-slug]");
+  const pickCount = await directPicks.count();
+  if (pickCount < 9) {
+    addFailure("catalog", `player shelves should expose direct game picks, found ${pickCount}`);
+  }
+  for (const shelf of ["featured", "quick", "newest"]) {
+    const shelfPickCount = await page.locator(`#playerShelvesList [data-shelf-pick="${shelf}"]`).count();
+    if (shelfPickCount < 3) {
+      addFailure("catalog", `${shelf} shelf should expose three direct game picks, found ${shelfPickCount}`);
+    }
+  }
+  if (pickCount > 0) {
+    const firstPick = directPicks.first();
+    const firstPickSlug = await firstPick.getAttribute("data-slug");
+    const firstPickTitle = await firstPick.locator("strong").textContent();
+    await firstPick.click();
+    await page.waitForSelector("#playerModal:not([hidden])");
+    const playerTitle = await page.locator("#playerTitle").textContent();
+    if (!firstPickTitle || playerTitle?.trim() !== firstPickTitle.trim()) {
+      addFailure("catalog", `direct player shelf pick opened "${playerTitle}" instead of "${firstPickTitle}"`);
+    }
+    const hash = await page.evaluate(() => location.hash);
+    if (!firstPickSlug || hash !== `#play=${encodeURIComponent(firstPickSlug)}`) {
+      addFailure("catalog", `direct player shelf pick did not sync #play hash for ${firstPickSlug}: ${hash}`);
+    }
+    await page.locator("#playerClose").click();
+    await page.waitForFunction(() => document.getElementById("playerModal").hidden);
+  }
+
+  await page.locator('#playerShelvesList [data-shelf-action="featured"]').click();
   await page.waitForTimeout(100);
   if (await page.locator("#sort").inputValue() !== "pop") {
     addFailure("catalog", "Featured shelf did not switch to popular sort");
   }
 
-  await page.locator('#playerShelvesList [data-shelf="newest"]').click();
+  await page.locator('#playerShelvesList [data-shelf-action="quick"]').click();
+  await page.waitForTimeout(100);
+  if (await page.locator("#sort").inputValue() !== "pop") {
+    addFailure("catalog", "Quick plays shelf did not switch to popular sort");
+  }
+  await assertTagFilterState(page, "Arcade", "catalog");
+
+  await page.locator('#playerShelvesList [data-shelf-action="newest"]').click();
   await page.waitForTimeout(100);
   if (await page.locator("#sort").inputValue() !== "new") {
     addFailure("catalog", "Newest shelf did not restore newest sort");
@@ -534,6 +570,70 @@ async function checkSessionRailPopulated(page, label, { openFirst = false } = {}
   }
 }
 
+async function checkCatalogMobileFirstVisitShelves(browser, baseUrl) {
+  setPhase("catalog mobile first visit", "open narrow catalog", { viewport: "mobile" });
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844, isMobile: true, hasTouch: true }
+  });
+  observePage(page, baseUrl, "catalog mobile first visit");
+  const githubRequests = [];
+  recordGithubApiRequests(page, githubRequests);
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
+  if (githubRequests.length) {
+    addFailure("catalog mobile first visit", `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
+  }
+  await checkSessionRailHidden(page, "catalog mobile first visit");
+  const mobilePlacement = await page.evaluate(() => {
+    const shelves = document.querySelector(".shelves");
+    const grid = document.getElementById("grid");
+    const shelfRect = shelves?.getBoundingClientRect();
+    const gridRect = grid?.getBoundingClientRect();
+    return {
+      shelvesTop: shelfRect ? shelfRect.top : null,
+      gridTop: gridRect ? gridRect.top : null,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  if (mobilePlacement.shelvesTop === null || mobilePlacement.gridTop === null) {
+    addFailure("catalog mobile first visit", "player shelves or catalog grid missing from mobile layout");
+  } else {
+    if (!(mobilePlacement.shelvesTop < mobilePlacement.gridTop)) {
+      addFailure("catalog mobile first visit", `player shelves should appear before the grid, got shelvesTop=${mobilePlacement.shelvesTop} gridTop=${mobilePlacement.gridTop}`);
+    }
+    if (mobilePlacement.shelvesTop >= mobilePlacement.viewportHeight) {
+      addFailure("catalog mobile first visit", `player shelves should be visible in the first viewport, top=${mobilePlacement.shelvesTop} viewport=${mobilePlacement.viewportHeight}`);
+    }
+  }
+  const directPicks = page.locator("#playerShelvesList [data-shelf-pick][data-slug]");
+  const pickCount = await directPicks.count();
+  if (pickCount < 9) {
+    addFailure("catalog mobile first visit", `player shelves should expose direct game picks, found ${pickCount}`);
+  }
+  if (pickCount > 0) {
+    const firstPick = directPicks.first();
+    const firstPickSlug = await firstPick.getAttribute("data-slug");
+    const firstPickTitle = await firstPick.locator("strong").textContent();
+    await firstPick.click();
+    await page.waitForSelector("#playerModal:not([hidden])");
+    const playerTitle = await page.locator("#playerTitle").textContent();
+    if (!firstPickTitle || playerTitle?.trim() !== firstPickTitle.trim()) {
+      addFailure("catalog mobile first visit", `direct player shelf pick opened "${playerTitle}" instead of "${firstPickTitle}"`);
+    }
+    const hash = await page.evaluate(() => location.hash);
+    if (!firstPickSlug || hash !== `#play=${encodeURIComponent(firstPickSlug)}`) {
+      addFailure("catalog mobile first visit", `direct player shelf pick did not sync #play hash for ${firstPickSlug}: ${hash}`);
+    }
+    await page.locator("#playerClose").click();
+    await page.waitForFunction(() => document.getElementById("playerModal").hidden);
+  }
+  const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
+  if (overflow > 2) {
+    addFailure("catalog mobile first visit", `horizontal overflow ${overflow}px`);
+  }
+  await page.close();
+}
+
 async function checkCatalogMobileContainment(browser, baseUrl) {
   setPhase("catalog mobile", "open narrow catalog", { viewport: "mobile" });
   const page = await browser.newPage({
@@ -578,6 +678,31 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   }
   if (mobilePlacement.railBottom !== null && mobilePlacement.shelvesTop !== null && mobilePlacement.railBottom > mobilePlacement.shelvesTop + 2) {
     addFailure("catalog mobile", `Continue rail should appear before player shelves, railBottom=${mobilePlacement.railBottom} shelvesTop=${mobilePlacement.shelvesTop}`);
+  }
+
+  const directPicks = page.locator("#playerShelvesList [data-shelf-pick][data-slug]");
+  const pickCount = await directPicks.count();
+  if (pickCount < 9) {
+    addFailure("catalog mobile", `player shelves should expose direct game picks after seeded session state, found ${pickCount}`);
+  }
+  const featuredPick = page.locator('#playerShelvesList [data-shelf-pick="featured"]').first();
+  if (await featuredPick.count()) {
+    const pickSlug = await featuredPick.getAttribute("data-slug");
+    const pickTitle = await featuredPick.locator("strong").textContent();
+    await featuredPick.click();
+    await page.waitForSelector("#playerModal:not([hidden])");
+    const playerTitle = await page.locator("#playerTitle").textContent();
+    if (!pickTitle || playerTitle?.trim() !== pickTitle.trim()) {
+      addFailure("catalog mobile", `seeded direct shelf pick opened "${playerTitle}" instead of "${pickTitle}"`);
+    }
+    const hash = await page.evaluate(() => location.hash);
+    if (!pickSlug || hash !== `#play=${encodeURIComponent(pickSlug)}`) {
+      addFailure("catalog mobile", `seeded direct shelf pick did not sync #play hash for ${pickSlug}: ${hash}`);
+    }
+    await page.locator("#playerClose").click();
+    await page.waitForFunction(() => document.getElementById("playerModal").hidden);
+  } else {
+    addFailure("catalog mobile", "missing featured direct shelf pick after seeded session state");
   }
 
   const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
@@ -743,6 +868,7 @@ async function checkCatalog(browser, baseUrl) {
     await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   }
   await page.close();
+  await checkCatalogMobileFirstVisitShelves(browser, baseUrl);
   await checkCatalogMobileContainment(browser, baseUrl);
 }
 

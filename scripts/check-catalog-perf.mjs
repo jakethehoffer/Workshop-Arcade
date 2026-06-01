@@ -160,6 +160,18 @@ async function checkCatalog() {
   if (!/function\s+buildPlayerShelves\s*\(/.test(src) || !/Featured games/.test(src) || !/Quick plays/.test(src) || !/Newest arrivals/.test(src)) {
     fail(`${indexPath}: product shelves must be generated from manifest data with featured, quick-play, and newest lanes`);
   }
+  if (!/dataset\.shelfPick\s*=/.test(src) || !/dataset\.slug\s*=\s*game\.slug/.test(src)) {
+    fail(`${indexPath}: player shelves must expose direct game pick buttons with game slugs`);
+  }
+  if (!/openPlayer\(game,\s*pick\)/.test(src)) {
+    fail(`${indexPath}: direct player shelf picks must reuse openPlayer()`);
+  }
+  if (!/dataset\.shelfAction\s*=/.test(src) || !/openShelf\(action\.dataset\.shelfAction/.test(src)) {
+    fail(`${indexPath}: player shelves must keep separate browse action buttons for featured / quick-play / newest views`);
+  }
+  if (!/games:\s*popular/.test(src) || !/games:\s*quick/.test(src) || !/games:\s*newest/.test(src)) {
+    fail(`${indexPath}: featured, quick-play, and newest shelves must carry direct game picks`);
+  }
   if (!/renderPlayerShelves\s*\(\s*\)/.test(src)) {
     fail(`${indexPath}: render() must refresh player shelves when catalog state changes`);
   }
