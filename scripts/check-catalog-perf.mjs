@@ -169,8 +169,16 @@ async function checkCatalog() {
   if (!/dataset\.shelfAction\s*=/.test(src) || !/openShelf\(action\.dataset\.shelfAction/.test(src)) {
     fail(`${indexPath}: player shelves must keep separate browse action buttons for featured / quick-play / newest views`);
   }
-  if (!/games:\s*popular/.test(src) || !/games:\s*quick/.test(src) || !/games:\s*newest/.test(src)) {
-    fail(`${indexPath}: featured, quick-play, and newest shelves must carry direct game picks`);
+  if (!/function\s+pickUniqueGames\s*\(/.test(src) || !/const\s+usedShelfPicks\s*=\s*new\s+Set\(\)/.test(src)) {
+    fail(`${indexPath}: player shelves must de-dupe first-visit picks with deterministic shared state`);
+  }
+  if (!/featuredPicks\s*=\s*pickUniqueGames\(popular,\s*3,\s*usedShelfPicks\)/.test(src)
+    || !/quickPicks\s*=\s*pickUniqueGames\(quick,\s*3,\s*usedShelfPicks\)/.test(src)
+    || !/newestPicks\s*=\s*pickUniqueGames\(newest,\s*3,\s*usedShelfPicks\)/.test(src)) {
+    fail(`${indexPath}: featured, quick-play, and newest shelves must each carry three de-duped direct picks`);
+  }
+  if (!/\.queue-picks\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(src)) {
+    fail(`${indexPath}: player shelf picks must use the compact three-column text-pill layout`);
   }
   if (!/renderPlayerShelves\s*\(\s*\)/.test(src)) {
     fail(`${indexPath}: render() must refresh player shelves when catalog state changes`);

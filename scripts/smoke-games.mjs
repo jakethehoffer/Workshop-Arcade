@@ -467,6 +467,11 @@ async function checkCatalogProductShelves(page, githubRequests) {
       addFailure("catalog", `${shelf} shelf should expose three direct game picks, found ${shelfPickCount}`);
     }
   }
+  const firstVisitSlugs = await page.locator('#playerShelvesList [data-shelf-pick="featured"], #playerShelvesList [data-shelf-pick="quick"], #playerShelvesList [data-shelf-pick="newest"]')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
+  if (firstVisitSlugs.length >= 9 && new Set(firstVisitSlugs).size !== firstVisitSlugs.length) {
+    addFailure("catalog", `first-visit player shelves repeated direct picks: ${firstVisitSlugs.join(", ")}`);
+  }
   if (pickCount > 0) {
     const firstPick = directPicks.first();
     const firstPickSlug = await firstPick.getAttribute("data-slug");
@@ -604,11 +609,19 @@ async function checkCatalogMobileFirstVisitShelves(browser, baseUrl) {
     if (mobilePlacement.shelvesTop >= mobilePlacement.viewportHeight) {
       addFailure("catalog mobile first visit", `player shelves should be visible in the first viewport, top=${mobilePlacement.shelvesTop} viewport=${mobilePlacement.viewportHeight}`);
     }
+    if (mobilePlacement.gridTop > 1250) {
+      addFailure("catalog mobile first visit", `compact player shelves should keep the grid near the first mobile viewport, got gridTop=${mobilePlacement.gridTop}`);
+    }
   }
   const directPicks = page.locator("#playerShelvesList [data-shelf-pick][data-slug]");
   const pickCount = await directPicks.count();
   if (pickCount < 9) {
     addFailure("catalog mobile first visit", `player shelves should expose direct game picks, found ${pickCount}`);
+  }
+  const firstVisitSlugs = await page.locator('#playerShelvesList [data-shelf-pick="featured"], #playerShelvesList [data-shelf-pick="quick"], #playerShelvesList [data-shelf-pick="newest"]')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-slug")).filter(Boolean));
+  if (firstVisitSlugs.length >= 9 && new Set(firstVisitSlugs).size !== firstVisitSlugs.length) {
+    addFailure("catalog mobile first visit", `first-visit player shelves repeated direct picks: ${firstVisitSlugs.join(", ")}`);
   }
   if (pickCount > 0) {
     const firstPick = directPicks.first();
