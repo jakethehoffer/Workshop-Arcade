@@ -387,37 +387,14 @@ async function checkCardTagFiltering(page) {
   await assertTagFilterState(page, keyboardCategory, "catalog");
 }
 
-async function checkDiscoveryActions(page) {
-  const discovery = page.locator("#catalogDiscovery");
-  if (!(await discovery.count())) {
-    addFailure("catalog", "missing catalog discovery actions");
-    return;
-  }
-
-  const newest = page.locator('#catalogDiscovery [data-view="new"]');
-  const popular = page.locator('#catalogDiscovery [data-view="pop"]');
-  if (!(await newest.count()) || !(await popular.count())) {
-    addFailure("catalog", "catalog discovery is missing Newest or Popular quick view");
-    return;
-  }
-
-  await popular.click();
-  await page.waitForTimeout(100);
-  if (await page.locator("#sort").inputValue() !== "pop") {
-    addFailure("catalog", "Popular discovery action did not sync the sort dropdown");
-  }
-
-  await newest.click();
-  await page.waitForTimeout(100);
-  if (await page.locator("#sort").inputValue() !== "new") {
-    addFailure("catalog", "Newest discovery action did not restore newest sort");
-  }
-}
-
 async function checkCatalogProductShelves(page, githubRequests) {
   await page.waitForTimeout(300);
   if (githubRequests.length) {
     addFailure("catalog", `GitHub API was requested during startup: ${githubRequests.join(", ")}`);
+  }
+
+  if (await page.locator("#catalogDiscovery").count()) {
+    addFailure("catalog", "redundant Browse shortcut strip should not appear ahead of player shelves");
   }
 
   const shelfRows = page.locator("#playerShelvesList .queue-row");
@@ -609,7 +586,7 @@ async function checkCatalogMobileFirstVisitShelves(browser, baseUrl) {
     if (mobilePlacement.shelvesTop >= mobilePlacement.viewportHeight) {
       addFailure("catalog mobile first visit", `player shelves should be visible in the first viewport, top=${mobilePlacement.shelvesTop} viewport=${mobilePlacement.viewportHeight}`);
     }
-    if (mobilePlacement.gridTop > 1250) {
+    if (mobilePlacement.gridTop > 1050) {
       addFailure("catalog mobile first visit", `compact player shelves should keep the grid near the first mobile viewport, got gridTop=${mobilePlacement.gridTop}`);
     }
   }
@@ -748,8 +725,6 @@ async function checkCatalog(browser, baseUrl) {
   await checkFilterChips(page);
   setPhase("catalog", "check card tag filtering");
   await checkCardTagFiltering(page);
-  setPhase("catalog", "check discovery actions");
-  await checkDiscoveryActions(page);
   setPhase("catalog", "check first-visit session rail");
   await checkSessionRailHidden(page, "catalog");
   setPhase("catalog", "check player product shelves");

@@ -118,15 +118,6 @@
     select:focus{outline:0;border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18)}
 
     main{max-width:var(--maxw);margin:8px auto 24px;padding:0 16px}
-    .discovery{display:flex;gap:14px;align-items:center;justify-content:space-between;margin:0 0 14px;
-      padding:12px 0;border-bottom:1px solid rgba(94,234,212,0.12)}
-    .discovery-copy{display:grid;gap:4px;min-width:0}
-    .discovery-copy .eyebrow{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
-      color:rgba(94,234,212,0.82);font-weight:700}
-    .discovery-copy strong{font-size:14px;line-height:1.35;letter-spacing:0.03em}
-    .discovery-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-    .discovery-actions .btn[aria-pressed="true"]{border-color:rgba(94,234,212,0.58);color:#e6edf3;
-      box-shadow:inset 0 0 0 1px rgba(94,234,212,0.14),0 0 14px rgba(94,234,212,0.12)}
     .session-rail{margin:0 0 14px;padding:12px;border:1px solid rgba(94,234,212,0.16);
       border-radius:14px;background:linear-gradient(180deg,rgba(15,22,38,0.86),rgba(10,16,28,0.86));
       box-shadow:0 10px 24px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.04)}
@@ -367,8 +358,6 @@
       .queue-head,.queue-row{grid-template-columns:1fr;display:grid}
       .queue-list{grid-template-columns:1fr}
       .queue-actions{justify-content:flex-start}
-      .discovery{align-items:flex-start;flex-direction:column}
-      .discovery-actions{justify-content:flex-start}
       .session-rail-list{grid-template-columns:1fr}
     }
     @media (max-width: 560px){
@@ -500,18 +489,6 @@
   </header>
 
   <main>
-    <section class="discovery" id="catalogDiscovery" aria-label="Browse shortcuts">
-      <div class="discovery-copy">
-        <span class="eyebrow">Browse</span>
-        <strong>Jump into the newest builds, top picks, or your recent games.</strong>
-      </div>
-      <div class="discovery-actions">
-        <button class="btn subtle" type="button" data-view="new" aria-pressed="true">Newest</button>
-        <button class="btn subtle" type="button" data-view="pop" aria-pressed="false">Popular</button>
-        <button class="btn subtle" type="button" data-view="recent" id="continueViewBtn" aria-pressed="false" hidden>Continue</button>
-        <button class="btn subtle" type="button" data-view="fav" id="favoriteViewBtn" aria-pressed="false" hidden>★ Favorites</button>
-      </div>
-    </section>
     <section class="session-rail" id="sessionRail" aria-labelledby="sessionRailTitle" hidden>
       <div class="session-rail-head">
         <div>
@@ -795,11 +772,8 @@ const els = {
   workshopClose: document.getElementById('workshopClose'),
   submitGameBtn: document.getElementById('submitGameBtn'),
   randomGameBtn: document.getElementById('randomGameBtn'),
-  catalogDiscovery: document.getElementById('catalogDiscovery'),
   sessionRail: document.getElementById('sessionRail'),
   sessionRailList: document.getElementById('sessionRailList'),
-  continueViewBtn: document.getElementById('continueViewBtn'),
-  favoriteViewBtn: document.getElementById('favoriteViewBtn'),
   helpBtn: document.getElementById('helpBtn'),
   installAppBtn: document.getElementById('installAppBtn'),
   helpDialog: document.getElementById('helpDialog'),
@@ -989,7 +963,6 @@ function buildFilters(){
     chip.addEventListener('click', ()=> setCategory(name));
     els.filters.appendChild(chip);
   }
-  syncDiscoveryActions();
 }
 
 function categoryCount(category){
@@ -1011,47 +984,9 @@ function setCategory(category){
   update();
 }
 
-function resetDiscoverySearch(){
+function resetCatalogSearch(){
   state.query = '';
   if(els.q) els.q.value = '';
-}
-
-function setDiscoveryView(view){
-  resetDiscoverySearch();
-  if(view === 'recent' && state.recentPlays.length){
-    state.category = 'Recently';
-  } else if(view === 'fav' && categoryCount('Favorites') > 0){
-    state.category = 'Favorites';
-  } else {
-    state.category = 'All';
-    state.sort = view === 'pop' ? 'pop' : 'new';
-    if(els.sort) els.sort.value = state.sort;
-  }
-  syncStateToUrl();
-  update();
-}
-
-function syncDiscoveryActions(){
-  if(!els.catalogDiscovery) return;
-  if(els.continueViewBtn) els.continueViewBtn.hidden = state.recentPlays.length === 0;
-  if(els.favoriteViewBtn) els.favoriteViewBtn.hidden = categoryCount('Favorites') === 0;
-  for(const button of els.catalogDiscovery.querySelectorAll('[data-view]')){
-    const view = button.dataset.view;
-    const active = view === 'recent'
-      ? state.category === 'Recently'
-      : view === 'fav'
-        ? state.category === 'Favorites'
-        : state.category !== 'Recently' && state.category !== 'Favorites' && state.sort === view && state.category === 'All';
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  }
-}
-
-if(els.catalogDiscovery){
-  els.catalogDiscovery.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-view]');
-    if(!button) return;
-    setDiscoveryView(button.dataset.view || 'new');
-  });
 }
 
 // Catalog URL state — bookmarkable, shareable, and restored on reload.
@@ -1202,7 +1137,6 @@ function update(){
   if(q) list = list.filter(g => `${g.title} ${g.subtitle} ${(g.tags||[]).join(' ')}`.toLowerCase().includes(q));
 
   state.filtered = list;
-  syncDiscoveryActions();
   render();
 }
 
@@ -1577,7 +1511,7 @@ function renderPlayerShelves(){
 }
 
 function openShelf(id){
-  resetDiscoverySearch();
+  resetCatalogSearch();
   if(id === 'recent' && state.recentPlays.length){
     state.category = 'Recently';
   } else if(id === 'favorites' && categoryCount('Favorites') > 0){

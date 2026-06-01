@@ -146,6 +146,9 @@ async function checkCatalog() {
       fail(`${indexPath}: repository widget surface "${needle}" should not appear in the player catalog`);
     }
   }
+  if (/id=["']catalogDiscovery["']/.test(src) || /\bdata-view=["'](?:new|pop|recent|fav)["']/.test(src)) {
+    fail(`${indexPath}: redundant Browse shortcut strip should not reappear ahead of player shelves`);
+  }
   if (!/id=["']playerShelvesList["']/.test(src)) {
     fail(`${indexPath}: missing player shelves list for featured / quick-play / newest sections`);
   }

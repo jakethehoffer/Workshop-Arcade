@@ -93,17 +93,12 @@ async function checkIndex() {
   requireMatch(src, /querySelector\(\s*['"]\.fav['"]\s*\)/, 'render() must select the per-card .fav button');
   requireMatch(src, /toggleFavorite\(/, 'render() must wire the .fav button click to toggleFavorite()');
 
-  // 7. Discovery-row quick-view — the prominent entry point alongside
-  //    Newest/Popular/Continue, revealed only when favorites exist.
-  const favViewBtn = src.match(/<button[^>]*data-view=["']fav["'][^>]*>/i);
-  if (!favViewBtn) {
-    fail(`${path}: missing discovery-row <button data-view="fav"> Favorites quick-view`);
-  } else if (!/id=["']favoriteViewBtn["']/i.test(favViewBtn[0])) {
-    fail(`${path}: the Favorites discovery quick-view button must declare id="favoriteViewBtn"`);
-  }
-  requireMatch(src, /favoriteViewBtn:\s*document\.getElementById\(['"]favoriteViewBtn['"]\)/, 'els.favoriteViewBtn mapping');
-  requireMatch(src, /view\s*===\s*['"]fav['"]/, "setDiscoveryView() must handle the 'fav' quick-view (sets the Favorites category)");
-  requireMatch(src, /els\.favoriteViewBtn\.hidden\s*=/, 'syncDiscoveryActions() must hide the Favorites quick-view when there are no favorites');
+  // 7. Player-shelf entry point — favorites should remain reachable without
+  //    the old Browse shortcut strip.
+  requireMatch(src, /id:\s*['"]favorites['"][\s\S]*title:\s*['"]Saved favorites['"][\s\S]*action:\s*['"]Open/, 'Saved favorites player shelf');
+  requireMatch(src, /id\s*===\s*['"]favorites['"][\s\S]*state\.category\s*=\s*['"]Favorites['"]/, "openShelf() must handle the 'favorites' shelf action");
+  requireMatch(src, /dataset\.shelfAction\s*=\s*shelf\.id/, 'player shelf action button wiring');
+  requireMatch(src, /openShelf\(action\.dataset\.shelfAction\s*\|\|\s*['"]newest['"]\)/, 'player shelf action click handler');
 }
 
 await checkIndex();

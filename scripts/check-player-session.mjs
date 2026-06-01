@@ -42,7 +42,7 @@ requireMatch(path, src, /id=["']playerSave["'][^>]+aria-pressed=["']false["']/, 
 requireMatch(path, src, /id=["']playerMore["'][^>]+aria-expanded=["']false["'][^>]+aria-controls=["']playerRelatedPanel["']/, 'playerMore aria-expanded/controls wiring');
 requireMatch(path, src, /id=["']playerRelatedPanel["'][^>]+aria-labelledby=["']playerRelatedTitle["'][^>]+hidden/, 'hidden related panel with accessible name');
 requireMatch(path, src, /id=["']sessionRail["'][^>]+aria-labelledby=["']sessionRailTitle["'][^>]+hidden/, 'hidden Continue playing rail with accessible name');
-requireMatch(path, src, /id=["']catalogDiscovery["'][\s\S]*id=["']sessionRail["'][\s\S]*id=["']grid["']/, 'Continue playing rail between discovery shortcuts and the catalog grid');
+requireMatch(path, src, /id=["']sessionRail["'][\s\S]*id=["']playerShelvesList["'][\s\S]*id=["']grid["']/, 'Continue playing rail before player shelves and the catalog grid');
 
 for (const fn of [
   'firstGameFromSlugs',
