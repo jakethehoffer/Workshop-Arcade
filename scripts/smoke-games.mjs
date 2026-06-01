@@ -426,6 +426,29 @@ async function checkCatalogProductShelves(page, githubRequests) {
     return;
   }
 
+  const placement = await page.evaluate(() => {
+    const shelves = document.querySelector(".shelves");
+    const grid = document.getElementById("grid");
+    const shelfRect = shelves?.getBoundingClientRect();
+    const gridRect = grid?.getBoundingClientRect();
+    return {
+      shelvesTop: shelfRect ? shelfRect.top : null,
+      shelvesBottom: shelfRect ? shelfRect.bottom : null,
+      gridTop: gridRect ? gridRect.top : null,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  if (placement.shelvesTop === null || placement.gridTop === null) {
+    addFailure("catalog", "player shelves or catalog grid missing from layout");
+  } else {
+    if (!(placement.shelvesTop < placement.gridTop)) {
+      addFailure("catalog", `player shelves should appear before the grid, got shelvesTop=${placement.shelvesTop} gridTop=${placement.gridTop}`);
+    }
+    if (placement.shelvesTop >= placement.viewportHeight) {
+      addFailure("catalog", `player shelves should be visible in the first viewport, top=${placement.shelvesTop} viewport=${placement.viewportHeight}`);
+    }
+  }
+
   const shelfText = await page.locator("#playerShelvesList").textContent();
   for (const label of ["Featured games", "Quick plays", "Newest arrivals"]) {
     if (!shelfText || !shelfText.includes(label)) {
@@ -534,6 +557,28 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
   await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
   await checkCatalogFirstLoadResources(page, baseUrl, requests, githubRequests, "catalog mobile");
   await checkSessionRailPopulated(page, "catalog mobile");
+  const mobilePlacement = await page.evaluate(() => {
+    const rail = document.getElementById("sessionRail");
+    const shelves = document.querySelector(".shelves");
+    const grid = document.getElementById("grid");
+    const railRect = rail?.getBoundingClientRect();
+    const shelfRect = shelves?.getBoundingClientRect();
+    const gridRect = grid?.getBoundingClientRect();
+    return {
+      railBottom: railRect && !rail.hidden ? railRect.bottom : null,
+      shelvesTop: shelfRect ? shelfRect.top : null,
+      shelvesBottom: shelfRect ? shelfRect.bottom : null,
+      gridTop: gridRect ? gridRect.top : null,
+    };
+  });
+  if (mobilePlacement.shelvesTop === null || mobilePlacement.gridTop === null) {
+    addFailure("catalog mobile", "player shelves or catalog grid missing from mobile layout");
+  } else if (!(mobilePlacement.shelvesTop < mobilePlacement.gridTop)) {
+    addFailure("catalog mobile", `player shelves should appear before the grid, got shelvesTop=${mobilePlacement.shelvesTop} gridTop=${mobilePlacement.gridTop}`);
+  }
+  if (mobilePlacement.railBottom !== null && mobilePlacement.shelvesTop !== null && mobilePlacement.railBottom > mobilePlacement.shelvesTop + 2) {
+    addFailure("catalog mobile", `Continue rail should appear before player shelves, railBottom=${mobilePlacement.railBottom} shelvesTop=${mobilePlacement.shelvesTop}`);
+  }
 
   const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
   if (overflow > 2) {

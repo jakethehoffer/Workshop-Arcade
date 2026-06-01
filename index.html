@@ -215,17 +215,18 @@
 
     /* Empty state */
     .empty{padding:40px;border:1px dashed rgba(94,234,212,0.18);border-radius:14px;text-align:center;color:var(--muted)}
-    .queue{margin-top:28px;border-top:1px solid rgba(94,234,212,0.12);padding-top:20px}
-    .queue-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .queue{margin:0 0 16px;padding:12px;border:1px solid rgba(94,234,212,0.14);border-radius:14px;
+      background:rgba(7,11,18,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.03)}
+    .queue-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px}
     .queue-head .queue-heading{display:flex;flex-direction:column;gap:4px;line-height:1.1}
     .queue-head .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;
       color:rgba(94,234,212,0.85);font-weight:700}
-    .queue-head h2{margin:0;font-size:20px;letter-spacing:0.04em}
+    .queue-head h2{margin:0;font-size:18px;letter-spacing:0.04em}
     .queue-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .queue-list{display:grid;gap:8px}
-    .queue-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;width:100%;
+    .queue-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .queue-row{display:grid;grid-template-columns:1fr;gap:8px;align-items:center;width:100%;
       background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));
-      border:1px solid rgba(94,234,212,0.16);border-radius:12px;padding:12px;
+      border:1px solid rgba(94,234,212,0.16);border-radius:12px;padding:10px;
       box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
       transition:border-color 0.15s ease;color:inherit;font:inherit;text-align:left}
     .queue-row:hover{border-color:rgba(94,234,212,0.36)}
@@ -353,6 +354,7 @@
       .card-actions{width:100%;margin-left:0}
       .row{align-items:flex-start;flex-wrap:wrap}
       .queue-head,.queue-row{grid-template-columns:1fr;display:grid}
+      .queue-list{grid-template-columns:1fr}
       .queue-actions{justify-content:flex-start}
       .discovery{align-items:flex-start;flex-direction:column}
       .discovery-actions{justify-content:flex-start}
@@ -508,6 +510,19 @@
       </div>
       <div class="session-rail-list" id="sessionRailList" aria-live="polite"></div>
     </section>
+    <section class="queue shelves" aria-labelledby="playerShelvesTitle">
+      <div class="queue-head">
+        <div class="queue-heading">
+          <span class="eyebrow">Player picks</span>
+          <h2 id="playerShelvesTitle">Arcade lanes</h2>
+          <div class="queue-state" id="playerShelvesStatus" aria-live="polite">Featured, quick plays, newest, and saved games</div>
+        </div>
+        <div class="queue-actions">
+          <button class="btn subtle" type="button" id="suggestImprovementBtn">Suggest improvement</button>
+        </div>
+      </div>
+      <div class="queue-list" id="playerShelvesList"></div>
+    </section>
     <section id="grid" class="grid" aria-live="polite" aria-busy="true"></section>
     <template id="cardT">
       <article class="card">
@@ -527,19 +542,6 @@
       </article>
     </template>
     <div id="empty" class="empty" hidden>No results. Try a different search or filter.</div>
-    <section class="queue shelves" aria-labelledby="playerShelvesTitle">
-      <div class="queue-head">
-        <div class="queue-heading">
-          <span class="eyebrow">Player picks</span>
-          <h2 id="playerShelvesTitle">Arcade lanes</h2>
-          <div class="queue-state" id="playerShelvesStatus" aria-live="polite">Featured, quick plays, newest, and saved games</div>
-        </div>
-        <div class="queue-actions">
-          <button class="btn subtle" type="button" id="suggestImprovementBtn">Suggest improvement</button>
-        </div>
-      </div>
-      <div class="queue-list" id="playerShelvesList"></div>
-    </section>
   </main>
 
   <div class="modal" id="workshopModal" role="dialog" aria-modal="true" aria-labelledby="workshopTitle" tabindex="-1" hidden>

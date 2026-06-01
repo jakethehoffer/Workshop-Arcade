@@ -149,6 +149,14 @@ async function checkCatalog() {
   if (!/id=["']playerShelvesList["']/.test(src)) {
     fail(`${indexPath}: missing player shelves list for featured / quick-play / newest sections`);
   }
+  const sessionRailIndex = src.search(/id=["']sessionRail["']/);
+  const playerShelvesIndex = src.search(/id=["']playerShelvesList["']/);
+  const gridIndex = src.search(/id=["']grid["']/);
+  if (sessionRailIndex < 0 || playerShelvesIndex < 0 || gridIndex < 0) {
+    fail(`${indexPath}: unable to locate session rail, player shelves, and grid for first-viewport ordering check`);
+  } else if (!(sessionRailIndex < playerShelvesIndex && playerShelvesIndex < gridIndex)) {
+    fail(`${indexPath}: player shelves must appear after the Continue rail and before the full catalog grid`);
+  }
   if (!/function\s+buildPlayerShelves\s*\(/.test(src) || !/Featured games/.test(src) || !/Quick plays/.test(src) || !/Newest arrivals/.test(src)) {
     fail(`${indexPath}: product shelves must be generated from manifest data with featured, quick-play, and newest lanes`);
   }
