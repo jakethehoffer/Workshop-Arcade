@@ -8,7 +8,7 @@
 // Navigations that fail (no network, cache miss for the requested URL,
 // catalog shell missing) fall through to the dedicated `offline.html`
 // page so visitors always land somewhere branded with a "Back to catalog"
-// link. `404.html` is pre-cached opportunistically for the same reason.
+// link. `404.html` stays public but is not part of the install shell.
 //
 // Cache key includes a version stamp so a deploy that ships a changed
 // shell file invalidates the old cache via `activate` cleanup.
@@ -16,8 +16,8 @@
 // Deterministic hash of the install-time shell assets below plus the newest
 // COVER_PREFETCH_COUNT manifest covers. check-pwa.mjs recomputes it so shell
 // asset changes must also move the cache namespace.
-const SHELL_REVISION = 'shell-44625f9342f8';
-const VERSION = 'wa-v23-shell-44625f9342f8';
+const SHELL_REVISION = 'shell-7891c6b81db5';
+const VERSION = 'wa-v24-shell-7891c6b81db5';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const RUNTIME_CACHE_MAX_ENTRIES = 96;
@@ -42,7 +42,6 @@ const shellAssets = [
   'covers/app-icon.svg',
   'app.webmanifest',
   'offline.html',
-  '404.html',
 ].map((relative) => new URL(relative, scopeUrl).toString());
 
 async function cachePut(cache, url) {

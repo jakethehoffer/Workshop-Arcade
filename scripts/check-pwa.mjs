@@ -90,7 +90,20 @@ async function checkManifest() {
   return parsed;
 }
 
-async function expectedShellRevision(coverPrefetchCount) {
+function quotedStrings(source) {
+  return [...source.matchAll(/(['"])(.*?)\1/g)].map((match) => match[2]);
+}
+
+function readShellAssetFiles(swSource) {
+  const match = swSource.match(/const\s+shellAssets\s*=\s*\[([\s\S]*?)\]\.map\s*\(/);
+  if (!match) {
+    fail('sw.js: unable to parse shellAssets array for SHELL_REVISION check');
+    return [];
+  }
+  return quotedStrings(match[1]).map((asset) => asset === '' ? 'index.html' : asset);
+}
+
+async function expectedShellRevision(swSource, coverPrefetchCount) {
   const manifestRaw = await readFile(join(repoRoot, 'websites/manifest.json'), 'utf8');
   const manifest = JSON.parse(manifestRaw);
   const coverFiles = Array.isArray(manifest)
@@ -101,12 +114,7 @@ async function expectedShellRevision(coverPrefetchCount) {
       .filter((cover) => typeof cover === 'string' && cover.length > 0)
     : [];
   const shellFiles = [
-    'index.html',
-    'websites/manifest.json',
-    'covers/app-icon.svg',
-    'app.webmanifest',
-    'offline.html',
-    '404.html',
+    ...readShellAssetFiles(swSource),
     ...coverFiles,
   ];
   const hash = createHash('sha256');
@@ -214,7 +222,7 @@ async function checkServiceWorker() {
     }
   }
   if (revisionMatch && /^shell-[a-f0-9]{12}$/.test(revisionMatch[1]) && coverPrefetchCount > 0) {
-    const expected = await expectedShellRevision(coverPrefetchCount);
+    const expected = await expectedShellRevision(src, coverPrefetchCount);
     if (revisionMatch[1] !== expected) {
       fail(`${swPath}: SHELL_REVISION is ${revisionMatch[1]}, expected ${expected} from current install-time shell assets`);
     }

@@ -28,6 +28,18 @@ function fail(message) {
   issues.push(message);
 }
 
+function quotedStrings(source) {
+  return [...source.matchAll(/(['"])(.*?)\1/g)].map((match) => match[2]);
+}
+
+function readShellAssetFiles(swSource) {
+  const match = swSource.match(/const\s+shellAssets\s*=\s*\[([\s\S]*?)\]\.map\s*\(/);
+  if (!match) {
+    throw new Error('Unable to parse shellAssets array for SHELL_REVISION check');
+  }
+  return quotedStrings(match[1]).map((asset) => asset === '' ? 'index.html' : asset);
+}
+
 async function expectedShellRevision() {
   const swSource = await readFile(join(repoRoot, 'sw.js'), 'utf8');
   const count = Number(swSource.match(/const\s+COVER_PREFETCH_COUNT\s*=\s*(\d+)/)?.[1] || 0);
@@ -40,12 +52,7 @@ async function expectedShellRevision() {
       .filter((cover) => typeof cover === 'string' && cover.length > 0)
     : [];
   const shellFiles = [
-    'index.html',
-    'websites/manifest.json',
-    'covers/app-icon.svg',
-    'app.webmanifest',
-    'offline.html',
-    '404.html',
+    ...readShellAssetFiles(swSource),
     ...coverFiles,
   ];
   const hash = createHash('sha256');
