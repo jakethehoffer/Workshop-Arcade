@@ -10,6 +10,7 @@ const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--ci");
 const CHECK_RECIPES = args.has("--check-recipes");
 const manifest = JSON.parse(await readFile(path.join(repoRoot, "websites", "manifest.json"), "utf8"));
+const startedAt = new Date().toISOString();
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outputRoot = path.join(repoRoot, "test-results", "render-ranking", stamp);
 const shotsDir = path.join(outputRoot, "shots");
@@ -17,6 +18,9 @@ const viewports = [
   { name: "desktop", width: 1280, height: 820 },
   { name: "mobile", width: 390, height: 844, isMobile: true, hasTouch: true },
 ];
+const expectedSurfaceCount = manifest.length * viewports.length;
+const records = [];
+let lastPhase = phaseSnapshot("initializing");
 
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -43,24 +47,139 @@ if (CHECK_RECIPES) {
 
 await mkdir(shotsDir, { recursive: true });
 
-const { server, baseUrl } = await startServer();
+let server;
 let browser;
 try {
+  setPhase("starting server");
+  const serverInfo = await startServer();
+  server = serverInfo.server;
+  const baseUrl = serverInfo.baseUrl;
+
+  setPhase("launching browser");
   browser = await chromium.launch({ headless: !process.env.HEADED });
-  const records = [];
 
   for (const game of manifest) {
     for (const viewport of viewports) {
+      setPhase("capturing surface", game, viewport);
       records.push(await captureGame(browser, baseUrl, game, viewport));
+      setPhase("surface captured", game, viewport);
     }
   }
 
-  const rankedSurfaces = records
+  setPhase("ranking surfaces");
+  const rankedRecords = rankRecords();
+  const failingRecords = rankedRecords.filter((record) => record.ranking.score > 0);
+  const status = failingRecords.length ? "ranked-issues" : "passed";
+  let summary = await writeRunSummary({ status, passed: failingRecords.length === 0, error: null });
+  setPhase("writing contact sheet");
+  await writeContactSheet(summary);
+  setPhase("capturing contact sheet");
+  await captureContactSheet(browser);
+  setPhase("completed");
+  summary = await writeRunSummary({ status, passed: failingRecords.length === 0, error: null });
+  await writeContactSheet(summary);
+  const failures = summary.rankedSurfaces.filter((surface) => surface.score > 0);
+
+  console.log(`Captured ${records.length} rendered surfaces for ${manifest.length} games.`);
+  console.log(`Output: ${outputRoot}`);
+  console.log(`Max render score: ${summary.rankedSurfaces[0]?.score ?? 0}`);
+  console.log("Top ranked surfaces:");
+  for (const surface of summary.rankedSurfaces.slice(0, 10)) {
+    const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
+    console.log(` - ${surface.title} ${surface.viewport}: ${surface.score} (${reasonText})`);
+  }
+
+  if (STRICT) {
+    if (failures.length) {
+      console.error("\nCI rendered-quality gate failed:");
+      for (const surface of failures) {
+        const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
+        console.error(`- ${surface.title} ${surface.viewport}: ${surface.score} (${reasonText})`);
+      }
+      process.exitCode = 1;
+    } else {
+      console.log("CI rendered-quality gate passed.");
+    }
+  }
+} catch (error) {
+  markFailedPhase();
+  const serializedError = serializeError(error);
+  const summary = await writeRunSummary({ status: "failed", passed: false, error: serializedError });
+  if (records.length > 0) {
+    try {
+      await writeContactSheet(summary);
+    } catch (contactSheetError) {
+      console.error(`Unable to write partial contact sheet: ${serializeError(contactSheetError).message}`);
+    }
+  }
+  console.error("\nRendered-quality capture failed before completing all surfaces.");
+  console.error(serializedError.message);
+  console.error(`Summary: ${path.join(outputRoot, "summary.json")}`);
+  if (records.length > 0) {
+    console.error(`Partial contact sheet: ${path.join(outputRoot, "contact-sheet.html")}`);
+  }
+  process.exitCode = 1;
+} finally {
+  if (browser) await browser.close();
+  if (server) await new Promise((resolve) => server.close(resolve));
+}
+
+function phaseSnapshot(phase, game = null, viewport = null) {
+  return {
+    phase,
+    game: game
+      ? {
+          slug: game.slug,
+          title: game.title,
+          url: game.url,
+        }
+      : null,
+    viewport: viewport?.name || null,
+    expectedSurfaceCount,
+    capturedSurfaceCount: records.length,
+    at: new Date().toISOString(),
+  };
+}
+
+function setPhase(phase, game = null, viewport = null) {
+  lastPhase = phaseSnapshot(phase, game, viewport);
+}
+
+function markFailedPhase() {
+  lastPhase = {
+    ...lastPhase,
+    status: "failed",
+    failedAt: new Date().toISOString(),
+    capturedSurfaceCount: records.length,
+  };
+}
+
+function serializeError(error) {
+  if (!error) return null;
+  return {
+    name: error?.name || "Error",
+    message: error?.message || String(error),
+    stack: error?.stack ? String(error.stack).split("\n").slice(0, 12).join("\n") : null,
+  };
+}
+
+function rankRecords() {
+  return records
     .map((record) => ({ ...record, ranking: rankSurface(record) }))
     .sort((a, b) => b.ranking.score - a.ranking.score || a.slug.localeCompare(b.slug));
+}
 
+async function writeRunSummary({ status, passed, error }) {
+  const rankedSurfaces = rankRecords();
   const summary = {
-    createdAt: new Date().toISOString(),
+    createdAt: startedAt,
+    finishedAt: new Date().toISOString(),
+    passed,
+    status,
+    error,
+    expectedSurfaceCount,
+    capturedSurfaceCount: records.length,
+    lastPhase,
     provenance: await collectEvidenceProvenance(repoRoot),
     manifestCount: manifest.length,
     outputRoot,
@@ -87,36 +206,8 @@ try {
       reasons: record.ranking.reasons,
     })),
   };
-
   await writeFile(path.join(outputRoot, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
-  await writeContactSheet(summary);
-  await captureContactSheet(browser);
-
-  console.log(`Captured ${records.length} rendered surfaces for ${manifest.length} games.`);
-  console.log(`Output: ${outputRoot}`);
-  console.log(`Max render score: ${summary.rankedSurfaces[0]?.score ?? 0}`);
-  console.log("Top ranked surfaces:");
-  for (const surface of summary.rankedSurfaces.slice(0, 10)) {
-    const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
-    console.log(` - ${surface.title} ${surface.viewport}: ${surface.score} (${reasonText})`);
-  }
-
-  if (STRICT) {
-    const failures = summary.rankedSurfaces.filter((surface) => surface.score > 0);
-    if (failures.length) {
-      console.error("\nCI rendered-quality gate failed:");
-      for (const surface of failures) {
-        const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
-        console.error(`- ${surface.title} ${surface.viewport}: ${surface.score} (${reasonText})`);
-      }
-      process.exitCode = 1;
-    } else {
-      console.log("CI rendered-quality gate passed.");
-    }
-  }
-} finally {
-  if (browser) await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  return summary;
 }
 
 async function captureGame(browserInstance, rootUrl, game, viewport) {
@@ -1829,6 +1920,16 @@ async function checkCaptureRecipes() {
     'import { collectEvidenceProvenance, formatEvidenceProvenance } from "./evidence-provenance.mjs";',
     "provenance: await collectEvidenceProvenance(repoRoot)",
     "formatEvidenceProvenance(summary.provenance)",
+    "passed,",
+    "status,",
+    "error,",
+    "expectedSurfaceCount,",
+    "capturedSurfaceCount: records.length",
+    "lastPhase,",
+    "markFailedPhase()",
+    "Rendered-quality capture failed before completing all surfaces.",
+    "await writeRunSummary({ status: \"failed\", passed: false, error: serializedError })",
+    "if (records.length > 0) {",
     'path.join(outputRoot, "summary.json")',
     'path.join(outputRoot, "contact-sheet.html")',
   ]) {
@@ -2248,8 +2349,10 @@ function observePage(page, rootUrl, label, issues) {
 async function writeContactSheet(summary) {
   const rows = manifest.map((game) => ({
     game,
-    records: viewports.map((viewport) => summary.records.find((record) => record.slug === game.slug && record.viewport === viewport.name)),
-  }));
+    records: viewports
+      .map((viewport) => summary.records.find((record) => record.slug === game.slug && record.viewport === viewport.name))
+      .filter(Boolean),
+  })).filter((row) => row.records.length > 0);
 
   const topScores = new Map(summary.rankedSurfaces.map((surface) => [`${surface.slug}-${surface.viewport}`, surface]));
   const html = `<!doctype html>
@@ -2280,7 +2383,7 @@ async function writeContactSheet(summary) {
 </style>
 <body>
   <h1>Workshop Arcade Render Ranking</h1>
-  <p class="meta">${escapeHtml(summary.createdAt)} · ${summary.manifestCount} games · desktop 1280x820 · mobile 390x844</p>
+  <p class="meta">${escapeHtml(summary.createdAt)} · ${summary.manifestCount} games · ${escapeHtml(summary.status || "unknown")} · ${summary.capturedSurfaceCount}/${summary.expectedSurfaceCount} surfaces · desktop 1280x820 · mobile 390x844</p>
   <ul class="meta">
     ${formatEvidenceProvenance(summary.provenance).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n    ")}
   </ul>
@@ -2289,7 +2392,7 @@ async function writeContactSheet(summary) {
   </ol>
   ${rows.map(({ game, records }) => `<section class="row">
     ${records.map((record) => {
-      const surface = topScores.get(`${record.slug}-${record.viewport}`);
+      const surface = topScores.get(`${record.slug}-${record.viewport}`) || { score: 999, reasons: ["missing ranked surface"] };
       const scoreClass = surface.score >= 70 ? "bad" : surface.score >= 25 ? "warn" : "";
       return `<article class="card">
         <div class="head">

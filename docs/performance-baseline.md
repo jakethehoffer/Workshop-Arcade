@@ -9,6 +9,8 @@ npm run audit:perf:local
 
 `audit:perf` is a local Playwright-based audit (see `scripts/audit-pagespeed.mjs`). It hits the live URL, walks the catalog plus every game in `websites/manifest.json`, and measures the metrics Lighthouse cares about most: paint timing, transfer weight, request count, console errors, meta-tag completeness, and the largest single resource per page. The compact `test-results/lighthouse-baseline/<timestamp>/summary.json`, Markdown `report.md`, and raw per-page JSON live under the same gitignored run directory. The summary and report include source revision provenance so CI and local audit evidence identify the exact branch, commit, dirty state, manifest count, and newest slugs checked.
 
+The neighboring rendered-quality evidence under `test-results/render-ranking/<timestamp>/` follows the same source-identifying launch-evidence model. Its summary records pass/fail status, expected/captured surface counts, last capture phase, and any run-level error so early harness failures remain diagnosable instead of leaving only partial screenshots.
+
 Use `npm run audit:perf:local` for local publish checks: it starts a disposable static server, sets `WORKSHOP_ARCADE_URL` to that server, runs the strict audit, and cleans up the server. CI runs `npm run audit:perf:ci` against its own local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
 
 CI budgets:
