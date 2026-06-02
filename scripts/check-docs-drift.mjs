@@ -60,6 +60,9 @@ const liveSmokeRequiredText = [
   'WORKSHOP_ARCADE_TOUCHED_SLUGS',
   'WORKSHOP_ARCADE_REQUIRE_LIVE_SLUGS',
   'WORKSHOP_ARCADE_SKIP_CONTENT_HASH',
+  'WORKSHOP_ARCADE_EXPECTED_ROOT',
+  'WORKSHOP_ARCADE_EXPECTED_SITE_URL',
+  'WORKSHOP_ARCADE_EXPECTED_SECURITY_CANONICAL',
   'WORKSHOP_ARCADE_EXPECTED_SW_REVISION',
   'WORKSHOP_ARCADE_SKIP_SW_REVISION',
   '.well-known/security.txt',
@@ -135,7 +138,7 @@ for (const file of localPerfSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:all']);
+const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-rehearsal', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();

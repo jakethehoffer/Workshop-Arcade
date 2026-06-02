@@ -13,10 +13,20 @@ import { chromium } from 'playwright';
 import { collectCanvasEvidence, getCanvasEvidenceFailure } from './live-canvas-evidence.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const manifest = JSON.parse(await readFile(resolve(repoRoot, 'websites', 'manifest.json'), 'utf8'));
-const localServiceWorkerText = await readFile(resolve(repoRoot, 'sw.js'), 'utf8');
+const expectedRoot = resolveExpectedRoot(process.env.WORKSHOP_ARCADE_EXPECTED_ROOT);
+const expectedRootProvided = Boolean(process.env.WORKSHOP_ARCADE_EXPECTED_ROOT);
+const manifest = JSON.parse(await readFile(resolve(expectedRoot, 'websites', 'manifest.json'), 'utf8'));
+const localServiceWorkerText = await readFile(resolve(expectedRoot, 'sw.js'), 'utf8');
 const localServiceWorker = parseServiceWorkerIdentity(localServiceWorkerText);
 const baseUrl = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || 'https://jakethehoffer.github.io/Workshop-Arcade/');
+const defaultCanonicalRoot = 'https://jakethehoffer.github.io/Workshop-Arcade/';
+const expectedSiteUrl = process.env.WORKSHOP_ARCADE_EXPECTED_SITE_URL
+  ? normalizeBaseUrl(process.env.WORKSHOP_ARCADE_EXPECTED_SITE_URL)
+  : null;
+const expectedSecurityCanonicalUrl = normalizeSecurityCanonical(
+  process.env.WORKSHOP_ARCADE_EXPECTED_SECURITY_CANONICAL ||
+  `${defaultCanonicalRoot}.well-known/security.txt`
+);
 const requestedSlugEnv = process.env.WORKSHOP_ARCADE_LIVE_SLUGS || process.env.WORKSHOP_ARCADE_TOUCHED_SLUGS;
 const requestedSlugSource = process.env.WORKSHOP_ARCADE_LIVE_SLUGS
   ? 'WORKSHOP_ARCADE_LIVE_SLUGS'
@@ -52,6 +62,7 @@ const summary = {
   pages: [],
   contentHash: {
     skipped: skipContentHash,
+    expectedRoot: relativeArtifactPath(expectedRoot),
     normalizedLineEndings: true,
     shellAssets: [],
     selectedGames: [],
@@ -63,7 +74,9 @@ const summary = {
       ? 'skipped'
       : process.env.WORKSHOP_ARCADE_EXPECTED_SW_REVISION
         ? 'WORKSHOP_ARCADE_EXPECTED_SW_REVISION'
-        : 'local sw.js',
+        : expectedRootProvided
+          ? 'WORKSHOP_ARCADE_EXPECTED_ROOT sw.js'
+          : 'local sw.js',
     localShellRevision: localServiceWorker.shellRevision,
     localVersion: localServiceWorker.version,
     remoteShellRevision: null,
@@ -75,6 +88,17 @@ const summary = {
 
 function normalizeBaseUrl(value) {
   return `${String(value || '').replace(/\/+$/, '')}/`;
+}
+
+function resolveExpectedRoot(value) {
+  if (!value) return repoRoot;
+  return resolve(repoRoot, value);
+}
+
+function normalizeSecurityCanonical(value) {
+  const raw = String(value || '').trim();
+  const url = raw.replace(/^Canonical:\s*/i, '').trim();
+  return `Canonical: ${url}`;
 }
 
 function parseSlugs(value) {
@@ -203,14 +227,14 @@ async function assertLocalContentHash(localPath, remoteText, record, label, grou
 
   let localText;
   try {
-    localText = await readFile(resolve(repoRoot, localPath), 'utf8');
+    localText = await readFile(resolve(expectedRoot, localPath), 'utf8');
   } catch (error) {
     contentHash.check = 'failed';
     if (group && summary.contentHash[group]) {
       const aggregate = summary.contentHash[group].find((item) => item.label === label && item.relativePath === record.relativePath);
       if (aggregate) aggregate.check = 'failed';
     }
-    fail(label, `unable to read local ${localPath} for content hash: ${error.message}`);
+    fail(label, `unable to read expected ${localPath} for content hash: ${error.message}`);
     return;
   }
 
@@ -605,8 +629,12 @@ try {
     if (!/xml/i.test(contentType)) fail('sitemap', `unexpected content-type ${contentType}`);
     const locs = [...text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
     const expectedMinimum = manifest.length + 1;
-    const canonicalRoot = 'https://jakethehoffer.github.io/Workshop-Arcade/';
-    const hasTargetRoot = locs.some((loc) => normalizeBaseUrl(loc) === baseUrl || normalizeBaseUrl(loc) === canonicalRoot);
+    const acceptableRoots = new Set(
+      [baseUrl, defaultCanonicalRoot, expectedSiteUrl]
+        .filter(Boolean)
+        .map((value) => normalizeBaseUrl(value))
+    );
+    const hasTargetRoot = locs.some((loc) => acceptableRoots.has(normalizeBaseUrl(loc)));
     if (!text.includes('<urlset') || locs.length < expectedMinimum || !hasTargetRoot) {
       fail('sitemap', `expected urlset with at least ${expectedMinimum} URLs and a catalog root reference, found ${locs.length}`);
     }
@@ -686,9 +714,8 @@ try {
       }
     }
 
-    const expectedCanonical = 'Canonical: https://jakethehoffer.github.io/Workshop-Arcade/.well-known/security.txt';
-    if (!text.includes(expectedCanonical)) {
-      fail('security.txt', `missing canonical line "${expectedCanonical}"`);
+    if (!text.includes(expectedSecurityCanonicalUrl)) {
+      fail('security.txt', `missing canonical line "${expectedSecurityCanonicalUrl}"`);
     }
 
     await assertLocalContentHash('.well-known/security.txt', text, record, 'security.txt', 'shellAssets');

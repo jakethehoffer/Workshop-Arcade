@@ -114,6 +114,7 @@ function assertSafeToRemove(absolutePath) {
   const rel = repoRelative(absolutePath);
   if (rel === '_site') return;
   if (rel.startsWith('test-results/pages-artifact-check/')) return;
+  if (rel.startsWith('test-results/owned-domain-rehearsal/')) return;
   throw new Error(`Refusing to remove unmanaged output path: ${rel || absolutePath}`);
 }
 
