@@ -32,6 +32,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:github-security-settings', 'Authenticated remote GitHub API drift check — requires maintainer/security settings access. Run via `npm run test:github-security-settings`.'],
   ['test:games', 'Playwright smoke test — needs browsers installed and takes minutes. Run via `npm run test:games` or `npm run test:all`.'],
   ['test:live-canvas-evidence', 'Browser-backed live-smoke canvas evidence fixture — needs Chromium. Run via `npm run test:live-canvas-evidence`.'],
+  ['test:owned-domain-cutover-preflight', 'Slow custom-domain cutover preflight — runs the root-domain rehearsal and optional remote DNS / Pages checks. Run via `npm run test:owned-domain-cutover-preflight`.'],
   ['test:owned-domain-rehearsal', 'Slow root-domain release rehearsal — builds, serves, smokes, and audits a temporary owned-domain artifact. Run via `npm run test:owned-domain-rehearsal`.'],
   ['test:pwa-runtime', 'Browser-backed PWA runtime probe — needs Chromium/service worker support. Run via `npm run test:pwa-runtime`.'],
   ['test:publish-ready', 'Slow local publish-readiness aggregate — runs browser, render, and performance gates. Run via `npm run test:publish-ready`.'],

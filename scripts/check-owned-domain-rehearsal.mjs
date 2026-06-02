@@ -109,7 +109,7 @@ const readme = await readText(readmePath);
 for (const text of [
   'npm run test:owned-domain-rehearsal-contract',
   'npm run test:owned-domain-rehearsal',
-  '42 fast validators',
+  '43 fast validators',
   'test-results/owned-domain-rehearsal/<timestamp>/summary.json',
   'test-results/owned-domain-rehearsal/<timestamp>/report.md',
   'WORKSHOP_ARCADE_EXPECTED_ROOT',
