@@ -3,6 +3,7 @@ import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
+import { collectEvidenceProvenance, formatEvidenceProvenance } from "./evidence-provenance.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -36,7 +37,7 @@ const mimeTypes = new Map([
 ]);
 
 if (CHECK_RECIPES) {
-  checkCaptureRecipes();
+  await checkCaptureRecipes();
   process.exit(0);
 }
 
@@ -60,6 +61,7 @@ try {
 
   const summary = {
     createdAt: new Date().toISOString(),
+    provenance: await collectEvidenceProvenance(repoRoot),
     manifestCount: manifest.length,
     outputRoot,
     records,
@@ -1782,9 +1784,10 @@ function getInteractionRecipe(slug) {
   return recipes[slug] || null;
 }
 
-function checkCaptureRecipes() {
+async function checkCaptureRecipes() {
   const missing = [];
   const invalid = [];
+  const contractIssues = [];
   const duplicateSlugs = new Set();
   const seen = new Set();
 
@@ -1801,14 +1804,28 @@ function checkCaptureRecipes() {
     }
   }
 
-  if (missing.length || invalid.length || duplicateSlugs.size) {
+  const source = await readFile(fileURLToPath(import.meta.url), "utf8");
+  for (const snippet of [
+    'import { collectEvidenceProvenance, formatEvidenceProvenance } from "./evidence-provenance.mjs";',
+    "provenance: await collectEvidenceProvenance(repoRoot)",
+    "formatEvidenceProvenance(summary.provenance)",
+    'path.join(outputRoot, "summary.json")',
+    'path.join(outputRoot, "contact-sheet.html")',
+  ]) {
+    if (!source.includes(snippet)) {
+      contractIssues.push(`missing render evidence provenance snippet: ${snippet}`);
+    }
+  }
+
+  if (missing.length || invalid.length || duplicateSlugs.size || contractIssues.length) {
     if (missing.length) console.error(`Missing capture recipes: ${missing.join(", ")}`);
     if (invalid.length) console.error(`Invalid capture recipes: ${invalid.join(", ")}`);
     if (duplicateSlugs.size) console.error(`Duplicate manifest slugs: ${Array.from(duplicateSlugs).join(", ")}`);
+    for (const issue of contractIssues) console.error(issue);
     process.exit(1);
   }
 
-  console.log(`Capture recipe preflight passed for ${manifest.length} manifest games.`);
+  console.log(`Capture recipe preflight passed for ${manifest.length} manifest games with render evidence provenance wiring.`);
 }
 
 function scoreInteraction({ recipe, error, hasRenderText, preState, eventState, postState, eventSignals, signals, feedbackActive, issues }) {
@@ -2244,6 +2261,9 @@ async function writeContactSheet(summary) {
 <body>
   <h1>Workshop Arcade Render Ranking</h1>
   <p class="meta">${escapeHtml(summary.createdAt)} · ${summary.manifestCount} games · desktop 1280x820 · mobile 390x844</p>
+  <ul class="meta">
+    ${formatEvidenceProvenance(summary.provenance).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n    ")}
+  </ul>
   <ol class="ranking">
     ${summary.rankedSurfaces.slice(0, 10).map((surface) => `<li><strong>${escapeHtml(surface.title)} ${escapeHtml(surface.viewport)}</strong> · score ${surface.score}<br>${escapeHtml(surface.reasons.join("; ") || "no automated issues")}</li>`).join("\n    ")}
   </ol>

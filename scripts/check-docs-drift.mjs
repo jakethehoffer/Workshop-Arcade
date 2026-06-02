@@ -79,6 +79,21 @@ const localPerfSurfaces = [
   'docs/performance-baseline.md'
 ];
 
+const ciEvidenceSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md'
+];
+
+const ciEvidenceRequiredText = [
+  'game-smoke-summary',
+  'test-results/smoke-games/<timestamp>/summary.json',
+  'performance-audit',
+  'test-results/lighthouse-baseline/<timestamp>/summary.json',
+  'render-ranking',
+  'test-results/render-ranking/<timestamp>/summary.json',
+  'source revision provenance'
+];
+
 const issues = [];
 
 function readText(file) {
@@ -134,6 +149,16 @@ for (const file of localPerfSurfaces) {
   if (!text) continue;
   if (!text.includes('npm run audit:perf:local')) {
     issues.push(`${file}: missing local performance-audit command "npm run audit:perf:local"`);
+  }
+}
+
+for (const file of ciEvidenceSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of ciEvidenceRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing CI evidence contract text "${requiredText}"`);
+    }
   }
 }
 
@@ -286,7 +311,20 @@ function findArtifactUploadBlock(artifactName) {
   return workflowLines.slice(start, end).join('\n');
 }
 
-for (const artifactName of ['performance-audit', 'render-ranking']) {
+const artifactPathRequirements = new Map([
+  ['game-smoke-summary', ['test-results/smoke-games/**/summary.json']],
+  ['performance-audit', [
+    'test-results/lighthouse-baseline/**/summary.json',
+    'test-results/lighthouse-baseline/**/report.md'
+  ]],
+  ['render-ranking', [
+    'test-results/render-ranking/**/summary.json',
+    'test-results/render-ranking/**/contact-sheet.html',
+    'test-results/render-ranking/**/contact-sheet.png'
+  ]],
+]);
+
+for (const artifactName of artifactPathRequirements.keys()) {
   const artifactBlock = findArtifactUploadBlock(artifactName);
   if (!artifactBlock) {
     issues.push(`.github/workflows/validate-catalog.yml: missing "${artifactName}" artifact upload`);
@@ -299,6 +337,12 @@ for (const artifactName of ['performance-audit', 'render-ranking']) {
 
   if (!artifactBlock.includes('retention-days: 14')) {
     issues.push(`.github/workflows/validate-catalog.yml: "${artifactName}" artifact must retain for 14 days`);
+  }
+
+  for (const expectedPath of artifactPathRequirements.get(artifactName)) {
+    if (!artifactBlock.includes(expectedPath)) {
+      issues.push(`.github/workflows/validate-catalog.yml: "${artifactName}" artifact must upload "${expectedPath}"`);
+    }
   }
 }
 

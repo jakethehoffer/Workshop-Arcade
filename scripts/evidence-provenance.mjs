@@ -15,6 +15,26 @@ function runGit(repoRoot, args) {
   return (result.stdout || '').trim();
 }
 
+function envValue(names) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
+function normalizeBranchName(value) {
+  return value
+    .replace(/^refs\/heads\//, '')
+    .replace(/^refs\/pull\//, 'pull/');
+}
+
+function shortCommit(value) {
+  return /^[0-9a-f]{12,40}$/i.test(value) ? value.slice(0, 12) : null;
+}
+
 async function readManifestProvenance(repoRoot, newestCount) {
   const raw = await readFile(join(repoRoot, 'websites', 'manifest.json'), 'utf8');
   const manifest = JSON.parse(raw);
@@ -53,6 +73,19 @@ export async function collectEvidenceProvenance(repoRoot, options = {}) {
     provenance.isDirty = provenance.statusShort.length > 0;
   } catch (error) {
     errors.push(`git: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const ciBranch = envValue(['GITHUB_HEAD_REF', 'GITHUB_REF_NAME']);
+  if (!provenance.branch && ciBranch) {
+    provenance.branch = normalizeBranchName(ciBranch);
+  }
+
+  const ciCommit = envValue(['GITHUB_SHA']);
+  if (!provenance.commit && ciCommit) {
+    provenance.commit = ciCommit;
+  }
+  if (!provenance.shortCommit && provenance.commit) {
+    provenance.shortCommit = shortCommit(provenance.commit);
   }
 
   try {

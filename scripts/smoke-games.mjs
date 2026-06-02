@@ -3,6 +3,7 @@ import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { collectEvidenceProvenance } from "./evidence-provenance.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(repoRoot, "websites", "manifest.json");
@@ -59,6 +60,7 @@ async function writeSummary() {
   const summary = {
     startedAt,
     finishedAt: new Date().toISOString(),
+    provenance: await collectEvidenceProvenance(repoRoot),
     manifestCount: manifest.length,
     failureCount: failures.length,
     passed: failures.length === 0,

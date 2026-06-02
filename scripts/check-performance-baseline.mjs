@@ -42,6 +42,12 @@ function readBudget(source, key) {
   return { transferKb: Number(match[1]), requests: Number(match[2]) };
 }
 
+function requireText(file, source, text, label = text) {
+  if (!source.includes(text)) {
+    fail(`${file}: missing ${label}`);
+  }
+}
+
 function latestPassSection(markdown) {
   const firstHeading = markdown.match(/^## .+$/m);
   if (!firstHeading) {
@@ -57,6 +63,9 @@ function latestPassSection(markdown) {
 const manifest = JSON.parse(await readText('websites/manifest.json'));
 const perfDoc = await readText('docs/performance-baseline.md');
 const auditSource = await readText('scripts/audit-pagespeed.mjs');
+const workflow = await readText('.github/workflows/validate-catalog.yml');
+const readme = await readText('README.md');
+const architecture = await readText('ARCHITECTURE.md');
 
 if (!Array.isArray(manifest)) {
   fail('websites/manifest.json: expected an array');
@@ -96,6 +105,32 @@ if (latest && Array.isArray(manifest)) {
       fail(`docs/performance-baseline.md: latest pass table must include ${title}`);
     }
   }
+}
+
+for (const snippet of [
+  "import { collectEvidenceProvenance, formatEvidenceProvenance } from \"./evidence-provenance.mjs\";",
+  'const provenance = await collectEvidenceProvenance(repoRoot)',
+  '...formatEvidenceProvenance(provenance)',
+  'const summaryPath = join(outDir, "summary.json")',
+  'await writeFile(summaryPath',
+]) {
+  requireText('scripts/audit-pagespeed.mjs', auditSource, snippet, `performance evidence provenance snippet ${snippet}`);
+}
+
+for (const text of [
+  'test-results/lighthouse-baseline/**/summary.json',
+  'test-results/lighthouse-baseline/**/report.md',
+]) {
+  requireText('.github/workflows/validate-catalog.yml', workflow, text, `performance artifact path ${text}`);
+}
+
+for (const [file, text] of [
+  ['README.md', readme],
+  ['ARCHITECTURE.md', architecture],
+  ['docs/performance-baseline.md', perfDoc],
+]) {
+  requireText(file, text, 'source revision provenance');
+  requireText(file, text, 'test-results/lighthouse-baseline/<timestamp>/summary.json');
 }
 
 if (issues.length > 0) {

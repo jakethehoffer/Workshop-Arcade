@@ -13,6 +13,7 @@ import { chromium } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { collectEvidenceProvenance, formatEvidenceProvenance } from "./evidence-provenance.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -240,6 +241,7 @@ async function main() {
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const outDir = join(repoRoot, "test-results", "lighthouse-baseline", ts);
   await mkdir(outDir, { recursive: true });
+  const provenance = await collectEvidenceProvenance(repoRoot);
 
   const browser = await chromium.launch();
   const results = [];
@@ -271,6 +273,7 @@ async function main() {
   lines.push("# Workshop Arcade Performance & SEO Baseline");
   lines.push("");
   lines.push("Captured " + ts + " against " + SITE + " (chromium @ 1280×800, network idle).");
+  lines.push(...formatEvidenceProvenance(provenance).map((line) => "- " + line));
   lines.push("");
   lines.push("## Headline metrics");
   lines.push("");
@@ -366,15 +369,42 @@ async function main() {
   }
 
   const reportPath = join(outDir, "report.md");
+  const strictFailures = results.flatMap((r) => auditIssues(r).map((issue) => r.label + ": " + issue));
+  const summaryPath = join(outDir, "summary.json");
+  const summary = {
+    status: STRICT && strictFailures.length ? "failed" : "passed",
+    createdAt: ts,
+    site: SITE,
+    strict: STRICT,
+    outputDir: outDir,
+    summaryPath,
+    reportPath,
+    provenance,
+    targetCount: targets.length,
+    failureCount: strictFailures.length,
+    failures: strictFailures,
+    results: results.map((result) => ({
+      label: result.label,
+      url: result.url,
+      error: result.error || null,
+      totalBytes: result.totalBytes ?? null,
+      requestCount: result.requestCount ?? null,
+      consoleErrorCount: result.consoleErrors?.length ?? null,
+      pageErrorCount: result.pageErrors?.length ?? null,
+      issueCount: auditIssues(result).length,
+      issues: auditIssues(result),
+    })),
+  };
+  await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
   await writeFile(reportPath, lines.join("\n") + "\n");
+  console.log("\nSummary: " + summaryPath);
   console.log("\nReport: " + reportPath);
   console.log(lines.join("\n"));
 
   if (STRICT) {
-    const failures = results.flatMap((r) => auditIssues(r).map((issue) => r.label + ": " + issue));
-    if (failures.length) {
+    if (strictFailures.length) {
       console.error("\nCI strict audit failed:");
-      for (const failure of failures) {
+      for (const failure of strictFailures) {
         console.error("- " + failure);
       }
       process.exit(1);
