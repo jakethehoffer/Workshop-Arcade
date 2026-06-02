@@ -1650,6 +1650,26 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "clause-courier": {
+      name: "swap courier words along the dispatch rail",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(140);
+          };
+          press("d", "KeyD");
+          press("ArrowRight", "ArrowRight");
+          press("d", "KeyD");
+          press("ArrowRight", "ArrowRight");
+          press(" ", "Space");
+          window.advanceTime(360);
+        });
+      },
+    },
     "pylon-shift": {
       name: "shift discs across the pylons",
       freezePostAtEvent: true,

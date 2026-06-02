@@ -22,6 +22,20 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Clause Courier word-order addition (pass 94)
+
+Captured 2026-06-02 against a disposable local static server after adding **Clause Courier**, a compact word-order puzzle where players restore scrambled dispatch phrases by swapping adjacent word tiles within a move budget. The pass refreshed generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumped the service-worker shell revision for the new newest-cover set. No custom-domain, backend, or Security Surfaces work changed. The strict audit covered the catalog plus 75 manifest games, 76 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 100 ms | 80 ms | 🟢 81 ms | 🟢 172.8 KB | 8 | 0 |
+| Lexica | 🟢 80 ms | 19 ms | 🟢 20 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 460 ms | 10 ms | 🟢 12 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 76 ms | 52 ms | 🟢 52 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 108 ms | 92 ms | 🟢 92 ms | 🟢 109.7 KB | 2 | 0 |
+
+Clause Courier lands at 28.9 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog holds at 172.8 KB / 8 requests, well within its 200 KB / 18 request budget. Every named exception remains below its CI budget, no console/page errors appeared across the 76 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Blackjack card-game addition (pass 93)
 
 Captured 2026-06-01 against a disposable local static server after adding **Blackjack**, a casino card game (seeded shoe, hit/stand/double, dealer draws to 17, blackjack pays 3:2, chip-stack scoring), plus refreshing the generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumping the service-worker shell revision for the new newest-cover set. No existing gameplay code, storage keys, or capture recipes changed. The strict audit covered the catalog plus 74 manifest games, 75 pages total.
