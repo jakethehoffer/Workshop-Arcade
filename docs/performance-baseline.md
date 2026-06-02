@@ -24,6 +24,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Breachline stealth-tactics addition (pass 95)
+
+Captured 2026-06-02 against a disposable local static server after adding **Breachline**, a compact stealth-tactics puzzle where players queue synchronized Alpha/Beta routes, avoid patrol cones, collect the signal core, and extract both agents. The pass refreshed generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumped the service-worker shell revision for the new newest-cover set. No custom-domain, backend, or Security Surfaces work changed. The strict audit covered the catalog plus 76 manifest games, 77 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 80 ms | 105 ms | 🟢 108 ms | 🟢 172.9 KB | 8 | 0 |
+| Lexica | 🟢 44 ms | 46 ms | 🟢 46 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 464 ms | 13 ms | 🟢 15 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 80 ms | 55 ms | 🟢 55 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 124 ms | 106 ms | 🟢 106 ms | 🟢 109.7 KB | 2 | 0 |
+| Breachline | 🟢 40 ms | 14 ms | 🟢 14 ms | 🟢 32.4 KB | 2 | 0 |
+
+Breachline lands at 32.4 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog holds at 172.9 KB / 8 requests, well within its 200 KB / 18 request budget. Every named exception remains below its CI budget, no console/page errors appeared across the 77 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Clause Courier word-order addition (pass 94)
 
 Captured 2026-06-02 against a disposable local static server after adding **Clause Courier**, a compact word-order puzzle where players restore scrambled dispatch phrases by swapping adjacent word tiles within a move budget. The pass refreshed generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumped the service-worker shell revision for the new newest-cover set. No custom-domain, backend, or Security Surfaces work changed. The strict audit covered the catalog plus 75 manifest games, 76 pages total.

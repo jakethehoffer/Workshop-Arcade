@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Breachline - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Plot synchronized infiltrator routes past patrol cones and extract the signal core." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/breachline.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Breachline — Workshop Arcade" />
+<meta property="og:description" content="Plot synchronized infiltrator routes past patrol cones and extract the signal core." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/breachline.html" />
+<meta property="og:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/breachline.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Breachline — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Breachline — Workshop Arcade" />
+<meta name="twitter:description" content="Plot synchronized infiltrator routes past patrol cones and extract the signal core." />
+<meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/breachline.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Breachline",
+  "description": "Plot synchronized infiltrator routes past patrol cones and extract the signal core.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/breachline.html",
+  "image": "https://jakethehoffer.github.io/Workshop-Arcade/covers/breachline.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Tactics",
+    "Stealth",
+    "Strategy"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Plot synchronized infiltrator routes past patrol cones and extract the signal core." />
+<meta name="theme-color" content="#071018" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eef8ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 430px at 8% -8%,rgba(34,211,238,.18),transparent 62%),radial-gradient(650px 430px at 94% 0,rgba(168,85,247,.16),transparent 60%),linear-gradient(180deg,#071018,#050713 88%)}
+button{font:inherit}
+.app{width:min(1040px,100%);display:grid;gap:9px;align-content:start}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(25px,4vw,36px);font-weight:950;text-transform:uppercase;text-shadow:0 0 24px rgba(103,232,249,.25)}
+.help{max-width:660px;color:#b8c7d9;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button{border:1px solid rgba(103,232,249,.24);background:linear-gradient(180deg,rgba(16,31,49,.96),rgba(6,14,29,.98));box-shadow:0 12px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#67e8f9;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(103,232,249,.78);outline-offset:2px}
+.status{min-height:22px;color:#93e8ff;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#91f6ff,#22d3ee);color:#06272e}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
+.touch{display:grid;grid-template-columns:repeat(6,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
+.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:820px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 108px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.touch .wide{grid-column:span 1}.touch button{font-size:11px;min-height:43px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Breachline stealth tactics game">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Breachline</span></div>
+    <div class="help">Queue one move for Alpha and Beta, then execute the beat. Avoid patrol cones, grab the core, and extract both agents.</div>
+  </header>
+  <section class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Mission</span><span class="value" id="missionValue">1/5</span></div>
+    <div class="pill"><span class="label">Beat</span><span class="value" id="beatValue">0</span></div>
+    <div class="pill"><span class="label">Agent</span><span class="value" id="agentValue">A</span></div>
+    <div class="pill"><span class="label">Alpha</span><span class="value" id="alphaValue">Wait</span></div>
+    <div class="pill"><span class="label">Beta</span><span class="value" id="betaValue">Wait</span></div>
+    <div class="pill"><span class="label">Core</span><span class="value" id="coreValue">Open</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Breachline synchronized stealth tactics grid."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Queue a route for Alpha and Beta.</div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Mission ready.</div>
+  <section class="bar" aria-label="Mission controls">
+    <button class="btn primary" id="executeBtn" type="button">Execute Beat</button>
+    <button class="btn" id="agentBtn" type="button">Switch Agent</button>
+    <button class="btn" id="waitBtn" type="button">Queue Wait</button>
+    <button class="btn" id="nextBtn" type="button">Next Mission</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </section>
+  <section class="touch" aria-label="Touch route controls">
+    <button type="button" data-key="Tab">Agent</button>
+    <button type="button" data-key="ArrowUp">Up</button>
+    <button type="button" data-key="Enter" class="wide">Execute</button>
+    <button type="button" data-key="ArrowLeft">Left</button>
+    <button type="button" data-key=" ">Wait</button>
+    <button type="button" data-key="ArrowRight">Right</button>
+    <button type="button" data-key="m">Sound</button>
+    <button type="button" data-key="ArrowDown">Down</button>
+    <button type="button" data-key="r">Reset</button>
+  </section>
+</main>
+<script>
+(() => {
+"use strict";
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const COLS = 8;
+const ROWS = 6;
+const STEP = 1000 / 60;
+const BEST_KEY = "breachline.best.v1";
+const PROGRESS_KEY = "breachline.progress.v1";
+const SOUND_KEY = "breachline.sound.v1";
+const dirs = {
+  up: [0, -1],
+  down: [0, 1],
+  left: [-1, 0],
+  right: [1, 0],
+  wait: [0, 0],
+};
+const dirIcon = { up: "Up", down: "Down", left: "Left", right: "Right", wait: "Wait" };
+const missions = [
+  {
+    name: "Open Corridor",
+    par: 7,
+    agents: { A: [0, 4], B: [0, 5] },
+    core: [4, 4],
+    exits: [[7, 4], [7, 5]],
+    walls: [[3, 1], [3, 2], [5, 0]],
+    patrols: [
+      { id: "P1", loop: [[3, 0, "right"], [4, 0, "down"], [4, 1, "down"], [4, 0, "left"]] },
+    ],
+  },
+  {
+    name: "Crossfire Bank",
+    par: 9,
+    agents: { A: [0, 1], B: [0, 5] },
+    core: [5, 2],
+    exits: [[7, 0], [7, 5]],
+    walls: [[2, 2], [2, 3], [4, 4], [6, 2]],
+    patrols: [
+      { id: "P1", loop: [[3, 0, "down"], [3, 1, "down"], [3, 0, "right"]] },
+      { id: "P2", loop: [[6, 5, "up"], [5, 5, "left"], [5, 4, "up"]] },
+    ],
+  },
+  {
+    name: "Mirror Watch",
+    par: 10,
+    agents: { A: [0, 0], B: [0, 5] },
+    core: [6, 3],
+    exits: [[7, 1], [7, 4]],
+    walls: [[1, 2], [2, 2], [4, 1], [4, 2], [4, 4]],
+    patrols: [
+      { id: "P1", loop: [[5, 0, "left"], [6, 0, "down"], [6, 1, "down"], [5, 1, "left"]] },
+      { id: "P2", loop: [[3, 5, "right"], [3, 4, "right"], [2, 4, "up"]] },
+    ],
+  },
+  {
+    name: "Split Relay",
+    par: 11,
+    agents: { A: [1, 0], B: [1, 5] },
+    core: [4, 3],
+    exits: [[7, 0], [7, 5]],
+    walls: [[3, 1], [3, 2], [3, 4], [5, 2], [5, 3]],
+    patrols: [
+      { id: "P1", loop: [[0, 2, "right"], [1, 2, "right"], [2, 2, "right"], [1, 2, "down"]] },
+      { id: "P2", loop: [[6, 1, "down"], [6, 2, "down"], [6, 3, "left"], [6, 2, "up"]] },
+    ],
+  },
+  {
+    name: "Final Extraction",
+    par: 12,
+    agents: { A: [0, 2], B: [0, 3] },
+    core: [6, 2],
+    exits: [[7, 0], [7, 5]],
+    walls: [[2, 0], [2, 1], [2, 4], [2, 5], [4, 2], [4, 3]],
+    patrols: [
+      { id: "P1", loop: [[3, 0, "down"], [3, 1, "down"], [3, 2, "right"], [3, 1, "up"]] },
+      { id: "P2", loop: [[5, 5, "up"], [5, 4, "up"], [5, 3, "left"], [5, 4, "down"]] },
+      { id: "P3", loop: [[7, 2, "left"], [7, 3, "left"], [6, 3, "up"], [6, 2, "up"]] },
+    ],
+  },
+];
+const $ = (id) => document.getElementById(id);
+const els = {
+  app: $("app"),
+  mission: $("missionValue"),
+  beat: $("beatValue"),
+  agent: $("agentValue"),
+  alpha: $("alphaValue"),
+  beta: $("betaValue"),
+  core: $("coreValue"),
+  score: $("scoreValue"),
+  best: $("bestValue"),
+  status: $("statusLine"),
+  live: $("liveStatus"),
+  execute: $("executeBtn"),
+  agentBtn: $("agentBtn"),
+  wait: $("waitBtn"),
+  next: $("nextBtn"),
+  restart: $("restartBtn"),
+  sound: $("soundBtn"),
+  full: $("fullBtn"),
+};
+let audio = null;
+const state = {
+  mode: "planning",
+  mission: Math.min(missions.length - 1, readNumber(PROGRESS_KEY, 0)),
+  beat: 0,
+  selected: "A",
+  agents: {},
+  commands: { A: "wait", B: "wait" },
+  coreHeld: false,
+  coreHolder: null,
+  score: 0,
+  best: readNumber(BEST_KEY, 0),
+  sound: readBool(SOUND_KEY, true),
+  feedback: "Queue a route for Alpha and Beta.",
+  pulse: 0,
+  tick: 0,
+  lastEvent: "ready",
+};
+function storage() {
+  try { return window.localStorage || window.workshopStorage || null; } catch (_) { return window.workshopStorage || null; }
+}
+function readNumber(key, fallback) {
+  try {
+    const value = parseInt(storage()?.getItem(key), 10);
+    return Number.isFinite(value) ? value : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+function writeNumber(key, value) {
+  try { storage()?.setItem(key, String(value)); } catch (_) {}
+}
+function readBool(key, fallback) {
+  try {
+    const value = storage()?.getItem(key);
+    return value == null ? fallback : value === "1";
+  } catch (_) {
+    return fallback;
+  }
+}
+function writeBool(key, value) {
+  try { storage()?.setItem(key, value ? "1" : "0"); } catch (_) {}
+}
+function mission() { return missions[state.mission]; }
+function say(text) {
+  state.feedback = text;
+  els.status.textContent = text;
+  els.live.textContent = text;
+}
+function sfx(kind) {
+  if (!state.sound) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    audio = audio || new AC();
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    const now = audio.currentTime;
+    const freq = { queue: 340, execute: 220, core: 520, win: 720, fail: 96, switch: 420, block: 140 }[kind] || 260;
+    osc.type = kind === "fail" ? "sawtooth" : "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.075, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  } catch (_) {}
+}
+function vibrate(value) {
+  try {
+    if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(value);
+  } catch (_) {}
+}
+function resetMission(resetScore = false) {
+  const m = mission();
+  state.mode = "planning";
+  state.beat = 0;
+  state.selected = "A";
+  state.agents = {
+    A: { id: "A", x: m.agents.A[0], y: m.agents.A[1], seen: false, exited: false },
+    B: { id: "B", x: m.agents.B[0], y: m.agents.B[1], seen: false, exited: false },
+  };
+  state.commands = { A: "wait", B: "wait" };
+  state.coreHeld = false;
+  state.coreHolder = null;
+  state.pulse = 0;
+  state.lastEvent = "reset";
+  if (resetScore) state.score = 0;
+  say(m.name + ": queue both agents, then execute.");
+  checkSight("start");
+  sync();
+  draw();
+}
+function isWall(x, y) {
+  return mission().walls.some(([wx, wy]) => wx === x && wy === y);
+}
+function inBounds(x, y) {
+  return x >= 0 && y >= 0 && x < COLS && y < ROWS;
+}
+function isExit(x, y) {
+  return mission().exits.some(([ex, ey]) => ex === x && ey === y);
+}
+function patrolState(patrol, offset = 0) {
+  const step = patrol.loop[(state.beat + offset) % patrol.loop.length];
+  return { id: patrol.id, x: step[0], y: step[1], dir: step[2] };
+}
+function blocksSight(x, y) {
+  return isWall(x, y);
+}
+function visionCells(guard = null, offset = 0) {
+  const g = guard?.loop ? patrolState(guard, offset) : guard;
+  if (!g) return [];
+  const [dx, dy] = dirs[g.dir];
+  const cells = [];
+  for (let i = 1; i <= 3; i += 1) {
+    const x = g.x + dx * i;
+    const y = g.y + dy * i;
+    if (!inBounds(x, y)) break;
+    if (blocksSight(x, y)) break;
+    cells.push([x, y]);
+    if (i <= 2) {
+      const sideA = dx === 0 ? [x + 1, y] : [x, y + 1];
+      const sideB = dx === 0 ? [x - 1, y] : [x, y - 1];
+      if (inBounds(sideA[0], sideA[1]) && !blocksSight(sideA[0], sideA[1])) cells.push(sideA);
+      if (inBounds(sideB[0], sideB[1]) && !blocksSight(sideB[0], sideB[1])) cells.push(sideB);
+    }
+  }
+  return cells;
+}
+function occupiedByAgent(x, y, id = null) {
+  return Object.values(state.agents).find((agent) => agent.id !== id && agent.x === x && agent.y === y);
+}
+function occupiedByPatrol(x, y, offset = 0) {
+  return mission().patrols.some((patrol) => {
+    const guard = patrolState(patrol, offset);
+    return guard.x === x && guard.y === y;
+  });
+}
+function queueCommand(command) {
+  if (state.mode !== "planning") {
+    if (state.mode === "cleared") nextMission();
+    else if (state.mode === "failed" || state.mode === "complete") restartAll();
+    return;
+  }
+  state.commands[state.selected] = command;
+  state.lastEvent = "queue-" + state.selected + "-" + command;
+  say(state.selected + " queued " + dirIcon[command] + ".");
+  sfx("queue");
+  vibrate(8);
+  sync();
+  draw();
+}
+function switchAgent() {
+  state.selected = state.selected === "A" ? "B" : "A";
+  state.lastEvent = "switch-" + state.selected;
+  say("Selected " + (state.selected === "A" ? "Alpha" : "Beta") + ".");
+  sfx("switch");
+  sync();
+  draw();
+}
+function executeBeat() {
+  if (state.mode === "cleared") return nextMission();
+  if (state.mode === "failed" || state.mode === "complete") return restartAll();
+  if (state.mode !== "planning") return;
+  const targets = {};
+  let blocked = false;
+  for (const id of ["A", "B"]) {
+    const agent = state.agents[id];
+    const [dx, dy] = dirs[state.commands[id]];
+    const x = agent.x + dx;
+    const y = agent.y + dy;
+    if (!inBounds(x, y) || isWall(x, y) || occupiedByPatrol(x, y, 0)) {
+      if (state.commands[id] !== "wait") blocked = true;
+      targets[id] = { x: agent.x, y: agent.y };
+    } else {
+      targets[id] = { x, y };
+    }
+  }
+  if (targets.A.x === targets.B.x && targets.A.y === targets.B.y && !isExit(targets.A.x, targets.A.y)) blocked = true;
+  if (targets.A.x === state.agents.B.x && targets.A.y === state.agents.B.y && targets.B.x === state.agents.A.x && targets.B.y === state.agents.A.y) blocked = true;
+  if (blocked) {
+    say("Route blocked. Re-queue the beat.");
+    state.lastEvent = "blocked";
+    state.pulse = 1;
+    sfx("block");
+    vibrate(18);
+    draw();
+    return;
+  }
+  state.agents.A.x = targets.A.x;
+  state.agents.A.y = targets.A.y;
+  state.agents.B.x = targets.B.x;
+  state.agents.B.y = targets.B.y;
+  state.beat += 1;
+  state.score += 8;
+  state.commands = { A: "wait", B: "wait" };
+  state.lastEvent = "execute";
+  const core = mission().core;
+  for (const agent of Object.values(state.agents)) {
+    if (!state.coreHeld && agent.x === core[0] && agent.y === core[1]) {
+      state.coreHeld = true;
+      state.coreHolder = agent.id;
+      state.score += 120;
+      say(agent.id + " secured the signal core. Extract both agents.");
+      sfx("core");
+    }
+  }
+  if (checkSight("beat")) return;
+  if (state.coreHeld && Object.values(state.agents).every((agent) => isExit(agent.x, agent.y))) {
+    clearMission();
+    return;
+  }
+  if (state.feedback.indexOf("secured") < 0) say("Beat " + state.beat + " executed. Queue next routes.");
+  sfx("execute");
+  sync();
+  draw();
+}
+function checkSight(reason) {
+  for (const patrol of mission().patrols) {
+    const guard = patrolState(patrol, 0);
+    const vision = visionCells(guard, 0);
+    for (const agent of Object.values(state.agents)) {
+      if ((guard.x === agent.x && guard.y === agent.y) || vision.some(([x, y]) => x === agent.x && y === agent.y)) {
+        state.mode = "failed";
+        agent.seen = true;
+        state.pulse = 1;
+        state.lastEvent = "spotted-" + reason;
+        say(agent.id + " was spotted by " + guard.id + ". Press Restart.");
+        sfx("fail");
+        vibrate(50);
+        sync();
+        draw();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function clearMission() {
+  const m = mission();
+  const bonus = Math.max(0, (m.par - state.beat) * 18) + 160;
+  state.score += bonus;
+  if (state.mission >= missions.length - 1) {
+    state.mode = "complete";
+    state.lastEvent = "campaign-complete";
+    say("Extraction complete. Final score " + state.score + ".");
+  } else {
+    state.mode = "cleared";
+    state.lastEvent = "mission-clear";
+    say(m.name + " cleared. Press Next Mission.");
+  }
+  if (state.score > state.best) {
+    state.best = state.score;
+    writeNumber(BEST_KEY, state.best);
+  }
+  writeNumber(PROGRESS_KEY, Math.max(readNumber(PROGRESS_KEY, 0), state.mission));
+  sfx("win");
+  vibrate([24, 24, 24]);
+  sync();
+  draw();
+}
+function nextMission() {
+  if (state.mission < missions.length - 1) {
+    state.mission += 1;
+    writeNumber(PROGRESS_KEY, state.mission);
+    resetMission(false);
+  }
+}
+function restartAll() {
+  state.mission = 0;
+  state.score = 0;
+  resetMission(true);
+  sfx("switch");
+}
+function restartMission() {
+  resetMission(state.mission === 0);
+  sfx("switch");
+}
+function toggleSound() {
+  state.sound = !state.sound;
+  writeBool(SOUND_KEY, state.sound);
+  sync();
+  if (state.sound) sfx("switch");
+  say(state.sound ? "Sound enabled." : "Sound muted.");
+}
+function fullActive() {
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function syncFull() {
+  els.full.textContent = fullActive() ? "Exit Fullscreen" : "Fullscreen";
+}
+function toggleFull() {
+  try {
+    if (fullActive()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    else (els.app.requestFullscreen || els.app.webkitRequestFullscreen)?.call(els.app);
+  } catch (_) {}
+}
+function gridLayout() {
+  const cell = Math.floor(Math.min(canvas.width / (COLS + 1.55), (canvas.height - 86) / ROWS));
+  return { cell, ox: Math.floor((canvas.width - cell * COLS) / 2), oy: 78 };
+}
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bg.addColorStop(0, "#081a2b");
+  bg.addColorStop(0.65, "#07101f");
+  bg.addColorStop(1, "#040711");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(103,232,249,.08)";
+  for (let i = 0; i < 38; i += 1) ctx.fillRect((i * 193) % canvas.width, 16 + (i * 67) % 420, 1 + (i % 3), 1 + (i % 2));
+  ctx.fillStyle = "#67e8f9";
+  ctx.font = "900 19px system-ui,Segoe UI,sans-serif";
+  ctx.fillText(mission().name, 28, 34);
+  ctx.fillStyle = "#a9bed3";
+  ctx.font = "800 12px system-ui,Segoe UI,sans-serif";
+  ctx.fillText("Queue synchronized moves. Patrol cones update each beat. Core plus both exits clears the mission.", 28, 55);
+  const g = gridLayout();
+  ctx.save();
+  ctx.translate(g.ox, g.oy);
+  for (let y = 0; y < ROWS; y += 1) {
+    for (let x = 0; x < COLS; x += 1) {
+      ctx.fillStyle = (x + y) % 2 ? "#0b1b2a" : "#0d2233";
+      ctx.fillRect(x * g.cell, y * g.cell, g.cell - 3, g.cell - 3);
+      ctx.strokeStyle = "rgba(103,232,249,.12)";
+      ctx.strokeRect(x * g.cell + 0.5, y * g.cell + 0.5, g.cell - 4, g.cell - 4);
+    }
+  }
+  for (const [x, y] of mission().walls) drawBlock(x, y, g, "#233044", "#94a3b8", "X");
+  for (const [x, y] of mission().exits) drawBlock(x, y, g, "rgba(34,211,238,.2)", "#67e8f9", "E");
+  if (!state.coreHeld) drawBlock(mission().core[0], mission().core[1], g, "rgba(250,204,21,.22)", "#facc15", "C");
+  for (const patrol of mission().patrols) {
+    for (const [x, y] of visionCells(patrolState(patrol), 0)) {
+      ctx.fillStyle = "rgba(251,191,36,.18)";
+      ctx.fillRect(x * g.cell + 5, y * g.cell + 5, g.cell - 13, g.cell - 13);
+    }
+  }
+  for (const patrol of mission().patrols) drawPatrol(patrolState(patrol), g);
+  for (const agent of Object.values(state.agents)) drawAgent(agent, g);
+  drawQueued("A", g);
+  drawQueued("B", g);
+  ctx.restore();
+  if (state.pulse > 0) {
+    ctx.fillStyle = "rgba(251,113,133," + (0.08 + state.pulse * 0.25) + ")";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (state.mode === "failed" || state.mode === "cleared" || state.mode === "complete") drawOverlay();
+  sync();
+}
+function drawBlock(x, y, g, fill, stroke, label) {
+  const px = x * g.cell;
+  const py = y * g.cell;
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 3;
+  roundRect(px + 8, py + 8, g.cell - 19, g.cell - 19, 8, true, true);
+  ctx.fillStyle = stroke;
+  ctx.font = "950 13px system-ui,Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(label, px + g.cell / 2, py + g.cell / 2 + 5);
+  ctx.textAlign = "left";
+}
+function drawPatrol(guard, g) {
+  const px = guard.x * g.cell + g.cell / 2;
+  const py = guard.y * g.cell + g.cell / 2;
+  ctx.fillStyle = "#fb7185";
+  ctx.strokeStyle = "#fecdd3";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(px, py, g.cell * 0.23, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  const [dx, dy] = dirs[guard.dir];
+  ctx.strokeStyle = "#fff1f2";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px + dx * g.cell * 0.3, py + dy * g.cell * 0.3);
+  ctx.stroke();
+}
+function drawAgent(agent, g) {
+  const px = agent.x * g.cell + g.cell / 2;
+  const py = agent.y * g.cell + g.cell / 2;
+  const active = agent.id === state.selected && state.mode === "planning";
+  ctx.fillStyle = agent.id === "A" ? "#5eead4" : "#60a5fa";
+  ctx.strokeStyle = active ? "#f8fafc" : "#0f172a";
+  ctx.lineWidth = active ? 5 : 3;
+  ctx.shadowBlur = active ? 16 : 8;
+  ctx.shadowColor = agent.id === "A" ? "#5eead4" : "#60a5fa";
+  ctx.beginPath();
+  ctx.moveTo(px, py - g.cell * 0.28);
+  ctx.lineTo(px + g.cell * 0.28, py + g.cell * 0.25);
+  ctx.lineTo(px - g.cell * 0.28, py + g.cell * 0.25);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#051018";
+  ctx.font = "950 14px system-ui,Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(agent.id, px, py + 7);
+  ctx.textAlign = "left";
+}
+function drawQueued(id, g) {
+  const agent = state.agents[id];
+  const command = state.commands[id];
+  if (!agent || command === "wait" || state.mode !== "planning") return;
+  const [dx, dy] = dirs[command];
+  const x = agent.x * g.cell + g.cell / 2;
+  const y = agent.y * g.cell + g.cell / 2;
+  ctx.strokeStyle = id === "A" ? "#99f6e4" : "#bfdbfe";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + dx * g.cell * 0.44, y + dy * g.cell * 0.44);
+  ctx.stroke();
+}
+function drawOverlay() {
+  ctx.fillStyle = "rgba(2,6,23,.76)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = state.mode === "failed" ? "#fb7185" : "#67e8f9";
+  ctx.font = "950 42px system-ui,Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  const title = state.mode === "failed" ? "BREACH BURNED" : state.mode === "complete" ? "BREACHLINE CLEAR" : "MISSION CLEAR";
+  ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 12);
+  ctx.fillStyle = "#dbeafe";
+  ctx.font = "800 17px system-ui,Segoe UI,sans-serif";
+  ctx.fillText(state.feedback, canvas.width / 2, canvas.height / 2 + 28);
+  ctx.textAlign = "left";
+}
+function roundRect(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+function sync() {
+  els.mission.textContent = (state.mission + 1) + "/" + missions.length;
+  els.beat.textContent = String(state.beat) + "/" + mission().par;
+  els.agent.textContent = state.selected;
+  els.alpha.textContent = dirIcon[state.commands.A];
+  els.beta.textContent = dirIcon[state.commands.B];
+  els.core.textContent = state.coreHeld ? state.coreHolder : "Open";
+  els.score.textContent = String(state.score);
+  els.best.textContent = String(state.best);
+  els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+  els.sound.setAttribute("aria-pressed", String(state.sound));
+  els.next.disabled = state.mode !== "cleared";
+  els.execute.textContent = state.mode === "cleared" ? "Next Mission" : state.mode === "failed" || state.mode === "complete" ? "Restart" : "Execute Beat";
+}
+function step(ms) {
+  state.tick += ms;
+  if (state.pulse > 0) state.pulse = Math.max(0, state.pulse - ms / 420);
+}
+function handleKey(key) {
+  const lower = String(key).toLowerCase();
+  if (key === "ArrowUp" || lower === "w") queueCommand("up");
+  else if (key === "ArrowDown" || lower === "s") queueCommand("down");
+  else if (key === "ArrowLeft" || lower === "a") queueCommand("left");
+  else if (key === "ArrowRight" || lower === "d") queueCommand("right");
+  else if (key === "Tab") switchAgent();
+  else if (key === " " || key === "Spacebar") queueCommand("wait");
+  else if (key === "Enter") executeBeat();
+  else if (lower === "n") nextMission();
+  else if (lower === "r") restartMission();
+  else if (lower === "m") toggleSound();
+  else if (lower === "f") toggleFull();
+}
+function pointer(event) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+  const g = gridLayout();
+  const cx = Math.floor((x - g.ox) / g.cell);
+  const cy = Math.floor((y - g.oy) / g.cell);
+  if (!inBounds(cx, cy)) return;
+  const selectedAgent = Object.values(state.agents).find((agent) => agent.x === cx && agent.y === cy);
+  if (selectedAgent) {
+    state.selected = selectedAgent.id;
+    say("Selected " + selectedAgent.id + ".");
+    sync();
+    draw();
+    return;
+  }
+  const agent = state.agents[state.selected];
+  const dx = cx - agent.x;
+  const dy = cy - agent.y;
+  if (Math.abs(dx) + Math.abs(dy) === 1) {
+    queueCommand(dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up");
+  }
+}
+function snapshot() {
+  return {
+    coordinates: "tile grid origin top-left; x right; y down",
+    mode: state.mode,
+    mission: { index: state.mission + 1, total: missions.length, name: mission().name, par: mission().par },
+    beat: state.beat,
+    selected: state.selected,
+    agents: Object.values(state.agents).map((agent) => ({ id: agent.id, x: agent.x, y: agent.y, seen: agent.seen })),
+    commands: { ...state.commands },
+    core: { x: mission().core[0], y: mission().core[1], held: state.coreHeld, holder: state.coreHolder },
+    exits: mission().exits.map(([x, y]) => ({ x, y })),
+    walls: mission().walls.map(([x, y]) => ({ x, y })),
+    patrols: mission().patrols.map((patrol) => {
+      const guard = patrolState(patrol);
+      return { id: guard.id, x: guard.x, y: guard.y, dir: guard.dir, vision: visionCells(guard) };
+    }),
+    score: state.score,
+    best: state.best,
+    sound: state.sound,
+    feedback: state.feedback,
+    lastEvent: state.lastEvent,
+  };
+}
+window.render_game_to_text = () => JSON.stringify(snapshot());
+window.advanceTime = (ms) => {
+  const frames = Math.max(1, Math.min(1200, Math.round((Number(ms) || 0) / STEP)));
+  for (let i = 0; i < frames; i += 1) step(STEP);
+  draw();
+  return window.render_game_to_text();
+};
+document.addEventListener("keydown", (event) => {
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Enter", "Tab"].includes(event.key)) event.preventDefault();
+  handleKey(event.key);
+});
+canvas.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  canvas.focus();
+  pointer(event);
+});
+els.execute.addEventListener("click", executeBeat);
+els.agentBtn.addEventListener("click", switchAgent);
+els.wait.addEventListener("click", () => queueCommand("wait"));
+els.next.addEventListener("click", nextMission);
+els.restart.addEventListener("click", restartMission);
+els.sound.addEventListener("click", toggleSound);
+els.full.addEventListener("click", toggleFull);
+document.addEventListener("fullscreenchange", syncFull);
+document.addEventListener("webkitfullscreenchange", syncFull);
+document.querySelectorAll("[data-key]").forEach((button) => {
+  button.addEventListener("click", () => {
+    canvas.focus();
+    handleKey(button.dataset.key);
+  });
+});
+function frame() {
+  step(16.7);
+  draw();
+  requestAnimationFrame(frame);
+}
+resetMission(false);
+syncFull();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

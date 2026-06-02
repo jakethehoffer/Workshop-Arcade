@@ -1890,6 +1890,29 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "breachline": {
+      name: "queue synchronized routes and execute two stealth beats",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(120);
+          };
+          press("ArrowRight", "ArrowRight");
+          press("Tab", "Tab");
+          press("ArrowRight", "ArrowRight");
+          press("Enter", "Enter");
+          press("ArrowRight", "ArrowRight");
+          press("Tab", "Tab");
+          press("ArrowRight", "ArrowRight");
+          press("Enter", "Enter");
+          window.advanceTime(420);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;
