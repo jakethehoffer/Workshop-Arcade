@@ -69,7 +69,8 @@ const liveSmokeRequiredText = [
   'npm run test:live-smoke-slugs',
   'npm run test:live-canvas-evidence',
   'test-results/live-pages-smoke/<timestamp>/summary.json',
-  'test-results/live-pages-smoke/<timestamp>/report.md'
+  'test-results/live-pages-smoke/<timestamp>/report.md',
+  'source revision provenance'
 ];
 
 const localPerfSurfaces = [

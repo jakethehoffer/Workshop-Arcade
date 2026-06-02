@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const helperPath = join(repoRoot, 'scripts', 'derive-live-smoke-slugs.mjs');
+const livePagesPath = join(repoRoot, 'scripts', 'check-live-pages.mjs');
 const issues = [];
 
 function fail(message) {
@@ -68,6 +69,21 @@ async function readOptionalText(file) {
   }
 }
 
+async function checkLivePagesProvenanceContract() {
+  const source = await readFile(livePagesPath, 'utf8');
+  const requiredSnippets = [
+    "import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';",
+    'provenance: await collectEvidenceProvenance(repoRoot)',
+    'formatEvidenceProvenance(summary.provenance)',
+  ];
+
+  for (const snippet of requiredSnippets) {
+    if (!source.includes(snippet)) {
+      fail(`live pages provenance contract: missing ${JSON.stringify(snippet)}`);
+    }
+  }
+}
+
 deriveJson('direct game HTML maps to its slug', ['--file', 'websites/wordle.html'], ['wordle']);
 deriveJson('regular cover maps to its slug', ['--file', 'covers/brick-breaker.svg'], ['brick-breaker']);
 deriveJson('OG cover maps to its slug', ['--file', 'covers/og/doodle-jump.svg'], ['doodle-jump']);
@@ -114,6 +130,8 @@ try {
   await rm(tempRoot, { recursive: true, force: true });
 }
 
+await checkLivePagesProvenanceContract();
+
 if (issues.length > 0) {
   console.error(`Live-smoke slug derivation fixtures failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
   for (const message of issues) {
@@ -122,4 +140,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Live-smoke slug derivation fixtures passed: direct pages, covers, OG covers, shared scripts, fallback, de-duping, and GitHub env output are covered.');
+console.log('Live-smoke slug derivation fixtures passed: direct pages, covers, OG covers, shared scripts, fallback, de-duping, GitHub env output, and live-smoke provenance wiring are covered.');

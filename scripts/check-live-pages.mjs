@@ -10,6 +10,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';
 import { collectCanvasEvidence, getCanvasEvidenceFailure } from './live-canvas-evidence.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,6 +52,7 @@ const summary = {
   status: 'running',
   startedAt,
   finishedAt: null,
+  provenance: await collectEvidenceProvenance(repoRoot),
   baseUrl,
   requireLiveSlugs,
   slugSource: requestedSlugSource || 'newest manifest entries',
@@ -563,6 +565,7 @@ function buildReport() {
     '# Workshop Arcade Live Pages Smoke',
     '',
     `- Status: ${summary.status}`,
+    ...formatEvidenceProvenance(summary.provenance).map((line) => `- ${line}`),
     `- Base URL: ${summary.baseUrl}`,
     `- Started: ${summary.startedAt}`,
     `- Finished: ${summary.finishedAt}`,
