@@ -12,6 +12,7 @@ import { createServer } from 'node:net';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const startedAt = new Date().toISOString();
@@ -39,6 +40,7 @@ const summary = {
   finishedAt: null,
   durationMs: null,
   repoRoot,
+  provenance: await collectEvidenceProvenance(repoRoot),
   outputDir,
   siteDir,
   summaryPath,
@@ -348,6 +350,7 @@ function buildReport() {
     '# Owned-Domain Rehearsal Report',
     '',
     `Status: ${summary.status.toUpperCase()}`,
+    ...formatEvidenceProvenance(summary.provenance),
     `Public URL: ${summary.publicSiteUrl}`,
     `Local URL: ${summary.localUrl || ''}`,
     `Artifact: ${repoRelative(summary.siteDir)}`,

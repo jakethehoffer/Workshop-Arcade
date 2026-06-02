@@ -39,6 +39,9 @@ if (scripts['test:owned-domain-cutover-preflight-contract'] !== 'node scripts/ch
 
 const runnerPath = 'scripts/run-owned-domain-cutover-preflight.mjs';
 const runner = await readText(runnerPath);
+requireText(runnerPath, runner, "import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';", 'evidence provenance helper import');
+requireText(runnerPath, runner, 'provenance: await collectEvidenceProvenance(repoRoot)', 'provenance summary field');
+requireText(runnerPath, runner, '...formatEvidenceProvenance(summary.provenance)', 'provenance report lines');
 for (const text of [
   'WORKSHOP_ARCADE_CUSTOM_DOMAIN',
   'arcade.example.test',
@@ -57,6 +60,21 @@ for (const text of [
   'report.md',
 ]) {
   requireText(runnerPath, runner, text);
+}
+const provenancePath = 'scripts/evidence-provenance.mjs';
+const provenance = await readText(provenancePath);
+for (const text of [
+  'branch',
+  'commit',
+  'shortCommit',
+  'isDirty',
+  'statusShort',
+  'manifestGameCount',
+  'newestSlugs',
+  'collectedAt',
+  'error',
+]) {
+  requireText(provenancePath, provenance, text, `provenance field ${text}`);
 }
 requireMatch(runnerPath, runner, /validateHostname/, 'hostname validation helper');
 requireMatch(runnerPath, runner, /placeholderMode/, 'placeholder mode');
@@ -90,6 +108,7 @@ for (const text of [
   'WORKSHOP_ARCADE_REQUIRE_PAGES_CNAME',
   'test-results/owned-domain-cutover-preflight/<timestamp>/summary.json',
   'test-results/owned-domain-cutover-preflight/<timestamp>/report.md',
+  'source revision provenance',
   'CNAME',
 ]) {
   requireText(readmePath, readme, text);
@@ -104,6 +123,7 @@ for (const text of [
   'WORKSHOP_ARCADE_CHECK_DNS',
   'WORKSHOP_ARCADE_REQUIRE_PAGES_CNAME',
   'test-results/owned-domain-cutover-preflight/<timestamp>/summary.json',
+  'source revision provenance',
   'CNAME',
 ]) {
   requireText(architecturePath, architecture, text);

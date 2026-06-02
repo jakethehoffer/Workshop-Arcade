@@ -42,6 +42,9 @@ if (scripts['test:publish-ready-contract'] !== 'node scripts/check-publish-ready
 
 const runnerPath = 'scripts/run-publish-ready.mjs';
 const runner = await readText(runnerPath);
+requireText(runnerPath, runner, "import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';", 'evidence provenance helper import');
+requireText(runnerPath, runner, 'provenance: await collectEvidenceProvenance(repoRoot)', 'provenance summary field');
+requireText(runnerPath, runner, '...formatEvidenceProvenance(summary.provenance)', 'provenance report lines');
 for (const command of [
   'validate-catalog.ps1',
   'npm test',
@@ -65,6 +68,27 @@ requireMatch(runnerPath, runner, /commands:\s*PUBLISH_READY_STEPS\.map\(\(step\)
 requireMatch(runnerPath, runner, /durationMs/, 'duration fields in evidence');
 requireMatch(runnerPath, runner, /windowsHide:\s*true/, 'hidden Windows child processes');
 
+const provenancePath = 'scripts/evidence-provenance.mjs';
+const provenance = await readText(provenancePath);
+for (const text of [
+  'collectEvidenceProvenance',
+  'formatEvidenceProvenance',
+  'branch',
+  'commit',
+  'shortCommit',
+  'isDirty',
+  'statusShort',
+  'manifestGameCount',
+  'newestSlugs',
+  'collectedAt',
+  'error',
+  'websites',
+  'manifest.json',
+]) {
+  requireText(provenancePath, provenance, text, `provenance field ${text}`);
+}
+requireMatch(provenancePath, provenance, /catch\s*\(error\)/, 'best-effort non-throwing provenance collection');
+
 const fastRunnerPath = 'scripts/run-fast-tests.mjs';
 const fastRunner = await readText(fastRunnerPath);
 requireText(fastRunnerPath, fastRunner, "'test:publish-ready'", 'test:publish-ready exclusion');
@@ -85,12 +109,14 @@ requireText(readmePath, readme, 'npm run test:publish-ready');
 requireText(readmePath, readme, '43 fast validators');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/summary.json');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/report.md');
+requireText(readmePath, readme, 'source revision provenance');
 
 const architecturePath = 'ARCHITECTURE.md';
 const architecture = await readText(architecturePath);
 requireText(architecturePath, architecture, 'test:publish-ready-contract');
 requireText(architecturePath, architecture, 'npm run test:publish-ready');
 requireText(architecturePath, architecture, 'test-results/publish-ready/<timestamp>/summary.json');
+requireText(architecturePath, architecture, 'source revision provenance');
 
 const workflowPath = '.github/workflows/validate-catalog.yml';
 const workflow = await readText(workflowPath);

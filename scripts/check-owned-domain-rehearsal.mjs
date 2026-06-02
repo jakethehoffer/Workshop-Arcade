@@ -39,6 +39,9 @@ if (scripts['test:owned-domain-rehearsal-contract'] !== 'node scripts/check-owne
 
 const runnerPath = 'scripts/run-owned-domain-rehearsal.mjs';
 const runner = await readText(runnerPath);
+requireText(runnerPath, runner, "import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';", 'evidence provenance helper import');
+requireText(runnerPath, runner, 'provenance: await collectEvidenceProvenance(repoRoot)', 'provenance summary field');
+requireText(runnerPath, runner, '...formatEvidenceProvenance(summary.provenance)', 'provenance report lines');
 for (const text of [
   'test-results',
   'owned-domain-rehearsal',
@@ -61,6 +64,21 @@ for (const text of [
   'report.md',
 ]) {
   requireText(runnerPath, runner, text);
+}
+const provenancePath = 'scripts/evidence-provenance.mjs';
+const provenance = await readText(provenancePath);
+for (const text of [
+  'branch',
+  'commit',
+  'shortCommit',
+  'isDirty',
+  'statusShort',
+  'manifestGameCount',
+  'newestSlugs',
+  'collectedAt',
+  'error',
+]) {
+  requireText(provenancePath, provenance, text, `provenance field ${text}`);
 }
 requireMatch(runnerPath, runner, /windowsHide:\s*true/, 'hidden Windows child processes');
 requireMatch(runnerPath, runner, /publicBasePath\s*!==\s*['"]\/['"]/, 'root-domain base-path guard');
@@ -115,6 +133,7 @@ for (const text of [
   'WORKSHOP_ARCADE_EXPECTED_ROOT',
   'WORKSHOP_ARCADE_EXPECTED_SITE_URL',
   'WORKSHOP_ARCADE_EXPECTED_SECURITY_CANONICAL',
+  'source revision provenance',
 ]) {
   requireText(readmePath, readme, text);
 }
@@ -128,6 +147,7 @@ for (const text of [
   'WORKSHOP_ARCADE_EXPECTED_ROOT',
   'WORKSHOP_ARCADE_EXPECTED_SITE_URL',
   'WORKSHOP_ARCADE_EXPECTED_SECURITY_CANONICAL',
+  'source revision provenance',
 ]) {
   requireText(architecturePath, architecture, text);
 }

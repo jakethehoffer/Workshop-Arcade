@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const startedAt = new Date().toISOString();
@@ -85,6 +86,7 @@ const summary = {
   finishedAt: null,
   durationMs: null,
   repoRoot,
+  provenance: await collectEvidenceProvenance(repoRoot),
   summaryPath,
   reportPath,
   failedStep: null,
@@ -138,6 +140,7 @@ function buildReport() {
     '# Publish Readiness Report',
     '',
     `Status: ${summary.status.toUpperCase()}`,
+    ...formatEvidenceProvenance(summary.provenance),
     `Started: ${summary.startedAt}`,
     `Finished: ${summary.finishedAt || ''}`,
     `Duration: ${durationLabel(summary.durationMs)}`,

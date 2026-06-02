@@ -12,6 +12,7 @@ import dns from 'node:dns/promises';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const startedAt = new Date().toISOString();
@@ -39,6 +40,7 @@ const summary = {
   finishedAt: null,
   durationMs: null,
   repoRoot,
+  provenance: await collectEvidenceProvenance(repoRoot),
   outputDir,
   summaryPath,
   reportPath,
@@ -271,6 +273,7 @@ function buildReport() {
     '',
     `Status: ${summary.status.toUpperCase()}`,
     `Mode: ${summary.mode}`,
+    ...formatEvidenceProvenance(summary.provenance),
     `Domain: ${summary.customDomain}`,
     `Site origin: ${summary.siteOrigin}`,
     `Started: ${summary.startedAt}`,
