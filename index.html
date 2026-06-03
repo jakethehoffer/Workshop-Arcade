@@ -619,6 +619,7 @@
         <span class="player-status" id="playerStatus" aria-live="polite"></span>
         <button class="btn subtle" type="button" id="playerSave" aria-pressed="false" aria-label="Save this game">★ Save</button>
         <button class="btn subtle" type="button" id="playerNext" aria-label="Play next game">Next</button>
+        <button class="btn subtle" type="button" id="playerRandom" aria-label="Play a random game">Random</button>
         <button class="btn subtle" type="button" id="playerMore" aria-expanded="false" aria-controls="playerRelatedPanel">More</button>
         <button class="btn subtle" type="button" id="playerShare" aria-label="Share this game">Share</button>
         <button class="icon-btn" type="button" id="playerFullscreenBtn" aria-label="Enter fullscreen" aria-pressed="false" title="Enter fullscreen (F)">
@@ -786,6 +787,7 @@ const els = {
   playerModal: document.getElementById('playerModal'),
   playerSave: document.getElementById('playerSave'),
   playerNext: document.getElementById('playerNext'),
+  playerRandom: document.getElementById('playerRandom'),
   playerMore: document.getElementById('playerMore'),
   playerRelatedPanel: document.getElementById('playerRelatedPanel'),
   playerRelatedList: document.getElementById('playerRelatedList'),
@@ -1047,11 +1049,15 @@ window.addEventListener('popstate', () => {
 // any active category / search the user is browsing. Falls back to the
 // full catalog when the current filter is empty so the button never
 // becomes a no-op while there are games available.
-function pickRandomGame(){
-  const pool = (state.filtered && state.filtered.length) ? state.filtered : state.games;
-  if (!pool || !pool.length) return null;
-  const index = Math.floor(Math.random() * pool.length);
-  return pool[index];
+function pickRandomGame(excludeSlug = ""){
+  const basePool = (state.filtered && state.filtered.length) ? state.filtered : state.games;
+  if (!basePool || !basePool.length) return null;
+  const pool = excludeSlug && basePool.length > 1
+    ? basePool.filter(game => game && game.slug !== excludeSlug)
+    : basePool;
+  const candidates = pool.length ? pool : basePool;
+  const index = Math.floor(Math.random() * candidates.length);
+  return candidates[index];
 }
 
 function openRandomGame(trigger){
@@ -1065,6 +1071,14 @@ if (els.randomGameBtn) {
     e.preventDefault();
     openRandomGame(e.currentTarget);
   });
+}
+
+function openPlayerRandomGame(trigger){
+  const current = currentlyOpenGame();
+  const game = pickRandomGame(current ? current.slug : "");
+  if (!game) return;
+  openPlayer(game, trigger);
+  if (current && game.slug !== current.slug) setPlayerStatus('Random pick');
 }
 
 // Keyboard shortcuts help — native <dialog> handles focus trapping and
@@ -1843,6 +1857,12 @@ if (els.playerNext) {
   els.playerNext.addEventListener('click', () => {
     const next = nextSessionGame(currentlyOpenGame());
     if(next) openPlayer(next, els.playerNext);
+  });
+}
+
+if (els.playerRandom) {
+  els.playerRandom.addEventListener('click', () => {
+    openPlayerRandomGame(els.playerRandom);
   });
 }
 

@@ -2,8 +2,9 @@
 // Player session continuity contract.
 //
 // The catalog player should not be a dead end once a game opens. This fast
-// check locks in the static wiring for Save, Next, and More-like-this controls
-// without launching a browser; Playwright smoke tests exercise the runtime path.
+// check locks in the static wiring for Save, Next, Random, and More-like-this
+// controls without launching a browser; Playwright smoke tests exercise the
+// runtime path.
 
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -30,6 +31,7 @@ for (const [id, label] of [
   ['sessionRailList', 'session rail item list'],
   ['playerSave', 'Save button in the player modal'],
   ['playerNext', 'Next button in the player modal'],
+  ['playerRandom', 'Random button in the player modal'],
   ['playerMore', 'More button in the player modal'],
   ['playerRelatedPanel', 'related-games panel'],
   ['playerRelatedList', 'related-games list'],
@@ -83,6 +85,9 @@ requireMatch(path, src, /syncPlayerSessionControls\(g\)/, 'openPlayer refreshes 
 requireMatch(path, src, /history\.replaceState\(null,\s*'',\s*`#play=\$\{encodeURIComponent\(g\.slug\)\}`\)/, 'openPlayer keeps #play deep link in sync');
 requireMatch(path, src, /playerSave\.addEventListener\(\s*['"]click['"]/, 'playerSave click handler');
 requireMatch(path, src, /playerNext\.addEventListener\(\s*['"]click['"]/, 'playerNext click handler');
+requireMatch(path, src, /playerRandom\.addEventListener\(\s*['"]click['"]/, 'playerRandom click handler');
+requireMatch(path, src, /openPlayerRandomGame\(els\.playerRandom\)/, 'playerRandom click reuses in-player random helper');
+requireMatch(path, src, /pickRandomGame\(current \? current\.slug : [""]{2}\)/, 'in-player random excludes the current game when possible');
 requireMatch(path, src, /playerMore\.addEventListener\(\s*['"]click['"]/, 'playerMore click handler');
 requireMatch(path, src, /playerRelatedList\.addEventListener\(\s*['"]click['"]/, 'playerRelatedList click handler');
 
@@ -100,4 +105,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log('Player-session check passed: Continue rail plus Save, Next, and More-like-this controls are wired to deterministic player-session state.');
+console.log('Player-session check passed: Continue rail plus Save, Next, Random, and More-like-this controls are wired to deterministic player-session state.');

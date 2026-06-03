@@ -1,6 +1,6 @@
 # Architecture
 
-Workshop Arcade is a player-facing static catalog of HTML5 browser games designed to move cleanly from the current GitHub Pages preview to an owned-domain arcade. There is no backend — every game is a standalone HTML file in `websites/` that runs in the visitor's browser, and the catalog page (`index.html`) is plain HTML + inline CSS + inline ES2020. This document explains how the pieces fit together so a new contributor (or AI agent) can find the right surface to change without reading every file.
+Workshop Arcade is a player-facing static catalog of HTML5 browser games designed to move cleanly from the current GitHub Pages preview to an owned-domain arcade. There is no backend — every game is a standalone HTML file in `websites/` that runs in the visitor's browser, and the catalog page (`index.html`) is plain HTML + inline CSS + inline ES2020. The player modal keeps browsing local with Save, Next, Random, More, Share, and fullscreen controls. This document explains how the pieces fit together so a new contributor (or AI agent) can find the right surface to change without reading every file.
 
 If you're here to ship a new game, jump straight to [Adding a new game](#adding-a-new-game).
 

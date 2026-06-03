@@ -901,10 +901,26 @@ async function checkCatalog(browser, baseUrl) {
   }
 
   setPhase("catalog", "check player session controls");
-  for (const selector of ["#playerSave", "#playerNext", "#playerMore", "#playerRelatedPanel", "#playerRelatedList"]) {
+  for (const selector of ["#playerSave", "#playerNext", "#playerRandom", "#playerMore", "#playerRelatedPanel", "#playerRelatedList"]) {
     if (!(await page.locator(selector).count())) {
       addFailure("catalog", `missing player session control ${selector}`);
     }
+  }
+
+  const firstPlayerTitle = await page.locator("#playerTitle").textContent();
+  await page.locator("#playerRandom").click();
+  await page.waitForTimeout(250);
+  const randomTitle = await page.locator("#playerTitle").textContent();
+  if (!randomTitle || randomTitle.trim() === firstPlayerTitle?.trim()) {
+    addFailure("catalog", "player Random control did not open a different game");
+  }
+  const randomHash = await page.evaluate(() => location.hash);
+  if (!randomHash.startsWith("#play=")) {
+    addFailure("catalog", `player Random control did not sync #play hash: ${randomHash}`);
+  }
+  const randomFrameSrc = await page.locator("#playerFrame").getAttribute("src");
+  if (!randomFrameSrc || !randomFrameSrc.startsWith("websites/")) {
+    addFailure("catalog", `player Random control did not refresh the iframe src: ${randomFrameSrc}`);
   }
 
   const initialSaveState = await page.locator("#playerSave").getAttribute("aria-pressed");

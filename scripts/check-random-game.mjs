@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Random-game button contract check.
 //
-// The catalog ships a "🎲 Random" button in the sticky header that
-// picks a random game from the currently-filtered list and opens the
-// player modal. It's also bound to the "r" keyboard shortcut so power
-// users can re-roll quickly. This check locks in the structural pieces
-// so the feature can't regress silently as the inline catalog JS grows.
+// The catalog ships a "🎲 Random" button in the sticky header and a
+// player-modal Random action. Both pick from the currently-filtered list
+// and open the player modal through the same player flow. The header path
+// is also bound to the "r" keyboard shortcut so power users can re-roll
+// quickly. This check locks in the structural pieces so the feature can't
+// regress silently as the inline catalog JS grows.
 //
 // Verifies (against index.html):
 //   1. The header HTML declares a <button id="randomGameBtn"> with an
@@ -15,9 +16,9 @@
 //   2. The els map exposes randomGameBtn so the JS attaches handlers
 //      without crashing.
 //   3. A pickRandomGame() function exists, sources from
-//      state.filtered (with a fallback to state.games), and uses
-//      Math.random() to pick the index.
-//   4. The button's click handler calls openPlayer.
+//      state.filtered (with a fallback to state.games), uses Math.random()
+//      to pick the index, and can exclude the current player slug.
+//   4. The header button and player-modal Random action call openPlayer.
 //   5. A keydown listener watches for 'r'/'R' outside modal context,
 //      skips when the target is an INPUT/TEXTAREA/contentEditable, and
 //      ignores modifier-key combos (ctrl/meta/alt) so it doesn't
@@ -73,6 +74,8 @@ async function checkIndex() {
 
   // 2. els map
   requireMatch(path, src, /randomGameBtn:\s*document\.getElementById\(['"]randomGameBtn['"]\)/, 'els.randomGameBtn entry');
+  requireMatch(path, src, /playerRandom:\s*document\.getElementById\(['"]playerRandom['"]\)/, 'els.playerRandom entry');
+  requireMatch(path, src, /id=["']playerRandom["'][^>]+aria-label=["']Play a random game["']/, 'player-modal Random button with accessible name');
 
   // 3. Picker function
   if (!/function\s+pickRandomGame\s*\(/.test(src)) {
@@ -84,12 +87,19 @@ async function checkIndex() {
     if (!/Math\.random\(\)/.test(src)) {
       fail(`${path}: pickRandomGame() must use Math.random() to choose the index`);
     }
+    if (!/excludeSlug/.test(src.match(/function\s+pickRandomGame\s*\([^)]*\)\s*\{[\s\S]*?\n\}/)?.[0] || '')) {
+      fail(`${path}: pickRandomGame() must accept an excluded slug for in-player random jumps`);
+    }
   }
 
   // 4. Click wiring
   if (!/randomGameBtn\.addEventListener\(\s*['"]click['"]/.test(src)) {
     fail(`${path}: missing randomGameBtn.addEventListener('click', ...) wiring`);
   }
+  if (!/playerRandom\.addEventListener\(\s*['"]click['"]/.test(src)) {
+    fail(`${path}: missing playerRandom.addEventListener('click', ...) wiring`);
+  }
+  requireMatch(path, src, /function\s+openPlayerRandomGame\s*\([^)]*\)[\s\S]*currentlyOpenGame\(\)[\s\S]*pickRandomGame\([^)]*current\.slug[\s\S]*openPlayer\(game,\s*trigger\)/, 'in-player Random helper that excludes the active game and reuses openPlayer');
   if (!/openPlayer\(/.test(src)) {
     fail(`${path}: random-game flow must call openPlayer to surface the picked game in the modal`);
   }
@@ -113,4 +123,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Random-game check passed: header button, els mapping, picker function, click handler, and "r" keyboard shortcut all wired.');
+console.log('Random-game check passed: header button, player Random action, picker function, click handlers, and "r" keyboard shortcut all wired.');
