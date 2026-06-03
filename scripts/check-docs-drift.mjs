@@ -94,6 +94,17 @@ const ciEvidenceRequiredText = [
   'source revision provenance'
 ];
 
+const tagCoverageSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md'
+];
+
+const tagCoverageRequiredText = [
+  'npm run test:tag-coverage',
+  'at least 3 games',
+  'CATEGORY_ORDER'
+];
+
 const issues = [];
 
 function readText(file) {
@@ -158,6 +169,16 @@ for (const file of ciEvidenceSurfaces) {
   for (const requiredText of ciEvidenceRequiredText) {
     if (!text.includes(requiredText)) {
       issues.push(`${file}: missing CI evidence contract text "${requiredText}"`);
+    }
+  }
+}
+
+for (const file of tagCoverageSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of tagCoverageRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing tag-coverage contract text "${requiredText}"`);
     }
   }
 }

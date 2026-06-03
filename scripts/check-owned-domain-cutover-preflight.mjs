@@ -102,7 +102,7 @@ const readme = await readText(readmePath);
 for (const text of [
   'npm run test:owned-domain-cutover-preflight-contract',
   'npm run test:owned-domain-cutover-preflight',
-  '43 fast validators',
+  '44 fast validators',
   'WORKSHOP_ARCADE_CUSTOM_DOMAIN',
   'WORKSHOP_ARCADE_CHECK_DNS',
   'WORKSHOP_ARCADE_REQUIRE_PAGES_CNAME',

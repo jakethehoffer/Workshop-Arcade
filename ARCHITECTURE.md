@@ -44,7 +44,7 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 
 | Concern | Validator(s) |
 |---------|--------------|
-| **Manifest contract** | `test:manifest-schema` |
+| **Manifest contract** | `test:manifest-schema` · `test:tag-coverage` |
 | **Catalog source of truth** | `validate-catalog.ps1` (no npm wrapper) |
 | **Generator output mirrors manifest** | `test:seo` · `test:feed` · `test:og-images` · `test:game-jsonld` · `test:generated-surfaces` |
 | **Owned-domain launch config** | `test:owned-domain-readiness` · `test:owned-domain-rehearsal-contract` · `test:owned-domain-cutover-preflight-contract` |
@@ -56,7 +56,7 @@ These scripts transform the manifest into the surfaces the catalog serves. All a
 | **Tooling integrity** | `test:tools` · `test:test-aggregator` · `test:publish-ready-contract` · `test:capture-recipes` · `test:docs` · `test:performance-baseline` · `test:validator-fixtures` |
 | **Live game smoke** | `test:live-smoke-slugs` (fast fixture for Deploy Pages touched-slug derivation and live-smoke provenance wiring) · `test:live-canvas-evidence` (local Playwright fixture for live-smoke canvas aggregation) · `test:games` (local Playwright, slow — run via `npm run test:games` or `npm run test:all`) · `test:live-pages` (Deploy Pages post-deploy smoke with auto-selected touched slugs plus explicit preview checks) |
 
-The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `README.md`, `CONTRIBUTING.md`, `docs/game-contract.md`, the PR/issue templates, and the workflow YAML all naming the same publish-ready command set, so contributor-facing docs can't quietly fall behind CI.
+The tag coverage gate (`npm run test:tag-coverage`) requires each manifest tag to appear in at least 3 games and in `index.html` `CATEGORY_ORDER`, so category parity and filter-chip ordering cannot quietly drift. The [docs drift validator](scripts/check-docs-drift.mjs) (`test:docs`) keeps `README.md`, `CONTRIBUTING.md`, `docs/game-contract.md`, the PR/issue templates, and the workflow YAML all naming the same publish-ready command set, so contributor-facing docs can't quietly fall behind CI.
 
 ## CI workflow structure
 

@@ -106,7 +106,7 @@ const readmePath = 'README.md';
 const readme = await readText(readmePath);
 requireText(readmePath, readme, 'npm run test:publish-ready-contract');
 requireText(readmePath, readme, 'npm run test:publish-ready');
-requireText(readmePath, readme, '43 fast validators');
+requireText(readmePath, readme, '44 fast validators');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/summary.json');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/report.md');
 requireText(readmePath, readme, 'source revision provenance');
