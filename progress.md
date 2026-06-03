@@ -1,5 +1,10 @@
 Original prompt: Do this for me
 
+## 2026-06-03 Codex Vector Pool render capture stabilization
+
+- Stabilized the render-capture recipe for Vector Pool so evidence waits deterministically for the scored pocket feedback state instead of sampling a shot while it may still be rolling. This does not change player-facing game behavior, catalog content, generated metadata, service-worker behavior, custom-domain settings, or Security Surfaces configuration.
+- The existing `test:capture-recipes` guard now requires the bounded Vector Pool wait, scored-state predicate, feedback predicate, and clear failure message so the launch-evidence flake cannot silently return.
+
 ## 2026-06-03 Codex catalog shell headroom refresh
 
 - Reduced desktop catalog eager/high-priority covers from 6 to 4 so the first row remains prioritized while lower rows use the existing lazy-loading path. This preserves player-facing catalog behavior and avoids adding games, manifest changes, generated metadata changes, backend calls, custom-domain work, or Security Surfaces work.

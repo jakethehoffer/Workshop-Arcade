@@ -1219,9 +1219,35 @@ function getInteractionRecipe(slug) {
     "vector-pool": {
       name: "fire a shot from the cue ball",
       freezePostAtEvent: true,
-      run: async (page) => {
-        await clickSelectorIfVisible(page, "#shootBtn");
-        await settlePage(page, 600);
+      run: async (page, { preState } = {}) => {
+        const beforeScore = Number(preState?.score) || 0;
+        const clicked = await clickSelectorIfVisible(page, "#shootBtn");
+        if (!clicked) throw new Error("Vector Pool capture could not click Shoot");
+        const reachedState = await page.evaluate((scoreBeforeShot) => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return null;
+          const readState = () => {
+            try {
+              return JSON.parse(window.render_game_to_text());
+            } catch (_) {
+              return null;
+            }
+          };
+          const vectorPoolScored = (state) => Boolean(
+            state &&
+            state.mode !== "rolling" &&
+            Number(state.score) > scoreBeforeShot &&
+            Array.isArray(state.balls) &&
+            state.balls.some((ball) => ball && ball.potted === true) &&
+            state.feedbackActive === true
+          );
+          for (let elapsed = 0; elapsed <= 6400; elapsed += 80) {
+            const state = readState();
+            if (vectorPoolScored(state)) return state;
+            if (elapsed < 6400) window.advanceTime(80);
+          }
+          return null;
+        }, beforeScore);
+        if (!reachedState) throw new Error("Vector Pool capture did not reach scored pocket feedback state");
       },
     },
     "gridline-tactics": {
@@ -2018,9 +2044,17 @@ async function checkCaptureRecipes() {
     "if (records.length > 0) {",
     'path.join(outputRoot, "summary.json")',
     'path.join(outputRoot, "contact-sheet.html")',
+    '"vector-pool": {',
+    "const vectorPoolScored =",
+    'state.mode !== "rolling"',
+    "Number(state.score) > scoreBeforeShot",
+    "state.balls.some((ball) => ball && ball.potted === true)",
+    "state.feedbackActive === true",
+    "window.advanceTime(80)",
+    "Vector Pool capture did not reach scored pocket feedback state",
   ]) {
     if (!source.includes(snippet)) {
-      contractIssues.push(`missing render evidence provenance snippet: ${snippet}`);
+      contractIssues.push(`missing capture contract snippet: ${snippet}`);
     }
   }
 
