@@ -1950,6 +1950,32 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "slipstream-sprint": {
+      name: "start, draft, boost, and switch lanes",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const press = (key, code = key, holdMs = 110) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(holdMs);
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+            window.advanceTime(70);
+          };
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(260);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true }));
+          window.advanceTime(620);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true, cancelable: true }));
+          press("ArrowLeft", "ArrowLeft", 90);
+          window.advanceTime(460);
+          press("ArrowRight", "ArrowRight", 90);
+          document.querySelector("#boostBtn")?.click();
+          window.advanceTime(480);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;

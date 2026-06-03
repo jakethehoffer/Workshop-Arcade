@@ -24,6 +24,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Slipstream Sprint racing addition (pass 97)
+
+Captured 2026-06-03 against a disposable local static server after adding **Slipstream Sprint**, a compact three-lane racing game where players switch lanes, draft rivals to recharge boost, spend boost for overtakes, and avoid fixed barriers through a deterministic three-lap sprint. The pass refreshed generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumped the service-worker shell revision for the new newest-cover set. No custom-domain, backend, or Security Surfaces work changed. The strict audit covered the catalog plus 78 manifest games, 79 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 80 ms | 108 ms | 🟢 111 ms | 🟢 173.2 KB | 8 | 0 |
+| Lexica | 🟢 176 ms | 189 ms | 🟢 190 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 556 ms | 22 ms | 🟢 25 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 228 ms | 60 ms | 🟢 60 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 180 ms | 157 ms | 🟢 157 ms | 🟢 109.7 KB | 2 | 0 |
+| Slipstream Sprint | 🟢 56 ms | 19 ms | 🟢 19 ms | 🟢 35.5 KB | 2 | 0 |
+
+Slipstream Sprint lands at 35.5 KB / 2 requests, comfortably inside the default 100 KB / 3 request publish budget. The catalog holds at 173.2 KB / 8 requests, well within its 200 KB / 18 request budget. Every named exception remains below its CI budget, no console/page errors appeared across the 79 audited URLs, and every page passed the strict meta/alt checks.
+
 ## Bulwark Burst defense-shooter addition (pass 96)
 
 Captured 2026-06-03 against a disposable local static server after adding **Bulwark Burst**, a compact radial defense shooter where players rotate a core cannon, burst incoming drones, manage heat, and time shield pulses across deterministic attack waves. The pass refreshed generated catalog surfaces (fallback catalog, sitemap, feed, OG cards) and bumped the service-worker shell revision for the new newest-cover set. No custom-domain, backend, or Security Surfaces work changed. The strict audit covered the catalog plus 77 manifest games, 78 pages total.

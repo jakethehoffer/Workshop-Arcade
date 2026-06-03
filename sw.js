@@ -16,8 +16,8 @@
 // Deterministic hash of the install-time shell assets below plus the newest
 // COVER_PREFETCH_COUNT manifest covers. check-pwa.mjs recomputes it so shell
 // asset changes must also move the cache namespace.
-const SHELL_REVISION = 'shell-8375174d793d';
-const VERSION = 'wa-v35-shell-8375174d793d';
+const SHELL_REVISION = 'shell-3325d3ab08c4';
+const VERSION = 'wa-v36-shell-3325d3ab08c4';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const RUNTIME_CACHE_MAX_ENTRIES = 96;

@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-03 Codex Slipstream Sprint pass (77 -> 78 games)
+
+- Added **Slipstream Sprint** as a new `Racing` / `Arcade` / `Action` catalog game, bringing the Racing tag up from 2 to 3 games. The game is a standalone deterministic three-lane canvas racer with fixed traffic, boost pads, barriers, drafting recharge, boost overtakes, collision integrity, keyboard/touch controls, restart, sound, fullscreen, defensive localStorage, and `render_game_to_text` / `advanceTime` diagnostics.
+- Added `covers/slipstream-sprint.svg`, the manifest entry, and a render-capture recipe that starts the race, drafts, boosts, switches lanes, and freezes a readable mid-race state. Regenerated fallback catalog, JSON-LD, sitemap, feed, OG cards, and bumped the service-worker shell revision to `wa-v36-shell-3325d3ab08c4`.
+- Verification passed locally: catalog validation with `-Fix` and clean validation, generated meta/feed/sitemap/OG refresh, `node --check` for changed JS, manifest/generated/capture/game/a11y/page-weight/PWA/PWA-install/docs/performance focused gates, develop-web-game Playwright client screenshots, custom desktop/mobile smoke covering start, lane switching, drafting/boost, collision damage, finish, failure, restart, sound/fullscreen, no console errors, no GitHub startup calls, and no horizontal overflow, `npm run audit:perf:local` across 79 pages, `npm test`, `npm run test:pwa-runtime`, `npm run test:games` (passed on rerun after a transient local socket exhaustion failure), `npm run capture:games:ci` with 156/156 surfaces and max score 0, and `git diff --check`. Remaining final gates are commit/push and remote workflow confirmation.
+
 ## 2026-05-30 Codex page-weight headroom refresh
 
 - Mechanically compacted inline CSS presentation whitespace in `websites/idle-tycoon.html` and `websites/doodle-jump.html`, then initialized Arcade Jump's existing menu backdrop canvas so live-smoke canvas evidence is nonblank before a run starts, without changing gameplay code, storage keys, manifest entries, generated surfaces, service-worker behavior, or capture recipes.
