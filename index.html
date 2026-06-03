@@ -1149,15 +1149,15 @@ function update(){
 // Number of cards likely visible above the fold for the current viewport.
 // Their covers get eager loading + high fetch priority so the LCP candidate
 // is fetched immediately; later covers stay lazy so off-screen ones don't
-// compete for bandwidth on first paint. Tuned from live measurements: at
-// 375x812 only ~1-2 cards are visible above the fold, so eagerly fetching
-// 6 wasted ~4 cover requests on mobile; desktop at 1280x800 fits ~6 cards
-// above the fold, so the desktop branch keeps the prior value.
+// compete for bandwidth on first paint. Tuned from live measurements and the
+// static shell budget: at 375x812 only ~1-2 cards are visible above the fold,
+// so eagerly fetching 6 wasted ~4 cover requests on mobile; desktop keeps the
+// first row prioritized while preserving at least 20 KB shell headroom.
 function aboveFoldCoverCount() {
   const w = (typeof window !== 'undefined' && window.innerWidth) || 1280;
   if (w <= 600) return 3;   // phone: 1-2 visible + small fast-scroll buffer
   if (w <= 1024) return 4;  // tablet: 2-3 visible + buffer
-  return 6;                 // desktop: 4-6 visible + buffer
+  return 4;                 // desktop: first row + shell-headroom buffer
 }
 
 // Native loading="lazy" is a *hint* — Chromium pre-fetches images well past the

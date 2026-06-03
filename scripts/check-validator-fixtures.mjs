@@ -161,6 +161,41 @@ const BUDGETS = {
       fail(`check-page-weight fixture: expected oversized Fixture Game payload message, got ${JSON.stringify(combined.trim())}`);
     }
   });
+
+  await withFixture('page-weight-headroom', async (root) => {
+    await writeFixture(root, 'websites/manifest.json', JSON.stringify([{
+      id: 'fixture-game',
+      slug: 'fixture-game',
+      title: 'Fixture Game',
+      subtitle: 'Fixture.',
+      url: 'websites/fixture-game.html',
+      cover: 'covers/fixture-game.svg',
+      tags: ['Puzzle'],
+      addedAt: '2026-05-23',
+      popularity: 1,
+    }], null, 2));
+    await writeFixture(root, 'scripts/audit-pagespeed.mjs', `
+const BUDGETS = {
+  Catalog: { transferKb: 20, requests: 10 },
+  default: { transferKb: 100, requests: 3 }
+};
+`);
+    await writeFixture(root, 'index.html', '<!doctype html><script>function aboveFoldCoverCount() { return 1; // desktop\\n}</script>');
+    await writeFixture(root, 'sw.js', 'self.addEventListener("install", () => {});');
+    await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
+    await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'covers/fixture-game.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'websites/fixture-game.html', '<!doctype html><title>Fixture</title><main>Fixture</main>');
+
+    const result = runValidator('scripts/check-page-weight.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0) {
+      fail('check-page-weight fixture: expected failure for low catalog shell headroom, got success');
+    }
+    if (!/Catalog local shell/.test(combined) || !/transfer headroom/.test(combined) || !/request headroom/.test(combined)) {
+      fail(`check-page-weight fixture: expected catalog shell headroom messages, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
 }
 
 async function checkPwaInstallBudgetNegative() {

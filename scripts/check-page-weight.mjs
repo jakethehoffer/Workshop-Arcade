@@ -17,6 +17,8 @@ const repoRoot = process.env.WORKSHOP_ARCADE_REPO_ROOT
   ? resolve(process.env.WORKSHOP_ARCADE_REPO_ROOT)
   : resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+const MIN_CATALOG_SHELL_HEADROOM_KB = 20;
+const MIN_CATALOG_SHELL_REQUEST_HEADROOM = 5;
 const issues = [];
 
 function fail(message) {
@@ -199,15 +201,29 @@ async function checkCatalogShell(manifest, budgets) {
 
   if (budget) {
     const byteBudget = budget.transferKb * 1024;
+    const transferHeadroomKb = budget.transferKb - (totalBytes / 1024);
+    const requestHeadroom = budget.requests - requestCount;
     if (totalBytes > byteBudget) {
       fail(`Catalog local shell: ${fmtKb(totalBytes)} exceeds ${budget.transferKb} KB budget (${uniqueShellFiles.length} files)`);
     }
     if (requestCount > budget.requests) {
       fail(`Catalog local shell: ${requestCount} local shell request(s) exceeds ${budget.requests} request budget`);
     }
+    if (transferHeadroomKb < MIN_CATALOG_SHELL_HEADROOM_KB) {
+      fail(`Catalog local shell: ${fmtKb(totalBytes)} leaves ${transferHeadroomKb.toFixed(1)} KB transfer headroom, below ${MIN_CATALOG_SHELL_HEADROOM_KB} KB minimum (${uniqueShellFiles.join(', ')})`);
+    }
+    if (requestHeadroom < MIN_CATALOG_SHELL_REQUEST_HEADROOM) {
+      fail(`Catalog local shell: ${requestCount} local shell request(s) leaves ${requestHeadroom} request headroom, below ${MIN_CATALOG_SHELL_REQUEST_HEADROOM} minimum (${uniqueShellFiles.join(', ')})`);
+    }
   }
 
-  return { totalBytes, requestCount, eagerCount };
+  return {
+    totalBytes,
+    requestCount,
+    eagerCount,
+    transferHeadroomKb: budget ? budget.transferKb - (totalBytes / 1024) : null,
+    requestHeadroom: budget ? budget.requests - requestCount : null,
+  };
 }
 
 async function checkGames(manifest, budgets) {
@@ -293,4 +309,4 @@ const closest = [...games]
   .map((entry) => `${entry.title} ${fmtKb(entry.totalBytes)} / ${entry.budget.transferKb} KB`)
   .join('; ');
 
-console.log(`Page-weight check passed: catalog local shell ${fmtKb(catalog.totalBytes)} / ${budgets.Catalog.transferKb} KB across ${catalog.requestCount}/${budgets.Catalog.requests} files (${catalog.eagerCount} eager covers); ${manifest.length} games under static budgets. Tightest: ${closest}.`);
+console.log(`Page-weight check passed: catalog local shell ${fmtKb(catalog.totalBytes)} / ${budgets.Catalog.transferKb} KB across ${catalog.requestCount}/${budgets.Catalog.requests} files (${catalog.eagerCount} eager covers; headroom ${catalog.transferHeadroomKb.toFixed(1)} KB / ${catalog.requestHeadroom} files); ${manifest.length} games under static budgets. Tightest: ${closest}.`);

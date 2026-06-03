@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-03 Codex catalog shell headroom refresh
+
+- Reduced desktop catalog eager/high-priority covers from 6 to 4 so the first row remains prioritized while lower rows use the existing lazy-loading path. This preserves player-facing catalog behavior and avoids adding games, manifest changes, generated metadata changes, backend calls, custom-domain work, or Security Surfaces work.
+- Added a static catalog shell headroom guard to `npm run test:page-weight`: the Catalog shell must now keep at least 20 KB transfer headroom and 5 request headroom below its 200 KB / 18 request budget. The validator fixture suite now proves the low-headroom failure path.
+- Measured post-change results: `npm run test:page-weight` reports the catalog local shell at 177.3 KB / 200 KB across 9/18 files, with 22.7 KB / 9 files headroom. `npm run audit:perf:local` passed across 79 pages with Catalog at 167.6 KB / 6 requests and no page errors. Local verification passed through focused shell/PWA/docs gates, `npm test`, `npm run test:games`, custom desktop/mobile catalog browser smoke, and `git diff --check`; remaining final gates are commit/push and remote workflow confirmation.
+
 ## 2026-06-03 Codex Slipstream Sprint pass (77 -> 78 games)
 
 - Added **Slipstream Sprint** as a new `Racing` / `Arcade` / `Action` catalog game, bringing the Racing tag up from 2 to 3 games. The game is a standalone deterministic three-lane canvas racer with fixed traffic, boost pads, barriers, drafting recharge, boost overtakes, collision integrity, keyboard/touch controls, restart, sound, fullscreen, defensive localStorage, and `render_game_to_text` / `advanceTime` diagnostics.

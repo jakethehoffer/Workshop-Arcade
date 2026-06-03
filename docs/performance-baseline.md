@@ -13,6 +13,8 @@ The neighboring rendered-quality evidence under `test-results/render-ranking/<ti
 
 Use `npm run audit:perf:local` for local publish checks: it starts a disposable static server, sets `WORKSHOP_ARCADE_URL` to that server, runs the strict audit, and cleans up the server. CI runs `npm run audit:perf:ci` against its own local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
 
+The fast `npm run test:page-weight` gate adds an earlier static catalog shell headroom check: the shell must keep at least a 20 KB / 5 request buffer below the Catalog budget before the slower browser audit runs.
+
 CI budgets:
 
 | Page group | Transfer | Requests |
@@ -23,6 +25,21 @@ CI budgets:
 | Arcade Jump | 110 KB | 4 |
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
+
+## Catalog shell headroom refresh (pass 98)
+
+Captured 2026-06-03 against a disposable local static server after reducing desktop eager catalog covers from 6 to 4 and adding the static catalog shell headroom guard. The strict audit covered the catalog plus 78 manifest games, 79 pages total. No games, manifest entries, generated catalog surfaces, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 184 ms | 214 ms | 🟢 218 ms | 🟢 167.6 KB | 6 | 0 |
+| Lexica | 🟢 72 ms | 29 ms | 🟢 30 ms | 🟢 152.5 KB | 4 | 0 |
+| Idle Tycoon | 🟢 480 ms | 17 ms | 🟢 19 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 96 ms | 67 ms | 🟢 67 ms | 🟢 101.7 KB | 2 | 0 |
+| Brick Breaker | 🟢 136 ms | 114 ms | 🟢 114 ms | 🟢 109.7 KB | 2 | 0 |
+| Slipstream Sprint | 🟢 48 ms | 18 ms | 🟢 18 ms | 🟢 35.5 KB | 2 | 0 |
+
+`npm run test:page-weight` now reports the catalog local shell at 177.3 KB / 200 KB across 9/18 files, with 22.7 KB / 9 files headroom. The browser audit measured Catalog at 167.6 KB / 6 requests, down from 173.2 KB / 8 requests in pass 97. All named exception games stayed below their budgets, and the strict audit reported zero console/page errors across all 79 URLs.
 
 ## Slipstream Sprint racing addition (pass 97)
 
