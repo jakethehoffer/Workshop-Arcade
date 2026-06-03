@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bulwark Burst - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Rotate a core cannon, burst incoming drones, and hold the bulwark through deterministic attack waves." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/bulwark-burst.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Bulwark Burst — Workshop Arcade" />
+<meta property="og:description" content="Rotate a core cannon, burst incoming drones, and hold the bulwark through deterministic attack waves." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/bulwark-burst.html" />
+<meta property="og:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/bulwark-burst.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Bulwark Burst — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Bulwark Burst — Workshop Arcade" />
+<meta name="twitter:description" content="Rotate a core cannon, burst incoming drones, and hold the bulwark through deterministic attack waves." />
+<meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/bulwark-burst.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Bulwark Burst",
+  "description": "Rotate a core cannon, burst incoming drones, and hold the bulwark through deterministic attack waves.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/bulwark-burst.html",
+  "image": "https://jakethehoffer.github.io/Workshop-Arcade/covers/bulwark-burst.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Defense",
+    "Shooter",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<meta name="description" content="Rotate a core cannon, burst incoming drones, and hold the bulwark through deterministic attack waves." />
+<meta name="theme-color" content="#08111f" />
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eef7ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(860px 520px at 9% -12%,rgba(34,211,238,.18),transparent 62%),radial-gradient(780px 500px at 96% 4%,rgba(251,113,133,.14),transparent 62%),linear-gradient(180deg,#08111f,#040814 88%);display:flex;justify-content:center}
+button{font:inherit}
+.app{width:min(1050px,100%);display:grid;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#67e8f9;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#fff7ed;font-size:clamp(23px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(251,113,133,.25)}
+.help{max-width:670px;color:#bdd0e5;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button,dialog{border:1px solid rgba(103,232,249,.24);background:linear-gradient(180deg,rgba(19,32,54,.96),rgba(7,13,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 6px;text-align:center}.label{display:block;color:#67e8f9;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:18px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}.hot{color:#facc15}.bad{color:#fb7185}.good{color:#86efac}
+.stage{border-radius:10px;overflow:hidden;background:#07101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#07101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(250,204,21,.86);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#fb7185,#f97316);color:#fff7ed}
+.btn[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,255,255,.17)}
+.touch{display:grid;grid-template-columns:repeat(4,minmax(0,132px));justify-content:center;gap:8px}
+.touch button{min-height:50px;user-select:none;-webkit-user-select:none}.touch button[data-active="true"]{transform:translateY(1px);border-color:#facc15;box-shadow:0 0 20px rgba(250,204,21,.18),inset 0 2px 10px rgba(0,0,0,.32)}
+.sr{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;padding:18px}dialog::backdrop{background:rgba(1,5,14,.72)}dialog h2{margin:0 0 10px;font-size:21px}dialog p{margin:8px 0;color:#b8c8dc;font-size:14px;line-height:1.4}dialog ul{margin:10px 0 14px;padding-left:20px;color:#d8f6ff;font-size:14px;line-height:1.55}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+@media(max-width:720px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 104px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.touch button{min-height:48px;padding:8px;font-size:11px}}
+@media(max-width:420px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch button{font-size:10px;padding:7px 4px}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<noscript><p style="color:#edf7ff;background:#06101d;margin:0;padding:12px;text-align:center">Bulwark Burst needs JavaScript enabled to run.</p></noscript>
+<main class="app" aria-label="Bulwark Burst radial defense shooter">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Bulwark Burst</span></div>
+    <div class="help">Rotate the cannon around the core, fire bursts into incoming drones, and pulse the shield only when the ring is crowded.</div>
+  </header>
+  <section class="hud" aria-label="Bulwark status">
+    <div class="pill"><span class="label">Wave</span><span class="value" id="waveValue">1/5</span></div>
+    <div class="pill"><span class="label">Core</span><span class="value" id="coreValue">100</span></div>
+    <div class="pill"><span class="label">Heat</span><span class="value" id="heatValue">0</span></div>
+    <div class="pill"><span class="label">Drones</span><span class="value" id="droneValue">0</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
+  </section>
+  <div class="stage">
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Bulwark Burst playfield. A center cannon shoots drones approaching from all directions."></canvas>
+  </div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start. Hold the core through five attack waves.</div>
+  <div class="sr" id="liveLine" aria-live="polite"></div>
+  <section class="bar" aria-label="Run controls">
+    <button class="btn primary" id="startBtn" type="button">Start</button>
+    <button class="btn" id="pulseBtn" type="button">Pulse Shield</button>
+    <button class="btn" id="restartBtn" type="button">Restart</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="helpBtn" type="button" aria-keyshortcuts="?">Help</button>
+    <button class="btn" id="fullBtn" type="button">Fullscreen</button>
+  </section>
+  <section class="touch" aria-label="Touch firing controls">
+    <button id="leftBtn" type="button">Rotate Left</button>
+    <button id="fireBtn" type="button">Fire</button>
+    <button id="rightBtn" type="button">Rotate Right</button>
+    <button id="touchPulseBtn" type="button">Shield</button>
+  </section>
+</main>
+<dialog id="helpDialog" aria-modal="true" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">Bulwark Burst Controls</h2>
+  <p>Protect the central core. Drones fly in from the edge, shots build heat, and a shield pulse knocks back close threats on a long cooldown.</p>
+  <ul>
+    <li>Arrow Left/Right or A/D: rotate cannon</li>
+    <li>Space or Enter: fire a burst</li>
+    <li>Shift or E: pulse shield</li>
+    <li>Pointer/touch canvas: aim and fire</li>
+    <li>R: restart, F: fullscreen, ?: help</li>
+  </ul>
+  <button class="btn primary" id="closeHelpBtn" type="button">Close</button>
+</dialog>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const CX = W / 2;
+  const CY = H / 2;
+  const TAU = Math.PI * 2;
+  const STEP = 1 / 60;
+  const BEST_KEY = "bulwark-burst.best.v1";
+  const SOUND_KEY = "bulwark-burst.sound.v1";
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const round = (n) => Math.round(n * 10) / 10;
+  const dist = (a, b, c, d) => Math.hypot(a - c, b - d);
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    wave: $("waveValue"), core: $("coreValue"), heat: $("heatValue"), drones: $("droneValue"),
+    score: $("scoreValue"), best: $("bestValue"), status: $("statusLine"), live: $("liveLine"),
+    start: $("startBtn"), pulse: $("pulseBtn"), restart: $("restartBtn"), sound: $("soundBtn"),
+    help: $("helpBtn"), full: $("fullBtn"), closeHelp: $("closeHelpBtn"), dialog: $("helpDialog"),
+    left: $("leftBtn"), fire: $("fireBtn"), right: $("rightBtn"), touchPulse: $("touchPulseBtn")
+  };
+  const stars = Array.from({ length: 86 }, (_, i) => ({ x: (i * 149 + i * i * 19) % W, y: 18 + (i * 83 + i * i * 11) % 500, r: i % 13 === 0 ? 1.5 : .55 + (i % 3) * .28 }));
+  const waves = [
+    [{ t: .4, a: -90, hp: 1, v: 86 }, { t: 1.1, a: 25, hp: 1, v: 90 }, { t: 1.9, a: 155, hp: 1, v: 88 }, { t: 3.0, a: -35, hp: 2, v: 76 }],
+    [{ t: .3, a: 205, hp: 1, v: 96 }, { t: .9, a: -20, hp: 1, v: 102 }, { t: 1.5, a: 90, hp: 2, v: 84 }, { t: 2.5, a: 18, hp: 2, v: 86 }, { t: 3.3, a: 150, hp: 2, v: 88 }],
+    [{ t: .2, a: -80, hp: 2, v: 104 }, { t: .8, a: 35, hp: 1, v: 116 }, { t: 1.3, a: 215, hp: 1, v: 118 }, { t: 2.0, a: 120, hp: 3, v: 82 }, { t: 3.0, a: -30, hp: 2, v: 110 }, { t: 3.7, a: 178, hp: 2, v: 108 }],
+    [{ t: .2, a: 250, hp: 2, v: 120 }, { t: .7, a: 10, hp: 2, v: 122 }, { t: 1.2, a: 82, hp: 2, v: 118 }, { t: 1.9, a: 168, hp: 3, v: 94 }, { t: 2.8, a: -54, hp: 3, v: 96 }, { t: 3.6, a: 130, hp: 3, v: 100 }],
+    [{ t: .2, a: -95, hp: 2, v: 132 }, { t: .6, a: -18, hp: 2, v: 128 }, { t: 1.0, a: 48, hp: 2, v: 132 }, { t: 1.6, a: 118, hp: 3, v: 112 }, { t: 2.2, a: 190, hp: 3, v: 112 }, { t: 2.8, a: 255, hp: 3, v: 112 }, { t: 4.0, a: 28, hp: 4, v: 88 }]
+  ];
+
+  function storage() {
+    if (window.workshopStorage) return window.workshopStorage;
+    try { return window.localStorage; } catch (_) { return null; }
+  }
+  function readStore(key, fallback) {
+    const source = storage();
+    if (!source) return fallback;
+    try {
+      const value = source.getItem(key);
+      return value === null ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    const source = storage();
+    if (!source) return;
+    try { source.setItem(key, String(value)); } catch (_) {}
+  }
+  function readSound() {
+    return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
+  }
+
+  const state = {
+    mode: "ready", wave: 0, waveTime: 0, spawnIndex: 0, angle: -Math.PI / 2,
+    core: 100, heat: 0, cooldown: 0, pulseCooldown: 0, score: 0,
+    best: Number(readStore(BEST_KEY, "0")) || 0, sound: readSound(),
+    enemies: [], shots: [], bursts: [],
+    feedback: "Press Start. Hold the core through five attack waves.", feedbackTimer: 0,
+    lastInput: "none", lastEvent: "ready", shake: 0, hitFlash: 0, kills: 0, leaks: 0
+  };
+  let enemyId = 1;
+  let shotId = 1;
+  let audio = null;
+  let lastFrame = 0;
+  let clock = 0;
+
+  function normalizeAngle(angle) {
+    while (angle > Math.PI) angle -= TAU;
+    while (angle < -Math.PI) angle += TAU;
+    return angle;
+  }
+  function degToRad(deg) { return deg * Math.PI / 180; }
+  function angleDeg(angle) {
+    const value = Math.round((angle * 180 / Math.PI + 360) % 360);
+    return value === 360 ? 0 : value;
+  }
+  function setFeedback(text, event = "status") {
+    state.feedback = text;
+    state.feedbackTimer = 1.4;
+    state.lastEvent = event;
+  }
+  function ensureAudio() {
+    if (!state.sound || audio) return;
+    try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+  }
+  function tone(freq, dur = .06, gain = .035, type = "triangle") {
+    if (!state.sound) return;
+    ensureAudio();
+    if (!audio) return;
+    const osc = audio.createOscillator();
+    const amp = audio.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    amp.gain.setValueAtTime(gain, audio.currentTime);
+    amp.gain.exponentialRampToValueAtTime(.001, audio.currentTime + dur);
+    osc.connect(amp).connect(audio.destination);
+    osc.start();
+    osc.stop(audio.currentTime + dur);
+  }
+  function makeEnemy(spec) {
+    const angle = degToRad(spec.a);
+    const radius = 480;
+    return { id: enemyId++, angle, x: CX + Math.cos(angle) * radius, y: CY + Math.sin(angle) * radius, hp: spec.hp, maxHp: spec.hp, speed: spec.v * .78, size: 16 + spec.hp * 3, hit: 0 };
+  }
+  function resetRun(start = false) {
+    state.mode = start ? "active" : "ready";
+    state.wave = 0;
+    state.waveTime = 0;
+    state.spawnIndex = 0;
+    state.angle = -Math.PI / 2;
+    state.core = 100;
+    state.heat = 0;
+    state.cooldown = 0;
+    state.pulseCooldown = 0;
+    state.score = 0;
+    state.enemies = [];
+    state.shots = [];
+    state.bursts = [];
+    state.feedbackTimer = 0;
+    state.lastInput = start ? "start" : "restart";
+    state.lastEvent = start ? "started" : "ready";
+    state.shake = 0;
+    state.hitFlash = 0;
+    state.kills = 0;
+    state.leaks = 0;
+    setFeedback(start ? "Wave 1 incoming. Rotate, aim, and fire." : "Press Start. Hold the core through five attack waves.", start ? "started" : "ready");
+    updateHud();
+    draw();
+  }
+  function startRun() {
+    if (state.mode === "active") return;
+    resetRun(true);
+    tone(280, .06, .03);
+    canvas.focus({ preventScroll: true });
+  }
+  function finishRun(mode) {
+    state.mode = mode;
+    if (mode === "won") {
+      state.score += Math.max(0, Math.round(state.core * 12 - state.heat * 2));
+      if (state.score > state.best) {
+        state.best = state.score;
+        writeStore(BEST_KEY, state.best);
+      }
+      setFeedback("Bulwark held. All waves cleared.", "won");
+      tone(740, .11, .04, "sine");
+      tone(990, .13, .03, "sine");
+    } else {
+      setFeedback("Core breached. Restart and tighten your angles.", "failed");
+      tone(130, .16, .04, "sawtooth");
+    }
+    updateHud();
+  }
+  function rotate(delta) {
+    state.angle = normalizeAngle(state.angle + delta);
+    state.lastInput = delta < 0 ? "rotate-left" : "rotate-right";
+  }
+  function aimAt(x, y) {
+    state.angle = normalizeAngle(Math.atan2(y - CY, x - CX));
+    state.lastInput = "aim";
+  }
+  function fire() {
+    if (state.mode !== "active") {
+      startRun();
+      return;
+    }
+    if (state.cooldown > 0) {
+      setFeedback("Cannon cycling.", "cooldown");
+      return;
+    }
+    if (state.heat > 92) {
+      setFeedback("Cannon overheated. Let it cool.", "overheat");
+      tone(170, .05, .025, "square");
+      return;
+    }
+    const speed = 820;
+    const sx = CX + Math.cos(state.angle) * 62;
+    const sy = CY + Math.sin(state.angle) * 62;
+    state.shots.push({ id: shotId++, x: sx, y: sy, vx: Math.cos(state.angle) * speed, vy: Math.sin(state.angle) * speed, life: 1.1, angle: state.angle });
+    state.heat = clamp(state.heat + 12, 0, 100);
+    state.cooldown = .13;
+    state.lastInput = "fire";
+    state.lastEvent = "fire";
+    state.hitFlash = .18;
+    tone(460 + state.heat * 2, .045, .026, "square");
+  }
+  function pulseShield() {
+    if (state.mode !== "active") {
+      startRun();
+      return;
+    }
+    if (state.pulseCooldown > 0) {
+      setFeedback(`Shield charging ${Math.ceil(state.pulseCooldown)}s.`, "shield-cooldown");
+      return;
+    }
+    state.pulseCooldown = 4.6;
+    state.heat = clamp(state.heat + 8, 0, 100);
+    state.bursts.push({ x: CX, y: CY, r: 62, life: .5, color: "#67e8f9" });
+    let hits = 0;
+    const destroyed = new Set();
+    for (const enemy of state.enemies) {
+      const d = dist(enemy.x, enemy.y, CX, CY);
+      if (d < 178) {
+        enemy.hp -= 1;
+        enemy.hit = .35;
+        const awayX = (enemy.x - CX) / Math.max(1, d);
+        const awayY = (enemy.y - CY) / Math.max(1, d);
+        enemy.x += awayX * 34;
+        enemy.y += awayY * 34;
+        hits += 1;
+        if (enemy.hp <= 0) {
+          destroyed.add(enemy.id);
+          destroyEnemy(enemy, 45);
+        }
+      }
+    }
+    state.enemies = state.enemies.filter((enemy) => !destroyed.has(enemy.id));
+    state.shake = .22;
+    state.lastInput = "shield";
+    setFeedback(hits ? `Shield pulse hit ${hits} drone${hits === 1 ? "" : "s"}.` : "Shield pulse cleared the ring.", "shield");
+    tone(260, .08, .04, "sine");
+    tone(520, .1, .03, "sine");
+  }
+  function destroyEnemy(enemy, bonus = 0) {
+    state.score += 120 + enemy.maxHp * 35 + bonus;
+    state.kills += 1;
+    state.bursts.push({ x: enemy.x, y: enemy.y, r: 16, life: .34, color: "#fb7185" });
+    setFeedback(`Drone burst. ${state.enemies.length - 1} threats remain.`, "kill");
+    tone(720, .045, .028, "triangle");
+  }
+  function leakEnemy(enemy) {
+    state.core = clamp(state.core - (10 + enemy.maxHp * 3), 0, 100);
+    state.leaks += 1;
+    state.shake = .32;
+    state.bursts.push({ x: CX, y: CY, r: 42, life: .4, color: "#f97316" });
+    setFeedback("Drone reached the core.", "leak");
+    tone(120, .12, .035, "sawtooth");
+    if (state.core <= 0) finishRun("failed");
+  }
+  function advanceWaveIfReady() {
+    if (state.mode !== "active") return;
+    const plan = waves[state.wave];
+    if (state.spawnIndex < plan.length || state.enemies.length > 0) return;
+    if (state.wave >= waves.length - 1) {
+      finishRun("won");
+      return;
+    }
+    state.wave += 1;
+    state.waveTime = 0;
+    state.spawnIndex = 0;
+    state.pulseCooldown = Math.max(0, state.pulseCooldown - 1.2);
+    state.score += 250 + Math.round(state.core * 3);
+    setFeedback(`Wave ${state.wave} cleared. Wave ${state.wave + 1} incoming.`, "wave-clear");
+    tone(560, .08, .03, "sine");
+  }
+  function update(dt) {
+    clock += dt;
+    state.feedbackTimer = Math.max(0, state.feedbackTimer - dt);
+    state.cooldown = Math.max(0, state.cooldown - dt);
+    state.pulseCooldown = Math.max(0, state.pulseCooldown - dt);
+    state.heat = Math.max(0, state.heat - dt * 24);
+    state.shake = Math.max(0, state.shake - dt * 2.6);
+    state.hitFlash = Math.max(0, state.hitFlash - dt * 3.2);
+    if (state.mode === "active") {
+      state.waveTime += dt;
+      const plan = waves[state.wave];
+      while (state.spawnIndex < plan.length && plan[state.spawnIndex].t <= state.waveTime) {
+        state.enemies.push(makeEnemy(plan[state.spawnIndex]));
+        state.spawnIndex += 1;
+      }
+      for (const enemy of state.enemies) {
+        const d = Math.max(1, dist(enemy.x, enemy.y, CX, CY));
+        enemy.x += ((CX - enemy.x) / d) * enemy.speed * dt;
+        enemy.y += ((CY - enemy.y) / d) * enemy.speed * dt;
+        enemy.hit = Math.max(0, enemy.hit - dt * 2.8);
+      }
+      for (const shot of state.shots) {
+        shot.x += shot.vx * dt;
+        shot.y += shot.vy * dt;
+        shot.life -= dt;
+      }
+      state.shots = state.shots.filter((shot) => shot.life > 0 && shot.x > -40 && shot.x < W + 40 && shot.y > -40 && shot.y < H + 40);
+      const removedShots = new Set();
+      const removedEnemies = new Set();
+      for (const shot of state.shots) {
+        for (const enemy of state.enemies) {
+          if (removedEnemies.has(enemy.id) || removedShots.has(shot.id)) continue;
+          if (dist(shot.x, shot.y, enemy.x, enemy.y) < enemy.size + 7) {
+            enemy.hp -= 1;
+            enemy.hit = .36;
+            state.bursts.push({ x: shot.x, y: shot.y, r: 8, life: .2, color: "#facc15" });
+            removedShots.add(shot.id);
+            if (enemy.hp <= 0) {
+              removedEnemies.add(enemy.id);
+              destroyEnemy(enemy, Math.max(0, Math.round((220 - dist(enemy.x, enemy.y, CX, CY)) * .3)));
+            } else {
+              setFeedback("Armor cracked. Keep firing.", "hit");
+              tone(600, .035, .018);
+            }
+          }
+        }
+      }
+      state.shots = state.shots.filter((shot) => !removedShots.has(shot.id));
+      const leaking = [];
+      for (const enemy of state.enemies) {
+        if (!removedEnemies.has(enemy.id) && dist(enemy.x, enemy.y, CX, CY) < 46) leaking.push(enemy.id);
+      }
+      state.enemies = state.enemies.filter((enemy) => {
+        if (removedEnemies.has(enemy.id)) return false;
+        if (leaking.includes(enemy.id)) {
+          leakEnemy(enemy);
+          return false;
+        }
+        return true;
+      });
+      advanceWaveIfReady();
+    }
+    for (const burst of state.bursts) {
+      burst.life -= dt;
+      burst.r += dt * 220;
+    }
+    state.bursts = state.bursts.filter((burst) => burst.life > 0);
+    updateHud();
+  }
+  function updateHud() {
+    els.wave.textContent = `${Math.min(state.wave + 1, waves.length)}/${waves.length}`;
+    els.core.textContent = Math.round(state.core);
+    els.core.className = `value ${state.core < 34 ? "bad" : state.core > 74 ? "good" : ""}`.trim();
+    els.heat.textContent = Math.round(state.heat);
+    els.heat.className = `value ${state.heat > 82 ? "bad" : state.heat > 58 ? "hot" : ""}`.trim();
+    els.drones.textContent = state.enemies.length;
+    els.score.textContent = state.score;
+    els.best.textContent = state.best;
+    els.status.textContent = state.feedback;
+    els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
+    els.sound.setAttribute("aria-pressed", String(state.sound));
+    els.start.textContent = state.mode === "active" ? "Running" : "Start";
+    els.pulse.textContent = state.pulseCooldown > 0 ? `Shield ${Math.ceil(state.pulseCooldown)}s` : "Pulse Shield";
+    els.live.textContent = state.feedbackTimer > 1.25 ? state.feedback : "";
+  }
+  function drawBackground() {
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, "#0a1830");
+    grd.addColorStop(.62, "#07101d");
+    grd.addColorStop(1, "#030712");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+    for (const star of stars) {
+      const twinkle = .45 + .45 * Math.sin(clock * 1.5 + star.x * .03);
+      ctx.globalAlpha = twinkle;
+      ctx.fillStyle = "#bff9ff";
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "rgba(103,232,249,.13)";
+    ctx.lineWidth = 1;
+    for (let r = 92; r <= 410; r += 54) {
+      ctx.beginPath();
+      ctx.arc(CX, CY, r, 0, TAU);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 12; i += 1) {
+      const a = i * TAU / 12;
+      ctx.beginPath();
+      ctx.moveTo(CX + Math.cos(a) * 74, CY + Math.sin(a) * 74);
+      ctx.lineTo(CX + Math.cos(a) * 430, CY + Math.sin(a) * 430);
+      ctx.stroke();
+    }
+  }
+  function drawCore() {
+    const pulse = 1 + Math.sin(clock * 4) * .04;
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.rotate(clock * .24);
+    ctx.fillStyle = "rgba(8,18,34,.95)";
+    ctx.strokeStyle = state.core < 34 ? "#fb7185" : "#67e8f9";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 52 * pulse, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(250,204,21,.45)";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i += 1) {
+      ctx.rotate(TAU / 6);
+      ctx.beginPath();
+      ctx.moveTo(0, -72);
+      ctx.lineTo(0, -58);
+      ctx.stroke();
+    }
+    ctx.restore();
+    if (state.hitFlash > 0) {
+      ctx.strokeStyle = `rgba(250,204,21,${state.hitFlash})`;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(CX, CY, 76 + state.hitFlash * 26, 0, TAU);
+      ctx.stroke();
+    }
+  }
+  function drawCannon() {
+    const barrel = 82;
+    const ax = Math.cos(state.angle);
+    const ay = Math.sin(state.angle);
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.strokeStyle = state.heat > 82 ? "#fb7185" : "#f97316";
+    ctx.lineWidth = 12;
+    ctx.shadowColor = "rgba(249,115,22,.42)";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.moveTo(CX + ax * 24, CY + ay * 24);
+    ctx.lineTo(CX + ax * barrel, CY + ay * barrel);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#fff7ed";
+    ctx.beginPath();
+    ctx.arc(CX + ax * barrel, CY + ay * barrel, 9, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(251,113,133,.34)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(CX + ax * 96, CY + ay * 96);
+    ctx.lineTo(CX + ax * 430, CY + ay * 430);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawEnemies() {
+    for (const enemy of state.enemies) {
+      const glow = enemy.hit > 0 ? "#facc15" : "#fb7185";
+      ctx.save();
+      ctx.translate(enemy.x, enemy.y);
+      ctx.rotate(enemy.angle + Math.PI / 2);
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = enemy.hit > 0 ? 20 : 10;
+      ctx.fillStyle = enemy.hit > 0 ? "#facc15" : "#fb7185";
+      ctx.beginPath();
+      ctx.moveTo(0, -enemy.size);
+      ctx.lineTo(enemy.size * .74, enemy.size * .78);
+      ctx.lineTo(0, enemy.size * .42);
+      ctx.lineTo(-enemy.size * .74, enemy.size * .78);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-enemy.size * .42, -3, enemy.size * .84, 6);
+      ctx.fillStyle = "#67e8f9";
+      ctx.fillRect(-enemy.size * .42, -3, enemy.size * .84 * (enemy.hp / enemy.maxHp), 6);
+      ctx.restore();
+    }
+  }
+  function drawShots() {
+    ctx.save();
+    ctx.lineCap = "round";
+    for (const shot of state.shots) {
+      ctx.strokeStyle = "rgba(250,204,21,.88)";
+      ctx.lineWidth = 5;
+      ctx.shadowColor = "rgba(250,204,21,.6)";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.moveTo(shot.x - Math.cos(shot.angle) * 18, shot.y - Math.sin(shot.angle) * 18);
+      ctx.lineTo(shot.x, shot.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawBursts() {
+    for (const burst of state.bursts) {
+      ctx.globalAlpha = clamp(burst.life * 2, 0, 1);
+      ctx.strokeStyle = burst.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(burst.x, burst.y, burst.r, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+  function drawOverlay() {
+    if (state.mode === "ready" || state.mode === "won" || state.mode === "failed") {
+      ctx.save();
+      ctx.fillStyle = "rgba(2,6,18,.62)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#f8fbff";
+      ctx.textAlign = "center";
+      ctx.font = "900 34px system-ui,sans-serif";
+      const title = state.mode === "won" ? "BULWARK HELD" : state.mode === "failed" ? "CORE BREACHED" : "BULWARK BURST";
+      ctx.fillText(title, CX, CY - 30);
+      ctx.fillStyle = "#bae6fd";
+      ctx.font = "800 16px system-ui,sans-serif";
+      ctx.fillText(state.mode === "ready" ? "Start, aim toward drones, and keep cannon heat under control." : state.feedback, CX, CY + 6);
+      ctx.fillStyle = "#facc15";
+      ctx.font = "800 13px system-ui,sans-serif";
+      ctx.fillText("Arrow keys rotate. Space fires. E pulses shield. Pointer aims and fires.", CX, CY + 34);
+      ctx.restore();
+    }
+  }
+  function draw() {
+    ctx.save();
+    if (state.shake > 0) {
+      const amount = state.shake * 8;
+      ctx.translate(Math.sin(clock * 55) * amount, Math.cos(clock * 43) * amount);
+    }
+    drawBackground();
+    drawBursts();
+    drawShots();
+    drawEnemies();
+    drawCore();
+    drawCannon();
+    ctx.restore();
+    drawOverlay();
+  }
+  function nearestTarget() {
+    if (!state.enemies.length) return null;
+    return [...state.enemies].sort((a, b) => dist(a.x, a.y, CX, CY) - dist(b.x, b.y, CX, CY))[0];
+  }
+  function renderText() {
+    const nearest = nearestTarget();
+    return JSON.stringify({
+      title: "Bulwark Burst",
+      mode: state.mode,
+      coordinateSystem: "canvas pixels, origin top-left, x right, y down",
+      wave: { current: Math.min(state.wave + 1, waves.length), total: waves.length, time: round(state.waveTime), spawned: state.spawnIndex, remainingInWave: waves[state.wave] ? waves[state.wave].length - state.spawnIndex : 0 },
+      core: Math.round(state.core),
+      heat: Math.round(state.heat),
+      score: state.score,
+      best: state.best,
+      cannon: { x: CX, y: CY, angle: round(state.angle), degrees: angleDeg(state.angle), cooldown: round(state.cooldown), pulseCooldown: round(state.pulseCooldown) },
+      enemies: state.enemies.slice(0, 8).map((enemy) => ({ id: enemy.id, x: round(enemy.x), y: round(enemy.y), hp: enemy.hp, maxHp: enemy.maxHp, distance: round(dist(enemy.x, enemy.y, CX, CY)), angleDegrees: angleDeg(Math.atan2(enemy.y - CY, enemy.x - CX)) })),
+      nearestTarget: nearest ? { id: nearest.id, x: round(nearest.x), y: round(nearest.y), hp: nearest.hp, distance: round(dist(nearest.x, nearest.y, CX, CY)), angleDegrees: angleDeg(Math.atan2(nearest.y - CY, nearest.x - CX)) } : null,
+      shots: state.shots.slice(0, 5).map((shot) => ({ x: round(shot.x), y: round(shot.y), life: round(shot.life) })),
+      feedback: state.feedback,
+      feedbackActive: state.feedbackTimer > 0,
+      lastInput: state.lastInput,
+      lastEvent: state.lastEvent,
+      kills: state.kills,
+      leaks: state.leaks,
+      soundEnabled: state.sound
+    });
+  }
+  function step(ms) {
+    const frames = Math.max(1, Math.round(ms / (1000 / 60)));
+    for (let i = 0; i < frames; i += 1) update(STEP);
+    draw();
+  }
+  function tick(now) {
+    if (!lastFrame) lastFrame = now;
+    const dt = Math.min(.05, Math.max(0, (now - lastFrame) / 1000) || STEP);
+    lastFrame = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(tick);
+  }
+  function canvasPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: ((event.clientX - rect.left) / Math.max(1, rect.width)) * W, y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * H };
+  }
+  function openHelp() {
+    if (typeof els.dialog.showModal === "function") els.dialog.showModal();
+  }
+  function closeHelp() {
+    if (els.dialog.open) els.dialog.close();
+    canvas.focus({ preventScroll: true });
+  }
+  function toggleSound() {
+    state.sound = !state.sound;
+    writeStore(SOUND_KEY, state.sound ? "1" : "0");
+    if (state.sound) tone(520, .06, .03);
+    updateHud();
+  }
+  async function toggleFullscreen() {
+    const root = document.documentElement;
+    try {
+      if (!document.fullscreenElement) {
+        await root.requestFullscreen?.();
+      } else {
+        await document.exitFullscreen?.();
+      }
+    } catch (_) {}
+    setTimeout(draw, 60);
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    const point = canvasPoint(event);
+    aimAt(point.x, point.y);
+    fire();
+    canvas.focus({ preventScroll: true });
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!event.buttons) return;
+    const point = canvasPoint(event);
+    aimAt(point.x, point.y);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && els.dialog.open) return;
+    if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      rotate(-.17);
+    } else if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+      event.preventDefault();
+      rotate(.17);
+    } else if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") {
+      event.preventDefault();
+      rotate(-.1);
+    } else if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      rotate(.1);
+    } else if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      fire();
+    } else if (event.key === "Shift" || event.key.toLowerCase() === "e") {
+      event.preventDefault();
+      pulseShield();
+    } else if (event.key.toLowerCase() === "r") {
+      event.preventDefault();
+      resetRun(false);
+    } else if (event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      toggleFullscreen();
+    } else if (event.key === "?") {
+      event.preventDefault();
+      openHelp();
+    }
+  });
+  els.start.addEventListener("click", startRun);
+  els.pulse.addEventListener("click", pulseShield);
+  els.restart.addEventListener("click", () => resetRun(false));
+  els.sound.addEventListener("click", toggleSound);
+  els.help.addEventListener("click", openHelp);
+  els.closeHelp.addEventListener("click", closeHelp);
+  els.full.addEventListener("click", toggleFullscreen);
+  els.left.addEventListener("pointerdown", () => { rotate(-.24); els.left.dataset.active = "true"; });
+  els.left.addEventListener("pointerup", () => { els.left.dataset.active = "false"; });
+  els.right.addEventListener("pointerdown", () => { rotate(.24); els.right.dataset.active = "true"; });
+  els.right.addEventListener("pointerup", () => { els.right.dataset.active = "false"; });
+  els.fire.addEventListener("click", fire);
+  els.touchPulse.addEventListener("click", pulseShield);
+  document.addEventListener("fullscreenchange", draw);
+
+  window.render_game_to_text = renderText;
+  window.advanceTime = step;
+
+  resetRun(false);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

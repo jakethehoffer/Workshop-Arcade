@@ -1913,6 +1913,43 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "bulwark-burst": {
+      name: "start, aim, and burst first drone",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const canvas = document.querySelector("#game");
+          if (!canvas) return;
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(1400);
+          const rect = canvas.getBoundingClientRect();
+          for (let i = 0; i < 7; i += 1) {
+            const snap = JSON.parse(window.render_game_to_text());
+            const target = snap.nearestTarget || { x: 480, y: 40 };
+            const point = {
+              x: rect.left + (target.x / 960) * rect.width,
+              y: rect.top + (target.y / 540) * rect.height
+            };
+            canvas.dispatchEvent(new PointerEvent("pointerdown", {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 77 + i,
+              pointerType: "mouse",
+              isPrimary: true,
+              button: 0,
+              buttons: 1,
+              clientX: point.x,
+              clientY: point.y
+            }));
+            window.advanceTime(330);
+          }
+          document.querySelector("#pulseBtn")?.click();
+          window.advanceTime(220);
+        });
+      },
+    },
   };
 
   return recipes[slug] || null;
