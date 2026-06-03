@@ -133,6 +133,8 @@ for (const [file, text] of [
   requireText(file, text, 'test-results/lighthouse-baseline/<timestamp>/summary.json');
   requireText(file, text, 'catalog shell headroom');
   requireText(file, text, '20 KB / 5 request');
+  requireText(file, text, 'named exception headroom');
+  requireText(file, text, '10 KB / 1 request');
 }
 
 if (issues.length > 0) {

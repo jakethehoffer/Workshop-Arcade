@@ -19,6 +19,9 @@ const repoRoot = process.env.WORKSHOP_ARCADE_REPO_ROOT
 
 const MIN_CATALOG_SHELL_HEADROOM_KB = 20;
 const MIN_CATALOG_SHELL_REQUEST_HEADROOM = 5;
+const MIN_NAMED_EXCEPTION_HEADROOM_KB = 10;
+const MIN_NAMED_EXCEPTION_REQUEST_HEADROOM = 1;
+const NAMED_EXCEPTION_TITLES = new Set(['Lexica', 'Idle Tycoon', 'Arcade Jump', 'Brick Breaker']);
 const issues = [];
 
 function fail(message) {
@@ -262,6 +265,16 @@ async function checkGames(manifest, budgets) {
     if (requestCount > budget.requests) {
       fail(`${game.title}: ${requestCount} local request(s) exceeds ${budget.requests} request budget`);
     }
+    if (NAMED_EXCEPTION_TITLES.has(game.title)) {
+      const transferHeadroomKb = budget.transferKb - (totalBytes / 1024);
+      const requestHeadroom = budget.requests - requestCount;
+      if (transferHeadroomKb < MIN_NAMED_EXCEPTION_HEADROOM_KB) {
+        fail(`${game.title}: static page weight ${fmtKb(totalBytes)} leaves ${transferHeadroomKb.toFixed(1)} KB transfer headroom, below ${MIN_NAMED_EXCEPTION_HEADROOM_KB} KB named exception minimum (${htmlPath}${uniqueDependencies.length ? ` + ${uniqueDependencies.join(', ')}` : ''})`);
+      }
+      if (requestHeadroom < MIN_NAMED_EXCEPTION_REQUEST_HEADROOM) {
+        fail(`${game.title}: ${requestCount} local request(s) leaves ${requestHeadroom} request headroom, below ${MIN_NAMED_EXCEPTION_REQUEST_HEADROOM} named exception minimum`);
+      }
+    }
   }
 
   return results;
@@ -306,7 +319,11 @@ const closest = [...games]
   }))
   .sort((a, b) => a.headroomBytes - b.headroomBytes)
   .slice(0, 5)
-  .map((entry) => `${entry.title} ${fmtKb(entry.totalBytes)} / ${entry.budget.transferKb} KB`)
+  .map((entry) => {
+    const transferHeadroomKb = entry.budget.transferKb - (entry.totalBytes / 1024);
+    const requestHeadroom = entry.budget.requests - entry.requestCount;
+    return `${entry.title} ${fmtKb(entry.totalBytes)} / ${entry.budget.transferKb} KB (${transferHeadroomKb.toFixed(1)} KB / ${requestHeadroom} req headroom)`;
+  })
   .join('; ');
 
 console.log(`Page-weight check passed: catalog local shell ${fmtKb(catalog.totalBytes)} / ${budgets.Catalog.transferKb} KB across ${catalog.requestCount}/${budgets.Catalog.requests} files (${catalog.eagerCount} eager covers; headroom ${catalog.transferHeadroomKb.toFixed(1)} KB / ${catalog.requestHeadroom} files); ${manifest.length} games under static budgets. Tightest: ${closest}.`);

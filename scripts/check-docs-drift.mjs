@@ -161,6 +161,12 @@ for (const file of localPerfSurfaces) {
   if (!text.includes('npm run audit:perf:local')) {
     issues.push(`${file}: missing local performance-audit command "npm run audit:perf:local"`);
   }
+  if (!text.includes('named exception headroom')) {
+    issues.push(`${file}: missing named exception headroom policy text`);
+  }
+  if (!text.includes('10 KB / 1 request')) {
+    issues.push(`${file}: missing named exception headroom threshold "10 KB / 1 request"`);
+  }
 }
 
 for (const file of ciEvidenceSurfaces) {

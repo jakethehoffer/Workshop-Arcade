@@ -13,7 +13,7 @@ The neighboring rendered-quality evidence under `test-results/render-ranking/<ti
 
 Use `npm run audit:perf:local` for local publish checks: it starts a disposable static server, sets `WORKSHOP_ARCADE_URL` to that server, runs the strict audit, and cleans up the server. CI runs `npm run audit:perf:ci` against its own local static server. Strict mode fails on deterministic regressions only: load failures, HTTP 4xx/5xx responses, console/page errors, missing required meta tags, images missing `alt`, excessive transfer, or excessive request count. FCP/load timing stays informational to avoid flaky failures on shared runners.
 
-The fast `npm run test:page-weight` gate adds an earlier static catalog shell headroom check: the shell must keep at least a 20 KB / 5 request buffer below the Catalog budget before the slower browser audit runs.
+The fast `npm run test:page-weight` gate adds earlier static headroom checks before the slower browser audit runs: the catalog shell must keep at least a 20 KB / 5 request buffer below the Catalog budget, and each named exception must keep at least 10 KB / 1 request of named exception headroom below its own budget.
 
 CI budgets:
 
@@ -25,6 +25,21 @@ CI budgets:
 | Arcade Jump | 110 KB | 4 |
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
+
+## Named game headroom guard (pass 99)
+
+Captured 2026-06-03 against a disposable local static server after adding named exception headroom enforcement to `npm run test:page-weight` and mechanically trimming Lexica plus Arcade Jump. Lexica now folds its answer bank into `words5.js`, removes the unused `answers5.js` request, and drops obsolete comments/blank lines; Arcade Jump drops low-risk inline whitespace. No gameplay rules, scoring, storage keys, diagnostics, capture recipes, manifest entries, generated metadata, service-worker behavior, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed. The strict audit covered the catalog plus 78 manifest games, 79 pages total.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 116 ms | 94 ms | 🟢 95 ms | 🟢 168.3 KB | 6 | 0 |
+| Lexica | 🟢 60 ms | 21 ms | 🟢 22 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 500 ms | 13 ms | 🟢 16 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 56 ms | 🟢 56 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 120 ms | 101 ms | 🟢 101 ms | 🟢 109.7 KB | 2 | 0 |
+| Slipstream Sprint | 🟢 40 ms | 14 ms | 🟢 14 ms | 🟢 35.5 KB | 2 | 0 |
+
+`npm run test:page-weight` now requires named exception headroom of at least 10 KB / 1 request below each named game budget. It reports Lexica at 146.0 KB / 160 KB with 14.0 KB / 1 request headroom, Arcade Jump at 99.0 KB / 110 KB with 11.0 KB / 2 request headroom, Brick Breaker at 109.7 KB / 120 KB with 10.3 KB / 2 request headroom, and Idle Tycoon at 153.3 KB / 170 KB with 16.7 KB / 2 request headroom. The catalog local shell reports 178.0 KB / 200 KB across 9/18 files, with 22.0 KB / 9 files headroom. The browser audit measured Catalog at 168.3 KB / 6 requests, and the strict audit reported zero console/page errors across all 79 URLs.
 
 ## Catalog shell headroom refresh (pass 98)
 

@@ -196,6 +196,46 @@ const BUDGETS = {
       fail(`check-page-weight fixture: expected catalog shell headroom messages, got ${JSON.stringify(combined.trim())}`);
     }
   });
+
+  await withFixture('page-weight-named-exception-headroom', async (root) => {
+    await writeFixture(root, 'websites/manifest.json', JSON.stringify([{
+      id: 'lexica',
+      slug: 'lexica',
+      title: 'Lexica',
+      subtitle: 'Fixture.',
+      url: 'websites/lexica.html',
+      cover: 'covers/lexica.svg',
+      tags: ['Word'],
+      addedAt: '2026-05-23',
+      popularity: 1,
+    }], null, 2));
+    await writeFixture(root, 'scripts/audit-pagespeed.mjs', `
+const BUDGETS = {
+  Catalog: { transferKb: 200, requests: 18 },
+  Lexica: { transferKb: 20, requests: 2 },
+  "Idle Tycoon": { transferKb: 170, requests: 4 },
+  "Arcade Jump": { transferKb: 110, requests: 4 },
+  "Brick Breaker": { transferKb: 120, requests: 4 },
+  default: { transferKb: 100, requests: 3 }
+};
+`);
+    await writeFixture(root, 'index.html', '<!doctype html><script>function aboveFoldCoverCount() { return 1; // desktop\\n}</script>');
+    await writeFixture(root, 'sw.js', 'self.addEventListener("install", () => {});');
+    await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
+    await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'covers/lexica.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    await writeFixture(root, 'websites/workshop-runtime.js', 'window.workshopRuntime = true;');
+    await writeFixture(root, 'websites/lexica.html', `<!doctype html><title>Lexica</title><script src="workshop-runtime.js"></script><main>${'x'.repeat(14500)}</main>`);
+
+    const result = runValidator('scripts/check-page-weight.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0) {
+      fail('check-page-weight fixture: expected failure for low named exception headroom, got success');
+    }
+    if (!/Lexica/.test(combined) || !/named exception/.test(combined) || !/transfer headroom/.test(combined) || !/request headroom/.test(combined)) {
+      fail(`check-page-weight fixture: expected Lexica named exception headroom messages, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
 }
 
 async function checkPwaInstallBudgetNegative() {

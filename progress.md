@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-03 Codex named game headroom guard
+
+- Added named exception headroom enforcement to `npm run test:page-weight`: Lexica, Idle Tycoon, Arcade Jump, and Brick Breaker must now keep at least 10 KB transfer headroom and 1 request headroom below their named budgets. The validator fixture suite proves a named exception can be under its nominal budget but still fail for low headroom.
+- Mechanically trimmed Lexica and Arcade Jump without changing gameplay rules, scoring, storage keys, diagnostics, capture recipes, manifest entries, generated metadata, service-worker behavior, custom-domain settings, backend calls, or Security Surfaces configuration. Lexica now folds its answer bank into `words5.js` and no longer loads `answers5.js`; Arcade Jump had low-risk inline whitespace/comments compacted. Brick Breaker and Idle Tycoon already cleared the new headroom floor and were left unchanged.
+- Measured post-change results: `npm run test:page-weight` reports Lexica at 146.0 KB / 160 KB with 14.0 KB / 1 request headroom, Arcade Jump at 99.0 KB / 110 KB with 11.0 KB / 2 request headroom, Brick Breaker at 109.7 KB / 120 KB with 10.3 KB / 2 request headroom, Idle Tycoon at 153.3 KB / 170 KB with 16.7 KB / 2 request headroom, and the catalog local shell at 178.0 KB / 200 KB with 22.0 KB / 9 files headroom. `npm run audit:perf:local` passed across 79 pages with Catalog at 168.3 KB / 6 requests and no page errors.
+
 ## 2026-06-03 Codex Vector Pool render capture stabilization
 
 - Stabilized the render-capture recipe for Vector Pool so evidence waits deterministically for the scored pocket feedback state instead of sampling a shot while it may still be rolling. This does not change player-facing game behavior, catalog content, generated metadata, service-worker behavior, custom-domain settings, or Security Surfaces configuration.
