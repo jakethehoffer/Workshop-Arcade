@@ -40,6 +40,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:live-pages', 'Post-deploy smoke test — hits GitHub Pages or WORKSHOP_ARCADE_URL. Run after Pages deploys via `npm run test:live-pages`.'],
   ['test:launch-evidence-current', 'Local launch-evidence freshness check — depends on gitignored test-results evidence. Run after publish-ready + live-pages evidence via `npm run test:launch-evidence-current`.'],
   ['test:launch-evidence-refresh', 'Slow local launch-evidence refresh — runs publish-ready, live-pages, and freshness verification. Run post-commit via `npm run test:launch-evidence-refresh`.'],
+  ['test:current-head-workflows', 'Authenticated remote workflow status check — verifies required GitHub Actions runs for the current clean HEAD. Run post-push via `npm run test:current-head-workflows`.'],
   ['test:all', 'Composite that calls this runner + test:games; running it from inside the runner would recurse.'],
 ]);
 

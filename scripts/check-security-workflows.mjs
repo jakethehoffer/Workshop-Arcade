@@ -459,10 +459,96 @@ async function checkSecuritySurfaces() {
   }
 }
 
+async function checkCurrentHeadWorkflowStatusChecker() {
+  const checkerPath = 'scripts/check-current-head-workflows.mjs';
+  if (!(await exists(checkerPath))) {
+    fail(`${checkerPath}: file missing — current-HEAD workflow status needs a local remote checker`);
+    return;
+  }
+
+  const packageJson = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
+  const scripts = packageJson.scripts || {};
+  if (scripts['test:current-head-workflows'] !== 'node scripts/check-current-head-workflows.mjs') {
+    fail(`package.json: test:current-head-workflows must run scripts/check-current-head-workflows.mjs, got ${JSON.stringify(scripts['test:current-head-workflows'])}`);
+  }
+
+  const checkerSrc = await readFile(join(repoRoot, checkerPath), 'utf8');
+  for (const checkerNeedle of [
+    'collectEvidenceProvenance',
+    'formatEvidenceProvenance',
+    'test-results',
+    'current-head-workflows',
+    'summary.json',
+    'report.md',
+    'gh',
+    'run',
+    'list',
+    'headSha',
+    'Validate Catalog',
+    'Deploy Pages',
+    'CodeQL',
+    'Security Surfaces',
+    'provenance.commit',
+    'provenance.isDirty !== false',
+    "run.status !== 'completed'",
+    "run.conclusion !== 'success'",
+    'windowsHide: true'
+  ]) {
+    if (!checkerSrc.includes(checkerNeedle)) {
+      fail(`${checkerPath}: checker must contain "${checkerNeedle}" so current clean HEAD workflow status evidence stays guarded`);
+    }
+  }
+
+  const fastRunnerPath = 'scripts/run-fast-tests.mjs';
+  const fastRunnerSrc = await readFile(join(repoRoot, fastRunnerPath), 'utf8');
+  if (!fastRunnerSrc.includes("'test:current-head-workflows'")) {
+    fail(`${fastRunnerPath}: must exclude test:current-head-workflows from npm test because it depends on remote authenticated Actions state`);
+  }
+  if (!/test:current-head-workflows[\s\S]*remote workflow status/i.test(fastRunnerSrc)) {
+    fail(`${fastRunnerPath}: test:current-head-workflows exclusion must name the remote workflow status reason`);
+  }
+
+  const aggregatorPath = 'scripts/check-test-aggregator.mjs';
+  const aggregatorSrc = await readFile(join(repoRoot, aggregatorPath), 'utf8');
+  if (!aggregatorSrc.includes("'test:current-head-workflows'")) {
+    fail(`${aggregatorPath}: must allow the intentional test:current-head-workflows fast-runner exclusion`);
+  }
+
+  const docsDriftPath = 'scripts/check-docs-drift.mjs';
+  const docsDriftSrc = await readFile(join(repoRoot, docsDriftPath), 'utf8');
+  for (const docsNeedle of [
+    "'test:current-head-workflows'",
+    'npm run test:current-head-workflows',
+    'test-results/current-head-workflows/<timestamp>/summary.json'
+  ]) {
+    if (!docsDriftSrc.includes(docsNeedle)) {
+      fail(`${docsDriftPath}: missing current-HEAD workflow status docs contract text "${docsNeedle}"`);
+    }
+  }
+
+  for (const docsPath of ['README.md', 'ARCHITECTURE.md']) {
+    const docsSrc = await readFile(join(repoRoot, docsPath), 'utf8');
+    for (const docsNeedle of [
+      'npm run test:current-head-workflows',
+      'test-results/current-head-workflows/<timestamp>/summary.json',
+      'Validate Catalog',
+      'Deploy Pages',
+      'CodeQL',
+      'Security Surfaces',
+      'current clean HEAD'
+    ]) {
+      if (!docsSrc.includes(docsNeedle)) {
+        fail(`${docsPath}: missing current-HEAD workflow status documentation "${docsNeedle}"`);
+      }
+    }
+  }
+}
+
 await checkDependabot();
 await checkCodeql();
 await checkPagesDeploy();
 await checkSecuritySurfaces();
+await checkCurrentHeadWorkflowStatusChecker();
 
 if (issues.length > 0) {
   console.error(`Security workflows check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -472,4 +558,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Security workflows check passed: Dependabot, CodeQL, Deploy Pages, and Security Surfaces automation are intact.');
+console.log('Security workflows check passed: Dependabot, CodeQL, Deploy Pages, Security Surfaces, and current-HEAD workflow status automation are intact.');
