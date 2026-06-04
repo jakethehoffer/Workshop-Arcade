@@ -26,6 +26,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Beacon Bastion adventure defense pass (pass 101)
+
+Captured 2026-06-04 against a disposable local static server after adding **Beacon Bastion**, a compact Adventure/Defense/Strategy scout-and-beacon defense game, as the catalog's newest game. The strict audit covered the catalog plus 80 manifest games, 81 pages total. Beacon Bastion is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 23.0 KB), comfortably inside the 100 KB / 3 request default budget. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 228 ms | 208 ms | 🟢 208 ms | 🟢 168.6 KB | 6 | 0 |
+| Lexica | 🟢 60 ms | 20 ms | 🟢 21 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 464 ms | 12 ms | 🟢 14 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 116 ms | 63 ms | 🟢 64 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 116 ms | 96 ms | 🟢 96 ms | 🟢 109.7 KB | 2 | 0 |
+| Beacon Bastion | 🟢 48 ms | 17 ms | 🟢 17 ms | 🟢 23.0 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 81 URLs and `npm run audit:perf:local` reported `CI strict audit passed`. Beacon Bastion measured 23.0 KB / 2 requests, leaving roughly 77 KB / 1 request of headroom under the default budget. `npm run test:page-weight` reports the catalog local shell at 178.3 KB / 200 KB across 9/18 files, with 21.7 KB / 9 files headroom.
+
 ## Diamond Derby home-run derby (pass 100)
 
 Captured 2026-06-04 against a disposable local static server after adding **Diamond Derby**, a Sports/Arcade/Action swing-timing home-run derby, as the catalog's newest game. The strict audit covered the catalog plus 79 manifest games, 80 pages total. Diamond Derby is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 24.8 KB), comfortably inside the 100 KB / 3 request default budget. No named exception budgets, generated catalog surface formats, service-worker behavior beyond the shell revision bump, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.

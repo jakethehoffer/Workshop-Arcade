@@ -562,6 +562,33 @@ function getInteractionRecipe(slug) {
         await clickSelectorIfVisible(page, "#startGameBtn");
         await pressAndAdvance(page, "Space", 900);
         await holdKeyAdvance(page, "ArrowRight", 450);
+        const reachedHitFeedback = await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return false;
+          const readState = () => {
+            try {
+              return JSON.parse(window.render_game_to_text());
+            } catch {
+              return null;
+            }
+          };
+          const hasHitFeedback = (state) => Boolean(
+            state &&
+            Number(state.score) > 0 &&
+            state.feedback &&
+            (
+              (state.feedback.lastBrickHitAge !== null && state.feedback.lastBrickHitAge <= 1.25) ||
+              (state.feedback.lastBrickBreakAge !== null && state.feedback.lastBrickBreakAge <= 1.25) ||
+              (state.feedback.lastTactileAge !== null && state.feedback.lastTactileAge <= 1.25)
+            )
+          );
+          for (let elapsed = 0; elapsed <= 5000; elapsed += 80) {
+            const state = readState();
+            if (hasHitFeedback(state)) return true;
+            if (elapsed < 5000) window.advanceTime(80);
+          }
+          return false;
+        });
+        if (!reachedHitFeedback) throw new Error("Brick Breaker capture did not reach brick feedback state");
       },
     },
     checkers: {
@@ -1368,6 +1395,25 @@ function getInteractionRecipe(slug) {
         if (!reached || reached.phase !== "homeRun") {
           throw new Error("Diamond Derby capture did not reach a settled home-run state");
         }
+      },
+    },
+    "beacon-bastion": {
+      name: "start, place a ward, pulse, and expose shades",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(260);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", code: "ArrowRight", bubbles: true, cancelable: true }));
+          window.advanceTime(520);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight", code: "ArrowRight", bubbles: true, cancelable: true }));
+          document.querySelector("#wardBtn")?.click();
+          window.advanceTime(1200);
+          document.querySelector("#pulseBtn")?.click();
+          window.advanceTime(420);
+        });
       },
     },
     "orbit-salvage": {
