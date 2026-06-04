@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Diamond Derby - Workshop Arcade</title>
+<!-- workshop-meta:start -->
+<meta name="description" content="Time your swing through five rounds of escalating neon home-run derby, reading the pitch and picking a launch angle to clear the fence." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/diamond-derby.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Diamond Derby — Workshop Arcade" />
+<meta property="og:description" content="Time your swing through five rounds of escalating neon home-run derby, reading the pitch and picking a launch angle to clear the fence." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/diamond-derby.html" />
+<meta property="og:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/diamond-derby.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Diamond Derby — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Diamond Derby — Workshop Arcade" />
+<meta name="twitter:description" content="Time your swing through five rounds of escalating neon home-run derby, reading the pitch and picking a launch angle to clear the fence." />
+<meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/diamond-derby.svg" />
+<!-- workshop-meta:end -->
+<!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Diamond Derby",
+  "description": "Time your swing through five rounds of escalating neon home-run derby, reading the pitch and picking a launch angle to clear the fence.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/diamond-derby.html",
+  "image": "https://jakethehoffer.github.io/Workshop-Arcade/covers/diamond-derby.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Sports",
+    "Arcade",
+    "Action"
+  ]
+}
+</script>
+<!-- workshop-jsonld:end -->
+<link rel="icon" href="data:," />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:#eaf6ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 440px at 8% -8%,rgba(45,212,191,.17),transparent 62%),radial-gradient(680px 420px at 96% 0%,rgba(99,102,241,.16),transparent 64%),linear-gradient(180deg,#071018,#050713 88%)}
+button{font:inherit}
+.app{width:min(980px,100%);display:grid;grid-template-rows:auto auto auto auto auto auto;align-content:start;gap:9px}
+.top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
+.help{max-width:560px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
+.hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{border-radius:10px;overflow:hidden;background:#06101d}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+.status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
+.touch{display:grid;grid-template-columns:repeat(4,minmax(0,116px));justify-content:center;gap:7px}.touch button{min-height:46px;padding:8px}
+.touch button.swing{border-color:transparent;background:linear-gradient(180deg,#fda4af,#fb7185);color:#3b0a17}
+.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:44px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<script src="workshop-runtime.js"></script>
+</head>
+<body>
+<main class="app" id="app" aria-label="Diamond Derby home-run timing game">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Diamond Derby</span></div>
+    <div class="help">Watch the pitch and the timing bar, then Swing (Space, Enter, or tap) as it hits the lit zone. Set launch angle with Up/Down — the middle angle carries farthest. Clear the fence for a home run. R retries the round, N starts a new derby.</div>
+  </header>
+  <section class="hud" aria-label="Game status">
+    <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">1/5</span></div>
+    <div class="pill"><span class="label">Pitch</span><span class="value" id="pitchValue">1/5</span></div>
+    <div class="pill"><span class="label">Homers</span><span class="value" id="homersValue">0/3</span></div>
+    <div class="pill"><span class="label">Launch</span><span class="value" id="launchValue">33&deg;</span></div>
+    <div class="pill"><span class="label">Longest</span><span class="value" id="longestValue">&mdash;</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">&mdash;</span></div>
+  </section>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Diamond Derby ballpark. A pitch travels toward home plate while a timing bar sweeps below it. Swing as the marker enters the lit contact zone, then watch the ball arc toward the outfield fence; clearing the fence is a home run."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Swing in the lit zone — Space or tap. Up/Down sets the launch angle.</div>
+  <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Diamond Derby ready. Round 1, pitch 1.</div>
+  <section class="bar" aria-label="Actions">
+    <button class="btn primary" id="newBtn" type="button">New Derby</button>
+    <button class="btn" id="retryBtn" type="button">Retry Round</button>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+  </section>
+  <section class="touch" aria-label="Touch controls">
+    <button type="button" class="swing" data-act="swing">Swing</button>
+    <button type="button" data-act="up">Angle &#9650;</button>
+    <button type="button" data-act="down">Angle &#9660;</button>
+    <button type="button" data-act="reset">Reset</button>
+  </section>
+</main>
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const STATS_KEY="diamond-derby.stats.v1",SOUND_KEY="diamond-derby.sound.v1";
+
+// Five deterministic rounds. Difficulty rises as the timing bar sweeps faster
+// (shorter real-time window) and the fence is pushed back.
+const ROUNDS=[
+  {pitchMs:1700,fence:370,quota:3,pitches:5},
+  {pitchMs:1520,fence:388,quota:3,pitches:5},
+  {pitchMs:1360,fence:401,quota:3,pitches:5},
+  {pitchMs:1220,fence:416,quota:4,pitches:6},
+  {pitchMs:1090,fence:432,quota:4,pitches:6}
+];
+const TOTAL=ROUNDS.length;
+// Timing-bar zones as a fraction of the sweep (0 release -> 1 plate). Same
+// shape every round; the real-time window shrinks because faster rounds sweep
+// the same fractions in less time.
+const ZONE_LO=0.60,ZONE_HI=0.82,PERF_LO=0.67,PERF_HI=0.76;
+// Launch angles in degrees. The middle option is the default and carries best.
+const ANGLES=[27,33,39],ANGLE_DEFAULT=1;
+const BASE_DIST=340;
+const angleMult=i=>[0.93,1.0,0.92][i]||0.9;
+const powerMult=g=>({perfect:1.3,good:1.1,early:0.85,late:0.85,whiff:0})[g]||0;
+
+const $=id=>document.getElementById(id);
+const els={round:$("roundValue"),pitch:$("pitchValue"),homers:$("homersValue"),launch:$("launchValue"),longest:$("longestValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn")};
+const saved=readStats();
+const state={round:0,pitch:1,homers:0,angle:ANGLE_DEFAULT,phase:"pitch",t:0,swingT:null,grade:null,distance:0,isHR:false,lastResult:"",longest:saved.longest,bestRound:saved.bestRound,sound:readSound(),feedback:"Swing in the lit zone — Space or tap.",flight:0,settle:0,time:0,flash:0};
+let audio=null;
+
+function cfg(){return ROUNDS[state.round]}
+function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
+function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{longest:Number(v.longest)||0,bestRound:Number(v.bestRound)||0}}catch(_){}return{longest:0,bestRound:0}}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({longest:state.longest,bestRound:state.bestRound}))}catch(_){}}
+function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
+function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
+function tone(kind){if(!state.sound)return;if(navigator.userActivation&&!navigator.userActivation.hasBeenActive)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={pitch:240,swing:300,homer:660,clear:520,win:740,bad:150}[kind]||260;o.type=kind==="homer"||kind==="win"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.2);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.22)}catch(_){}}
+
+function newDerby(){state.round=0;state.pitch=1;state.homers=0;state.angle=ANGLE_DEFAULT;startPitch();say("New derby — round 1. Clear "+cfg().quota+" homers to advance.");tone("pitch")}
+function retryRound(){state.pitch=1;state.homers=0;startPitch();say("Round "+(state.round+1)+" reset — need "+cfg().quota+" homers.");tone("pitch")}
+function startPitch(){state.phase="pitch";state.t=0;state.swingT=null;state.grade=null;state.distance=0;state.isHR=false;state.flight=0;state.settle=0;update();draw()}
+
+function gradeFor(t){if(t<ZONE_LO)return"early";if(t>=PERF_LO&&t<=PERF_HI)return"perfect";if(t<=ZONE_HI)return"good";return"late"}
+
+function swing(){if(state.phase!=="pitch")return;const g=gradeFor(state.t);state.grade=g;state.swingT=state.t;state.flash=1;
+  if(g==="early"||g==="late"){tone("bad")}else{tone("swing")}
+  state.distance=Math.round(BASE_DIST*powerMult(g)*angleMult(state.angle));
+  state.isHR=state.distance>=cfg().fence;
+  state.phase="flight";state.flight=0;state.settle=0;
+  say((g==="perfect"?"Perfect contact!":g==="good"?"Solid contact.":g==="early"?"Early — out in front.":"Late — under it.")+" Tracking the ball…");
+  update();draw()}
+
+function landBall(){const c=cfg();
+  if(state.isHR){state.phase="homeRun";state.homers++;if(state.distance>state.longest){state.longest=state.distance}state.bestRound=Math.max(state.bestRound,state.round+1);saveStats();state.lastResult="HOME RUN — "+state.distance+" ft!";tone("homer");vibe([24,18,40])}
+  else{state.phase="out";if(state.distance>=c.fence-30&&state.distance>0){state.lastResult="Robbed at the wall — "+state.distance+" ft."}else if(state.distance>0){state.lastResult="Flied out — "+state.distance+" ft."}else{state.lastResult="Whiff — swung through it."}tone("bad")}
+  state.settle=0;update();say(state.lastResult)}
+
+function nextPitch(){const c=cfg();
+  if(state.homers>=c.quota)return roundClear();
+  if(state.pitch>=c.pitches)return failDerby();
+  state.pitch++;startPitch();say("Pitch "+state.pitch+" of "+c.pitches+" — "+(c.quota-state.homers)+" more to clear round "+(state.round+1)+".")}
+
+function roundClear(){state.bestRound=Math.max(state.bestRound,state.round+1);saveStats();
+  if(state.round<TOTAL-1){state.phase="roundClear";state.settle=0;state.lastResult="Round "+(state.round+1)+" cleared! Loading round "+(state.round+2)+"…";tone("clear");vibe([22,22])}
+  else{winDerby()}
+  update();say(state.lastResult)}
+
+function advanceAfterClear(){state.round++;state.pitch=1;state.homers=0;startPitch();say("Round "+(state.round+1)+" — fence at "+cfg().fence+" ft, need "+cfg().quota+" homers.")}
+
+function failDerby(){state.phase="fail";state.bestRound=Math.max(state.bestRound,state.round+1);saveStats();state.lastResult="Derby over at round "+(state.round+1)+". Press R to retry or N for a new derby.";tone("bad");update();say(state.lastResult)}
+function winDerby(){state.phase="win";state.bestRound=TOTAL;saveStats();state.lastResult="Champion! All five rounds cleared. Press N to go again.";tone("win");vibe([30,30,50]);update();say(state.lastResult)}
+
+function changeAngle(d){const n=Math.max(0,Math.min(ANGLES.length-1,state.angle+d));if(n===state.angle)return;state.angle=n;update();draw();say("Launch angle "+ANGLES[state.angle]+"°"+(state.angle===ANGLE_DEFAULT?" — best carry.":"."))}
+
+function takeSwingInput(){if(state.phase==="pitch")swing()}
+
+function update(){const c=cfg();els.round.textContent=(state.round+1)+"/"+TOTAL;els.pitch.textContent=state.pitch+"/"+c.pitches;els.homers.textContent=state.homers+"/"+c.quota;els.launch.textContent=ANGLES[state.angle]+"°";els.longest.textContent=state.longest?String(state.longest):"—";els.best.textContent=state.bestRound?(state.bestRound+"/"+TOTAL):"—";els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+
+// ---- Rendering -------------------------------------------------------------
+const W=960,H=540,PX=176,PY=404,GY=250;
+function fenceX(dist){return PX+Math.min(1,dist/470)*706}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function ball(x,y,r,glow){if(glow){ctx.shadowColor="rgba(255,244,180,.8)";ctx.shadowBlur=18}ctx.fillStyle="#fdfbe9";ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle="rgba(220,80,80,.7)";ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(x-r*0.3,y,r*0.85,-0.9,0.9);ctx.stroke()}
+
+function draw(){
+  // sky + grass
+  const sky=ctx.createLinearGradient(0,0,0,GY);sky.addColorStop(0,"#0a2233");sky.addColorStop(1,"#0d3346");ctx.fillStyle=sky;ctx.fillRect(0,0,W,GY);
+  const grass=ctx.createLinearGradient(0,GY,0,H);grass.addColorStop(0,"#0c3a2a");grass.addColorStop(1,"#06231a");ctx.fillStyle=grass;ctx.fillRect(0,GY,W,H-GY);
+  // ambient neon glow
+  ctx.fillStyle="rgba(94,234,212,.05)";ctx.beginPath();ctx.arc(150,40,150,0,7);ctx.fill();ctx.fillStyle="rgba(99,102,241,.06)";ctx.beginPath();ctx.arc(840,30,160,0,7);ctx.fill();
+  // foul lines fanning from the plate
+  ctx.strokeStyle="rgba(180,230,255,.18)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(W-20,300);ctx.moveTo(PX,PY);ctx.lineTo(560,GY);ctx.stroke();
+  // outfield fence at this round's distance
+  const fx=fenceX(cfg().fence);ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(fx,GY+6);ctx.lineTo(fx,346);ctx.stroke();
+  ctx.fillStyle="rgba(94,234,212,.1)";roundRect(fx-3,GY+6,6,340-GY,3,true,false);
+  ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText(cfg().fence+" FT",fx,GY-2);
+  // home plate + batter silhouette
+  ctx.fillStyle="#dfeaf2";ctx.beginPath();ctx.moveTo(PX-13,PY+10);ctx.lineTo(PX+13,PY+10);ctx.lineTo(PX+13,PY+2);ctx.lineTo(PX,PY-6);ctx.lineTo(PX-13,PY+2);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#13283b";roundRect(PX-30,PY-72,18,70,6,true,false);ctx.beginPath();ctx.arc(PX-21,PY-82,11,0,7);ctx.fill();
+  ctx.strokeStyle="#7dd3fc";ctx.lineWidth=5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(PX-16,PY-58);ctx.lineTo(PX+14,PY-78-(state.flash>0?6:0));ctx.stroke();ctx.lineCap="butt";
+
+  if(state.phase==="pitch"){
+    // pitched ball travelling from the mound toward the plate, tied to meter t
+    const bx=PX+ (1-state.t)*600, by=200+state.t*(PY-78-200);
+    ball(bx,by,9,state.t>=ZONE_LO&&state.t<=ZONE_HI);
+  } else if(state.phase==="flight"){
+    const p=state.flight,sx=PX+12,sy=PY-78;
+    if(state.isHR){const ex=sx+Math.min(1,state.distance/520)*(W-30-sx),peak=240+Math.min(1,state.distance/520)*150;ball(sx+(ex-sx)*p,sy-peak*p,9,true);}
+    else{const ex=sx+Math.min(1,state.distance/Math.max(1,cfg().fence))*(fenceX(cfg().fence)-sx),arc=90+state.distance/3;ball(sx+(ex-sx)*p,sy-4*p*(1-p)*arc,9,false);}
+  } else if(state.phase==="homeRun"){
+    const ex=PX+12+Math.min(1,state.distance/520)*(W-30-(PX+12));ball(ex,GY-110,10,true);
+  }
+
+  // timing bar
+  const bw=W-220,bx0=110,by0=H-40,bh=18;
+  ctx.fillStyle="#06131f";roundRect(bx0,by0,bw,bh,9,true,false);ctx.strokeStyle="rgba(148,176,200,.3)";ctx.lineWidth=1.5;roundRect(bx0+.5,by0+.5,bw-1,bh-1,9,false,true);
+  ctx.fillStyle="rgba(45,212,191,.32)";roundRect(bx0+ZONE_LO*bw,by0,(ZONE_HI-ZONE_LO)*bw,bh,0,true,false);
+  ctx.fillStyle="rgba(110,247,255,.6)";roundRect(bx0+PERF_LO*bw,by0,(PERF_HI-PERF_LO)*bw,bh,0,true,false);
+  if(state.phase==="pitch"||state.phase==="flight"){const mt=state.phase==="flight"?(state.swingT||0):state.t;ctx.fillStyle="#f8fafc";ctx.fillRect(bx0+mt*bw-1.5,by0-4,3,bh+8)}
+  ctx.fillStyle="#9fb3c8";ctx.font="800 11px system-ui";ctx.textAlign="left";ctx.fillText("SWING",bx0,by0-7);ctx.textAlign="right";ctx.fillText("ANGLE "+ANGLES[state.angle]+"°",bx0+bw,by0-7);
+
+  // top-left HUD echo
+  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 18px system-ui";ctx.fillText("Round "+(state.round+1)+"/"+TOTAL,26,38);
+  ctx.fillStyle="#cfe6f5";ctx.font="800 13px system-ui";ctx.fillText("Homers "+state.homers+"/"+cfg().quota+"   ·   Pitch "+state.pitch+"/"+cfg().pitches,26,58);
+
+  // result / overlay banners
+  if(state.phase==="homeRun"){banner("HOME RUN","#5eead4",state.distance+" FEET")}
+  else if(state.phase==="out"){banner("OUT","#fca5a5",state.lastResult)}
+  else if(state.phase==="roundClear"){overlay("ROUND "+(state.round+1)+" CLEAR","#5eead4",state.lastResult)}
+  else if(state.phase==="win"){overlay("DERBY CHAMPION","#6ff7ff",state.lastResult)}
+  else if(state.phase==="fail"){overlay("DERBY OVER","#fca5a5",state.lastResult)}
+}
+function banner(big,color,sub){ctx.textAlign="center";ctx.fillStyle=color;ctx.font="950 40px system-ui";ctx.fillText(big,W/2,150);ctx.fillStyle="#dbeafe";ctx.font="800 16px system-ui";ctx.fillText(sub,W/2,178);ctx.textAlign="left"}
+function overlay(big,color,sub){ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,W,H);ctx.textAlign="center";ctx.fillStyle=color;ctx.font="950 48px system-ui";ctx.fillText(big,W/2,H/2-8);ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";ctx.fillText(sub,W/2,H/2+28);ctx.textAlign="left"}
+
+// ---- Clock -----------------------------------------------------------------
+function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/220);
+  if(state.phase==="pitch"){state.t+=dt/cfg().pitchMs;if(state.t>=1){state.t=1;state.grade="whiff";state.swingT=null;state.distance=0;state.isHR=false;state.phase="flight";state.flight=1;landBall()}}
+  else if(state.phase==="flight"){state.flight+=dt/900;if(state.flight>=1){state.flight=1;landBall()}}
+  else if(state.phase==="roundClear"){state.settle+=dt;if(state.settle>=850)advanceAfterClear()}
+  else if(state.phase==="homeRun"||state.phase==="out"){state.settle+=dt;if(state.settle>=900)nextPitch()}
+  draw()}
+window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){const c=cfg();return JSON.stringify({phase:state.phase,round:state.round+1,total:TOTAL,pitch:state.pitch,pitches:c.pitches,homers:state.homers,quota:c.quota,fence:c.fence,angle:ANGLES[state.angle],angleIndex:state.angle,meter:{t:Number(state.t.toFixed(4)),zoneLo:ZONE_LO,zoneHi:ZONE_HI,perfLo:PERF_LO,perfHi:PERF_HI},grade:state.grade,swingT:state.swingT===null?null:Number(state.swingT.toFixed(4)),distance:state.distance,isHomeRun:state.isHR,lastResult:state.lastResult,longest:state.longest,bestRound:state.bestRound,sound:state.sound,feedback:state.feedback,coordinateSystem:"meter.t 0(release)->1(plate); swing while t within [zoneLo,zoneHi], best inside [perfLo,perfHi]; distance ft >= fence clears for a home run; ANGLES middle index carries farthest"})};
+
+// ---- Input -----------------------------------------------------------------
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+  if(k===" "||k==="Enter")takeSwingInput();
+  else if(k==="ArrowUp"||k==="w"||k==="W")changeAngle(1);
+  else if(k==="ArrowDown"||k==="s"||k==="S")changeAngle(-1);
+  else if(k==="r"||k==="R")retryRound();
+  else if(k==="n"||k==="N")newDerby()});
+canvas.addEventListener("pointerdown",e=>{e.preventDefault();canvas.focus();takeSwingInput()});
+$("newBtn").addEventListener("click",newDerby);
+$("retryBtn").addEventListener("click",retryRound);
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("swing")});
+document.querySelectorAll("[data-act]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const a=btn.dataset.act;if(a==="swing")takeSwingInput();else if(a==="up")changeAngle(1);else if(a==="down")changeAngle(-1);else if(a==="reset")retryRound()}));
+
+newDerby();say("Swing in the lit zone — Space or tap. Up/Down sets the launch angle.");
+let last=performance.now();function frame(now){const dt=Math.min(80,Math.max(0,now-last));last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

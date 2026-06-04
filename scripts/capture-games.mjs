@@ -1330,6 +1330,46 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "diamond-derby": {
+      name: "time a swing for a home run",
+      freezePostAtEvent: true,
+      run: async (page) => {
+        const reached = await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return null;
+          const read = () => {
+            try {
+              return JSON.parse(window.render_game_to_text());
+            } catch (_) {
+              return null;
+            }
+          };
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          // Reset to a deterministic round 1 / pitch 1 first: real-time idle
+          // play before this evaluate can otherwise park the game in a settled
+          // fail state where no fresh pitch is ever in flight.
+          press("n", "KeyN");
+          let swung = false;
+          for (let elapsed = 0; elapsed <= 4200; elapsed += 40) {
+            const snap = read();
+            if (snap) {
+              if (!swung && snap.phase === "pitch" && snap.meter && snap.meter.t >= snap.meter.zoneLo) {
+                press(" ", "Space");
+                swung = true;
+              }
+              if (snap.phase === "homeRun") return snap;
+            }
+            window.advanceTime(40);
+          }
+          return read();
+        });
+        if (!reached || reached.phase !== "homeRun") {
+          throw new Error("Diamond Derby capture did not reach a settled home-run state");
+        }
+      },
+    },
     "orbit-salvage": {
       name: "launch the rescue skiff past the first gravity well",
       expectsStart: true,

@@ -26,6 +26,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Diamond Derby home-run derby (pass 100)
+
+Captured 2026-06-04 against a disposable local static server after adding **Diamond Derby**, a Sports/Arcade/Action swing-timing home-run derby, as the catalog's newest game. The strict audit covered the catalog plus 79 manifest games, 80 pages total. Diamond Derby is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 24.8 KB), comfortably inside the 100 KB / 3 request default budget. No named exception budgets, generated catalog surface formats, service-worker behavior beyond the shell revision bump, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 356 ms | 92 ms | 🟢 95 ms | 🟢 168.3 KB | 6 | 0 |
+| Lexica | 🟢 140 ms | 112 ms | 🟢 112 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 576 ms | 27 ms | 🟢 32 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 224 ms | 181 ms | 🟢 181 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 128 ms | 119 ms | 🟢 119 ms | 🟢 109.7 KB | 2 | 0 |
+| Diamond Derby | 🟢 864 ms | 737 ms | 🟢 737 ms | 🟢 24.8 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 80 URLs and `npm run audit:perf:local` reported `CI strict audit passed`. Diamond Derby measured 24.8 KB / 2 requests, leaving roughly 75 KB / 1 request of headroom under the default budget.
+
 ## Named game headroom guard (pass 99)
 
 Captured 2026-06-03 against a disposable local static server after adding named exception headroom enforcement to `npm run test:page-weight` and mechanically trimming Lexica plus Arcade Jump. Lexica now folds its answer bank into `words5.js`, removes the unused `answers5.js` request, and drops obsolete comments/blank lines; Arcade Jump drops low-risk inline whitespace. No gameplay rules, scoring, storage keys, diagnostics, capture recipes, manifest entries, generated metadata, service-worker behavior, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed. The strict audit covered the catalog plus 78 manifest games, 79 pages total.
