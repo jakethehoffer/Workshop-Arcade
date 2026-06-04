@@ -94,6 +94,18 @@ const ciEvidenceRequiredText = [
   'source revision provenance'
 ];
 
+const launchEvidenceCurrentSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md'
+];
+
+const launchEvidenceCurrentRequiredText = [
+  'npm run test:launch-evidence-current',
+  'test-results/publish-ready/<timestamp>/summary.json',
+  'test-results/live-pages-smoke/<timestamp>/summary.json',
+  'current clean HEAD'
+];
+
 const tagCoverageSurfaces = [
   'README.md',
   'ARCHITECTURE.md'
@@ -179,6 +191,16 @@ for (const file of ciEvidenceSurfaces) {
   }
 }
 
+for (const file of launchEvidenceCurrentSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of launchEvidenceCurrentRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing launch-evidence freshness contract text "${requiredText}"`);
+    }
+  }
+}
+
 for (const file of tagCoverageSurfaces) {
   const text = readText(file);
   if (!text) continue;
@@ -191,7 +213,7 @@ for (const file of tagCoverageSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:all']);
+const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:launch-evidence-current', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();

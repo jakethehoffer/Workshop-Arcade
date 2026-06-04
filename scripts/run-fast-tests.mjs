@@ -38,6 +38,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:publish-ready', 'Slow local publish-readiness aggregate — runs browser, render, and performance gates. Run via `npm run test:publish-ready`.'],
   ['test:runtime-storage', 'Browser-backed sandboxed runtime storage probe — needs Chromium. Run via `npm run test:runtime-storage`.'],
   ['test:live-pages', 'Post-deploy smoke test — hits GitHub Pages or WORKSHOP_ARCADE_URL. Run after Pages deploys via `npm run test:live-pages`.'],
+  ['test:launch-evidence-current', 'Local launch-evidence freshness check — depends on gitignored test-results evidence. Run after publish-ready + live-pages evidence via `npm run test:launch-evidence-current`.'],
   ['test:all', 'Composite that calls this runner + test:games; running it from inside the runner would recurse.'],
 ]);
 

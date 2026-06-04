@@ -39,6 +39,9 @@ if (scripts['test:publish-ready'] !== 'node scripts/run-publish-ready.mjs') {
 if (scripts['test:publish-ready-contract'] !== 'node scripts/check-publish-ready.mjs') {
   fail(`package.json: test:publish-ready-contract must run scripts/check-publish-ready.mjs, got ${JSON.stringify(scripts['test:publish-ready-contract'])}`);
 }
+if (scripts['test:launch-evidence-current'] !== 'node scripts/check-launch-evidence-current.mjs') {
+  fail(`package.json: test:launch-evidence-current must run scripts/check-launch-evidence-current.mjs, got ${JSON.stringify(scripts['test:launch-evidence-current'])}`);
+}
 
 const runnerPath = 'scripts/run-publish-ready.mjs';
 const runner = await readText(runnerPath);
@@ -89,18 +92,46 @@ for (const text of [
 }
 requireMatch(provenancePath, provenance, /catch\s*\(error\)/, 'best-effort non-throwing provenance collection');
 
+const launchEvidencePath = 'scripts/check-launch-evidence-current.mjs';
+const launchEvidence = await readText(launchEvidencePath);
+for (const text of [
+  'test-results',
+  'publish-ready',
+  'live-pages-smoke',
+  'summary.json',
+  'report.md',
+  "runGit(['rev-parse', 'HEAD'])",
+  "runGit(['status', '--short'])",
+  'websites',
+  'manifest.json',
+  'isDirty',
+  'statusShort',
+  'manifestGameCount',
+  'newestSlugs',
+  'Dirty: no',
+]) {
+  requireText(launchEvidencePath, launchEvidence, text, `launch evidence freshness snippet ${text}`);
+}
+requireMatch(launchEvidencePath, launchEvidence, /provenance\.commit !== expected\.commit/, 'commit freshness check');
+requireMatch(launchEvidencePath, launchEvidence, /provenance\.isDirty !== false/, 'clean evidence check');
+requireText(launchEvidencePath, launchEvidence, 'Commit: ${expected.shortCommit} (${expected.commit})', 'human report commit check');
+
 const fastRunnerPath = 'scripts/run-fast-tests.mjs';
 const fastRunner = await readText(fastRunnerPath);
 requireText(fastRunnerPath, fastRunner, "'test:publish-ready'", 'test:publish-ready exclusion');
 requireMatch(fastRunnerPath, fastRunner, /test:publish-ready[\s\S]*slow local publish-readiness/i, 'explicit slow-runner exclusion reason');
+requireText(fastRunnerPath, fastRunner, "'test:launch-evidence-current'", 'test:launch-evidence-current exclusion');
+requireMatch(fastRunnerPath, fastRunner, /test:launch-evidence-current[\s\S]*gitignored test-results evidence/i, 'explicit launch-evidence-current exclusion reason');
 
 const aggregatorPath = 'scripts/check-test-aggregator.mjs';
 const aggregator = await readText(aggregatorPath);
 requireText(aggregatorPath, aggregator, "'test:publish-ready'", 'allowed exclusion for test:publish-ready');
+requireText(aggregatorPath, aggregator, "'test:launch-evidence-current'", 'allowed exclusion for test:launch-evidence-current');
 
 const docsDriftPath = 'scripts/check-docs-drift.mjs';
 const docsDrift = await readText(docsDriftPath);
 requireText(docsDriftPath, docsDrift, "'test:publish-ready'", 'docs drift fast-gate exclusion for slow publish runner');
+requireText(docsDriftPath, docsDrift, "'test:launch-evidence-current'", 'docs drift fast-gate exclusion for launch evidence checker');
 
 const readmePath = 'README.md';
 const readme = await readText(readmePath);
@@ -109,13 +140,19 @@ requireText(readmePath, readme, 'npm run test:publish-ready');
 requireText(readmePath, readme, '44 fast validators');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/summary.json');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/report.md');
+requireText(readmePath, readme, 'npm run test:launch-evidence-current');
+requireText(readmePath, readme, 'test-results/live-pages-smoke/<timestamp>/summary.json');
+requireText(readmePath, readme, 'current clean HEAD');
 requireText(readmePath, readme, 'source revision provenance');
 
 const architecturePath = 'ARCHITECTURE.md';
 const architecture = await readText(architecturePath);
 requireText(architecturePath, architecture, 'test:publish-ready-contract');
 requireText(architecturePath, architecture, 'npm run test:publish-ready');
+requireText(architecturePath, architecture, 'npm run test:launch-evidence-current');
 requireText(architecturePath, architecture, 'test-results/publish-ready/<timestamp>/summary.json');
+requireText(architecturePath, architecture, 'test-results/live-pages-smoke/<timestamp>/summary.json');
+requireText(architecturePath, architecture, 'current clean HEAD');
 requireText(architecturePath, architecture, 'source revision provenance');
 
 const workflowPath = '.github/workflows/validate-catalog.yml';
