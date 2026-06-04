@@ -26,6 +26,19 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Chrome Convoy combat racer pass (pass 102)
+
+Captured 2026-06-04 against a disposable local static server after adding **Chrome Convoy**, a compact Racing/Shooter/Action combat racer (free-steer lane, heat-limited cannon, ram, five deterministic stretches), as the catalog's newest game and game #81. The strict audit covered the catalog plus 81 manifest games, 82 pages total. Chrome Convoy is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 31.9 KB), comfortably inside the 100 KB / 3 request default budget. It lifts the Racing and Shooter tags off the `MIN_TAG_COUNT=3` coverage floor to 4. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 72 ms | 95 ms | 🟢 98 ms | 🟢 168.5 KB | 6 | 0 |
+| Lexica | 🟢 36 ms | 35 ms | 🟢 35 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 460 ms | 11 ms | 🟢 12 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 80 ms | 54 ms | 🟢 54 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 104 ms | 81 ms | 🟢 81 ms | 🟢 109.7 KB | 2 | 0 |
+| Chrome Convoy | 🟢 32 ms | 11 ms | 🟢 11 ms | 🟢 31.9 KB | 2 | 0 |
+
 ## Beacon Bastion adventure defense pass (pass 101)
 
 Captured 2026-06-04 against a disposable local static server after adding **Beacon Bastion**, a compact Adventure/Defense/Strategy scout-and-beacon defense game, as the catalog's newest game. The strict audit covered the catalog plus 80 manifest games, 81 pages total. Beacon Bastion is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 23.0 KB), comfortably inside the 100 KB / 3 request default budget. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.

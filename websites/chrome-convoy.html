@@ -5,8 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Chrome Convoy — Workshop Arcade</title>
 <!-- workshop-meta:start -->
+<meta name="description" content="Steer a neon interceptor down a scrolling gauntlet, gun and ram the hostile convoy, and clear five deterministic stretches." />
+<meta name="theme-color" content="#0b0f14" />
+<link rel="canonical" href="https://jakethehoffer.github.io/Workshop-Arcade/websites/chrome-convoy.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Workshop Arcade" />
+<meta property="og:title" content="Chrome Convoy — Workshop Arcade" />
+<meta property="og:description" content="Steer a neon interceptor down a scrolling gauntlet, gun and ram the hostile convoy, and clear five deterministic stretches." />
+<meta property="og:url" content="https://jakethehoffer.github.io/Workshop-Arcade/websites/chrome-convoy.html" />
+<meta property="og:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/chrome-convoy.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Chrome Convoy — Workshop Arcade share card" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Chrome Convoy — Workshop Arcade" />
+<meta name="twitter:description" content="Steer a neon interceptor down a scrolling gauntlet, gun and ram the hostile convoy, and clear five deterministic stretches." />
+<meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og/chrome-convoy.svg" />
 <!-- workshop-meta:end -->
 <!-- workshop-jsonld:start -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Chrome Convoy",
+  "description": "Steer a neon interceptor down a scrolling gauntlet, gun and ram the hostile convoy, and clear five deterministic stretches.",
+  "url": "https://jakethehoffer.github.io/Workshop-Arcade/websites/chrome-convoy.html",
+  "image": "https://jakethehoffer.github.io/Workshop-Arcade/covers/chrome-convoy.svg",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "gamePlatform": "Web Browser",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Workshop Arcade",
+    "url": "https://jakethehoffer.github.io/Workshop-Arcade/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "genre": [
+    "Racing",
+    "Shooter",
+    "Action"
+  ]
+}
+</script>
 <!-- workshop-jsonld:end -->
 <link rel="icon" href="data:," />
 <style>
@@ -114,6 +165,7 @@
   </div>
 </div>
 
+<script src="workshop-runtime.js"></script>
 <script>
 "use strict";
 
@@ -402,6 +454,7 @@ function killRival(th, viaRam) {
   state.score += base * state.combo;
   state.combo = Math.min(9, state.combo + 1);
   state.lastEvent = viaRam ? "ram-kill" : "gun-kill";
+  if (!viaRam) setFeedback("Rival down!", 0.8);
   tone(viaRam ? 220 : 520, 0.09, 0.04, "square");
 }
 
@@ -629,6 +682,7 @@ function snapshot() {
     threats: state.threats.slice(0, 8).map((t) => ({ type: t.type, x: round(t.x), y: round(t.y), hp: t.hp })),
     shots: state.shots.length,
     sound: state.sound,
+    feedback: state.feedback, feedbackActive: state.feedbackTimer > 0,
     lastInput: state.lastInput, lastEvent: state.lastEvent,
     coordinateSystem: "playerX 0=left road edge ->1=right edge; distance 0->1 is progress through the current stretch; checkpoint counts stretches cleared; threats stream from y=0 (far) to y=1 (at player); fire destroys rivals, ram costs armor, do not destroy civilians; clear 5 stretches to win",
   };

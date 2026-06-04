@@ -555,6 +555,23 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
 
 function getInteractionRecipe(slug) {
   const recipes = {
+    "chrome-convoy": {
+      name: "start, hold the lane, and gun the first rival",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(1700);   // approach the first rival (spawns centered, aligned with the player)
+          window.advanceTime(300);    // first rival now near the top of the lane
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true }));
+          window.advanceTime(650);    // tracer intercepts the aligned rival -> gun-kill
+          document.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true, cancelable: true }));
+          window.advanceTime(150);
+        });
+      },
+    },
     "brick-breaker": {
       name: "start and launch ball",
       expectsStart: true,
