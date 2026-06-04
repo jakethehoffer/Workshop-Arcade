@@ -101,8 +101,10 @@ const launchEvidenceCurrentSurfaces = [
 
 const launchEvidenceCurrentRequiredText = [
   'npm run test:launch-evidence-current',
+  'npm run test:launch-evidence-refresh',
   'test-results/publish-ready/<timestamp>/summary.json',
   'test-results/live-pages-smoke/<timestamp>/summary.json',
+  'test-results/launch-evidence-refresh/<timestamp>/summary.json',
   'current clean HEAD'
 ];
 
@@ -213,7 +215,7 @@ for (const file of tagCoverageSurfaces) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:launch-evidence-current', 'test:all']);
+const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:pwa-runtime', 'test:publish-ready', 'test:runtime-storage', 'test:live-pages', 'test:launch-evidence-current', 'test:launch-evidence-refresh', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();
