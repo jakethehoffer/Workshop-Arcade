@@ -287,7 +287,7 @@ function drawPlayer() {
 /* ---- Cannon: fire, shot update, shot render ---- */
 function fire() {
   if (state.mode !== "playing" || state.overheated || state.fireCd > 0) return;
-  state.shots.push({ x: state.playerX, y: 0 });
+  state.shots.push({ x: state.playerX, y: 0.92 }); // shared threat y-space: 1=player row, 0=far end
   state.fireCd = FIRE_CD;
   state.heat = clamp(state.heat + HEAT_PER_SHOT, 0, 1);
   if (state.heat >= 1) { state.overheated = true; setFeedback("Overheated!", 1.0); tone(120, 0.18, 0.04, "sawtooth"); }
@@ -301,8 +301,8 @@ function updateShots(dt) {
   if (state.firing) fire();
   for (let i = state.shots.length - 1; i >= 0; i--) {
     const s = state.shots[i];
-    s.y += SHOT_SPEED * dt;          // travels up the road (toward far end)
-    if (s.y > 1.05) state.shots.splice(i, 1);
+    s.y -= SHOT_SPEED * dt;          // travels up the road toward the far end (y -> 0)
+    if (s.y < -0.05) state.shots.splice(i, 1);
   }
 }
 
@@ -310,8 +310,8 @@ function drawShots() {
   ctx.fillStyle = "#facc15";
   for (const s of state.shots) {
     const px = threatPx(s.x);
-    const py = lerp(PLAYER_Y - CAR_H / 2, TOP_Y, s.y);
-    ctx.fillRect(px - 2, py - 10, 4, 12);
+    const py = threatPy(s.y);
+    ctx.fillRect(px - 2, py - 6, 4, 12);
   }
 }
 
