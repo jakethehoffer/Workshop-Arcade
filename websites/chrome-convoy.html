@@ -461,17 +461,23 @@ function killRival(th, viaRam) {
 const NEAR_Y = 0.06;      // y half-window for "same row" hits
 function overlapX(ax, bx, halfW) { return Math.abs(threatPx(ax) - threatPx(bx)) < halfW; }
 
-function resolveCombat() {
-  // shots hit destructibles (rival/blocker)
+function resolveCombat(dt) {
+  // shots hit destructibles (rival/blocker); civilians absorb the shot and penalize
   for (let i = state.shots.length - 1; i >= 0; i--) {
     const s = state.shots[i];
     for (const th of state.threats) {
-      if (th.dead || (th.type !== "rival" && th.type !== "blocker")) continue;
+      if (th.dead || (th.type !== "rival" && th.type !== "blocker" && th.type !== "civ")) continue;
       if (Math.abs(th.y - s.y) < NEAR_Y && overlapX(th.x, s.x, CAR_W * 0.6)) {
         state.shots.splice(i, 1);
-        th.hp -= 1;
-        if (th.hp <= 0) { if (th.type === "rival") killRival(th, false); else { th.dead = true; state.score += 40; } }
-        else tone(300, 0.04, 0.02, "square");
+        if (th.type === "civ") {
+          state.combo = 1; state.score = Math.max(0, state.score - 60);
+          state.lastEvent = "civ-shot";
+          setFeedback("Gunned a civilian! Combo lost", 1.1); tone(180, 0.12, 0.03, "sine");
+        } else {
+          th.hp -= 1;
+          if (th.hp <= 0) { if (th.type === "rival") killRival(th, false); else { th.dead = true; state.score += 40; } }
+          else tone(300, 0.04, 0.02, "square");
+        }
         break;
       }
     }
@@ -488,19 +494,20 @@ function resolveCombat() {
   }
   // road-edge contact chips armor
   if ((state.playerX <= 0.001 || state.playerX >= 0.999) && state.mode === "playing") {
-    state.edgeTimer = (state.edgeTimer || 0) + 1;
-    if (state.edgeTimer % 30 === 0) damage(1, "Scraped the edge");
+    state.edgeTimer = (state.edgeTimer || 0) + dt;
+    if (state.edgeTimer >= 0.5) { state.edgeTimer = 0; damage(1, "Scraped the edge"); }
   } else state.edgeTimer = 0;
 }
 
 /* ---- Run lifecycle: reset/start, fail/win, stretch progression ---- */
+function focusCanvas() { canvas.focus({ preventScroll: true }); }
 function resetRun() {
   Object.assign(state, {
     mode: "playing", stretch: 0, dist: 0, checkpoint: 0,
     armor: MAX_ARMOR, heat: 0, overheated: false, cool: 0,
     score: 0, combo: 1, playerX: 0.5, vx: 0, steer: 0,
     firing: false, fireCd: 0, shots: [], threats: [], spawnIdx: 0,
-    feedback: "", feedbackTimer: 0, lastEvent: "start", nextId: 1,
+    feedback: "", feedbackTimer: 0, lastEvent: "start", nextId: 1, edgeTimer: 0,
   });
   setFeedback("Stretch 1 — go!", 1.4);
 }
@@ -508,7 +515,12 @@ function startRun() {
   ensureAudio();
   if (state.mode === "playing") return;
   resetRun();
-  canvas.focus({ preventScroll: true });
+  focusCanvas();
+}
+function restartRun() {
+  ensureAudio();
+  resetRun();
+  focusCanvas();
 }
 
 function commitBest() {
@@ -540,6 +552,7 @@ function update(dt) {
   // advance the stretch + scroll
   scrollY += dt * 520;
   state.dist = clamp(state.dist + dt * 1000 / STRETCH_MS, 0, 1);
+  state.score += dt * 6 * state.combo; // distance-traveled component (counted before a win commits best)
   if (state.dist >= 1 && state.mode === "playing") nextStretch();
   // steer with light momentum, clamp to road
   state.vx += state.steer * STEER_ACCEL * dt;
@@ -549,8 +562,7 @@ function update(dt) {
   updateShots(dt);
   updateSpawns();
   updateThreats(dt);
-  resolveCombat();
-  state.score += dt * 6 * state.combo; // distance-traveled component
+  resolveCombat(dt);
 }
 
 function draw() {
@@ -579,11 +591,12 @@ function drawOverlay() {
 }
 
 let lastFrame = 0;
+function isHelpOpen() { return els.helpOverlay.classList.contains("show"); }
 function loop(ts) {
   if (!lastFrame) lastFrame = ts;
   const dt = Math.min(0.05, Math.max(0, (ts - lastFrame) / 1000));
   lastFrame = ts;
-  if (state.mode === "playing") update(dt);
+  if (state.mode === "playing" && !isHelpOpen()) update(dt);
   draw();
   syncHud();
   requestAnimationFrame(loop);
@@ -599,7 +612,7 @@ document.addEventListener("keydown", (e) => {
   else if (k === " " || k === "arrowup" || k === "w") { e.preventDefault(); state.firing = true; }
   else if (k === "enter" || k === "r") {
     e.preventDefault();
-    if (state.mode !== "playing") startRun(); else if (k === "r") startRun();
+    if (state.mode !== "playing") startRun(); else if (k === "r") restartRun();
   }
 });
 document.addEventListener("keyup", (e) => {
@@ -610,7 +623,7 @@ document.addEventListener("keyup", (e) => {
 });
 
 els.start.addEventListener("click", startRun);
-els.restart.addEventListener("click", startRun);
+els.restart.addEventListener("click", restartRun);
 canvas.addEventListener("pointerdown", () => { if (state.mode !== "playing") startRun(); });
 
 /* ---- Touch controls ---- */
@@ -693,7 +706,7 @@ function stepMs(ms) {
   let elapsed = 0;
   while (elapsed < total) {
     const chunk = Math.min(40, total - elapsed) / 1000;
-    if (state.mode === "playing") update(chunk);
+    if (state.mode === "playing" && !isHelpOpen()) update(chunk);
     elapsed += chunk * 1000;
   }
   draw(); syncHud();
