@@ -609,7 +609,7 @@ function onSpotted() {                              // immediate (player stepped
   raiseAlarm(ALARM_SPOT, "spotted"); setFeedback("Spotted!", 1.2); tone(180, 0.16, 0.05, "sawtooth");
 }
 function resolveDetection() {                        // end of guards' turn
-  let spotted = false;
+  let spotted = false, alarmRaised = false;
   if (state.cones.has(key(state.agent.x, state.agent.y))) spotted = true;
   // bodies seen by a live cone → spike + that guard investigates
   for (const b of state.bodies) {
@@ -617,12 +617,13 @@ function resolveDetection() {                        // end of guards' turn
       b.seen = true;                                  // each body alarms once, when first discovered
       const g = nearestGuard(b);
       if (g && !g.invest) { g.invest = { x: b.x, y: b.y }; g.investTurns = INVEST_TURNS; }
+      alarmRaised = true;
       raiseAlarm(ALARM_SPOT, "body"); setFeedback("Body spotted!", 1.2); tone(160, 0.18, 0.05, "sawtooth");
       if (state.mode !== "playing") return;
     }
   }
   if (spotted) { raiseAlarm(ALARM_SPOT, "spotted"); setFeedback("Spotted!", 1.2); tone(180, 0.16, 0.05, "sawtooth"); }
-  else { state.alarm = Math.max(0, state.alarm - ALARM_DECAY); state.alert = state.alarm >= ALERT_THRESH; }
+  else if (!alarmRaised) { state.alarm = Math.max(0, state.alarm - ALARM_DECAY); state.alert = state.alarm >= ALERT_THRESH; } // no decay on a body-discovery turn
 }
 
 /* ---------- Tactical verbs: takedown, distract ---------- */
@@ -646,10 +647,10 @@ function armDistract() {
   state.pendingDistract = true; setFeedback("Distract: pick a direction.", 1.2);
 }
 function throwLure(dx, dy) {
-  state.pendingDistract = false;
-  if (state.distractsLeft <= 0 || state.ap < 1) return;
+  if (state.distractsLeft <= 0 || state.ap < 1) { state.pendingDistract = false; return; }
   const lx = state.agent.x + dx, ly = state.agent.y + dy;
-  if (isWall(lx, ly)) { setFeedback("Blocked — pick another direction.", 1.0); return; }
+  if (isWall(lx, ly)) { setFeedback("Blocked — pick another direction.", 1.0); return; } // stays armed: pick a valid direction
+  state.pendingDistract = false;
   state.lures.push({ x: lx, y: ly, age: 0 }); state.distractsLeft -= 1; state.ap -= 1;
   state.lastEvent = "distract"; setFeedback("Lure thrown.", 1.0); tone(520, 0.07, 0.03);
   if (state.ap <= 0) endTurn();
