@@ -26,6 +26,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Cipher Cadence word-rhythm pass (pass 103)
+
+Captured 2026-06-05 against a disposable local static server after adding **Cipher Cadence**, a compact Word/Rhythm/Puzzle timing game where players select the next cipher word from four beat lanes and confirm on the pulse across five deterministic phrase tracks, as game #82. The strict audit covered the catalog plus 82 manifest games, 83 pages total. Cipher Cadence is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 33.5 KB), comfortably inside the 100 KB / 3 request default budget. It lifts the Word and Rhythm tags above the `MIN_TAG_COUNT=3` coverage floor to 4. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 128 ms | 104 ms | 🟢 105 ms | 🟢 169.6 KB | 6 | 0 |
+| Lexica | 🟢 48 ms | 40 ms | 🟢 41 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 476 ms | 13 ms | 🟢 15 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 112 ms | 72 ms | 🟢 72 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 116 ms | 94 ms | 🟢 94 ms | 🟢 109.7 KB | 2 | 0 |
+| Cipher Cadence | 🟢 48 ms | 32 ms | 🟢 32 ms | 🟢 33.5 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 83 URLs and `npm run audit:perf:local` reported `CI strict audit passed`. `npm run test:page-weight` reports the catalog local shell at 179.3 KB / 200 KB across 9/18 files, with 20.7 KB / 9 files headroom.
+
 ## Chrome Convoy combat racer pass (pass 102)
 
 Captured 2026-06-04 against a disposable local static server after adding **Chrome Convoy**, a compact Racing/Shooter/Action combat racer (free-steer lane, heat-limited cannon, ram, five deterministic stretches), as the catalog's newest game and game #81. The strict audit covered the catalog plus 81 manifest games, 82 pages total. Chrome Convoy is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 31.9 KB), comfortably inside the 100 KB / 3 request default budget. It lifts the Racing and Shooter tags off the `MIN_TAG_COUNT=3` coverage floor to 4. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.

@@ -572,6 +572,32 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "cipher-cadence": {
+      name: "start and catch the first cipher word on beat",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          };
+          document.querySelector("#startBtn")?.click();
+          window.advanceTime(560);
+          let lane = 1;
+          try {
+            const state = JSON.parse(window.render_game_to_text());
+            const expected = Array.isArray(state.visibleWords) ? state.visibleWords.find((word) => word && word.isExpected) : null;
+            lane = expected ? expected.lane : 1;
+          } catch {}
+          press(String(lane), `Digit${lane}`);
+          window.advanceTime(90);
+          press(" ", "Space");
+          window.advanceTime(220);
+        });
+      },
+    },
     "brick-breaker": {
       name: "start and launch ball",
       expectsStart: true,
