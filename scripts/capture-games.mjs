@@ -555,6 +555,20 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
 
 function getInteractionRecipe(slug) {
   const recipes = {
+    "nightwire": {
+      name: "start and infiltrate the first grid",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const press = (key) => document.dispatchEvent(new KeyboardEvent("keydown", { key, code: key, bubbles: true, cancelable: true }));
+          document.querySelector("#startBtn")?.click();
+          press("ArrowRight"); press("ArrowRight");   // step into the grid (turn ends, the guard patrols)
+          window.advanceTime(250);                    // keep the "Stage 1" status active for the feedback frame
+        });
+      },
+    },
     "chrome-convoy": {
       name: "start, hold the lane, and gun the first rival",
       expectsStart: true,
