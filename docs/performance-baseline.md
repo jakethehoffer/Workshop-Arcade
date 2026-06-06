@@ -26,6 +26,21 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Crosswire Clues mini-crossword pass (pass 105)
+
+Captured 2026-06-06 against a disposable local static server after adding **Crosswire Clues**, a compact Word/Puzzle/Strategy mini-crossword game where players fill five deterministic crossing word-square grids, check entries, and spend limited hints while preserving integrity, as game #84. The strict audit covered the catalog plus 84 manifest games, 85 pages total. Crosswire Clues is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 34.3 KB), comfortably inside the 100 KB / 3 request default budget. It adds a distinct crossword-style word mechanic and lifts the Word tag from 4 to 5. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 120 ms | 101 ms | 🟢 102 ms | 🟢 170.3 KB | 6 | 0 |
+| Lexica | 🟢 44 ms | 40 ms | 🟢 40 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 456 ms | 12 ms | 🟢 13 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 57 ms | 🟢 57 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 108 ms | 89 ms | 🟢 89 ms | 🟢 109.7 KB | 2 | 0 |
+| Crosswire Clues | 🟢 44 ms | 15 ms | 🟢 15 ms | 🟢 34.3 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 85 URLs and `npm run audit:perf:local` reported `CI strict audit passed`. `npm run test:page-weight` reports the catalog local shell at 180.0 KB / 200 KB across 9/18 files, with 20.0 KB / 9 files headroom after trimming the Crosswire Clues cover SVG.
+
 ## Nightwire tactical stealth pass (pass 104)
 
 Captured 2026-06-05 against a disposable local static server after adding **Nightwire**, a turn-based tactical-stealth game (single infiltrator, 2-AP turns, silent takedowns + distractions, deterministic vision-cone patrols, an alarm meter, and five hand-authored stages) as game #83. The strict audit covered the catalog plus 83 manifest games, 84 pages total. Nightwire is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 36.6 KB), comfortably inside the 100 KB / 3 request default budget. It lifts the Tactics and Stealth tags off the `MIN_TAG_COUNT=3` coverage floor to 4 — the final floor-clearing pass, after which every public tag sits at >= 4. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.

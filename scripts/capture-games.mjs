@@ -555,6 +555,24 @@ async function runInteraction(page, game, viewport, preRenderText, issues) {
 
 function getInteractionRecipe(slug) {
   const recipes = {
+    "crosswire-clues": {
+      name: "start and solve the first crossing clue",
+      expectsStart: true,
+      freezePostAtEvent: true,
+      run: async (page) => {
+        await page.evaluate(() => {
+          if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+          const press = (key, code = key) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          };
+          document.querySelector("#startBtn")?.click();
+          for (const letter of ["P", "A", "C", "E"]) press(letter, `Key${letter}`);
+          press("Enter", "Enter");
+          window.advanceTime(240);
+        });
+      },
+    },
     "nightwire": {
       name: "start and infiltrate the first grid",
       expectsStart: true,
