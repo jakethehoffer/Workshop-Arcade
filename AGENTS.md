@@ -12,6 +12,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\.ai-sync\ai-sync.ps1"
 
 Read `.ai-sync/state.md` and `.ai-sync/handoff.md` before making assumptions about prior work. If `.ai-sync/claude-context.md` exists, read it as imported Claude Code context.
 
+## Workshop Arcade Runbook
+
+Before implementation work, read `CLAUDE.md` for the shared Workshop Arcade agent runbook. It records the current catalog state, direct-main/no-PR convention, new-game footprint, service-worker revision rule, and verification/evidence gates used by both Claude and Codex.
+
 ## Shared Handoff
 
 Before finishing meaningful work, update the shared state:

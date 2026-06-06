@@ -121,6 +121,32 @@ const tagCoverageRequiredText = [
   'CATEGORY_ORDER'
 ];
 
+const agentRunbookRequiredText = [
+  '.ai-sync',
+  'no PR',
+  '83 games',
+  'every public tag is >= 4',
+  'workshop-runtime.js',
+  'window.render_game_to_text()',
+  'window.advanceTime(ms)',
+  'validate-catalog.ps1 -Fix',
+  'npm run inject:meta',
+  'npm run build:sitemap',
+  'npm run build:feed',
+  'npm run build:og-images',
+  'SHELL_REVISION',
+  'scripts/capture-games.mjs',
+  'docs/performance-baseline.md',
+  'progress.md',
+  'npm test',
+  'npm run test:games',
+  'npm run capture:games:ci',
+  'npm run audit:perf:local',
+  'npm run test:current-head-workflows',
+  'npm run test:launch-evidence-refresh',
+  'git diff --check'
+];
+
 const issues = [];
 
 function readText(file) {
@@ -213,6 +239,20 @@ for (const file of tagCoverageSurfaces) {
       issues.push(`${file}: missing tag-coverage contract text "${requiredText}"`);
     }
   }
+}
+
+const agentRunbookText = readText('CLAUDE.md');
+if (agentRunbookText) {
+  for (const requiredText of agentRunbookRequiredText) {
+    if (!agentRunbookText.includes(requiredText)) {
+      issues.push(`CLAUDE.md: missing agent runbook text "${requiredText}"`);
+    }
+  }
+}
+
+const agentsText = readText('AGENTS.md');
+if (agentsText && !agentsText.includes('CLAUDE.md')) {
+  issues.push('AGENTS.md: must point Codex agents to CLAUDE.md for the shared Workshop Arcade runbook');
 }
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
@@ -422,4 +462,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log(`Docs drift check passed for ${humanValidationSurfaces.length} validation surfaces.`);
+console.log(`Docs drift check passed for ${humanValidationSurfaces.length} validation surfaces plus CLAUDE.md agent runbook.`);
