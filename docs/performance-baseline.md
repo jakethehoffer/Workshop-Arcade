@@ -28,7 +28,7 @@ CI budgets:
 
 ## 100-game expansion pass (pass 106)
 
-Captured 2026-06-07 against a disposable local static server after adding 16 compact games: **Signal Loom**, **Crown Circuit**, **Forge Freighter**, **Aster Vault**, **Tempo Tunnels**, **Canopy Courier**, **Shard Sheriff**, **Ledger Lanes**, **Moonbase Mutex**, **Drift Loom**, **Bulb Brigade**, **Rune Roster**, **Velvet Heist**, **Pocket Orchard**, **Comet Cartel**, and **Finale Foundry**. The strict audit covered the catalog plus 100 manifest games, 101 pages total. The new games share a compact standalone grid engine with `workshop-runtime.js`, keyboard/touch controls, sound/fullscreen controls, defensive storage, `render_game_to_text()`, and deterministic `advanceTime(ms)` diagnostics. Each new page audited at 29.7-29.8 KB / 2 requests, comfortably inside the 100 KB / 3 request default budget. No custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed.
+Captured 2026-06-07 against a disposable local static server after adding 16 compact games: **Signal Loom**, **Crown Circuit**, **Forge Freighter**, **Aster Vault**, **Tempo Tunnels**, **Canopy Courier**, **Shard Sheriff**, **Ledger Lanes**, **Moonbase Mutex**, **Drift Loom**, **Bulb Brigade**, **Rune Roster**, **Velvet Heist**, **Pocket Orchard**, **Comet Cartel**, and **Finale Foundry**. The strict audit covered the catalog plus 100 manifest games, 101 pages total. The initial expansion used compact standalone shells with `workshop-runtime.js`, keyboard/touch controls, sound/fullscreen controls, defensive storage, `render_game_to_text()`, and deterministic `advanceTime(ms)` diagnostics. Follow-up quality slices have since replaced the highest-mismatch shared-grid entries with bespoke mechanics while keeping the same standalone footprint and budgets. The latest local audit for this slice measured **Aster Vault** at 23.1 KB / 2 requests, **Canopy Courier** at 22.9 KB / 2 requests, and **Shard Sheriff** at 22.3 KB / 2 requests, all comfortably inside the 100 KB / 3 request default budget. No custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed.
 
 The catalog fallback was compacted to stop duplicating manifest subtitles in `index.html`; runtime catalog data still comes from `websites/manifest.json`. This kept the static page-weight gate at its required floor while the manifest reached 100 games: `npm run test:page-weight` reports the catalog local shell at 180.0 KB / 200 KB across 9/18 files, with 20.0 KB / 9 files headroom.
 
@@ -42,6 +42,9 @@ The catalog fallback was compacted to stop duplicating manifest subtitles in `in
 | Signal Loom | 🟢 60 ms | 44 ms | 🟢 44 ms | 🟢 29.8 KB | 2 | 0 |
 | Crown Circuit | 🟢 48 ms | 21 ms | 🟢 21 ms | 🟢 29.8 KB | 2 | 0 |
 | Forge Freighter | 🟢 44 ms | 17 ms | 🟢 17 ms | 🟢 29.8 KB | 2 | 0 |
+| Aster Vault | 🟢 44 ms | 13 ms | 🟢 13 ms | 🟢 23.1 KB | 2 | 0 |
+| Canopy Courier | 🟢 40 ms | 13 ms | 🟢 13 ms | 🟢 22.9 KB | 2 | 0 |
+| Shard Sheriff | 🟢 48 ms | 17 ms | 🟢 18 ms | 🟢 22.3 KB | 2 | 0 |
 | Finale Foundry | 🟢 52 ms | 36 ms | 🟢 37 ms | 🟢 29.8 KB | 2 | 0 |
 
 The strict audit reported zero console/page errors across all 101 URLs and `npm run audit:perf:local` reported `CI strict audit passed`. `npm run capture:games:ci` covered 200 rendered desktop/mobile surfaces with max render score 0 after tightening the new games' mobile control order and action-pad label sizing.

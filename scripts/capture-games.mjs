@@ -2166,10 +2166,10 @@ function getInteractionRecipe(slug) {
     "signal-loom": expansionGridRecipe(),
     "crown-circuit": crownCircuitRecipe(),
     "forge-freighter": forgeFreighterRecipe(),
-    "aster-vault": expansionGridRecipe(),
+    "aster-vault": asterVaultRecipe(),
     "tempo-tunnels": tempoTunnelsRecipe(),
-    "canopy-courier": expansionGridRecipe(),
-    "shard-sheriff": expansionGridRecipe(),
+    "canopy-courier": canopyCourierRecipe(),
+    "shard-sheriff": shardSheriffRecipe(),
     "ledger-lanes": ledgerLanesRecipe(),
     "moonbase-mutex": expansionGridRecipe(),
     "drift-loom": driftLoomRecipe(),
@@ -2202,6 +2202,115 @@ function expansionGridRecipe() {
         window.advanceTime(180);
         press("ArrowRight", "ArrowRight", 140);
         press(" ", "Space", 160);
+        window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function asterVaultRecipe() {
+  return {
+    name: "start, thrust toward relics, and brake near the anchor",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const keyDown = (key, code = key) => document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+        const keyUp = (key, code = key) => document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+        const pulse = (keys, holdMs = 120) => {
+          for (const [key, code] of keys) keyDown(key, code);
+          window.advanceTime(holdMs);
+          for (const [key, code] of keys) keyUp(key, code);
+          window.advanceTime(50);
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        for (let i = 0; i < 16; i += 1) {
+          const snap = read();
+          if (snap.mode !== "playing") break;
+          const rec = snap.recommended;
+          const keys = [];
+          if (rec?.thrustX < 0) keys.push(["ArrowLeft", "ArrowLeft"]);
+          if (rec?.thrustX > 0) keys.push(["ArrowRight", "ArrowRight"]);
+          if (rec?.thrustY < 0) keys.push(["ArrowUp", "ArrowUp"]);
+          if (rec?.thrustY > 0) keys.push(["ArrowDown", "ArrowDown"]);
+          if (rec?.brake || snap.ship?.speed > 110) {
+            document.querySelector("#brakeBtn")?.click();
+            window.advanceTime(90);
+          }
+          pulse(keys.length ? keys : [["ArrowRight", "ArrowRight"]], 120);
+          if (read().relics?.some((relic) => relic.taken)) break;
+        }
+      });
+    },
+  };
+}
+
+function canopyCourierRecipe() {
+  return {
+    name: "start, lane-match parcels, flare, and avoid branches",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const press = (key, code = key) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(55);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(35);
+        };
+        const setLane = (lane) => {
+          for (let guard = 0; guard < 6; guard += 1) {
+            const snap = read();
+            if (snap.lane === lane) return;
+            press(snap.lane < lane ? "ArrowDown" : "ArrowUp", snap.lane < lane ? "ArrowDown" : "ArrowUp");
+          }
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        for (let i = 0; i < 18; i += 1) {
+          const snap = read();
+          if (snap.mode !== "flying") break;
+          const rec = snap.recommended;
+          if (rec?.lane != null) setLane(rec.lane);
+          if (rec?.distance > 80) window.advanceTime(Math.min(220, rec.distance * 2));
+          else window.advanceTime(120);
+          if (rec?.command === "avoid") document.querySelector("#flareBtn")?.click();
+          if (read().parcels > 0) break;
+        }
+      });
+    },
+  };
+}
+
+function shardSheriffRecipe() {
+  return {
+    name: "start, align the recommended ricochet angle, and fire",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const press = (key, code = key) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(45);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(25);
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(160);
+        for (let guard = 0; guard < 30; guard += 1) {
+          const snap = read();
+          const angle = snap.recommended?.angle ?? 0;
+          if (Math.abs(snap.aim - angle) <= 1) break;
+          press(snap.aim < angle ? "ArrowRight" : "ArrowLeft", snap.aim < angle ? "ArrowRight" : "ArrowLeft");
+        }
+        press(" ", "Space");
         window.advanceTime(220);
       });
     },
@@ -3031,7 +3140,7 @@ async function writeContactSheet(summary) {
 async function captureContactSheet(browserInstance) {
   const page = await browserInstance.newPage({ viewport: { width: 1500, height: 1200 } });
   await page.goto(pathToFileURL(path.join(outputRoot, "contact-sheet.html")).href, { waitUntil: "domcontentloaded" });
-  await page.screenshot({ path: path.join(outputRoot, "contact-sheet.png"), fullPage: true });
+  await page.screenshot({ path: path.join(outputRoot, "contact-sheet.png"), fullPage: true, timeout: 120000 });
   await page.close();
 }
 
