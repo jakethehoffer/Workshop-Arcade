@@ -2165,7 +2165,7 @@ function getInteractionRecipe(slug) {
     },
     "signal-loom": expansionGridRecipe(),
     "crown-circuit": crownCircuitRecipe(),
-    "forge-freighter": expansionGridRecipe(),
+    "forge-freighter": forgeFreighterRecipe(),
     "aster-vault": expansionGridRecipe(),
     "tempo-tunnels": tempoTunnelsRecipe(),
     "canopy-courier": expansionGridRecipe(),
@@ -2176,7 +2176,7 @@ function getInteractionRecipe(slug) {
     "bulb-brigade": expansionGridRecipe(),
     "rune-roster": runeRosterRecipe(),
     "velvet-heist": expansionGridRecipe(),
-    "pocket-orchard": expansionGridRecipe(),
+    "pocket-orchard": pocketOrchardRecipe(),
     "comet-cartel": cometCartelRecipe(),
     "finale-foundry": expansionGridRecipe(),
   };
@@ -2203,6 +2203,72 @@ function expansionGridRecipe() {
         press("ArrowRight", "ArrowRight", 140);
         press(" ", "Space", 160);
         window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function forgeFreighterRecipe() {
+  return {
+    name: "start, load recommended cargo, and launch a freighter route",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const click = (selector) => document.querySelector(selector)?.click();
+        click("#startBtn");
+        window.advanceTime(180);
+        for (let i = 0; i < 10; i += 1) {
+          const snap = read();
+          const rec = snap.recommended;
+          if (!rec || snap.mode !== "loading") break;
+          if (rec.command === "load") {
+            click('[data-cargo="' + rec.cargoIndex + '"]');
+            click('[data-bay="' + rec.bayIndex + '"]');
+            window.advanceTime(80);
+            click("#loadBtn");
+          } else if (rec.command === "launch") {
+            click("#launchBtn");
+            break;
+          }
+          window.advanceTime(180);
+        }
+      });
+    },
+  };
+}
+
+function pocketOrchardRecipe() {
+  return {
+    name: "start, follow orchard recommendations, and sell an order",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const click = (selector) => document.querySelector(selector)?.click();
+        click("#startBtn");
+        window.advanceTime(180);
+        for (let i = 0; i < 18; i += 1) {
+          const snap = read();
+          const rec = snap.recommended;
+          if (!rec || snap.mode !== "planning") break;
+          if (rec.plotIndex != null) click('[data-plot="' + rec.plotIndex + '"]');
+          if (rec.cropIndex != null) click('[data-crop="' + rec.cropIndex + '"]');
+          if (rec.orderIndex != null) click('[data-order="' + rec.orderIndex + '"]');
+          window.advanceTime(70);
+          if (rec.command === "plant") click("#plantBtn");
+          else if (rec.command === "water") click("#waterBtn");
+          else if (rec.command === "harvest") click("#harvestBtn");
+          else if (rec.command === "sell") click("#sellBtn");
+          else if (rec.command === "nextDay") click("#nextBtn");
+          else break;
+          window.advanceTime(170);
+          if (read().lastEvent === "sell") break;
+        }
       });
     },
   };
