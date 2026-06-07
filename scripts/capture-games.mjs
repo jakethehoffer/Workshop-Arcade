@@ -2164,10 +2164,10 @@ function getInteractionRecipe(slug) {
       },
     },
     "signal-loom": expansionGridRecipe(),
-    "crown-circuit": expansionGridRecipe(),
+    "crown-circuit": crownCircuitRecipe(),
     "forge-freighter": expansionGridRecipe(),
     "aster-vault": expansionGridRecipe(),
-    "tempo-tunnels": expansionGridRecipe(),
+    "tempo-tunnels": tempoTunnelsRecipe(),
     "canopy-courier": expansionGridRecipe(),
     "shard-sheriff": expansionGridRecipe(),
     "ledger-lanes": ledgerLanesRecipe(),
@@ -2203,6 +2203,101 @@ function expansionGridRecipe() {
         press("ArrowRight", "ArrowRight", 140);
         press(" ", "Space", 160);
         window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function crownCircuitRecipe() {
+  return {
+    name: "start, follow recommended circuit claims, and take control",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const press = (key, code = key) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(70);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(45);
+        };
+        const read = () => JSON.parse(window.render_game_to_text());
+        const moveCursorTo = (target) => {
+          for (let guard = 0; guard < 18; guard += 1) {
+            const snap = read();
+            if (!snap.cursor || snap.cursor.x === target.x && snap.cursor.y === target.y) return;
+            if (snap.cursor.x < target.x) press("ArrowRight", "ArrowRight");
+            else if (snap.cursor.x > target.x) press("ArrowLeft", "ArrowLeft");
+            else if (snap.cursor.y < target.y) press("ArrowDown", "ArrowDown");
+            else if (snap.cursor.y > target.y) press("ArrowUp", "ArrowUp");
+          }
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        for (let i = 0; i < 18; i += 1) {
+          const snap = read();
+          if (snap.mode !== "playing") break;
+          const target = snap.recommended?.target;
+          if (!target) {
+            press("e", "KeyE");
+            continue;
+          }
+          moveCursorTo(target);
+          press("Enter", "Enter");
+          window.advanceTime(150);
+        }
+      });
+    },
+  };
+}
+
+function tempoTunnelsRecipe() {
+  return {
+    name: "start, lane-match beat events, sync notes, and dodge traps",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const press = (key, code = key) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(45);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(25);
+        };
+        const read = () => JSON.parse(window.render_game_to_text());
+        const setLane = (lane) => {
+          for (let guard = 0; guard < 8; guard += 1) {
+            const snap = read();
+            if (snap.lane === lane) return;
+            press(snap.lane < lane ? "ArrowDown" : "ArrowUp", snap.lane < lane ? "ArrowDown" : "ArrowUp");
+          }
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(160);
+        for (let i = 0; i < 12; i += 1) {
+          const snap = read();
+          if (snap.mode !== "playing") break;
+          const event = snap.nextEvent;
+          if (!event) {
+            window.advanceTime(240);
+            continue;
+          }
+          setLane(event.recommendedLane);
+          const updated = read().nextEvent;
+          if (!updated) {
+            window.advanceTime(220);
+            continue;
+          }
+          if (updated.msUntilWindow > 70) window.advanceTime(Math.max(30, updated.msUntilWindow - 20));
+          if (updated.type === "trap") {
+            window.advanceTime(updated.windowMs + 80);
+          } else {
+            press(" ", "Space");
+            window.advanceTime(100);
+          }
+        }
       });
     },
   };
