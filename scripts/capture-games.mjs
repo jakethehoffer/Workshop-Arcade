@@ -2170,11 +2170,11 @@ function getInteractionRecipe(slug) {
     "tempo-tunnels": expansionGridRecipe(),
     "canopy-courier": expansionGridRecipe(),
     "shard-sheriff": expansionGridRecipe(),
-    "ledger-lanes": expansionGridRecipe(),
+    "ledger-lanes": ledgerLanesRecipe(),
     "moonbase-mutex": expansionGridRecipe(),
     "drift-loom": expansionGridRecipe(),
     "bulb-brigade": expansionGridRecipe(),
-    "rune-roster": expansionGridRecipe(),
+    "rune-roster": runeRosterRecipe(),
     "velvet-heist": expansionGridRecipe(),
     "pocket-orchard": expansionGridRecipe(),
     "comet-cartel": expansionGridRecipe(),
@@ -2202,6 +2202,49 @@ function expansionGridRecipe() {
         window.advanceTime(180);
         press("ArrowRight", "ArrowRight", 140);
         press(" ", "Space", 160);
+        window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function ledgerLanesRecipe() {
+  return {
+    name: "start, draft an order, and settle the first market",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        document.querySelector("#draftBtn")?.click();
+        window.advanceTime(180);
+        document.querySelector("#settleBtn")?.click();
+        window.advanceTime(260);
+      });
+    },
+  };
+}
+
+function runeRosterRecipe() {
+  return {
+    name: "start, spell a valid locked-rune word, and submit it",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const press = (key, code = key) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(70);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(35);
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        for (const key of ["t", "o", "n", "e"]) press(key, `Key${key.toUpperCase()}`);
+        press("Enter", "Enter");
         window.advanceTime(220);
       });
     },
