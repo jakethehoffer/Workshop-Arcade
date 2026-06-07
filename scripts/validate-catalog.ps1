@@ -52,7 +52,6 @@ function Get-FallbackJson($Games) {
     $items = @(
       (ConvertTo-Json -InputObject $id -Compress),
       (ConvertTo-Json -InputObject (Get-JsonValue $game "title") -Compress),
-      (ConvertTo-Json -InputObject (Get-JsonValue $game "subtitle") -Compress),
       (ConvertTo-Json -InputObject ([object[]]@($game.tags)) -Compress),
       (ConvertTo-Json -InputObject (Get-JsonValue $game "addedAt") -Compress),
       ([string][int]$game.popularity)
@@ -79,7 +78,7 @@ function Get-JsSingleQuotedString([string]$Value) {
 function Update-FallbackCatalog($Games, [string]$IndexPath) {
   $indexText = Get-Content -Raw -LiteralPath $IndexPath
   $fallbackJson = Get-FallbackJson $Games
-  $fallback = "const FALLBACK_GAMES = JSON.parse($(Get-JsSingleQuotedString $fallbackJson)).map(r=>({id:r[0],title:r[1],subtitle:r[2],tags:r[3],slug:r[0],url:r[6]||'websites/'+r[0]+'.html',cover:'covers/'+(r[7]||r[0])+'.svg',addedAt:r[4],popularity:r[5]}));"
+  $fallback = "const FALLBACK_GAMES = JSON.parse($(Get-JsSingleQuotedString $fallbackJson)).map(r=>({id:r[0],title:r[1],subtitle:'',tags:r[2],slug:r[0],url:r[5]||'websites/'+r[0]+'.html',cover:'covers/'+(r[6]||r[0])+'.svg',addedAt:r[3],popularity:r[4]}));"
   $pattern = '(?s)const FALLBACK_GAMES = (?:JSON\.parse\(''.*?''\)(?:\.map\([^;]+?\))?|\[.*?\]);'
   if ($indexText -notmatch $pattern) {
     Add-Error "Could not find FALLBACK_GAMES block in index.html."
@@ -238,8 +237,8 @@ if (Test-Path -LiteralPath $indexPath) {
       foreach ($row in $parsedFallback) {
         if ($row -is [System.Array]) {
           $rowId = [string]$row[0]
-          $rowUrl = if ($row.Count -gt 6 -and $null -ne $row[6] -and [string]$row[6] -ne "") { [string]$row[6] } else { "websites/$rowId.html" }
-          $rowCoverId = if ($row.Count -gt 7 -and $null -ne $row[7] -and [string]$row[7] -ne "") { [string]$row[7] } else { $rowId }
+          $rowUrl = if ($row.Count -gt 5 -and $null -ne $row[5] -and [string]$row[5] -ne "") { [string]$row[5] } else { "websites/$rowId.html" }
+          $rowCoverId = if ($row.Count -gt 6 -and $null -ne $row[6] -and [string]$row[6] -ne "") { [string]$row[6] } else { $rowId }
           $fallbackRows += [pscustomobject]@{
             id = $rowId
             url = $rowUrl

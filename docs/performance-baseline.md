@@ -26,6 +26,26 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## 100-game expansion pass (pass 106)
+
+Captured 2026-06-07 against a disposable local static server after adding 16 compact games: **Signal Loom**, **Crown Circuit**, **Forge Freighter**, **Aster Vault**, **Tempo Tunnels**, **Canopy Courier**, **Shard Sheriff**, **Ledger Lanes**, **Moonbase Mutex**, **Drift Loom**, **Bulb Brigade**, **Rune Roster**, **Velvet Heist**, **Pocket Orchard**, **Comet Cartel**, and **Finale Foundry**. The strict audit covered the catalog plus 100 manifest games, 101 pages total. The new games share a compact standalone grid engine with `workshop-runtime.js`, keyboard/touch controls, sound/fullscreen controls, defensive storage, `render_game_to_text()`, and deterministic `advanceTime(ms)` diagnostics. Each new page audited at 29.7-29.8 KB / 2 requests, comfortably inside the 100 KB / 3 request default budget. No custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed.
+
+The catalog fallback was compacted to stop duplicating manifest subtitles in `index.html`; runtime catalog data still comes from `websites/manifest.json`. This kept the static page-weight gate at its required floor while the manifest reached 100 games: `npm run test:page-weight` reports the catalog local shell at 180.0 KB / 200 KB across 9/18 files, with 20.0 KB / 9 files headroom.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 168 ms | 144 ms | 🟢 145 ms | 🟢 170.3 KB | 6 | 0 |
+| Lexica | 🟢 44 ms | 40 ms | 🟢 40 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 472 ms | 50 ms | 🟢 50 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 88 ms | 60 ms | 🟢 60 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 144 ms | 119 ms | 🟢 119 ms | 🟢 109.7 KB | 2 | 0 |
+| Signal Loom | 🟢 60 ms | 44 ms | 🟢 44 ms | 🟢 29.8 KB | 2 | 0 |
+| Crown Circuit | 🟢 48 ms | 21 ms | 🟢 21 ms | 🟢 29.8 KB | 2 | 0 |
+| Forge Freighter | 🟢 44 ms | 17 ms | 🟢 17 ms | 🟢 29.8 KB | 2 | 0 |
+| Finale Foundry | 🟢 52 ms | 36 ms | 🟢 37 ms | 🟢 29.8 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 101 URLs and `npm run audit:perf:local` reported `CI strict audit passed`. `npm run capture:games:ci` covered 200 rendered desktop/mobile surfaces with max render score 0 after tightening the new games' mobile control order and action-pad label sizing.
+
 ## Crosswire Clues mini-crossword pass (pass 105)
 
 Captured 2026-06-06 against a disposable local static server after adding **Crosswire Clues**, a compact Word/Puzzle/Strategy mini-crossword game where players fill five deterministic crossing word-square grids, check entries, and spend limited hints while preserving integrity, as game #84. The strict audit covered the catalog plus 84 manifest games, 85 pages total. Crosswire Clues is a single self-contained page that loads only its own HTML plus `workshop-runtime.js` (2 requests, 34.3 KB), comfortably inside the 100 KB / 3 request default budget. It adds a distinct crossword-style word mechanic and lifts the Word tag from 4 to 5. No named exception budgets, generated catalog surface formats, custom-domain settings, backend calls, or `SECURITY_SURFACES_TOKEN` work changed in this pass.

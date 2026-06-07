@@ -2163,9 +2163,49 @@ function getInteractionRecipe(slug) {
         });
       },
     },
+    "signal-loom": expansionGridRecipe(),
+    "crown-circuit": expansionGridRecipe(),
+    "forge-freighter": expansionGridRecipe(),
+    "aster-vault": expansionGridRecipe(),
+    "tempo-tunnels": expansionGridRecipe(),
+    "canopy-courier": expansionGridRecipe(),
+    "shard-sheriff": expansionGridRecipe(),
+    "ledger-lanes": expansionGridRecipe(),
+    "moonbase-mutex": expansionGridRecipe(),
+    "drift-loom": expansionGridRecipe(),
+    "bulb-brigade": expansionGridRecipe(),
+    "rune-roster": expansionGridRecipe(),
+    "velvet-heist": expansionGridRecipe(),
+    "pocket-orchard": expansionGridRecipe(),
+    "comet-cartel": expansionGridRecipe(),
+    "finale-foundry": expansionGridRecipe(),
   };
 
   return recipes[slug] || null;
+}
+
+function expansionGridRecipe() {
+  return {
+    name: "start, move, and use the primary action",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const press = (key, code = key, holdMs = 120) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(holdMs);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(80);
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        press("ArrowRight", "ArrowRight", 140);
+        press(" ", "Space", 160);
+        window.advanceTime(220);
+      });
+    },
+  };
 }
 
 async function checkCaptureRecipes() {
