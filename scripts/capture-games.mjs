@@ -2172,12 +2172,12 @@ function getInteractionRecipe(slug) {
     "shard-sheriff": expansionGridRecipe(),
     "ledger-lanes": ledgerLanesRecipe(),
     "moonbase-mutex": expansionGridRecipe(),
-    "drift-loom": expansionGridRecipe(),
+    "drift-loom": driftLoomRecipe(),
     "bulb-brigade": expansionGridRecipe(),
     "rune-roster": runeRosterRecipe(),
     "velvet-heist": expansionGridRecipe(),
     "pocket-orchard": expansionGridRecipe(),
-    "comet-cartel": expansionGridRecipe(),
+    "comet-cartel": cometCartelRecipe(),
     "finale-foundry": expansionGridRecipe(),
   };
 
@@ -2246,6 +2246,81 @@ function runeRosterRecipe() {
         for (const key of ["t", "o", "n", "e"]) press(key, `Key${key.toUpperCase()}`);
         press("Enter", "Enter");
         window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function driftLoomRecipe() {
+  return {
+    name: "start, throttle, steer, and drift through authored gates",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const fire = (type, key, code = key) => document.dispatchEvent(new KeyboardEvent(type, { key, code, bubbles: true, cancelable: true }));
+        const held = new Set();
+        const setHeld = (key, code, active) => {
+          const id = code || key;
+          if (active && !held.has(id)) {
+            held.add(id);
+            fire("keydown", key, code);
+          } else if (!active && held.has(id)) {
+            held.delete(id);
+            fire("keyup", key, code);
+          }
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(180);
+        setHeld("ArrowUp", "ArrowUp", true);
+        setHeld(" ", "Space", true);
+        for (let elapsed = 0; elapsed < 3400; elapsed += 80) {
+          const snap = JSON.parse(window.render_game_to_text());
+          const target = snap.nextGate?.offset ?? 0;
+          setHeld("ArrowLeft", "ArrowLeft", snap.offset > target + 10);
+          setHeld("ArrowRight", "ArrowRight", snap.offset < target - 10);
+          window.advanceTime(80);
+          if (snap.mode === "won" || snap.mode === "failed") break;
+        }
+        for (const id of [...held]) {
+          fire("keyup", id === "Space" ? " " : id, id);
+        }
+        window.advanceTime(240);
+      });
+    },
+  };
+}
+
+function cometCartelRecipe() {
+  return {
+    name: "start, lane-match targets, collect intel, and fire disruptors",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const press = (key, code = key, holdMs = 70) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(holdMs);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(45);
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(220);
+        for (let elapsed = 0; elapsed < 4200; elapsed += 120) {
+          const snap = JSON.parse(window.render_game_to_text());
+          const target = snap.nextTarget;
+          if (target && typeof target.lane === "number") {
+            if (target.lane < snap.lane) press("ArrowUp", "ArrowUp");
+            if (target.lane > snap.lane) press("ArrowDown", "ArrowDown");
+            if (target.type !== "intel" && target.lane === snap.lane) press(" ", "Space");
+          } else if (snap.intel >= snap.intelQuota && snap.distance > 0.72) {
+            press(" ", "Space");
+          }
+          window.advanceTime(120);
+          if (snap.mode === "won" || snap.mode === "failed") break;
+        }
       });
     },
   };
