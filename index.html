@@ -32,402 +32,7 @@
   <meta name="twitter:description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
   <meta name="twitter:image" content="https://jakethehoffer.github.io/Workshop-Arcade/covers/og-image.svg" />
   <meta name="twitter:image:alt" content="Workshop Arcade — Browser Games" />
-  <style>
-    :root{
-      color-scheme: dark;
-      --bg:#0b0f14;
-      --panel:#0f1522;
-      --ink:#e6edf3;
-      --muted:#9fb0c8;
-      --accent:#5eead4;
-      --ring:#7c9eff;
-      --card:#0c121e;
-      --stroke:#16243a;
-      --chip:#0c1929;
-      --ok:#34d399;
-      --warn:#f59e0b;
-      --danger:#fb7185;
-      --radius:16px;
-      --shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
-      --grid-gap:16px;
-      --maxw:1200px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
-      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
-    body{
-      background:
-        radial-gradient(900px 600px at 8% -6%, rgba(94,234,212,0.13), transparent 60%),
-        radial-gradient(700px 500px at 94% 8%, rgba(124,158,255,0.10), transparent 60%),
-        linear-gradient(180deg, #0b0f14, #070b12 80%);
-      background-attachment: fixed;
-    }
-    a{color:inherit;text-decoration:none}
-    img{max-width:100%;display:block}
-
-    /* Layout */
-    .wrap{min-height:100%;display:grid;grid-template-rows:auto auto 1fr auto}
-    header{
-      position:sticky;top:0;z-index:50;
-      background:linear-gradient(180deg, rgba(15,21,34,.92), rgba(15,21,34,.74));
-      backdrop-filter:saturate(120%) blur(10px);
-      border-bottom:1px solid rgba(94,234,212,0.14);
-      box-shadow:0 1px 0 rgba(94,234,212,0.05), 0 18px 40px rgba(0,0,0,0.35);
-    }
-    .bar{max-width:var(--maxw);margin:auto;display:flex;gap:14px;align-items:center;padding:14px 16px}
-    .logo{display:flex;align-items:center;gap:12px;line-height:1}
-    .logo .dot{width:14px;height:14px;border-radius:50%;
-      background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2);
-      box-shadow:0 0 14px rgba(94,234,212,0.45)}
-    .logo .brand-mark{display:flex;flex-direction:column;gap:3px;line-height:1}
-    .logo .eyebrow{font-size:9.5px;letter-spacing:0.32em;text-transform:uppercase;
-      color:rgba(94,234,212,0.85);font-weight:700}
-    .logo .name{font-size:16px;letter-spacing:0.18em;font-weight:800;color:#e6edf3;
-      text-shadow:0 0 18px rgba(94,234,212,0.18);text-transform:uppercase;font-variant-numeric:tabular-nums}
-
-    .search{position:relative;flex:1}
-    .search input{width:100%;background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
-      border:1px solid rgba(94,234,212,0.18);color:var(--ink);
-      padding:12px 40px 12px 14px;border-radius:12px;outline:0;
-      box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)}
-    .search input::placeholder{color:rgba(159,176,200,0.65)}
-    .search input:focus{border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18), 0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)}
-    .search .icon{position:absolute;right:12px;top:50%;translate:0 -50%;opacity:.7;color:rgba(94,234,212,0.7)}
-    .bar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-
-    .filters{max-width:var(--maxw);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 8px}
-    .chip{background:linear-gradient(180deg,rgba(20,30,50,0.55),rgba(11,17,32,0.55));
-      border:1px solid rgba(94,234,212,0.14);padding:8px 12px;border-radius:999px;
-      font-weight:700;color:var(--muted);cursor:pointer;user-select:none;
-      letter-spacing:0.04em;font-size:13px;transition:border-color 0.15s ease,color 0.15s ease,background 0.15s ease;
-      display:inline-flex;align-items:center;gap:7px}
-    .chip-count{font-variant-numeric:tabular-nums;color:rgba(94,234,212,0.8);font-size:12px}
-    .chip:hover{border-color:rgba(94,234,212,0.35);color:#e6edf3}
-    .chip[data-active="true"]{background:linear-gradient(180deg,rgba(94,234,212,0.18),rgba(11,17,32,0.92));
-      color:#e6edf3;border-color:rgba(94,234,212,0.55);
-      box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18), 0 0 14px rgba(94,234,212,0.18)}
-    .chip[data-active="true"] .chip-count{color:#e6edf3}
-
-    .controls{max-width:var(--maxw);margin:0 auto;padding:8px 16px 0;display:flex;gap:12px;align-items:center}
-    .controls small#resultCount{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
-      color:rgba(94,234,212,0.78);font-weight:700;font-variant-numeric:tabular-nums}
-    .select{margin-left:auto}
-    select{background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
-      border:1px solid rgba(94,234,212,0.18);color:var(--ink);padding:10px 12px;border-radius:10px;
-      box-shadow:0 6px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)}
-    select:focus{outline:0;border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18)}
-
-    main{max-width:var(--maxw);margin:8px auto 24px;padding:0 16px}
-    .session-rail{margin:0 0 14px;padding:12px;border:1px solid rgba(94,234,212,0.16);
-      border-radius:14px;background:linear-gradient(180deg,rgba(15,22,38,0.86),rgba(10,16,28,0.86));
-      box-shadow:0 10px 24px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.04)}
-    .session-rail[hidden]{display:none}
-    .session-rail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
-    .session-rail-head .eyebrow{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;
-      color:rgba(94,234,212,0.82);font-weight:700}
-    .session-rail-head h2{margin:3px 0 0;font-size:16px;letter-spacing:0.04em}
-    .session-rail-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-    .session-rail-card{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
-      min-width:0;border:1px solid rgba(94,234,212,0.16);border-radius:10px;
-      background:rgba(148,163,184,0.08);color:var(--ink);padding:10px;text-align:left;
-      cursor:pointer;font:inherit;transition:border-color 0.15s ease,background 0.15s ease}
-    .session-rail-card:hover{border-color:rgba(94,234,212,0.42);background:rgba(94,234,212,0.1)}
-    .session-rail-card strong{display:block;font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .session-rail-card span{display:block;margin-top:3px;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .session-rail-card .session-action{margin:0;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
-      color:rgba(94,234,212,0.85);font-weight:800;white-space:nowrap}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--grid-gap)}
-    @media (max-width: 1100px){ .grid{grid-template-columns:repeat(3,1fr)} }
-    @media (max-width: 760px){ .grid{grid-template-columns:repeat(2,1fr)} }
-    @media (max-width: 480px){ .grid{grid-template-columns:1fr} }
-
-    .card{position:relative;background:linear-gradient(180deg,rgba(15,22,38,0.95),rgba(10,16,28,0.95));
-      border:1px solid rgba(94,234,212,0.16);border-radius:var(--radius);
-      overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04);
-      display:flex;flex-direction:column;
-      transition:border-color 0.18s ease,transform 0.18s ease,box-shadow 0.18s ease}
-    .card:hover{border-color:rgba(94,234,212,0.38);transform:translateY(-2px);
-      box-shadow:0 22px 40px rgba(0,0,0,0.4), 0 0 18px rgba(94,234,212,0.10), inset 0 1px 0 rgba(255,255,255,0.06)}
-    .thumb{aspect-ratio: 16/9; width:100%;display:block;padding:0;border:0;cursor:pointer;appearance:none;
-      background:linear-gradient(180deg,#0e1a2b,#0b1220);border-bottom:1px solid rgba(94,234,212,0.10);
-      overflow:hidden;text-align:inherit}
-    .thumb img{width:100%;height:100%;object-fit:cover}
-    .fav{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;display:grid;place-items:center;
-      border-radius:999px;border:1px solid rgba(94,234,212,0.22);background:rgba(6,12,22,0.62);
-      color:#9fb3c8;cursor:pointer;padding:0;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-      transition:color 0.15s ease,border-color 0.15s ease,background 0.15s ease}
-    .fav svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
-    .fav:hover{border-color:rgba(94,234,212,0.5);color:#e6edf3}
-    .fav:focus-visible{outline:3px solid rgba(94,234,212,0.6);outline-offset:2px}
-    .fav[aria-pressed="true"]{color:#facc15;border-color:rgba(250,204,21,0.55);background:rgba(250,204,21,0.13)}
-    .fav[aria-pressed="true"] svg{fill:#facc15;stroke:#facc15}
-    .meta{padding:12px 12px 14px;display:grid;gap:8px}
-    .title{font-weight:800;font-size:16px;letter-spacing:.2px}
-    .subtitle{font-size:12.5px;color:var(--muted);line-height:1.2}
-    .tags{display:flex;gap:8px;flex-wrap:wrap}
-    .tag{font:inherit;font-size:10.5px;padding:3px 8px;border:1px solid rgba(94,234,212,0.18);border-radius:999px;
-      color:rgba(94,234,212,0.85);letter-spacing:0.08em;text-transform:uppercase;font-weight:700;
-      background:rgba(94,234,212,0.05);cursor:pointer}
-    .tag:hover,.tag[data-active="true"]{border-color:rgba(94,234,212,0.45);color:#e6edf3;background:rgba(94,234,212,0.11)}
-    .row{display:flex;align-items:center;gap:10px}
-    .card-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
-
-    .play{margin-left:auto;background:linear-gradient(180deg,#6cf0d8,#22d3ee);border:none;color:#06242a;
-      font-weight:800;padding:10px 12px;border-radius:10px;cursor:pointer;
-      letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
-      box-shadow:0 8px 18px rgba(34,211,238,0.28)}
-    .play:hover{filter:brightness(1.05)}
-    .play:focus{outline:0;box-shadow:0 0 0 3px rgba(94,234,212,.35), 0 8px 18px rgba(34,211,238,0.28)}
-    .card-actions .play{margin-left:0}
-    .improve{background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
-      border:1px solid rgba(94,234,212,0.22);color:var(--ink);
-      font-weight:700;padding:9px 11px;border-radius:10px;cursor:pointer;
-      letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
-      box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
-      transition:border-color 0.15s ease}
-    .improve:hover,.btn:hover{border-color:rgba(94,234,212,0.55)}
-
-    footer{border-top:1px solid rgba(94,234,212,0.10);background:rgba(7,11,18,0.6);color:var(--muted)}
-    .foot{max-width:var(--maxw);margin:auto;padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-
-    /* Buttons (kept for header links) */
-    .btn{background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));
-      border:1px solid rgba(94,234,212,0.22);color:var(--ink);
-      padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;
-      letter-spacing:0.06em;text-transform:uppercase;font-size:12px;
-      box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
-      transition:border-color 0.15s ease}
-    .btn:hover{border-color:rgba(94,234,212,0.55)}
-    .btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;
-      box-shadow:0 8px 18px rgba(34,211,238,0.28)}
-    .btn.primary:hover{filter:brightness(1.05);border:none}
-    .btn.subtle{background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));
-      color:rgba(230,237,243,0.85);border-color:rgba(94,234,212,0.16)}
-
-    /* Empty state */
-    .empty{padding:40px;border:1px dashed rgba(94,234,212,0.18);border-radius:14px;text-align:center;color:var(--muted)}
-    .queue{margin:0 0 16px;padding:12px;border:1px solid rgba(94,234,212,0.14);border-radius:14px;
-      background:rgba(7,11,18,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.03)}
-    .queue-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .queue-head .queue-heading{display:flex;flex-direction:column;gap:4px;line-height:1.1}
-    .queue-head .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;
-      color:rgba(94,234,212,0.85);font-weight:700}
-    .queue-head h2{margin:0;font-size:18px;letter-spacing:0.04em}
-    .queue-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .draft-count{font-size:12px;color:var(--muted);line-height:1.2;white-space:nowrap}
-    .draft-count[hidden]{display:none}
-    .queue-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-    .queue-row{display:grid;grid-template-rows:auto 1fr auto;gap:7px;align-items:stretch;width:100%;min-width:0;
-      background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));
-      border:1px solid rgba(94,234,212,0.16);border-radius:12px;padding:9px;
-      box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
-      transition:border-color 0.15s ease;color:inherit;text-align:left}
-    .queue-row:hover{border-color:rgba(94,234,212,0.36)}
-    .queue-row-header strong{display:block;font-size:14px;line-height:1.3}
-    .queue-row-header span{display:block;margin-top:3px;color:var(--muted);font-size:11.5px}
-    .queue-picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;align-content:start}
-    .queue-pick{display:grid;gap:1px;width:100%;min-width:0;border:1px solid rgba(94,234,212,0.12);
-      border-radius:9px;background:rgba(148,163,184,0.07);color:var(--ink);padding:6px 6px;
-      cursor:pointer;font:inherit;text-align:left;transition:border-color 0.15s ease,background 0.15s ease}
-    .queue-pick:hover{border-color:rgba(94,234,212,0.38);background:rgba(94,234,212,0.09)}
-    .queue-pick strong{font-size:11.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .queue-pick span{color:var(--muted);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .queue-row .queue-action{justify-self:start;border:0;background:transparent;padding:0;color:rgba(94,234,212,0.85);
-      cursor:pointer;font:inherit;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
-      font-weight:800;white-space:nowrap}
-    .queue-row .queue-action:hover{color:#e6edf3}
-    .queue-row .queue-action:focus-visible,.queue-pick:focus-visible{outline:3px solid rgba(94,234,212,0.55);outline-offset:2px}
-    .queue-row.queue-empty{cursor:default;background:transparent;border-style:dashed;border-color:rgba(94,234,212,0.18);box-shadow:none}
-    .queue-row.queue-empty.queue-actionable{cursor:pointer}
-    .queue-row.queue-empty:hover{border-color:rgba(94,234,212,0.18)}
-    .queue-state{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(94,234,212,0.78);min-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
-    .footer-link{border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}
-    .footer-link:hover{color:var(--ink)}
-    .footer-link:focus-visible{outline:3px solid var(--ring);outline-offset:4px;border-radius:4px}
-
-    /* Workshop modal */
-    [hidden]{display:none!important}
-    .modal[hidden]{display:none}
-    .modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px}
-    .modal-backdrop{position:absolute;inset:0;background:rgba(3,7,18,.72);backdrop-filter:blur(8px)}
-    .workshop-card{position:relative;width:min(920px,100%);max-height:min(88vh,860px);overflow:auto;
-      background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));
-      border:1px solid rgba(94,234,212,0.22);border-radius:16px;
-      box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 24px rgba(94,234,212,0.10)}
-    .workshop-head{position:sticky;top:0;z-index:2;display:flex;gap:12px;align-items:center;justify-content:space-between;
-      padding:18px 20px;background:rgba(13,20,34,.96);border-bottom:1px solid rgba(94,234,212,0.16)}
-    .workshop-head .workshop-heading{display:flex;flex-direction:column;gap:4px;line-height:1.1}
-    .workshop-head .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;
-      color:rgba(94,234,212,0.85);font-weight:700}
-    .workshop-head h2{margin:0;font-size:22px;letter-spacing:.04em}
-    .icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid rgba(94,234,212,0.22);
-      background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));color:var(--ink);
-      display:grid;place-items:center;cursor:pointer;font-size:22px;line-height:1;
-      box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);transition:border-color 0.15s ease}
-    .icon-btn:hover{border-color:rgba(94,234,212,0.55)}
-    .workshop-body{padding:20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.85fr);gap:18px}
-    .field{display:grid;gap:7px;margin-bottom:14px}
-    .field label,.field legend{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a8bbd5;font-weight:800}
-    .field input,.field select,.field textarea{width:100%;background:#09111f;border:1px solid #1f3553;color:var(--ink);
-      border-radius:10px;padding:11px 12px;font:inherit;outline:0}
-    .field textarea{min-height:116px;resize:vertical;line-height:1.45}
-    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(124,158,255,.18)}
-    .choice-grid{border:0;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-    .choice-grid legend{grid-column:1/-1;margin-bottom:2px}
-    .choice-grid label{display:flex;align-items:center;gap:8px;background:#0a1322;border:1px solid #1d314d;border-radius:10px;
-      padding:10px;color:var(--ink);font-size:13px;text-transform:none;letter-spacing:0}
-    .choice-grid input{width:auto;accent-color:#5eead4}
-    .workshop-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .brief-output{min-height:250px;font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:12.5px}
-    .status-line{min-height:20px;margin-top:10px;color:var(--ok);font-size:13px}
-    .drafts{display:grid;gap:8px;margin-top:10px}
-    .draft-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px;border:1px solid #1d314d;border-radius:10px;background:#0a1322}
-    .draft-row strong{font-size:13px}
-    .draft-row span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-    .mini-btn{border:1px solid #28415f;background:#101a2a;color:var(--ink);border-radius:8px;padding:7px 9px;cursor:pointer}
-    /* Service-worker update toast — surfaces when the registration's
-       updatefound event fires while there's already a controlling SW,
-       so PWA users aren't silently stuck on stale cache after a deploy. */
-    .sw-update-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
-      z-index:110;max-width:calc(100% - 24px);pointer-events:none}
-    .sw-update-toast[hidden]{display:none}
-    .sw-update-card{
-      display:flex;gap:12px;align-items:center;
-      background:var(--panel);color:var(--ink);
-      border:1px solid var(--stroke);border-radius:14px;
-      box-shadow:var(--shadow);padding:10px 12px 10px 14px;
-      pointer-events:auto;
-    }
-    .sw-update-icon{color:var(--accent);display:flex;align-items:center}
-    .sw-update-body{display:flex;flex-direction:column;gap:2px;line-height:1.25;font-size:13px}
-    .sw-update-body strong{font-weight:800;letter-spacing:0.02em}
-    .sw-update-body span{color:var(--muted);font-size:12px}
-    .sw-update-actions{display:flex;gap:8px;align-items:center;margin-left:6px}
-
-    /* Help dialog (native <dialog>) — small centered card listing the
-       keyboard shortcuts so the (R)/(Ctrl+/)/(Esc) hints elsewhere in
-       the UI are discoverable in one place. Native dialog handles
-       focus trapping + Esc-to-close for free. */
-    .help-btn{font-weight:800;line-height:1;width:34px;height:34px;
-      display:inline-flex;align-items:center;justify-content:center;
-      font-size:18px;color:var(--ink);background:transparent;
-      border:1px solid var(--stroke);border-radius:10px;cursor:pointer}
-    .help-btn:hover{border-color:rgba(94,234,212,0.4)}
-    .help-dialog{
-      max-width:440px;width:calc(100% - 32px);padding:0;
-      border:1px solid var(--stroke);border-radius:var(--radius);
-      background:var(--panel);color:var(--ink);box-shadow:var(--shadow);
-    }
-    .help-dialog::backdrop{background:rgba(2,6,12,0.6);backdrop-filter:blur(2px)}
-    .help-dialog .help-card{padding:18px 20px;margin:0;display:grid;gap:14px}
-    .help-dialog .help-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .help-dialog h2{margin:0;font-size:18px;letter-spacing:0.04em}
-    .help-dialog .help-list{margin:0;display:grid;grid-template-columns:auto 1fr;
-      column-gap:18px;row-gap:10px;font-size:13.5px;line-height:1.4}
-    .help-dialog .help-list dt{display:flex;gap:4px;align-items:center;
-      color:var(--muted);white-space:nowrap}
-    .help-dialog .help-list dd{margin:0;color:var(--ink)}
-    .help-dialog kbd{font:inherit;font-weight:700;font-size:11.5px;
-      padding:3px 7px;border-radius:6px;background:#0c1929;
-      border:1px solid var(--stroke);color:var(--accent);
-      box-shadow:inset 0 -1px 0 rgba(0,0,0,0.5)}
-    .help-dialog .help-hint{margin:0;font-size:12px;color:var(--muted);line-height:1.4}
-    .player-modal{position:fixed;inset:0;z-index:90;background:#050910;display:grid;grid-template-rows:auto auto 1fr}
-    .player-modal[hidden]{display:none}
-    .player-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;
-      border-bottom:1px solid rgba(94,234,212,0.16);background:rgba(12,20,34,0.96);backdrop-filter:blur(8px)}
-    .player-title{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-      letter-spacing:0.04em}
-    .player-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-    .player-status{font-size:12px;color:var(--accent);opacity:0;transition:opacity 0.15s ease}
-    .player-status[data-visible="true"]{opacity:1}
-    .player-related{border-bottom:1px solid rgba(94,234,212,0.12);background:rgba(8,14,25,0.98);padding:10px 12px 12px}
-    .player-related[hidden]{display:none}
-    .player-related-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-    .player-related-title{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--accent);font-weight:800}
-    .player-related-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-    .related-game{border:1px solid rgba(94,234,212,0.16);background:rgba(148,163,184,0.08);color:var(--ink);border-radius:8px;padding:8px 9px;text-align:left;cursor:pointer;display:grid;gap:3px;min-width:0}
-    .related-game:hover{border-color:rgba(94,234,212,0.42);background:rgba(94,234,212,0.1)}
-    .related-game strong{font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .related-game span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .player-frame{width:100%;height:100%;border:0;background:#050910}
-    @media (max-width: 820px){
-      .workshop-body{grid-template-columns:1fr}
-      .choice-grid{grid-template-columns:1fr}
-      .card-actions{width:100%;margin-left:0}
-      .row{align-items:flex-start;flex-wrap:wrap}
-      .queue-head,.queue-row{grid-template-columns:1fr;display:grid}
-      .queue-list{grid-template-columns:1fr}
-      .queue-actions{justify-content:flex-start}
-      .session-rail-list{grid-template-columns:1fr}
-    }
-    @media (max-width: 560px){
-      .bar{gap:10px;padding:12px 12px;flex-wrap:wrap}
-      .logo{min-width:0}
-      .search{order:3;flex-basis:100%}
-      .bar-actions{margin-left:auto;max-width:100%;justify-content:flex-end}
-      .bar-actions .btn{padding-inline:10px}
-      .filters{padding-inline:12px}
-      .controls{padding-inline:12px;flex-wrap:wrap}
-      .logo .eyebrow{display:none}
-      .logo .name{font-size:14px;letter-spacing:0.16em}
-      .session-rail{padding:10px}
-      .session-rail-card{grid-template-columns:1fr;gap:4px;padding:9px}
-      .player-bar{align-items:flex-start;flex-wrap:wrap;gap:8px}
-      .player-title{flex:1 1 100%;font-size:13px}
-      .player-actions{margin-left:0;width:100%;justify-content:flex-start;gap:6px}
-      .player-actions .btn{padding:8px 9px;font-size:12px}
-      .player-related-list{grid-template-columns:1fr 1fr}
-    }
-
-    /* Focus outlines for accessibility */
-    .chip:focus-visible, .tag:focus-visible, .btn:focus-visible, .play:focus-visible, .improve:focus-visible,
-    .icon-btn:focus-visible, .mini-btn:focus-visible, .thumb:focus-visible,
-    .queue-row:focus-visible, .related-game:focus-visible, .session-rail-card:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
-
-    /* Skip link — visually hidden until keyboard-focused so screen-reader
-       and keyboard users can jump past the sticky header straight to the
-       game grid without tabbing through every chip and filter. */
-    .skip-to-content{
-      position:absolute;left:-9999px;top:0;z-index:120;
-      background:var(--accent);color:#0b0f14;padding:10px 14px;
-      border-radius:0 0 12px 0;font-weight:800;letter-spacing:0.04em;
-      text-decoration:none;
-    }
-    .skip-to-content:focus-visible{
-      left:0;
-      outline:3px solid var(--ring);outline-offset:0;
-    }
-
-    /* Inline fallback when the page is loaded without JS — the catalog
-       depends on the manifest fetch + render loop, so the grid would
-       otherwise sit forever on aria-busy. */
-    .noscript-fallback{
-      max-width:var(--maxw);margin:24px auto;padding:18px 20px;
-      background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);
-      color:var(--ink);line-height:1.55;
-    }
-    .noscript-fallback h2{margin:0 0 6px;font-size:18px;letter-spacing:0.04em}
-    .noscript-fallback p{margin:0;color:var(--muted)}
-    .noscript-fallback a{color:var(--accent);font-weight:700}
-
-    /* Respect prefers-reduced-motion: collapse the optional polish
-       (card lift, button hovers, transient fades) for visitors with
-       vestibular sensitivities or who simply prefer a calmer UI. */
-    @media (prefers-reduced-motion: reduce){
-      *,
-      *::before,
-      *::after{
-        animation-duration:0.001ms !important;
-        animation-iteration-count:1 !important;
-        transition-duration:0.001ms !important;
-        scroll-behavior:auto !important;
-      }
-      .card:hover{transform:none}
-      .player-status{transition:none}
-    }
-  </style>
+  <style>:root{color-scheme:dark;--bg:#0b0f14;--panel:#0f1522;--ink:#e6edf3;--muted:#9fb0c8;--accent:#5eead4;--ring:#7c9eff;--card:#0c121e;--stroke:#16243a;--chip:#0c1929;--ok:#34d399;--warn:#f59e0b;--danger:#fb7185;--radius:16px;--shadow:0 10px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.03);--grid-gap:16px;--maxw:1200px}*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}body{background:radial-gradient(900px 600px at 8% -6%,rgba(94,234,212,0.13),transparent 60%),radial-gradient(700px 500px at 94% 8%,rgba(124,158,255,0.10),transparent 60%),linear-gradient(180deg,#0b0f14,#070b12 80%);background-attachment:fixed}a{color:inherit;text-decoration:none}img{max-width:100%;display:block}.wrap{min-height:100%;display:grid;grid-template-rows:auto auto 1fr auto}header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,rgba(15,21,34,.92),rgba(15,21,34,.74));backdrop-filter:saturate(120%) blur(10px);border-bottom:1px solid rgba(94,234,212,0.14);box-shadow:0 1px 0 rgba(94,234,212,0.05),0 18px 40px rgba(0,0,0,0.35)}.bar{max-width:var(--maxw);margin:auto;display:flex;gap:14px;align-items:center;padding:14px 16px}.logo{display:flex;align-items:center;gap:12px;line-height:1}.logo .dot{width:14px;height:14px;border-radius:50%;background:conic-gradient(from 180deg,#2cf8e2,#53d7ff,#7c9eff,#2cf8e2);box-shadow:0 0 14px rgba(94,234,212,0.45)}.logo .brand-mark{display:flex;flex-direction:column;gap:3px;line-height:1}.logo .eyebrow{font-size:9.5px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}.logo .name{font-size:16px;letter-spacing:0.18em;font-weight:800;color:#e6edf3;text-shadow:0 0 18px rgba(94,234,212,0.18);text-transform:uppercase;font-variant-numeric:tabular-nums}.search{position:relative;flex:1}.search input{width:100%;background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));border:1px solid rgba(94,234,212,0.18);color:var(--ink);padding:12px 40px 12px 14px;border-radius:12px;outline:0;box-shadow:0 6px 14px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.04)}.search input::placeholder{color:rgba(159,176,200,0.65)}.search input:focus{border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18),0 6px 14px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.04)}.search .icon{position:absolute;right:12px;top:50%;translate:0 -50%;opacity:.7;color:rgba(94,234,212,0.7)}.bar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.filters{max-width:var(--maxw);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 8px}.chip{background:linear-gradient(180deg,rgba(20,30,50,0.55),rgba(11,17,32,0.55));border:1px solid rgba(94,234,212,0.14);padding:8px 12px;border-radius:999px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:0.04em;font-size:13px;transition:border-color 0.15s ease,color 0.15s ease,background 0.15s ease;display:inline-flex;align-items:center;gap:7px}.chip-count{font-variant-numeric:tabular-nums;color:rgba(94,234,212,0.8);font-size:12px}.chip:hover{border-color:rgba(94,234,212,0.35);color:#e6edf3}.chip[data-active="true"]{background:linear-gradient(180deg,rgba(94,234,212,0.18),rgba(11,17,32,0.92));color:#e6edf3;border-color:rgba(94,234,212,0.55);box-shadow:inset 0 0 0 1px rgba(94,234,212,0.18),0 0 14px rgba(94,234,212,0.18)}.chip[data-active="true"] .chip-count{color:#e6edf3}.controls{max-width:var(--maxw);margin:0 auto;padding:8px 16px 0;display:flex;gap:12px;align-items:center}.controls small#resultCount{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(94,234,212,0.78);font-weight:700;font-variant-numeric:tabular-nums}.select{margin-left:auto}select{background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));border:1px solid rgba(94,234,212,0.18);color:var(--ink);padding:10px 12px;border-radius:10px;box-shadow:0 6px 14px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.04)}select:focus{outline:0;border-color:rgba(94,234,212,0.55);box-shadow:0 0 0 3px rgba(94,234,212,.18)}main{max-width:var(--maxw);margin:8px auto 24px;padding:0 16px}.session-rail{margin:0 0 14px;padding:12px;border:1px solid rgba(94,234,212,0.16);border-radius:14px;background:linear-gradient(180deg,rgba(15,22,38,0.86),rgba(10,16,28,0.86));box-shadow:0 10px 24px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.04)}.session-rail[hidden]{display:none}.session-rail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.session-rail-head .eyebrow{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(94,234,212,0.82);font-weight:700}.session-rail-head h2{margin:3px 0 0;font-size:16px;letter-spacing:0.04em}.session-rail-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.session-rail-card{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;min-width:0;border:1px solid rgba(94,234,212,0.16);border-radius:10px;background:rgba(148,163,184,0.08);color:var(--ink);padding:10px;text-align:left;cursor:pointer;font:inherit;transition:border-color 0.15s ease,background 0.15s ease}.session-rail-card:hover{border-color:rgba(94,234,212,0.42);background:rgba(94,234,212,0.1)}.session-rail-card strong{display:block;font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.session-rail-card span{display:block;margin-top:3px;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.session-rail-card .session-action{margin:0;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:800;white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--grid-gap)}@media (max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}@media (max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:480px){.grid{grid-template-columns:1fr}}.card{position:relative;background:linear-gradient(180deg,rgba(15,22,38,0.95),rgba(10,16,28,0.95));border:1px solid rgba(94,234,212,0.16);border-radius:var(--radius);overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,0.32),inset 0 1px 0 rgba(255,255,255,0.04);display:flex;flex-direction:column;transition:border-color 0.18s ease,transform 0.18s ease,box-shadow 0.18s ease}.card:hover{border-color:rgba(94,234,212,0.38);transform:translateY(-2px);box-shadow:0 22px 40px rgba(0,0,0,0.4),0 0 18px rgba(94,234,212,0.10),inset 0 1px 0 rgba(255,255,255,0.06)}.thumb{aspect-ratio:16/9;width:100%;display:block;padding:0;border:0;cursor:pointer;appearance:none;background:linear-gradient(180deg,#0e1a2b,#0b1220);border-bottom:1px solid rgba(94,234,212,0.10);overflow:hidden;text-align:inherit}.thumb img{width:100%;height:100%;object-fit:cover}.fav{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(94,234,212,0.22);background:rgba(6,12,22,0.62);color:#9fb3c8;cursor:pointer;padding:0;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:color 0.15s ease,border-color 0.15s ease,background 0.15s ease}.fav svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}.fav:hover{border-color:rgba(94,234,212,0.5);color:#e6edf3}.fav:focus-visible{outline:3px solid rgba(94,234,212,0.6);outline-offset:2px}.fav[aria-pressed="true"]{color:#facc15;border-color:rgba(250,204,21,0.55);background:rgba(250,204,21,0.13)}.fav[aria-pressed="true"] svg{fill:#facc15;stroke:#facc15}.meta{padding:12px 12px 14px;display:grid;gap:8px}.title{font-weight:800;font-size:16px;letter-spacing:.2px}.subtitle{font-size:12.5px;color:var(--muted);line-height:1.2}.tags{display:flex;gap:8px;flex-wrap:wrap}.tag{font:inherit;font-size:10.5px;padding:3px 8px;border:1px solid rgba(94,234,212,0.18);border-radius:999px;color:rgba(94,234,212,0.85);letter-spacing:0.08em;text-transform:uppercase;font-weight:700;background:rgba(94,234,212,0.05);cursor:pointer}.tag:hover,.tag[data-active="true"]{border-color:rgba(94,234,212,0.45);color:#e6edf3;background:rgba(94,234,212,0.11)}.row{display:flex;align-items:center;gap:10px}.card-actions{margin-left:auto;display:flex;gap:8px;align-items:center}.play{margin-left:auto;background:linear-gradient(180deg,#6cf0d8,#22d3ee);border:none;color:#06242a;font-weight:800;padding:10px 12px;border-radius:10px;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;font-size:12px;box-shadow:0 8px 18px rgba(34,211,238,0.28)}.play:hover{filter:brightness(1.05)}.play:focus{outline:0;box-shadow:0 0 0 3px rgba(94,234,212,.35),0 8px 18px rgba(34,211,238,0.28)}.card-actions .play{margin-left:0}.improve{background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));border:1px solid rgba(94,234,212,0.22);color:var(--ink);font-weight:700;padding:9px 11px;border-radius:10px;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;font-size:12px;box-shadow:0 6px 14px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);transition:border-color 0.15s ease}.improve:hover,.btn:hover{border-color:rgba(94,234,212,0.55)}footer{border-top:1px solid rgba(94,234,212,0.10);background:rgba(7,11,18,0.6);color:var(--muted)}.foot{max-width:var(--maxw);margin:auto;padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}.btn{background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));border:1px solid rgba(94,234,212,0.22);color:var(--ink);padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;font-size:12px;box-shadow:0 6px 14px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);transition:border-color 0.15s ease}.btn:hover{border-color:rgba(94,234,212,0.55)}.btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border:none;box-shadow:0 8px 18px rgba(34,211,238,0.28)}.btn.primary:hover{filter:brightness(1.05);border:none}.btn.subtle{background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));color:rgba(230,237,243,0.85);border-color:rgba(94,234,212,0.16)}.empty{padding:40px;border:1px dashed rgba(94,234,212,0.18);border-radius:14px;text-align:center;color:var(--muted)}.queue{margin:0 0 16px;padding:12px;border:1px solid rgba(94,234,212,0.14);border-radius:14px;background:rgba(7,11,18,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.03)}.queue-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px}.queue-head .queue-heading{display:flex;flex-direction:column;gap:4px;line-height:1.1}.queue-head .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}.queue-head h2{margin:0;font-size:18px;letter-spacing:0.04em}.queue-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.draft-count{font-size:12px;color:var(--muted);line-height:1.2;white-space:nowrap}.draft-count[hidden]{display:none}.queue-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.queue-row{display:grid;grid-template-rows:auto 1fr auto;gap:7px;align-items:stretch;width:100%;min-width:0;background:linear-gradient(180deg,rgba(15,22,38,0.92),rgba(10,16,28,0.92));border:1px solid rgba(94,234,212,0.16);border-radius:12px;padding:9px;box-shadow:0 6px 14px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.03);transition:border-color 0.15s ease;color:inherit;text-align:left}.queue-row:hover{border-color:rgba(94,234,212,0.36)}.queue-row-header strong{display:block;font-size:14px;line-height:1.3}.queue-row-header span{display:block;margin-top:3px;color:var(--muted);font-size:11.5px}.queue-picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;align-content:start}.queue-pick{display:grid;gap:1px;width:100%;min-width:0;border:1px solid rgba(94,234,212,0.12);border-radius:9px;background:rgba(148,163,184,0.07);color:var(--ink);padding:6px 6px;cursor:pointer;font:inherit;text-align:left;transition:border-color 0.15s ease,background 0.15s ease}.queue-pick:hover{border-color:rgba(94,234,212,0.38);background:rgba(94,234,212,0.09)}.queue-pick strong{font-size:11.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.queue-pick span{color:var(--muted);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.queue-row .queue-action{justify-self:start;border:0;background:transparent;padding:0;color:rgba(94,234,212,0.85);cursor:pointer;font:inherit;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;font-weight:800;white-space:nowrap}.queue-row .queue-action:hover{color:#e6edf3}.queue-row .queue-action:focus-visible,.queue-pick:focus-visible{outline:3px solid rgba(94,234,212,0.55);outline-offset:2px}.queue-row.queue-empty{cursor:default;background:transparent;border-style:dashed;border-color:rgba(94,234,212,0.18);box-shadow:none}.queue-row.queue-empty.queue-actionable{cursor:pointer}.queue-row.queue-empty:hover{border-color:rgba(94,234,212,0.18)}.queue-state{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(94,234,212,0.78);min-height:18px;font-weight:700;font-variant-numeric:tabular-nums}.footer-link{border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}.footer-link:hover{color:var(--ink)}.footer-link:focus-visible{outline:3px solid var(--ring);outline-offset:4px;border-radius:4px}[hidden]{display:none!important}.modal[hidden]{display:none}.modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px}.modal-backdrop{position:absolute;inset:0;background:rgba(3,7,18,.72);backdrop-filter:blur(8px)}.workshop-card{position:relative;width:min(920px,100%);max-height:min(88vh,860px);overflow:auto;background:linear-gradient(180deg,rgba(15,22,38,0.98),rgba(10,16,28,0.98));border:1px solid rgba(94,234,212,0.22);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 24px rgba(94,234,212,0.10)}.workshop-head{position:sticky;top:0;z-index:2;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:18px 20px;background:rgba(13,20,34,.96);border-bottom:1px solid rgba(94,234,212,0.16)}.workshop-head .workshop-heading{display:flex;flex-direction:column;gap:4px;line-height:1.1}.workshop-head .eyebrow{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}.workshop-head h2{margin:0;font-size:22px;letter-spacing:.04em}.icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid rgba(94,234,212,0.22);background:linear-gradient(180deg,rgba(20,30,50,0.92),rgba(11,17,32,0.92));color:var(--ink);display:grid;place-items:center;cursor:pointer;font-size:22px;line-height:1;box-shadow:0 6px 14px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04);transition:border-color 0.15s ease}.icon-btn:hover{border-color:rgba(94,234,212,0.55)}.workshop-body{padding:20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.85fr);gap:18px}.field{display:grid;gap:7px;margin-bottom:14px}.field label,.field legend{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a8bbd5;font-weight:800}.field input,.field select,.field textarea{width:100%;background:#09111f;border:1px solid #1f3553;color:var(--ink);border-radius:10px;padding:11px 12px;font:inherit;outline:0}.field textarea{min-height:116px;resize:vertical;line-height:1.45}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(124,158,255,.18)}.choice-grid{border:0;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.choice-grid legend{grid-column:1/-1;margin-bottom:2px}.choice-grid label{display:flex;align-items:center;gap:8px;background:#0a1322;border:1px solid #1d314d;border-radius:10px;padding:10px;color:var(--ink);font-size:13px;text-transform:none;letter-spacing:0}.choice-grid input{width:auto;accent-color:#5eead4}.workshop-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.brief-output{min-height:250px;font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:12.5px}.status-line{min-height:20px;margin-top:10px;color:var(--ok);font-size:13px}.drafts{display:grid;gap:8px;margin-top:10px}.draft-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px;border:1px solid #1d314d;border-radius:10px;background:#0a1322}.draft-row strong{font-size:13px}.draft-row span{display:block;color:var(--muted);font-size:12px;margin-top:2px}.mini-btn{border:1px solid #28415f;background:#101a2a;color:var(--ink);border-radius:8px;padding:7px 9px;cursor:pointer}.sw-update-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:110;max-width:calc(100% - 24px);pointer-events:none}.sw-update-toast[hidden]{display:none}.sw-update-card{display:flex;gap:12px;align-items:center;background:var(--panel);color:var(--ink);border:1px solid var(--stroke);border-radius:14px;box-shadow:var(--shadow);padding:10px 12px 10px 14px;pointer-events:auto}.sw-update-icon{color:var(--accent);display:flex;align-items:center}.sw-update-body{display:flex;flex-direction:column;gap:2px;line-height:1.25;font-size:13px}.sw-update-body strong{font-weight:800;letter-spacing:0.02em}.sw-update-body span{color:var(--muted);font-size:12px}.sw-update-actions{display:flex;gap:8px;align-items:center;margin-left:6px}.help-btn{font-weight:800;line-height:1;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink);background:transparent;border:1px solid var(--stroke);border-radius:10px;cursor:pointer}.help-btn:hover{border-color:rgba(94,234,212,0.4)}.help-dialog{max-width:440px;width:calc(100% - 32px);padding:0;border:1px solid var(--stroke);border-radius:var(--radius);background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}.help-dialog::backdrop{background:rgba(2,6,12,0.6);backdrop-filter:blur(2px)}.help-dialog .help-card{padding:18px 20px;margin:0;display:grid;gap:14px}.help-dialog .help-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.help-dialog h2{margin:0;font-size:18px;letter-spacing:0.04em}.help-dialog .help-list{margin:0;display:grid;grid-template-columns:auto 1fr;column-gap:18px;row-gap:10px;font-size:13.5px;line-height:1.4}.help-dialog .help-list dt{display:flex;gap:4px;align-items:center;color:var(--muted);white-space:nowrap}.help-dialog .help-list dd{margin:0;color:var(--ink)}.help-dialog kbd{font:inherit;font-weight:700;font-size:11.5px;padding:3px 7px;border-radius:6px;background:#0c1929;border:1px solid var(--stroke);color:var(--accent);box-shadow:inset 0 -1px 0 rgba(0,0,0,0.5)}.help-dialog .help-hint{margin:0;font-size:12px;color:var(--muted);line-height:1.4}.player-modal{position:fixed;inset:0;z-index:90;background:#050910;display:grid;grid-template-rows:auto auto 1fr}.player-modal[hidden]{display:none}.player-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid rgba(94,234,212,0.16);background:rgba(12,20,34,0.96);backdrop-filter:blur(8px)}.player-title{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0.04em}.player-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.player-status{font-size:12px;color:var(--accent);opacity:0;transition:opacity 0.15s ease}.player-status[data-visible="true"]{opacity:1}.player-related{border-bottom:1px solid rgba(94,234,212,0.12);background:rgba(8,14,25,0.98);padding:10px 12px 12px}.player-related[hidden]{display:none}.player-related-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.player-related-title{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--accent);font-weight:800}.player-related-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.related-game{border:1px solid rgba(94,234,212,0.16);background:rgba(148,163,184,0.08);color:var(--ink);border-radius:8px;padding:8px 9px;text-align:left;cursor:pointer;display:grid;gap:3px;min-width:0}.related-game:hover{border-color:rgba(94,234,212,0.42);background:rgba(94,234,212,0.1)}.related-game strong{font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.related-game span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player-frame{width:100%;height:100%;border:0;background:#050910}@media (max-width:820px){.workshop-body{grid-template-columns:1fr}.choice-grid{grid-template-columns:1fr}.card-actions{width:100%;margin-left:0}.row{align-items:flex-start;flex-wrap:wrap}.queue-head,.queue-row{grid-template-columns:1fr;display:grid}.queue-list{grid-template-columns:1fr}.queue-actions{justify-content:flex-start}.session-rail-list{grid-template-columns:1fr}}@media (max-width:560px){.bar{gap:10px;padding:12px 12px;flex-wrap:wrap}.logo{min-width:0}.search{order:3;flex-basis:100%}.bar-actions{margin-left:auto;max-width:100%;justify-content:flex-end}.bar-actions .btn{padding-inline:10px}.filters{padding-inline:12px}.controls{padding-inline:12px;flex-wrap:wrap}.logo .eyebrow{display:none}.logo .name{font-size:14px;letter-spacing:0.16em}.session-rail{padding:10px}.session-rail-card{grid-template-columns:1fr;gap:4px;padding:9px}.player-bar{align-items:flex-start;flex-wrap:wrap;gap:8px}.player-title{flex:1 1 100%;font-size:13px}.player-actions{margin-left:0;width:100%;justify-content:flex-start;gap:6px}.player-actions .btn{padding:8px 9px;font-size:12px}.player-related-list{grid-template-columns:1fr 1fr}}.chip:focus-visible,.tag:focus-visible,.btn:focus-visible,.play:focus-visible,.improve:focus-visible,.icon-btn:focus-visible,.mini-btn:focus-visible,.thumb:focus-visible,.queue-row:focus-visible,.related-game:focus-visible,.session-rail-card:focus-visible{outline:3px solid var(--ring);outline-offset:2px}.skip-to-content{position:absolute;left:-9999px;top:0;z-index:120;background:var(--accent);color:#0b0f14;padding:10px 14px;border-radius:0 0 12px 0;font-weight:800;letter-spacing:0.04em;text-decoration:none}.skip-to-content:focus-visible{left:0;outline:3px solid var(--ring);outline-offset:0}.noscript-fallback{max-width:var(--maxw);margin:24px auto;padding:18px 20px;background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);color:var(--ink);line-height:1.55}.noscript-fallback h2{margin:0 0 6px;font-size:18px;letter-spacing:0.04em}.noscript-fallback p{margin:0;color:var(--muted)}.noscript-fallback a{color:var(--accent);font-weight:700}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;scroll-behavior:auto !important}.card:hover{transform:none}.player-status{transition:none}}</style>
 <!-- workshop-catalog-jsonld:start -->
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ItemList","name":"Workshop Arcade Games","description":"Browser-playable HTML5 games in the Workshop Arcade catalog.","numberOfItems":100,"itemListElement":[{"@type":"ListItem","position":1,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/brick-breaker.html","name":"Brick Breaker"},{"@type":"ListItem","position":2,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/checkers.html","name":"Checkers"},{"@type":"ListItem","position":3,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/2048.html","name":"2048"},{"@type":"ListItem","position":4,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/chess.html","name":"Chess"},{"@type":"ListItem","position":5,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/doodle-jump.html","name":"Arcade Jump"},{"@type":"ListItem","position":6,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/flappy-bird.html","name":"Sky Hopper"},{"@type":"ListItem","position":7,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/snake.html","name":"Neon Snake"},{"@type":"ListItem","position":8,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/tetris.html","name":"Block Drop"},{"@type":"ListItem","position":9,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/maze-chase.html","name":"Maze Chase"},{"@type":"ListItem","position":10,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/memory-match.html","name":"Memory Match"},{"@type":"ListItem","position":11,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/reflex-spark.html","name":"Reflex Spark"},{"@type":"ListItem","position":12,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/echo-mimic.html","name":"Echo Mimic"},{"@type":"ListItem","position":13,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/paddle-pulse.html","name":"Paddle Pulse"},{"@type":"ListItem","position":14,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/rhythm-circuit.html","name":"Rhythm Circuit"},{"@type":"ListItem","position":15,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/circuit-putt.html","name":"Circuit Putt"},{"@type":"ListItem","position":16,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/neon-drift.html","name":"Neon Drift"},{"@type":"ListItem","position":17,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/signal-siege.html","name":"Signal Siege"},{"@type":"ListItem","position":18,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/pinball-foundry.html","name":"Pinball Foundry"},{"@type":"ListItem","position":19,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/starline-strafe.html","name":"Starline Strafe"},{"@type":"ListItem","position":20,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-switch.html","name":"Shadow Switch"},{"@type":"ListItem","position":21,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/deckforge-duel.html","name":"Deckforge Duel"},{"@type":"ListItem","position":22,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/gemline-cascade.html","name":"Gemline Cascade"},{"@type":"ListItem","position":23,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/dungeon-circuit.html","name":"Dungeon Circuit"},{"@type":"ListItem","position":24,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/minesweeper.html","name":"Minesweeper"},{"@type":"ListItem","position":25,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/solitare.html","name":"Klondike Solitaire"},{"@type":"ListItem","position":26,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/wordle.html","name":"Lexica"},{"@type":"ListItem","position":27,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/shape-inlay.html","name":"Slope Runner"},{"@type":"ListItem","position":28,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/idle-tycoon.html","name":"Idle Tycoon"},{"@type":"ListItem","position":29,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/metro-dash.html","name":"Metro Dash"},{"@type":"ListItem","position":30,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/arena.html","name":"Arena"},{"@type":"ListItem","position":31,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/hero-fact-match.html","name":"Hero Fact Match"},{"@type":"ListItem","position":32,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/night-shift-fact-match.html","name":"Night Shift Fact Match"},{"@type":"ListItem","position":33,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/arena-legend-guesser.html","name":"Arena Legend Guesser"},{"@type":"ListItem","position":34,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/cosmic-fact-match.html","name":"Cosmic Fact Match"},{"@type":"ListItem","position":35,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/packet-pilot.html","name":"Packet Pilot"},{"@type":"ListItem","position":36,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/typeforge-cipher.html","name":"Typeforge Cipher"},{"@type":"ListItem","position":37,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/stack-tide.html","name":"Stack Tide"},{"@type":"ListItem","position":38,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/crate-circuit.html","name":"Crate Circuit"},{"@type":"ListItem","position":39,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/prism-relay.html","name":"Prism Relay"},{"@type":"ListItem","position":40,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/vector-pool.html","name":"Vector Pool"},{"@type":"ListItem","position":41,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/gridline-tactics.html","name":"Gridline Tactics"},{"@type":"ListItem","position":42,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/service-shift.html","name":"Service Shift"},{"@type":"ListItem","position":43,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/letter-foundry.html","name":"Letter Foundry"},{"@type":"ListItem","position":44,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/penalty-circuit.html","name":"Penalty Circuit"},{"@type":"ListItem","position":45,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/orbit-salvage.html","name":"Orbit Salvage"},{"@type":"ListItem","position":46,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/harbor-switchboard.html","name":"Harbor Switchboard"},{"@type":"ListItem","position":47,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/relay-choir.html","name":"Relay Choir"},{"@type":"ListItem","position":48,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/circuit-draft.html","name":"Circuit Draft"},{"@type":"ListItem","position":49,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/switchback-rally.html","name":"Switchback Rally"},{"@type":"ListItem","position":50,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/inkline-courier.html","name":"Inkline Courier"},{"@type":"ListItem","position":51,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/cipher-rooms.html","name":"Cipher Rooms"},{"@type":"ListItem","position":52,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/patchwork-foundry.html","name":"Patchwork Foundry"},{"@type":"ListItem","position":53,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/market-minute.html","name":"Market Minute"},{"@type":"ListItem","position":54,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/bloomkeeper-grid.html","name":"Bloomkeeper Grid"},{"@type":"ListItem","position":55,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/volt-sudoku.html","name":"Volt Sudoku"},{"@type":"ListItem","position":56,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/glyphogram-grid.html","name":"Glyphogram Grid"},{"@type":"ListItem","position":57,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/lumen-lander.html","name":"Lumen Lander"},{"@type":"ListItem","position":58,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/wordweave-grid.html","name":"Wordweave Grid"},{"@type":"ListItem","position":59,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/dice-dynamo.html","name":"Dice Dynamo"},{"@type":"ListItem","position":60,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/shadow-vault.html","name":"Shadow Vault"},{"@type":"ListItem","position":61,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/rail-yard-relay.html","name":"Rail Yard Relay"},{"@type":"ListItem","position":62,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/skyline-sentry.html","name":"Skyline Sentry"},{"@type":"ListItem","position":63,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/tempo-forge.html","name":"Tempo Forge"},{"@type":"ListItem","position":64,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/gridfront-orders.html","name":"Gridfront Orders"},{"@type":"ListItem","position":65,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/flux-reversi.html","name":"Flux Reversi"},{"@type":"ListItem","position":66,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/fourfall.html","name":"Fourfall"},{"@type":"ListItem","position":67,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/eclipse-grid.html","name":"Eclipse Grid"},{"@type":"ListItem","position":68,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/slipsort.html","name":"Slipsort"},{"@type":"ListItem","position":69,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/seedline.html","name":"Seedline"},{"@type":"ListItem","position":70,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/floodgate.html","name":"Floodgate"},{"@type":"ListItem","position":71,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/last-light.html","name":"Last Light"},{"@type":"ListItem","position":72,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/chromalock.html","name":"Chromalock"},{"@type":"ListItem","position":73,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/pylon-shift.html","name":"Pylon Shift"},{"@type":"ListItem","position":74,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/blackjack.html","name":"Blackjack"},{"@type":"ListItem","position":75,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/clause-courier.html","name":"Clause Courier"},{"@type":"ListItem","position":76,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/breachline.html","name":"Breachline"},{"@type":"ListItem","position":77,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/bulwark-burst.html","name":"Bulwark Burst"},{"@type":"ListItem","position":78,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/slipstream-sprint.html","name":"Slipstream Sprint"},{"@type":"ListItem","position":79,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/diamond-derby.html","name":"Diamond Derby"},{"@type":"ListItem","position":80,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/beacon-bastion.html","name":"Beacon Bastion"},{"@type":"ListItem","position":81,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/chrome-convoy.html","name":"Chrome Convoy"},{"@type":"ListItem","position":82,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/cipher-cadence.html","name":"Cipher Cadence"},{"@type":"ListItem","position":83,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/nightwire.html","name":"Nightwire"},{"@type":"ListItem","position":84,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/crosswire-clues.html","name":"Crosswire Clues"},{"@type":"ListItem","position":85,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/signal-loom.html","name":"Signal Loom"},{"@type":"ListItem","position":86,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/crown-circuit.html","name":"Crown Circuit"},{"@type":"ListItem","position":87,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/forge-freighter.html","name":"Forge Freighter"},{"@type":"ListItem","position":88,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/aster-vault.html","name":"Aster Vault"},{"@type":"ListItem","position":89,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/tempo-tunnels.html","name":"Tempo Tunnels"},{"@type":"ListItem","position":90,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/canopy-courier.html","name":"Canopy Courier"},{"@type":"ListItem","position":91,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/shard-sheriff.html","name":"Shard Sheriff"},{"@type":"ListItem","position":92,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/ledger-lanes.html","name":"Ledger Lanes"},{"@type":"ListItem","position":93,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/moonbase-mutex.html","name":"Moonbase Mutex"},{"@type":"ListItem","position":94,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/drift-loom.html","name":"Drift Loom"},{"@type":"ListItem","position":95,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/bulb-brigade.html","name":"Bulb Brigade"},{"@type":"ListItem","position":96,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/rune-roster.html","name":"Rune Roster"},{"@type":"ListItem","position":97,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/velvet-heist.html","name":"Velvet Heist"},{"@type":"ListItem","position":98,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/pocket-orchard.html","name":"Pocket Orchard"},{"@type":"ListItem","position":99,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/comet-cartel.html","name":"Comet Cartel"},{"@type":"ListItem","position":100,"url":"https://jakethehoffer.github.io/Workshop-Arcade/websites/finale-foundry.html","name":"Finale Foundry"}]}
@@ -674,17 +279,10 @@
   </footer>
 </div>
 
-<script>
-// --- Client-side catalog for HTML5 games ---
-// websites/manifest.json is the source of truth. FALLBACK_GAMES keeps the
-// catalog usable when the file is opened directly without a local server.
-
-const FALLBACK_GAMES = JSON.parse('[["brick-breaker","Brick Breaker",["Arcade","Physics"],"2025-09-01",93],["checkers","Checkers",["Board","Strategy"],"2025-09-05",81],["2048","2048",["Puzzle","Strategy"],"2025-09-10",90],["chess","Chess",["Board","Strategy"],"2025-09-12",88],["doodle-jump","Arcade Jump",["Arcade","Endless"],"2025-10-01",85],["flappy-bird","Sky Hopper",["Arcade","Endless"],"2025-09-20",92],["snake","Neon Snake",["Arcade","Endless"],"2025-09-08",86],["tetris","Block Drop",["Puzzle","Arcade"],"2025-09-15",91],["maze-chase","Maze Chase",["Arcade","Action"],"2025-09-18",94],["memory-match","Memory Match",["Puzzle"],"2026-05-14",60],["reflex-spark","Reflex Spark",["Arcade","Action"],"2026-05-14",55],["echo-mimic","Echo Mimic",["Puzzle","Arcade"],"2026-05-14",50],["paddle-pulse","Paddle Pulse",["Arcade","Physics","Action"],"2026-05-15",58],["rhythm-circuit","Rhythm Circuit",["Arcade","Rhythm","Action"],"2026-05-15",57],["circuit-putt","Circuit Putt",["Sports","Physics","Arcade"],"2026-05-15",56],["neon-drift","Neon Drift",["Racing","Arcade","Action"],"2026-05-15",55],["signal-siege","Signal Siege",["Strategy","Action","Defense"],"2026-05-16",54],["pinball-foundry","Pinball Foundry",["Arcade","Physics","Action"],"2026-05-16",53],["starline-strafe","Starline Strafe",["Arcade","Action","Shooter"],"2026-05-16",52],["shadow-switch","Shadow Switch",["Puzzle","Strategy","Stealth"],"2026-05-17",51],["deckforge-duel","Deckforge Duel",["Card","Strategy","Action"],"2026-05-17",50],["gemline-cascade","Gemline Cascade",["Puzzle","Arcade","Strategy"],"2026-05-17",59],["dungeon-circuit","Dungeon Circuit",["Adventure","Strategy","Action"],"2026-05-17",56],["minesweeper","Minesweeper",["Puzzle","Strategy"],"2025-09-22",82],["solitaire","Klondike Solitaire",["Board","Strategy"],"2025-09-25",80,"websites/solitare.html"],["wordle","Lexica",["Puzzle"],"2025-09-28",89],["shape-inlay","Slope Runner",["Arcade","Endless","Action"],"2025-09-07",77,null,"slope-runner"],["idle-tycoon","Idle Tycoon",["Strategy"],"2025-10-05",75],["metro-dash","Metro Dash",["Arcade","Endless","Action"],"2025-10-08",83],["arena","Arena",["Action","Strategy"],"2025-10-10",78],["hero-fact-match","Hero Fact Match",["Puzzle"],"2025-10-15",70],["night-shift-fact-match","Night Shift Fact Match",["Puzzle"],"2025-10-18",76],["arena-legend-guesser","Arena Legend Guesser",["Puzzle"],"2025-10-20",74],["cosmic-fact-match","Cosmic Fact Match",["Puzzle"],"2025-10-22",73],["packet-pilot","Packet Pilot",["Puzzle","Strategy"],"2026-05-18",58],["typeforge-cipher","Typeforge Cipher",["Arcade","Action"],"2026-05-18",57],["stack-tide","Stack Tide",["Arcade","Endless"],"2026-05-18",56],["crate-circuit","Crate Circuit",["Puzzle","Strategy"],"2026-05-18",55],["prism-relay","Prism Relay",["Puzzle","Strategy"],"2026-05-18",54],["vector-pool","Vector Pool",["Physics","Sports"],"2026-05-18",53],["gridline-tactics","Gridline Tactics",["Strategy","Tactics","Action"],"2026-05-19",52],["service-shift","Service Shift",["Simulation","Strategy","Arcade"],"2026-05-19",51],["letter-foundry","Letter Foundry",["Word","Puzzle","Strategy"],"2026-05-19",50],["penalty-circuit","Penalty Circuit",["Sports","Action","Arcade"],"2026-05-19",49],["orbit-salvage","Orbit Salvage",["Physics","Puzzle","Strategy"],"2026-05-19",48],["harbor-switchboard","Harbor Switchboard",["Simulation","Strategy","Puzzle"],"2026-05-19",47],["relay-choir","Relay Choir",["Rhythm","Puzzle","Strategy"],"2026-05-19",46],["circuit-draft","Circuit Draft",["Card","Strategy","Puzzle"],"2026-05-19",45],["switchback-rally","Switchback Rally",["Racing","Strategy","Physics"],"2026-05-19",44],["inkline-courier","Inkline Courier",["Puzzle","Strategy","Action"],"2026-05-20",43],["cipher-rooms","Cipher Rooms",["Puzzle","Adventure"],"2026-05-20",42],["patchwork-foundry","Patchwork Foundry",["Puzzle","Strategy"],"2026-05-20",41],["market-minute","Market Minute",["Simulation","Strategy","Card"],"2026-05-20",40],["bloomkeeper-grid","Bloomkeeper Grid",["Puzzle","Simulation","Strategy"],"2026-05-20",39],["volt-sudoku","Volt Sudoku",["Puzzle","Board","Strategy"],"2026-05-21",38],["glyphogram-grid","Glyphogram Grid",["Puzzle","Board","Strategy"],"2026-05-21",37],["lumen-lander","Lumen Lander",["Physics","Arcade","Action"],"2026-05-21",36],["wordweave-grid","Wordweave Grid",["Word","Puzzle","Strategy"],"2026-05-21",35],["dice-dynamo","Dice Dynamo",["Simulation","Strategy","Puzzle"],"2026-05-21",34],["shadow-vault","Shadow Vault",["Stealth","Puzzle","Adventure"],"2026-05-22",33],["rail-yard-relay","Rail Yard Relay",["Simulation","Puzzle","Strategy"],"2026-05-22",32],["skyline-sentry","Skyline Sentry",["Defense","Shooter","Action"],"2026-05-22",31],["tempo-forge","Tempo Forge",["Rhythm","Puzzle","Strategy"],"2026-05-22",30],["gridfront-orders","Gridfront Orders",["Tactics","Strategy","Action"],"2026-05-22",29],["flux-reversi","Flux Reversi",["Board","Strategy"],"2026-05-28",60],["fourfall","Fourfall",["Board","Strategy"],"2026-05-28",59],["eclipse-grid","Eclipse Grid",["Puzzle","Board"],"2026-05-28",58],["slipsort","Slipsort",["Puzzle","Board"],"2026-05-29",57],["seedline","Seedline",["Board","Strategy"],"2026-05-29",56],["floodgate","Floodgate",["Puzzle","Strategy"],"2026-05-29",55],["last-light","Last Light",["Puzzle","Board"],"2026-05-29",54],["chromalock","Chromalock",["Puzzle","Strategy"],"2026-06-01",62],["pylon-shift","Pylon Shift",["Puzzle","Strategy"],"2026-06-01",61],["blackjack","Blackjack",["Card","Strategy"],"2026-06-01",63],["clause-courier","Clause Courier",["Word","Puzzle","Strategy"],"2026-06-02",64],["breachline","Breachline",["Tactics","Stealth","Strategy"],"2026-06-02",65],["bulwark-burst","Bulwark Burst",["Defense","Shooter","Action"],"2026-06-03",66],["slipstream-sprint","Slipstream Sprint",["Racing","Arcade","Action"],"2026-06-03",67],["diamond-derby","Diamond Derby",["Sports","Arcade","Action"],"2026-06-04",68],["beacon-bastion","Beacon Bastion",["Adventure","Defense","Strategy"],"2026-06-04",69],["chrome-convoy","Chrome Convoy",["Racing","Shooter","Action"],"2026-06-04",70],["cipher-cadence","Cipher Cadence",["Word","Rhythm","Puzzle"],"2026-06-05",71],["nightwire","Nightwire",["Tactics","Stealth","Strategy"],"2026-06-05",72],["crosswire-clues","Crosswire Clues",["Word","Puzzle","Strategy"],"2026-06-06",73],["signal-loom","Signal Loom",["Puzzle","Strategy","Rhythm"],"2026-06-07",74],["crown-circuit","Crown Circuit",["Board","Strategy"],"2026-06-07",75],["forge-freighter","Forge Freighter",["Simulation","Strategy","Puzzle"],"2026-06-07",76],["aster-vault","Aster Vault",["Adventure","Physics","Puzzle"],"2026-06-07",77],["tempo-tunnels","Tempo Tunnels",["Rhythm","Arcade","Action"],"2026-06-07",78],["canopy-courier","Canopy Courier",["Adventure","Arcade","Endless"],"2026-06-07",79],["shard-sheriff","Shard Sheriff",["Shooter","Action","Arcade"],"2026-06-07",80],["ledger-lanes","Ledger Lanes",["Card","Strategy","Simulation"],"2026-06-07",81],["moonbase-mutex","Moonbase Mutex",["Tactics","Strategy","Puzzle"],"2026-06-07",82],["drift-loom","Drift Loom",["Racing","Physics","Arcade"],"2026-06-07",83],["bulb-brigade","Bulb Brigade",["Defense","Strategy","Puzzle"],"2026-06-07",84],["rune-roster","Rune Roster",["Word","Puzzle","Strategy"],"2026-06-07",85],["velvet-heist","Velvet Heist",["Stealth","Tactics","Adventure"],"2026-06-07",86],["pocket-orchard","Pocket Orchard",["Simulation","Strategy"],"2026-06-07",87],["comet-cartel","Comet Cartel",["Shooter","Racing","Action"],"2026-06-07",88],["finale-foundry","Finale Foundry",["Puzzle","Arcade","Rhythm"],"2026-06-07",100]]').map(r=>({id:r[0],title:r[1],subtitle:'',tags:r[2],slug:r[0],url:r[5]||'websites/'+r[0]+'.html',cover:'covers/'+(r[6]||r[0])+'.svg',addedAt:r[3],popularity:r[4]}));
-
+<script>const FALLBACK_GAMES = JSON.parse('[["brick-breaker","Brick Breaker",["Arcade","Physics"],"2025-09-01",93],["checkers","Checkers",["Board","Strategy"],"2025-09-05",81],["2048","2048",["Puzzle","Strategy"],"2025-09-10",90],["chess","Chess",["Board","Strategy"],"2025-09-12",88],["doodle-jump","Arcade Jump",["Arcade","Endless"],"2025-10-01",85],["flappy-bird","Sky Hopper",["Arcade","Endless"],"2025-09-20",92],["snake","Neon Snake",["Arcade","Endless"],"2025-09-08",86],["tetris","Block Drop",["Puzzle","Arcade"],"2025-09-15",91],["maze-chase","Maze Chase",["Arcade","Action"],"2025-09-18",94],["memory-match","Memory Match",["Puzzle"],"2026-05-14",60],["reflex-spark","Reflex Spark",["Arcade","Action"],"2026-05-14",55],["echo-mimic","Echo Mimic",["Puzzle","Arcade"],"2026-05-14",50],["paddle-pulse","Paddle Pulse",["Arcade","Physics","Action"],"2026-05-15",58],["rhythm-circuit","Rhythm Circuit",["Arcade","Rhythm","Action"],"2026-05-15",57],["circuit-putt","Circuit Putt",["Sports","Physics","Arcade"],"2026-05-15",56],["neon-drift","Neon Drift",["Racing","Arcade","Action"],"2026-05-15",55],["signal-siege","Signal Siege",["Strategy","Action","Defense"],"2026-05-16",54],["pinball-foundry","Pinball Foundry",["Arcade","Physics","Action"],"2026-05-16",53],["starline-strafe","Starline Strafe",["Arcade","Action","Shooter"],"2026-05-16",52],["shadow-switch","Shadow Switch",["Puzzle","Strategy","Stealth"],"2026-05-17",51],["deckforge-duel","Deckforge Duel",["Card","Strategy","Action"],"2026-05-17",50],["gemline-cascade","Gemline Cascade",["Puzzle","Arcade","Strategy"],"2026-05-17",59],["dungeon-circuit","Dungeon Circuit",["Adventure","Strategy","Action"],"2026-05-17",56],["minesweeper","Minesweeper",["Puzzle","Strategy"],"2025-09-22",82],["solitaire","Klondike Solitaire",["Board","Strategy"],"2025-09-25",80,"websites/solitare.html"],["wordle","Lexica",["Puzzle"],"2025-09-28",89],["shape-inlay","Slope Runner",["Arcade","Endless","Action"],"2025-09-07",77,null,"slope-runner"],["idle-tycoon","Idle Tycoon",["Strategy"],"2025-10-05",75],["metro-dash","Metro Dash",["Arcade","Endless","Action"],"2025-10-08",83],["arena","Arena",["Action","Strategy"],"2025-10-10",78],["hero-fact-match","Hero Fact Match",["Puzzle"],"2025-10-15",70],["night-shift-fact-match","Night Shift Fact Match",["Puzzle"],"2025-10-18",76],["arena-legend-guesser","Arena Legend Guesser",["Puzzle"],"2025-10-20",74],["cosmic-fact-match","Cosmic Fact Match",["Puzzle"],"2025-10-22",73],["packet-pilot","Packet Pilot",["Puzzle","Strategy"],"2026-05-18",58],["typeforge-cipher","Typeforge Cipher",["Arcade","Action"],"2026-05-18",57],["stack-tide","Stack Tide",["Arcade","Endless"],"2026-05-18",56],["crate-circuit","Crate Circuit",["Puzzle","Strategy"],"2026-05-18",55],["prism-relay","Prism Relay",["Puzzle","Strategy"],"2026-05-18",54],["vector-pool","Vector Pool",["Physics","Sports"],"2026-05-18",53],["gridline-tactics","Gridline Tactics",["Strategy","Tactics","Action"],"2026-05-19",52],["service-shift","Service Shift",["Simulation","Strategy","Arcade"],"2026-05-19",51],["letter-foundry","Letter Foundry",["Word","Puzzle","Strategy"],"2026-05-19",50],["penalty-circuit","Penalty Circuit",["Sports","Action","Arcade"],"2026-05-19",49],["orbit-salvage","Orbit Salvage",["Physics","Puzzle","Strategy"],"2026-05-19",48],["harbor-switchboard","Harbor Switchboard",["Simulation","Strategy","Puzzle"],"2026-05-19",47],["relay-choir","Relay Choir",["Rhythm","Puzzle","Strategy"],"2026-05-19",46],["circuit-draft","Circuit Draft",["Card","Strategy","Puzzle"],"2026-05-19",45],["switchback-rally","Switchback Rally",["Racing","Strategy","Physics"],"2026-05-19",44],["inkline-courier","Inkline Courier",["Puzzle","Strategy","Action"],"2026-05-20",43],["cipher-rooms","Cipher Rooms",["Puzzle","Adventure"],"2026-05-20",42],["patchwork-foundry","Patchwork Foundry",["Puzzle","Strategy"],"2026-05-20",41],["market-minute","Market Minute",["Simulation","Strategy","Card"],"2026-05-20",40],["bloomkeeper-grid","Bloomkeeper Grid",["Puzzle","Simulation","Strategy"],"2026-05-20",39],["volt-sudoku","Volt Sudoku",["Puzzle","Board","Strategy"],"2026-05-21",38],["glyphogram-grid","Glyphogram Grid",["Puzzle","Board","Strategy"],"2026-05-21",37],["lumen-lander","Lumen Lander",["Physics","Arcade","Action"],"2026-05-21",36],["wordweave-grid","Wordweave Grid",["Word","Puzzle","Strategy"],"2026-05-21",35],["dice-dynamo","Dice Dynamo",["Simulation","Strategy","Puzzle"],"2026-05-21",34],["shadow-vault","Shadow Vault",["Stealth","Puzzle","Adventure"],"2026-05-22",33],["rail-yard-relay","Rail Yard Relay",["Simulation","Puzzle","Strategy"],"2026-05-22",32],["skyline-sentry","Skyline Sentry",["Defense","Shooter","Action"],"2026-05-22",31],["tempo-forge","Tempo Forge",["Rhythm","Puzzle","Strategy"],"2026-05-22",30],["gridfront-orders","Gridfront Orders",["Tactics","Strategy","Action"],"2026-05-22",29],["flux-reversi","Flux Reversi",["Board","Strategy"],"2026-05-28",60],["fourfall","Fourfall",["Board","Strategy"],"2026-05-28",59],["eclipse-grid","Eclipse Grid",["Puzzle","Board"],"2026-05-28",58],["slipsort","Slipsort",["Puzzle","Board"],"2026-05-29",57],["seedline","Seedline",["Board","Strategy"],"2026-05-29",56],["floodgate","Floodgate",["Puzzle","Strategy"],"2026-05-29",55],["last-light","Last Light",["Puzzle","Board"],"2026-05-29",54],["chromalock","Chromalock",["Puzzle","Strategy"],"2026-06-01",62],["pylon-shift","Pylon Shift",["Puzzle","Strategy"],"2026-06-01",61],["blackjack","Blackjack",["Card","Strategy"],"2026-06-01",63],["clause-courier","Clause Courier",["Word","Puzzle","Strategy"],"2026-06-02",64],["breachline","Breachline",["Tactics","Stealth","Strategy"],"2026-06-02",65],["bulwark-burst","Bulwark Burst",["Defense","Shooter","Action"],"2026-06-03",66],["slipstream-sprint","Slipstream Sprint",["Racing","Arcade","Action"],"2026-06-03",67],["diamond-derby","Diamond Derby",["Sports","Arcade","Action"],"2026-06-04",68],["beacon-bastion","Beacon Bastion",["Adventure","Defense","Strategy"],"2026-06-04",69],["chrome-convoy","Chrome Convoy",["Racing","Shooter","Action"],"2026-06-04",70],["cipher-cadence","Cipher Cadence",["Word","Rhythm","Puzzle"],"2026-06-05",71],["nightwire","Nightwire",["Tactics","Stealth","Strategy"],"2026-06-05",72],["crosswire-clues","Crosswire Clues",["Word","Puzzle","Strategy"],"2026-06-06",73],["signal-loom","Signal Loom",["Puzzle","Strategy","Rhythm"],"2026-06-07",74],["crown-circuit","Crown Circuit",["Board","Strategy"],"2026-06-07",75],["forge-freighter","Forge Freighter",["Simulation","Strategy","Puzzle"],"2026-06-07",76],["aster-vault","Aster Vault",["Adventure","Physics","Puzzle"],"2026-06-07",77],["tempo-tunnels","Tempo Tunnels",["Rhythm","Arcade","Action"],"2026-06-07",78],["canopy-courier","Canopy Courier",["Adventure","Arcade","Endless"],"2026-06-07",79],["shard-sheriff","Shard Sheriff",["Shooter","Action","Arcade"],"2026-06-07",80],["ledger-lanes","Ledger Lanes",["Card","Strategy","Simulation"],"2026-06-07",81],["moonbase-mutex","Moonbase Mutex",["Tactics","Strategy","Puzzle"],"2026-06-07",82],["drift-loom","Drift Loom",["Racing","Physics","Arcade"],"2026-06-07",83],["bulb-brigade","Bulb Brigade",["Defense","Strategy","Puzzle"],"2026-06-07",84],["rune-roster","Rune Roster",["Word","Puzzle","Strategy"],"2026-06-07",85],["velvet-heist","Velvet Heist",["Stealth","Tactics","Adventure"],"2026-06-07",86],["pocket-orchard","Pocket Orchard",["Simulation","Strategy"],"2026-06-07",87],["comet-cartel","Comet Cartel",["Shooter","Racing","Action"],"2026-06-07",88],["finale-foundry","Finale Foundry",["Puzzle","Arcade","Rhythm"],"2026-06-07",100]]').map(r=>({id:r[0],title:r[1],subtitle:'',tags:r[2],slug:r[0],url:r[5]||'websites/'+r[0]+'.html',cover:'covers/'+(r[6]||r[0])+'.svg',addedAt:r[3],popularity:r[4]}));
 const CATEGORY_ORDER = ["All","Arcade","Puzzle","Word","Board","Card","Strategy","Tactics","Simulation","Adventure","Stealth","Action","Shooter","Defense","Endless","Physics","Sports","Racing","Rhythm"];
 const DRAFTS_KEY = "workshop_arcade_drafts_v1";
 const GITHUB_ISSUE_URL = "https://github.com/jakethehoffer/Workshop-Arcade/issues/new";
-
 const state = {
   games: [],
   filtered: [],
@@ -696,10 +294,8 @@ const state = {
   favorites: [],
   activeGameSlug: ""
 };
-
 const RECENT_PLAYS_KEY = 'workshop-arcade:recentPlays:v1';
 const RECENT_PLAYS_MAX = 10;
-
 function loadRecentPlays(){
   try {
     const raw = localStorage.getItem(RECENT_PLAYS_KEY);
@@ -708,20 +304,13 @@ function loadRecentPlays(){
     return Array.isArray(parsed) ? parsed.filter(s => typeof s === 'string') : [];
   } catch { return []; }
 }
-
 function pushRecentPlay(slug){
   if(typeof slug !== 'string' || !slug) return;
   const plays = [slug, ...state.recentPlays.filter(s => s !== slug)].slice(0, RECENT_PLAYS_MAX);
   state.recentPlays = plays;
   try { localStorage.setItem(RECENT_PLAYS_KEY, JSON.stringify(plays)); } catch {}
 }
-
-// Favorites: a player-curated set of game slugs, persisted on the device.
-// Mirrors the recent-plays pattern and surfaces as a dynamic "Favorites"
-// filter chip (only shown when at least one favorite exists), just like
-// "Recently". Defensive against blocked/opaque localStorage.
 const FAVORITES_KEY = 'workshop-arcade:favorites:v1';
-
 function loadFavorites(){
   try {
     const raw = localStorage.getItem(FAVORITES_KEY);
@@ -730,11 +319,9 @@ function loadFavorites(){
     return Array.isArray(parsed) ? parsed.filter(s => typeof s === 'string') : [];
   } catch { return []; }
 }
-
 function isFavorite(slug){
   return typeof slug === 'string' && state.favorites.includes(slug);
 }
-
 function toggleFavorite(slug){
   if(typeof slug !== 'string' || !slug) return;
   state.favorites = isFavorite(slug)
@@ -742,7 +329,6 @@ function toggleFavorite(slug){
     : [slug, ...state.favorites];
   try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(state.favorites)); } catch {}
 }
-
 const els = {
   header: document.querySelector('header'),
   main: document.querySelector('main'),
@@ -799,9 +385,7 @@ const els = {
   playerExternalLink: document.getElementById('playerExternalLink'),
   playerClose: document.getElementById('playerClose')
 };
-
 loadDrafts();
-
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -811,20 +395,16 @@ const FOCUSABLE_SELECTOR = [
   'iframe:not([tabindex="-1"])',
   '[tabindex]:not([tabindex="-1"])'
 ].join(',');
-
 const modalFocus = {
   active: null,
   trigger: null
 };
-
 function isVisibleFocusable(el){
   return !!el && !el.hasAttribute('disabled') && el.getClientRects().length > 0;
 }
-
 function focusableWithin(root){
   return [...root.querySelectorAll(FOCUSABLE_SELECTOR)].filter(isVisibleFocusable);
 }
-
 function setPageChromeHidden(hidden){
   for(const el of [els.header, els.main, els.footer]){
     if(!el) continue;
@@ -832,13 +412,11 @@ function setPageChromeHidden(hidden){
     else el.removeAttribute('aria-hidden');
   }
 }
-
 function focusModalTarget(modal, preferred){
   const focusables = focusableWithin(modal);
   const target = isVisibleFocusable(preferred) ? preferred : (focusables[0] || modal);
   target.focus({ preventScroll: true });
 }
-
 function showManagedModal(modal, trigger, preferredFocus){
   modalFocus.active = modal;
   modalFocus.trigger = trigger && typeof trigger.focus === 'function' ? trigger : document.activeElement;
@@ -847,7 +425,6 @@ function showManagedModal(modal, trigger, preferredFocus){
   document.body.style.overflow = 'hidden';
   setTimeout(() => focusModalTarget(modal, preferredFocus), 0);
 }
-
 function hideManagedModal(modal, { restoreFocus = true } = {}){
   modal.hidden = true;
   if(modalFocus.active === modal) modalFocus.active = null;
@@ -861,18 +438,15 @@ function hideManagedModal(modal, { restoreFocus = true } = {}){
     setTimeout(() => restoreTarget.focus({ preventScroll: true }), 0);
   }
 }
-
 function trapModalFocus(e){
   const modal = modalFocus.active;
   if(!modal || modal.hidden) return false;
-
   if(e.key === 'Escape'){
     e.preventDefault();
     if(modal === els.playerModal) closePlayer();
     else if(modal === els.workshopModal) closeWorkshop();
     return true;
   }
-
   if(e.key !== 'Tab') return false;
   const focusables = focusableWithin(modal);
   if(!focusables.length){
@@ -894,11 +468,8 @@ function trapModalFocus(e){
   }
   return true;
 }
-
-// Load games manifest (backend can generate this later)
 (async function load(){
   try{
-    // was '/games/manifest.json'
     const res = await fetch('websites/manifest.json', { cache: 'no-cache' });
     if(!res.ok) throw new Error('no manifest');
     const data = await res.json();
@@ -909,17 +480,12 @@ function trapModalFocus(e){
   }
   state.recentPlays = loadRecentPlays();
   state.favorites = loadFavorites();
-  // Honor ?q=, ?tag=, ?sort= from the URL on cold load so bookmarked
-  // and shared filter URLs land on the right view. Defaults silently
-  // restore to "All" / no query / newest when params are missing.
   applyUrlStateFromLocation();
   buildFilters();
   populateWorkshopGames();
   update();
-  // If the URL has #play=slug, auto-open in the sandboxed player.
   syncHash();
 })();
-
 function normalizeGames(games){
   return games
     .filter(g => g && g.id && g.title && g.slug && isSafeGameUrl(g.url))
@@ -930,18 +496,14 @@ function normalizeGames(games){
       popularity: Number(g.popularity || 0)
     }));
 }
-
 function isSafeGameUrl(url){
   return typeof url === 'string' && /^websites\/[A-Za-z0-9._-]+\.html$/.test(url);
 }
-
 function buildFilters(){
   const found = new Set(state.games.flatMap(g => g.tags || []));
   const ordered = CATEGORY_ORDER.filter(name => name === 'All' || found.has(name));
   const extras = [...found].filter(name => !CATEGORY_ORDER.includes(name)).sort((a,b)=>a.localeCompare(b));
   const baseCategories = [...ordered, ...extras];
-  // Dynamic pseudo-categories sit right after "All": Favorites (player-curated)
-  // then Recently (auto-tracked). Each appears only when it has entries.
   const dynamic = [];
   if(categoryCount('Favorites') > 0) dynamic.push('Favorites');
   if(state.recentPlays.length) dynamic.push('Recently');
@@ -949,7 +511,6 @@ function buildFilters(){
     ? [baseCategories[0], ...dynamic, ...baseCategories.slice(1)]
     : baseCategories;
   if(!categories.includes(state.category)) state.category = 'All';
-
   els.filters.innerHTML = '';
   for(const name of categories){
     const count = categoryCount(name);
@@ -972,7 +533,6 @@ function buildFilters(){
     els.filters.appendChild(chip);
   }
 }
-
 function categoryCount(category){
   if(category === 'All') return state.games.length;
   if(category === 'Favorites'){
@@ -985,26 +545,16 @@ function categoryCount(category){
   }
   return state.games.filter(g => (g.tags||[]).includes(category)).length;
 }
-
 function setCategory(category){
   state.category = category;
   syncStateToUrl();
   update();
 }
-
 function resetCatalogSearch(){
   state.query = '';
   if(els.q) els.q.value = '';
 }
-
-// Catalog URL state — bookmarkable, shareable, and restored on reload.
-// ?q=snake&tag=Arcade&sort=pop is parsed at startup, kept in sync as
-// the user types / picks chips / changes the sort, and reapplied when
-// the user hits the back button (popstate). Defaults (empty query,
-// "All" tag, "new" sort) are omitted so the canonical URL stays /
-// without query noise.
 const VALID_SORT_VALUES = new Set(['new', 'az', 'pop']);
-
 function syncStateToUrl(){
   if (typeof URLSearchParams === 'undefined') return;
   const params = new URLSearchParams();
@@ -1016,7 +566,6 @@ function syncStateToUrl(){
   if (href === location.pathname + location.search + location.hash) return;
   try { history.replaceState(history.state, '', href); } catch {}
 }
-
 function applyUrlStateFromLocation(){
   if (typeof URLSearchParams === 'undefined') return;
   const params = new URLSearchParams(location.search);
@@ -1033,22 +582,14 @@ function applyUrlStateFromLocation(){
   state.sort = sort && VALID_SORT_VALUES.has(sort) ? sort : 'new';
   if (els.sort) els.sort.value = state.sort;
 }
-
-// Search helpers
 els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim().toLowerCase(); syncStateToUrl(); update(); });
 window.addEventListener('keydown', (e)=>{ if(modalFocus.active) return; if((e.ctrlKey||e.metaKey) && e.key === '/'){ els.q.focus(); e.preventDefault(); }});
 els.sort.addEventListener('change', ()=>{ state.sort = els.sort.value; syncStateToUrl(); update(); });
 window.addEventListener('popstate', () => {
-  // Back/forward button — re-read URL state and refresh the visible filter UI.
   applyUrlStateFromLocation();
   if (typeof buildFilters === 'function') buildFilters();
   update();
 });
-
-// Random game: pick from the currently-filtered list so the choice honors
-// any active category / search the user is browsing. Falls back to the
-// full catalog when the current filter is empty so the button never
-// becomes a no-op while there are games available.
 function pickRandomGame(excludeSlug = ""){
   const basePool = (state.filtered && state.filtered.length) ? state.filtered : state.games;
   if (!basePool || !basePool.length) return null;
@@ -1059,20 +600,17 @@ function pickRandomGame(excludeSlug = ""){
   const index = Math.floor(Math.random() * candidates.length);
   return candidates[index];
 }
-
 function openRandomGame(trigger){
   const game = pickRandomGame();
   if (!game) return;
   openPlayer(game, trigger);
 }
-
 if (els.randomGameBtn) {
   els.randomGameBtn.addEventListener('click', (e) => {
     e.preventDefault();
     openRandomGame(e.currentTarget);
   });
 }
-
 function openPlayerRandomGame(trigger){
   const current = currentlyOpenGame();
   const game = pickRandomGame(current ? current.slug : "");
@@ -1080,17 +618,12 @@ function openPlayerRandomGame(trigger){
   openPlayer(game, trigger);
   if (current && game.slug !== current.slug) setPlayerStatus('Random pick');
 }
-
-// Keyboard shortcuts help — native <dialog> handles focus trapping and
-// Esc-to-close, so toggleHelpDialog() just flips between showModal()
-// and close(). Wire both the header button click and the "?" key.
 function isTypingInEditableSurface(target){
   if (!target) return false;
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return true;
   if (target.isContentEditable) return true;
   return false;
 }
-
 function toggleHelpDialog(){
   const dialog = els.helpDialog;
   if (!dialog || typeof dialog.showModal !== 'function') return;
@@ -1100,14 +633,12 @@ function toggleHelpDialog(){
     dialog.showModal();
   }
 }
-
 if (els.helpBtn) {
   els.helpBtn.addEventListener('click', (e) => {
     e.preventDefault();
     toggleHelpDialog();
   });
 }
-
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key !== '?' && !(e.key === '/' && e.shiftKey)) return;
@@ -1115,9 +646,6 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   toggleHelpDialog();
 });
-
-// "r" keyboard shortcut for Random game. Skip when the user is typing in
-// an editable surface so it doesn't hijack normal text entry.
 window.addEventListener('keydown', (e) => {
   if (modalFocus.active) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1127,21 +655,16 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   openRandomGame(els.randomGameBtn || document.activeElement);
 });
-
 function update(){
-  // active chip UI
   for(const chip of els.filters.children){
     const active = chip.dataset.category === state.category;
     chip.setAttribute('data-active', active);
     chip.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
-
   const q = state.query;
   const cat = state.category;
   let list;
   if(cat === 'Recently'){
-    // Recency-ordered list of recently-played games; ignores the sort dropdown
-    // because the implicit order is "most recent first".
     list = state.recentPlays
       .map(slug => state.games.find(g => g.slug === slug))
       .filter(Boolean);
@@ -1149,39 +672,20 @@ function update(){
     list = [...state.games];
     if(cat === 'Favorites') list = list.filter(g => isFavorite(g.slug));
     else if(cat !== 'All') list = list.filter(g => (g.tags||[]).includes(cat));
-    // sort (Recently keeps its implicit recency order)
     if(state.sort === 'az') list.sort((a,b)=>a.title.localeCompare(b.title));
     else if(state.sort === 'pop') list.sort((a,b)=>(b.popularity||0)-(a.popularity||0));
     else list.sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
   }
   if(q) list = list.filter(g => `${g.title} ${g.subtitle} ${(g.tags||[]).join(' ')}`.toLowerCase().includes(q));
-
   state.filtered = list;
   render();
 }
-
-// Number of cards likely visible above the fold for the current viewport.
-// Their covers get eager loading + high fetch priority so the LCP candidate
-// is fetched immediately; later covers stay lazy so off-screen ones don't
-// compete for bandwidth on first paint. Tuned from live measurements and the
-// static shell budget: at 375x812 only ~1-2 cards are visible above the fold,
-// so eagerly fetching 6 wasted ~4 cover requests on mobile; desktop keeps the
-// first row prioritized while preserving at least 20 KB shell headroom.
 function aboveFoldCoverCount() {
   const w = (typeof window !== 'undefined' && window.innerWidth) || 1280;
-  if (w <= 600) return 3;   // phone: 1-2 visible + small fast-scroll buffer
-  if (w <= 1024) return 4;  // tablet: 2-3 visible + buffer
-  return 4;                 // desktop: first row + shell-headroom buffer
+  if (w <= 600) return 3;
+  if (w <= 1024) return 4;
+  return 4; // desktop
 }
-
-// Native loading="lazy" is a *hint* — Chromium pre-fetches images well past the
-// viewport on initial paint, so a 40-card catalog still pays 40 cover requests
-// up-front (44 total = catalog HTML + manifest.json + sw.js + app icon + 40
-// covers). The IntersectionObserver below makes the deferral actually deferred:
-// below-the-fold covers ship with a tiny blank placeholder src and only swap to
-// the real cover URL once the card actually enters the viewport.
-// The loading="lazy" + fetchpriority="low" hints stay in place so browsers
-// without IntersectionObserver still get the native lazy-load behaviour.
 const COVER_LAZY_PLACEHOLDER = "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27640%27%20height%3D%27360%27%2F%3E";
 let coverLazyObserver = null;
 function getCoverLazyObserver() {
@@ -1204,7 +708,6 @@ function getCoverLazyObserver() {
   }, { rootMargin: '0px 0px' });
   return coverLazyObserver;
 }
-
 function render(){
   els.grid.innerHTML = '';
   els.grid.setAttribute('aria-busy','true');
@@ -1231,7 +734,6 @@ function render(){
     cardIndex++;
     card.querySelector('.title').textContent = g.title;
     card.querySelector('.subtitle').textContent = g.subtitle || '';
-
     const tags = card.querySelector('.tags');
     for(const t of (g.tags||[])){
       const tag = document.createElement('button');
@@ -1248,7 +750,6 @@ function render(){
       });
       tags.appendChild(tag);
     }
-
     const playBtn = card.querySelector('.play');
     const improveBtn = card.querySelector('.improve');
     const thumbBtn = card.querySelector('.thumb');
@@ -1258,7 +759,6 @@ function render(){
     playBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
     improveBtn.addEventListener('click', e => openWorkshop(g.id, e.currentTarget));
     thumbBtn.addEventListener('click', e => openPlayer(g, e.currentTarget));
-
     const favBtn = card.querySelector('.fav');
     if(favBtn){
       const fav = isFavorite(g.slug);
@@ -1272,12 +772,10 @@ function render(){
         update();
       });
     }
-
     frag.appendChild(card);
   }
   els.grid.appendChild(frag);
   els.grid.removeAttribute('aria-busy');
-
   const n = state.filtered.length;
   if(state.category === 'Recently'){
     els.resultCount.textContent = n
@@ -1297,7 +795,6 @@ function render(){
   renderSessionRail();
   renderPlayerShelves();
 }
-
 function makeShelfRow(shelf){
   const row = document.createElement('article');
   row.className = 'queue-row';
@@ -1328,7 +825,6 @@ function makeShelfRow(shelf){
     pick.append(pickTitle, pickTags);
     picks.appendChild(pick);
   }
-
   const action = document.createElement('button');
   action.className = 'queue-action';
   action.type = 'button';
@@ -1337,21 +833,17 @@ function makeShelfRow(shelf){
   row.append(meta, picks, action);
   return row;
 }
-
 function sortNewest(games){
   return [...games].sort((a,b)=> new Date(b.addedAt||0) - new Date(a.addedAt||0));
 }
-
 function sortPopular(games){
   return [...games].sort((a,b)=>(b.popularity||0)-(a.popularity||0));
 }
-
 function gamesFromSlugs(slugs){
   return (slugs || [])
     .map(slug => state.games.find(g => g.slug === slug))
     .filter(Boolean);
 }
-
 function uniqueGamesFromSlugs(slugs){
   const seen = new Set();
   const games = [];
@@ -1362,7 +854,6 @@ function uniqueGamesFromSlugs(slugs){
   }
   return games;
 }
-
 function pickUniqueGames(games, count = 3, used = new Set()){
   const unique = [];
   for(const game of games || []){
@@ -1380,14 +871,12 @@ function pickUniqueGames(games, count = 3, used = new Set()){
   for(const game of unique) used.add(game.slug);
   return unique;
 }
-
 function localDateKey(date = new Date()){
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
-
 function hashPickKey(value){
   let hash = 2166136261;
   for(let i = 0; i < value.length; i++){
@@ -1396,7 +885,6 @@ function hashPickKey(value){
   }
   return hash >>> 0;
 }
-
 function dailyPicks(games, count = 3, date = new Date()){
   const key = localDateKey(date);
   return [...(games || [])]
@@ -1408,7 +896,6 @@ function dailyPicks(games, count = 3, date = new Date()){
     })
     .slice(0, count);
 }
-
 function firstGameFromSlugs(slugs, excluded = new Set()){
   for(const slug of (slugs || [])){
     if(excluded.has(slug)) continue;
@@ -1417,7 +904,6 @@ function firstGameFromSlugs(slugs, excluded = new Set()){
   }
   return null;
 }
-
 function returningPlayerPicks(count = 3, excluded = new Set()){
   const seeds = uniqueGamesFromSlugs([...(state.recentPlays || []), ...(state.favorites || [])]);
   const picks = [];
@@ -1430,7 +916,6 @@ function returningPlayerPicks(count = 3, excluded = new Set()){
   }
   return picks;
 }
-
 function buildSessionRailItems(){
   const shown = new Set();
   const recentGame = firstGameFromSlugs(state.recentPlays, shown);
@@ -1455,7 +940,6 @@ function buildSessionRailItems(){
       subtitle: 'Starred on this device'
     });
   }
-
   const nextPool = recentGame ? rankedRelatedGames(recentGame) : sortPopular(state.games);
   const nextGame = nextPool.find(g => g && !shown.has(g.slug));
   if(nextGame){
@@ -1466,10 +950,8 @@ function buildSessionRailItems(){
       subtitle: recentGame ? `Related to ${recentGame.title}` : 'Popular next play'
     });
   }
-
   return items.slice(0, 3);
 }
-
 function makeSessionRailItem(item){
   const button = document.createElement('button');
   button.className = 'session-rail-card';
@@ -1489,7 +971,6 @@ function makeSessionRailItem(item){
   button.append(meta, action);
   return button;
 }
-
 function renderSessionRail(){
   if(!els.sessionRail || !els.sessionRailList) return;
   const items = buildSessionRailItems();
@@ -1499,7 +980,6 @@ function renderSessionRail(){
     els.sessionRailList.appendChild(makeSessionRailItem(item));
   }
 }
-
 if(els.sessionRailList){
   els.sessionRailList.addEventListener('click', (event) => {
     const button = event.target.closest('[data-slug]');
@@ -1508,7 +988,6 @@ if(els.sessionRailList){
     if(game) openPlayer(game, button);
   });
 }
-
 function buildPlayerShelves(){
   const usedShelfPicks = new Set();
   const newest = sortNewest(state.games);
@@ -1526,7 +1005,6 @@ function buildPlayerShelves(){
   const quickPicks = pickUniqueGames(quick, 3, usedShelfPicks);
   const newestPicks = pickUniqueGames(newest, 3, usedShelfPicks);
   const shelves = [];
-
   if(recent.length){
     shelves.push({
       id: 'recent',
@@ -1554,7 +1032,6 @@ function buildPlayerShelves(){
       games: forYouPicks
     });
   }
-
   shelves.push(
     {
       id: 'today',
@@ -1578,10 +1055,8 @@ function buildPlayerShelves(){
       games: newestPicks
     }
   );
-
   return shelves;
 }
-
 function renderPlayerShelves(){
   if(!els.playerShelvesList) return;
   els.playerShelvesList.innerHTML = '';
@@ -1596,7 +1071,6 @@ function renderPlayerShelves(){
     els.gameCountFooter.textContent = String(state.games.length || 71);
   }
 }
-
 function openShelf(id){
   resetCatalogSearch();
   if(id === 'recent' && state.recentPlays.length){
@@ -1618,7 +1092,6 @@ function openShelf(id){
   update();
   document.getElementById('grid')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
-
 if(els.playerShelvesList){
   els.playerShelvesList.addEventListener('click', (event) => {
     const pick = event.target.closest('[data-shelf-pick][data-slug]');
@@ -1631,9 +1104,7 @@ if(els.playerShelvesList){
     if(action) openShelf(action.dataset.shelfAction || 'newest');
   });
 }
-
 function placeholderCover(title){
-  // Generate a unique hue from the title so every game gets a distinct colour
   let h = 0; for(let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) & 0xfff;
   const hue = h % 360;
   const c1 = `hsl(${hue},70%25,35%25)`;
@@ -1641,18 +1112,15 @@ function placeholderCover(title){
   const text = encodeURIComponent(title);
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='${c1}'/%3E%3Cstop offset='1' stop-color='${c2}'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='640' height='360' fill='url(%23g)'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial' font-size='36' font-weight='800' fill='white' opacity='.9'%3E${text}%3C/text%3E%3C/svg%3E`;
 }
-
 function compareNewest(a, b){
   const diff = new Date(b.addedAt || 0) - new Date(a.addedAt || 0);
   if(diff) return diff;
   return String(a.title || '').localeCompare(String(b.title || ''));
 }
-
 function sharedTagCount(a, b){
   const tags = new Set(a?.tags || []);
   return (b?.tags || []).filter(tag => tags.has(tag)).length;
 }
-
 function rankedRelatedGames(current){
   if(!current) return sortPopular(state.games).slice(0, 8);
   return state.games
@@ -1665,7 +1133,6 @@ function rankedRelatedGames(current){
       return compareNewest(a, b);
     });
 }
-
 function nextSessionGame(current){
   if(!current) return sortPopular(state.games)[0] || null;
   const filtered = state.filtered && state.filtered.length ? state.filtered : [];
@@ -1675,7 +1142,6 @@ function nextSessionGame(current){
   }
   return rankedRelatedGames(current)[0] || null;
 }
-
 function renderRelatedPanel(current){
   if(!els.playerRelatedList) return;
   els.playerRelatedList.innerHTML = '';
@@ -1694,12 +1160,10 @@ function renderRelatedPanel(current){
     els.playerRelatedList.appendChild(button);
   }
 }
-
 function closeRelatedPanel(){
   if(els.playerRelatedPanel) els.playerRelatedPanel.hidden = true;
   if(els.playerMore) els.playerMore.setAttribute('aria-expanded', 'false');
 }
-
 function toggleRelatedPanel(){
   if(!els.playerRelatedPanel || !els.playerMore) return;
   const willOpen = els.playerRelatedPanel.hidden;
@@ -1707,7 +1171,6 @@ function toggleRelatedPanel(){
   els.playerMore.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
   if(willOpen) renderRelatedPanel(currentlyOpenGame());
 }
-
 function syncPlayerSaveButton(g){
   if(!els.playerSave || !g) return;
   const saved = isFavorite(g.slug);
@@ -1715,7 +1178,6 @@ function syncPlayerSaveButton(g){
   els.playerSave.setAttribute('aria-label', saved ? `Remove ${g.title} from saved games` : `Save ${g.title}`);
   els.playerSave.textContent = saved ? '★ Saved' : '★ Save';
 }
-
 function syncPlayerSessionControls(g){
   if(!g) return;
   syncPlayerSaveButton(g);
@@ -1727,7 +1189,6 @@ function syncPlayerSessionControls(g){
     els.playerNext.setAttribute('aria-label', next ? `Play next game: ${next.title}` : 'No next game available');
   }
 }
-
 function openPlayer(g, trigger = document.activeElement){
   if(!g || !isSafeGameUrl(g.url)) return;
   if(modalFocus.active === els.workshopModal) closeWorkshop({ restoreFocus: false });
@@ -1740,18 +1201,11 @@ function openPlayer(g, trigger = document.activeElement){
   syncPlayerSessionControls(g);
   showManagedModal(els.playerModal, trigger, els.playerClose);
   pushRecentPlay(g.slug);
-  // Refresh chip list so a freshly-played game can populate the Recently chip
-  // the next time the user returns to the catalog.
   buildFilters();
   renderSessionRail();
   renderPlayerShelves();
 }
-
 function closePlayer(options = {}){
-  // Exit native fullscreen first so the document state is sane before
-  // the modal hides. Browsers throw if we hide a fullscreen element
-  // without calling exitFullscreen, leaving the page wedged at the
-  // browser-chrome level until the user manually presses Esc.
   if (document.fullscreenElement === els.playerModal) {
     try { document.exitFullscreen(); } catch {}
   }
@@ -1764,8 +1218,6 @@ function closePlayer(options = {}){
     try { history.replaceState(null, '', location.pathname + location.search); } catch {}
   }
 }
-
-// Simple hash deep-link: /#play=slug
 window.addEventListener('hashchange', syncHash);
 function syncHash(){
   const m = location.hash.match(/play=([^&]+)/);
@@ -1774,12 +1226,6 @@ function syncHash(){
   const g = state.games.find(x => x.slug === slug);
   if(g) openPlayer(g);
 }
-
-// Share the currently-open game using the Web Share API on devices that
-// support it (one-tap mobile sharing), falling back to copying the
-// canonical deep-link URL to the clipboard. The transient status pill
-// next to the button confirms which action ran so users know the share
-// completed even when no system share sheet appears.
 function setPlayerStatus(message){
   if(!els.playerStatus) return;
   els.playerStatus.textContent = message;
@@ -1792,7 +1238,6 @@ function setPlayerStatus(message){
     }, 2400);
   }
 }
-
 function currentlyOpenGame(){
   if(state.activeGameSlug){
     const active = state.games.find(x => x.slug === state.activeGameSlug);
@@ -1803,7 +1248,6 @@ function currentlyOpenGame(){
   const slug = decodeURIComponent(m[1]);
   return state.games.find(x => x.slug === slug) || null;
 }
-
 async function shareCurrentGame(){
   const g = currentlyOpenGame();
   if(!g) return;
@@ -1817,8 +1261,6 @@ async function shareCurrentGame(){
       return;
     }
   } catch (err) {
-    // User canceled the system share sheet, or share failed; fall through
-    // to the clipboard copy so they still get a useful result.
     if (err && err.name === 'AbortError') {
       setPlayerStatus('');
       return;
@@ -1831,15 +1273,12 @@ async function shareCurrentGame(){
       return;
     }
   } catch {
-    // Clipboard write blocked (permissions, insecure context); fall through.
   }
   setPlayerStatus('Copy failed — use your browser to copy the URL');
 }
-
 if (els.playerShare) {
   els.playerShare.addEventListener('click', shareCurrentGame);
 }
-
 if (els.playerSave) {
   els.playerSave.addEventListener('click', () => {
     const g = currentlyOpenGame();
@@ -1852,24 +1291,20 @@ if (els.playerSave) {
     setPlayerStatus(isFavorite(g.slug) ? 'Saved' : 'Removed');
   });
 }
-
 if (els.playerNext) {
   els.playerNext.addEventListener('click', () => {
     const next = nextSessionGame(currentlyOpenGame());
     if(next) openPlayer(next, els.playerNext);
   });
 }
-
 if (els.playerRandom) {
   els.playerRandom.addEventListener('click', () => {
     openPlayerRandomGame(els.playerRandom);
   });
 }
-
 if (els.playerMore) {
   els.playerMore.addEventListener('click', toggleRelatedPanel);
 }
-
 if (els.playerRelatedList) {
   els.playerRelatedList.addEventListener('click', (event) => {
     const button = event.target.closest('[data-slug]');
@@ -1878,17 +1313,9 @@ if (els.playerRelatedList) {
     if(game) openPlayer(game, button);
   });
 }
-
-// Player fullscreen toggle — uses the Fullscreen API on the whole
-// player-modal section so canvas games (Snake, Tetris, Brick Breaker,
-// Pinball, etc.) get edge-to-edge play. We fullscreen the modal
-// (not just the iframe) so the player-bar with Share/Close stays
-// reachable — Esc exits fullscreen back to the windowed modal, then
-// a second Esc closes the modal entirely.
 function isPlayerFullscreen(){
   return document.fullscreenElement === els.playerModal;
 }
-
 function syncFullscreenButton(){
   const btn = els.playerFullscreenBtn;
   if (!btn) return;
@@ -1896,9 +1323,6 @@ function syncFullscreenButton(){
   btn.setAttribute('aria-pressed', fs ? 'true' : 'false');
   btn.setAttribute('aria-label', fs ? 'Exit fullscreen' : 'Enter fullscreen');
   btn.setAttribute('title', fs ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)');
-  // SVGElement's `hidden` property is spec'd but unevenly supported in
-  // older browsers — use setAttribute/removeAttribute for guaranteed
-  // cross-platform behavior so the icon swap always lands.
   const enter = btn.querySelector('.player-fullscreen-icon');
   const exit = btn.querySelector('.player-fullscreen-exit-icon');
   if (enter) {
@@ -1908,12 +1332,8 @@ function syncFullscreenButton(){
     if (fs) exit.removeAttribute('hidden'); else exit.setAttribute('hidden', '');
   }
 }
-
 async function togglePlayerFullscreen(){
   if (!els.playerModal) return;
-  // Skip when the modal is hidden — clicking the button while it isn't
-  // visible would crash on browsers that reject requestFullscreen on
-  // detached elements.
   if (els.playerModal.hidden) return;
   try {
     if (isPlayerFullscreen()) {
@@ -1922,26 +1342,14 @@ async function togglePlayerFullscreen(){
       await els.playerModal.requestFullscreen();
     }
   } catch {
-    // Permissions/iframe sandbox/already-in-fullscreen failures all
-    // surface here — non-fatal; we just want the button to no-op.
   }
 }
-
 if (els.playerFullscreenBtn) {
   els.playerFullscreenBtn.addEventListener('click', togglePlayerFullscreen);
 }
-
 document.addEventListener('fullscreenchange', () => {
   syncFullscreenButton();
-  // If the user pressed Esc while in fullscreen, we drop back to the
-  // windowed modal — leave it open. If they closed the modal entirely,
-  // the existing closePlayer flow already exited fullscreen via the
-  // hidden state check above.
 });
-
-// "F" / "f" keyboard shortcut to toggle fullscreen — only while the
-// player modal is the active modal. Skips when the user is typing in
-// an editable surface (same rule as the R / ? shortcuts).
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key !== 'f' && e.key !== 'F') return;
@@ -1950,16 +1358,13 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   togglePlayerFullscreen();
 });
-
 document.getElementById('year').textContent = new Date().getFullYear();
-
 function populateWorkshopGames(){
   els.workshopGame.innerHTML = '';
   const newOption = document.createElement('option');
   newOption.value = '__new__';
   newOption.textContent = 'New game submission';
   els.workshopGame.appendChild(newOption);
-
   for(const g of state.games){
     const opt = document.createElement('option');
     opt.value = g.id;
@@ -1967,11 +1372,9 @@ function populateWorkshopGames(){
     els.workshopGame.appendChild(opt);
   }
 }
-
 function selectedWorkshopGame(){
   return state.games.find(g => g.id === els.workshopGame.value) || null;
 }
-
 function openWorkshop(gameId = '', trigger = document.activeElement){
   if(modalFocus.active === els.playerModal) closePlayer({ restoreFocus: false });
   if(!els.workshopGame.options.length) populateWorkshopGames();
@@ -1983,21 +1386,17 @@ function openWorkshop(gameId = '', trigger = document.activeElement){
   const initialFocus = els.workshopGame.value === '__new__' ? els.newGameTitle : els.workshopGame;
   showManagedModal(els.workshopModal, trigger, initialFocus);
 }
-
 function closeWorkshop(options = {}){
   hideManagedModal(els.workshopModal, options);
 }
-
 function updateWorkshopMode(){
   const isNew = els.workshopGame.value === '__new__' || !selectedWorkshopGame();
   els.newGameField.hidden = !isNew;
   els.openSelectedGameBtn.disabled = isNew;
 }
-
 function selectedFocus(){
   return [...els.workshopForm.querySelectorAll('input[name="focus"]:checked')].map(input => input.value);
 }
-
 function generateBrief(){
   updateWorkshopMode();
   const game = selectedWorkshopGame();
@@ -2007,7 +1406,6 @@ function generateBrief(){
   const goal = els.workshopGoal.value.trim() || 'Improve the game so it is more fun, clearer, and easier to play on desktop and mobile.';
   const focus = selectedFocus();
   const tags = game ? (game.tags || []).join(', ') : 'New, Arcade';
-
   const constraints = [
     '- Keep the game self-contained unless a shared asset is already in the repo.',
     '- Follow docs/game-contract.md.',
@@ -2020,7 +1418,6 @@ function generateBrief(){
   if(!isNew){
     constraints.push('- Preserve the game diagnostic hooks already wired up (window.render_game_to_text and window.advanceTime) so npm run capture:games and the develop-web-game client keep working.');
   }
-
   const acceptance = [
     '- The catalog loads without broken game links or missing covers.',
     '- The game starts, restarts, and handles its main controls.',
@@ -2030,7 +1427,6 @@ function generateBrief(){
     '- npm run test:games passes for all manifest games.',
     '- npm run capture:games scores 0 on every rendered surface.'
   ];
-
   const brief = [
     'Project: Workshop Arcade',
     `Game: ${title}`,
@@ -2050,12 +1446,10 @@ function generateBrief(){
     'Acceptance checks:',
     ...acceptance
   ].join('\n');
-
   els.briefOutput.value = brief;
   setStatus('Brief generated.');
   return brief;
 }
-
 function isValidDraft(draft){
   return !!draft
     && typeof draft === 'object'
@@ -2067,11 +1461,9 @@ function isValidDraft(draft){
       || typeof draft.title === 'string'
     );
 }
-
 function sanitizeDrafts(value){
   return Array.isArray(value) ? value.filter(isValidDraft).slice(0, 12) : [];
 }
-
 function newestWorkshopDraft(){
   return [...state.drafts].filter(isValidDraft).sort((a, b) => {
     const aTime = Date.parse(a.savedAt || '');
@@ -2083,7 +1475,6 @@ function newestWorkshopDraft(){
     return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
   })[0] || null;
 }
-
 function syncDraftResumeAction(){
   if(!els.resumeDraftBtn || !els.workshopDraftStatus) return;
   const count = state.drafts.filter(isValidDraft).length;
@@ -2094,7 +1485,6 @@ function syncDraftResumeAction(){
   els.workshopDraftStatus.hidden = hidden;
   els.workshopDraftStatus.textContent = hidden ? '' : `${count} saved draft${count === 1 ? '' : 's'}`;
 }
-
 function resumeLatestDraft(trigger = document.activeElement){
   const draft = newestWorkshopDraft();
   if(!draft){
@@ -2104,7 +1494,6 @@ function resumeLatestDraft(trigger = document.activeElement){
   openWorkshop(draft.gameId || '__new__', trigger);
   loadDraft(draft.id, { focusGoal: true });
 }
-
 function loadDrafts(){
   try {
     const raw = localStorage.getItem(DRAFTS_KEY);
@@ -2114,11 +1503,9 @@ function loadDrafts(){
   }
   syncDraftResumeAction();
 }
-
 function persistDrafts(){
   try { localStorage.setItem(DRAFTS_KEY, JSON.stringify(state.drafts.slice(0, 12))); } catch {}
 }
-
 function saveDraft(){
   const brief = generateBrief();
   const game = selectedWorkshopGame();
@@ -2137,7 +1524,6 @@ function saveDraft(){
   syncDraftResumeAction();
   setStatus('Draft saved locally.');
 }
-
 function renderDrafts(){
   els.draftList.innerHTML = '';
   if(!state.drafts.length){
@@ -2151,31 +1537,26 @@ function renderDrafts(){
   for(const draft of state.drafts){
     const row = document.createElement('div');
     row.className = 'draft-row';
-
     const meta = document.createElement('div');
     const title = document.createElement('strong');
     title.textContent = draft.title || 'Workshop draft';
     const date = document.createElement('span');
     date.textContent = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'Saved draft';
     meta.append(title, date);
-
     const load = document.createElement('button');
     load.type = 'button';
     load.className = 'mini-btn';
     load.textContent = 'Load';
     load.addEventListener('click', () => loadDraft(draft.id));
-
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'mini-btn';
     del.textContent = 'Delete';
     del.addEventListener('click', () => deleteDraft(draft.id));
-
     row.append(meta, load, del);
     els.draftList.appendChild(row);
   }
 }
-
 function loadDraft(id, options = {}){
   const draft = state.drafts.find(item => item.id === id);
   if(!draft) return;
@@ -2191,7 +1572,6 @@ function loadDraft(id, options = {}){
   if(options.focusGoal) setTimeout(() => els.workshopGoal.focus({ preventScroll: true }), 0);
   setStatus('Draft loaded.');
 }
-
 function deleteDraft(id){
   state.drafts = state.drafts.filter(item => item.id !== id);
   persistDrafts();
@@ -2199,7 +1579,6 @@ function deleteDraft(id){
   syncDraftResumeAction();
   setStatus('Draft deleted.');
 }
-
 async function copyBrief(){
   if(!els.briefOutput.value) generateBrief();
   try {
@@ -2211,7 +1590,6 @@ async function copyBrief(){
     setStatus('Brief selected for copying.');
   }
 }
-
 function downloadBrief(){
   if(!els.briefOutput.value) generateBrief();
   const game = selectedWorkshopGame();
@@ -2227,7 +1605,6 @@ function downloadBrief(){
   URL.revokeObjectURL(url);
   setStatus('Brief downloaded.');
 }
-
 function openGitHubIssue(){
   const brief = els.briefOutput.value || generateBrief();
   const game = selectedWorkshopGame();
@@ -2241,13 +1618,11 @@ function openGitHubIssue(){
   window.open(`${GITHUB_ISSUE_URL}?${params.toString()}`, '_blank', 'noopener');
   setStatus('Issue draft opened.');
 }
-
 function setStatus(message){
   els.workshopStatus.textContent = message;
   clearTimeout(setStatus.timer);
   setStatus.timer = setTimeout(()=>{ els.workshopStatus.textContent = ''; }, 3000);
 }
-
 els.submitGameBtn.addEventListener('click', e => { e.preventDefault(); openWorkshop('', e.currentTarget); });
 if(els.suggestImprovementBtn) {
   els.suggestImprovementBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
@@ -2280,24 +1655,14 @@ document.addEventListener('keydown', e => {
   if(trapModalFocus(e)) return;
 });
 renderDrafts();
-
-// Register the offline-capable shell worker after first paint so it never
-// blocks the catalog load. Failures are non-fatal: the site keeps working
-// without offline support.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     let registration;
     try {
       registration = await navigator.serviceWorker.register('sw.js');
     } catch {
-      // Registration failures (file:// protocol, private mode, etc.) are expected
-      // off the live site and intentionally swallowed to keep the console clean.
       return;
     }
-    // Surface a small "new version available" toast when the registration
-    // installs a NEW worker while an existing one is still controlling the
-    // page. We don't auto-reload because the user might be mid-game inside
-    // the player modal — let them pick the moment.
     const toast = document.getElementById('swUpdateToast');
     const reloadBtn = document.getElementById('swUpdateReloadBtn');
     const dismissBtn = document.getElementById('swUpdateDismissBtn');
@@ -2314,46 +1679,28 @@ if ('serviceWorker' in navigator) {
       if (!installing) return;
       installing.addEventListener('statechange', () => {
         if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-          // A previous SW is still in control, so this 'installed' event
-          // means an UPDATE (not a first-time install) is ready.
           showSwUpdateToast();
         }
       });
     });
   });
 }
-
-// PWA install affordance: capture the browser's beforeinstallprompt
-// event (fired only when the PWA install criteria are met and the user
-// hasn't already installed), stash it, and reveal a header "Install"
-// button that triggers prompt.prompt() on click. The button stays
-// hidden on Safari/iOS and on any browser that has already installed
-// the app, so it never advertises a flow that won't work. After the
-// user accepts OR dismisses, the cached event is single-use; if the
-// browser decides to fire it again later, the listener catches the new
-// one.
 let deferredInstallPrompt = null;
-
 function showInstallButton(){
   if (els.installAppBtn) els.installAppBtn.hidden = false;
 }
-
 function hideInstallButton(){
   if (els.installAppBtn) els.installAppBtn.hidden = true;
   deferredInstallPrompt = null;
 }
-
 window.addEventListener('beforeinstallprompt', (event) => {
-  // Prevent the legacy mini-infobar that older Chrome versions still show.
   event.preventDefault();
   deferredInstallPrompt = event;
   showInstallButton();
 });
-
 window.addEventListener('appinstalled', () => {
   hideInstallButton();
 });
-
 if (els.installAppBtn) {
   els.installAppBtn.addEventListener('click', async () => {
     if (!deferredInstallPrompt) return;
@@ -2363,8 +1710,6 @@ if (els.installAppBtn) {
       await prompt.prompt();
       await prompt.userChoice;
     } catch {
-      // Calling prompt() twice or after the event went stale throws.
-      // Either way the button has done its job — hide it.
     }
     hideInstallButton();
   });

@@ -5,7 +5,8 @@ Use this file as the fast agent entrypoint for Workshop Arcade work. It is a com
 ## Current State
 
 - The catalog is a static single-page arcade with standalone game HTML in `websites/`, cover art in `covers/`, and catalog data in `websites/manifest.json`.
-- As of game #83, Nightwire, the catalog has 83 games and every public tag is >= 4. The old sparse-tag floor cadence is retired; choose future games for quality, variety, or a genuinely new mechanic rather than only tag count.
+- The catalog has 100 games and 101 audited pages. The games 85-100 quality pass is complete: the high-mismatch expansion entries now have distinct rules, visuals, authored level logic, and rendered evidence.
+- The old sparse-tag floor cadence is retired. Unless the user explicitly asks for another game, default future work toward catalog/tooling, performance headroom, launch evidence, or playfeel polish rather than content expansion.
 - The user's workflow preference is autonomous execution with no PR. Commit directly to `main` and push when the work is ready, unless the user explicitly says otherwise.
 
 ## Start And Handoff

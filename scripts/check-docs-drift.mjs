@@ -124,8 +124,8 @@ const tagCoverageRequiredText = [
 const agentRunbookRequiredText = [
   '.ai-sync',
   'no PR',
-  '83 games',
-  'every public tag is >= 4',
+  'audited pages',
+  'catalog/tooling',
   'workshop-runtime.js',
   'window.render_game_to_text()',
   'window.advanceTime(ms)',
@@ -246,6 +246,26 @@ if (agentRunbookText) {
   for (const requiredText of agentRunbookRequiredText) {
     if (!agentRunbookText.includes(requiredText)) {
       issues.push(`CLAUDE.md: missing agent runbook text "${requiredText}"`);
+    }
+  }
+  let manifest = [];
+  try {
+    manifest = JSON.parse(readText('websites/manifest.json') || '[]');
+    if (!Array.isArray(manifest)) {
+      issues.push('websites/manifest.json: expected an array while checking CLAUDE.md game-count drift');
+      manifest = [];
+    }
+  } catch (error) {
+    issues.push(`websites/manifest.json: unable to parse while checking CLAUDE.md game-count drift (${error.message})`);
+  }
+  if (manifest.length > 0) {
+    const gameCountText = `${manifest.length} games`;
+    const auditedPagesText = `${manifest.length + 1} audited pages`;
+    if (!agentRunbookText.includes(gameCountText)) {
+      issues.push(`CLAUDE.md: current-state runbook must mention "${gameCountText}" from websites/manifest.json`);
+    }
+    if (!agentRunbookText.includes(auditedPagesText)) {
+      issues.push(`CLAUDE.md: current-state runbook must mention "${auditedPagesText}" from websites/manifest.json plus the catalog`);
     }
   }
 }

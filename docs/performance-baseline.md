@@ -26,6 +26,24 @@ CI budgets:
 | Brick Breaker | 120 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Catalog headroom and runbook drift pass (pass 107)
+
+Captured 2026-06-08 against a disposable local static server after a non-game catalog/tooling pass. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No games, manifest entries, generated game metadata, generated game surfaces, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+The catalog shell was trimmed by removing low-value explanatory comments and blank-line bulk, then compacting whitespace inside the existing catalog `<style>` block only. User-facing copy, DOM ids/classes, data attributes, JSON-LD marker comments, generated JSON-LD, `FALLBACK_GAMES`, keyboard shortcuts, filters, favorites, player shelves, player modal, Workshop feedback, PWA registration, lazy-cover observer wiring, and `aboveFoldCoverCount()` behavior were preserved. `index.html` is now 116.5 KB raw on disk, down from roughly 129.1 KB before this trim.
+
+Static headroom recovered above the required floor: `npm run test:page-weight` reports the catalog local shell at 167.6 KB / 200 KB across 9/18 files, with 32.4 KB / 9 files of catalog shell headroom. `npm run test:pwa-install-budget` reports the PWA install payload at 171.8 KB / 200 KB across 10/18 files, with 28.2 KB / 8 files headroom. The service-worker shell cache was refreshed to `SHELL_REVISION = shell-466c3bfa1e7b` and `VERSION = wa-v46-shell-466c3bfa1e7b`, and `npm run test:pwa` passed with that revision. The latest browser audit measured Catalog at 158.0 KB / 6 requests, down from 170.3 KB / 6 requests in pass 106, with zero console/page errors.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 160 ms | 155 ms | 🟢 157 ms | 🟢 158.0 KB | 6 | 0 |
+| Lexica | 🟢 56 ms | 44 ms | 🟢 44 ms | 🟢 146.0 KB | 3 | 0 |
+| Idle Tycoon | 🟢 472 ms | 16 ms | 🟢 18 ms | 🟢 153.3 KB | 2 | 0 |
+| Arcade Jump | 🟢 116 ms | 64 ms | 🟢 64 ms | 🟢 99.0 KB | 2 | 0 |
+| Brick Breaker | 🟢 104 ms | 89 ms | 🟢 89 ms | 🟢 109.7 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 101 URLs and `npm run audit:perf:local` reported `CI strict audit passed`.
+
 ## 100-game expansion pass (pass 106)
 
 Captured 2026-06-07 against a disposable local static server after adding 16 compact games: **Signal Loom**, **Crown Circuit**, **Forge Freighter**, **Aster Vault**, **Tempo Tunnels**, **Canopy Courier**, **Shard Sheriff**, **Ledger Lanes**, **Moonbase Mutex**, **Drift Loom**, **Bulb Brigade**, **Rune Roster**, **Velvet Heist**, **Pocket Orchard**, **Comet Cartel**, and **Finale Foundry**. The strict audit covered the catalog plus 100 manifest games, 101 pages total. The initial expansion used compact standalone shells with `workshop-runtime.js`, keyboard/touch controls, sound/fullscreen controls, defensive storage, `render_game_to_text()`, and deterministic `advanceTime(ms)` diagnostics. Follow-up quality slices have since replaced the highest-mismatch shared-grid entries with bespoke mechanics while keeping the same standalone footprint and budgets. The latest local audit for this slice measured **Velvet Heist** at 32.0 KB / 2 requests and **Finale Foundry** at 29.2 KB / 2 requests after replacing their generic grid shells with authored stealth-route and rhythm-foundry rules. Prior quality-slice measurements also kept **Signal Loom** at 26.1 KB / 2 requests, **Moonbase Mutex** at 28.0 KB / 2 requests, **Bulb Brigade** at 25.7 KB / 2 requests, **Aster Vault** at 23.1 KB / 2 requests, **Canopy Courier** at 22.9 KB / 2 requests, and **Shard Sheriff** at 22.3 KB / 2 requests. All remain comfortably inside the 100 KB / 3 request default budget. No custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed.
