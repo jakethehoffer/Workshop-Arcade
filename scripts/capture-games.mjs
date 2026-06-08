@@ -2175,10 +2175,10 @@ function getInteractionRecipe(slug) {
     "drift-loom": driftLoomRecipe(),
     "bulb-brigade": bulbBrigadeRecipe(),
     "rune-roster": runeRosterRecipe(),
-    "velvet-heist": expansionGridRecipe(),
+    "velvet-heist": velvetHeistRecipe(),
     "pocket-orchard": pocketOrchardRecipe(),
     "comet-cartel": cometCartelRecipe(),
-    "finale-foundry": expansionGridRecipe(),
+    "finale-foundry": finaleFoundryRecipe(),
   };
 
   return recipes[slug] || null;
@@ -2203,6 +2203,80 @@ function expansionGridRecipe() {
         press("ArrowRight", "ArrowRight", 140);
         press(" ", "Space", 160);
         window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function velvetHeistRecipe() {
+  return {
+    name: "start, follow stealth route, and lift a velvet case",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const press = (key, code = key, holdMs = 70) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(holdMs);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(45);
+        };
+        const dirKey = { N: ["ArrowUp", "ArrowUp"], S: ["ArrowDown", "ArrowDown"], W: ["ArrowLeft", "ArrowLeft"], E: ["ArrowRight", "ArrowRight"] };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(160);
+        for (let i = 0; i < 9; i += 1) {
+          const snap = read();
+          if (snap.mode !== "playing") break;
+          const rec = snap.recommendation || {};
+          if (rec.type === "move" && dirKey[rec.dir]) {
+            press(dirKey[rec.dir][0], dirKey[rec.dir][1]);
+          } else if (rec.type === "action") {
+            press(" ", "Space", 90);
+          } else {
+            window.advanceTime(180);
+          }
+          const after = read();
+          if (after.lastEvent === "steal" || after.stage > 1) break;
+        }
+      });
+    },
+  };
+}
+
+function finaleFoundryRecipe() {
+  return {
+    name: "start, lane-match, and strike foundry spark beats",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        const press = (key, code = key, holdMs = 60) => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(holdMs);
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
+          window.advanceTime(35);
+        };
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(140);
+        for (let i = 0; i < 12; i += 1) {
+          const snap = read();
+          if (snap.mode !== "playing") break;
+          const rec = snap.recommendation || {};
+          if (rec.type === "lane") {
+            press(rec.direction > 0 ? "ArrowDown" : "ArrowUp", rec.direction > 0 ? "ArrowDown" : "ArrowUp");
+          } else if (rec.type === "wait") {
+            window.advanceTime(Math.max(20, Math.min(900, Number(rec.ms) || 120)));
+          } else if (rec.type === "strike") {
+            press(" ", "Space", 80);
+            if ((read().hits || 0) >= 2) break;
+          } else {
+            window.advanceTime(180);
+          }
+        }
       });
     },
   };
