@@ -2163,7 +2163,7 @@ function getInteractionRecipe(slug) {
         });
       },
     },
-    "signal-loom": expansionGridRecipe(),
+    "signal-loom": signalLoomRecipe(),
     "crown-circuit": crownCircuitRecipe(),
     "forge-freighter": forgeFreighterRecipe(),
     "aster-vault": asterVaultRecipe(),
@@ -2171,9 +2171,9 @@ function getInteractionRecipe(slug) {
     "canopy-courier": canopyCourierRecipe(),
     "shard-sheriff": shardSheriffRecipe(),
     "ledger-lanes": ledgerLanesRecipe(),
-    "moonbase-mutex": expansionGridRecipe(),
+    "moonbase-mutex": moonbaseMutexRecipe(),
     "drift-loom": driftLoomRecipe(),
-    "bulb-brigade": expansionGridRecipe(),
+    "bulb-brigade": bulbBrigadeRecipe(),
     "rune-roster": runeRosterRecipe(),
     "velvet-heist": expansionGridRecipe(),
     "pocket-orchard": pocketOrchardRecipe(),
@@ -2203,6 +2203,122 @@ function expansionGridRecipe() {
         press("ArrowRight", "ArrowRight", 140);
         press(" ", "Space", 160);
         window.advanceTime(220);
+      });
+    },
+  };
+}
+
+function signalLoomRecipe() {
+  return {
+    name: "start, rotate conduits, and pulse the timed gate",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const canvas = document.querySelector("#game");
+        const clickTile = (x, y) => {
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          canvas.dispatchEvent(new PointerEvent("pointerdown", {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 501,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: 1,
+            clientX: rect.left + ((190 + x * 96 + 48) / 960) * rect.width,
+            clientY: rect.top + ((70 + y * 96 + 48) / 600) * rect.height,
+          }));
+        };
+        const read = () => JSON.parse(window.render_game_to_text());
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(120);
+        for (let step = 0; step < 18; step += 1) {
+          const snap = read();
+          const rec = snap.recommendation || {};
+          if (rec.type === "rotate") {
+            clickTile(rec.x, rec.y);
+            window.advanceTime(70);
+            const clicks = Math.max(1, Math.min(3, Number(rec.clicks) || 1));
+            for (let i = 0; i < clicks; i += 1) {
+              document.querySelector("#primaryBtn")?.click();
+              window.advanceTime(90);
+            }
+          } else if (rec.type === "wait") {
+            window.advanceTime(620);
+          } else {
+            document.querySelector("#secondaryBtn")?.click();
+            window.advanceTime(260);
+            break;
+          }
+        }
+      });
+    },
+  };
+}
+
+function moonbaseMutexRecipe() {
+  return {
+    name: "start, queue crew moves, and resolve an airlock tick",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(120);
+        for (let step = 0; step < 12; step += 1) {
+          const rec = read().recommendation || {};
+          if (rec.type === "assign") {
+            document.querySelector(`[data-crew="${rec.crew}"]`)?.click();
+            window.advanceTime(50);
+            document.querySelector(`[data-command="${rec.command}"]`)?.click();
+            window.advanceTime(80);
+          } else if (rec.type === "commit") {
+            document.querySelector("[data-commit]")?.click();
+            window.advanceTime(180);
+            if ((read().tick || 0) >= 2) break;
+          } else {
+            break;
+          }
+        }
+      });
+    },
+  };
+}
+
+function bulbBrigadeRecipe() {
+  return {
+    name: "start, set lens slots, and pulse the light core",
+    expectsStart: true,
+    freezePostAtEvent: true,
+    run: async (page) => {
+      await page.evaluate(() => {
+        if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
+        const read = () => JSON.parse(window.render_game_to_text());
+        document.querySelector("#startBtn")?.click();
+        window.advanceTime(120);
+        for (let step = 0; step < 18; step += 1) {
+          const rec = read().recommendation || {};
+          if (rec.type === "lens") {
+            document.querySelector(`[data-slot="${rec.slot}"]`)?.click();
+            window.advanceTime(60);
+            const clicks = Math.max(1, Math.min(3, Number(rec.clicks) || 1));
+            for (let i = 0; i < clicks; i += 1) {
+              document.querySelector("#primaryBtn")?.click();
+              window.advanceTime(80);
+            }
+          } else if (rec.type === "pulse") {
+            document.querySelector("#secondaryBtn")?.click();
+            window.advanceTime(180);
+            break;
+          } else {
+            break;
+          }
+        }
       });
     },
   };
