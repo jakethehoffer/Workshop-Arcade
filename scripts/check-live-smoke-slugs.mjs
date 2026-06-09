@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Fixture coverage for derive-live-smoke-slugs.mjs.
 //
-// Deploy Pages uses the helper to decide which direct game pages the
-// post-deploy live smoke should open. These tests keep the mapping behavior
-// local and fast so workflow-only checks do not become the first signal.
+// Validate Catalog's gated deployment uses the helper to decide which direct
+// game pages the post-deploy live smoke should open. These tests keep the
+// mapping behavior local and fast so workflow-only checks are not first signal.
 
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';

@@ -110,6 +110,22 @@ const launchEvidenceCurrentRequiredText = [
   'current clean HEAD'
 ];
 
+const validationGatedDeploySurfaces = [
+  'README.md',
+  'ARCHITECTURE.md',
+  'CLAUDE.md'
+];
+
+const validationGatedDeployRequiredText = [
+  'validation-gated',
+  'Build static artifact',
+  'Deploy',
+  'Live Pages smoke',
+  'Validate Catalog',
+  'CodeQL',
+  'Security Surfaces'
+];
+
 const tagCoverageSurfaces = [
   'README.md',
   'ARCHITECTURE.md'
@@ -227,6 +243,16 @@ for (const file of launchEvidenceCurrentSurfaces) {
   for (const requiredText of launchEvidenceCurrentRequiredText) {
     if (!text.includes(requiredText)) {
       issues.push(`${file}: missing launch-evidence freshness contract text "${requiredText}"`);
+    }
+  }
+}
+
+for (const file of validationGatedDeploySurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of validationGatedDeployRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing validation-gated deployment contract text "${requiredText}"`);
     }
   }
 }

@@ -12,9 +12,9 @@
 //      least-privilege permissions and the security-extended query
 //      pack so XSS/SSRF/prototype-pollution patterns surface as PR
 //      checks instead of going to production.
-//   3. .github/workflows/deploy-pages.yml — deploys GitHub Pages from
-//      a curated Actions artifact, then runs the deployed-site smoke so
-//      the public site is explicit, least-privilege, and verified.
+//   3. .github/workflows/validate-catalog.yml — gates GitHub Pages behind
+//      every validation job, deploys a curated Actions artifact, then runs
+//      the deployed-site smoke with no independent publish bypass.
 //   4. .github/workflows/security-surfaces.yml — periodically checks the
 //      GitHub-native security settings and alert backlogs that cannot be
 //      represented by repository files alone.
@@ -146,13 +146,18 @@ async function checkCodeql() {
 }
 
 async function checkPagesDeploy() {
-  const path = '.github/workflows/deploy-pages.yml';
+  const path = '.github/workflows/validate-catalog.yml';
+  const legacyPath = '.github/workflows/deploy-pages.yml';
+  if (await exists(legacyPath)) {
+    fail(`${legacyPath}: independent Pages workflow must stay removed so main cannot publish before validation completes`);
+  }
   if (!(await exists(path))) {
-    fail(`${path}: file missing — GitHub Pages must deploy from the repo-owned Actions workflow`);
+    fail(`${path}: file missing — validation-gated GitHub Pages deployment is required`);
     return;
   }
   const src = await readFile(join(repoRoot, path), 'utf8');
-  const deployJob = getWorkflowJobBlock(src, 'deploy');
+  const pagesBuildJob = getWorkflowJobBlock(src, 'pages-build');
+  const deployJob = getWorkflowJobBlock(src, 'pages-deploy');
   const liveSmokeJob = getWorkflowJobBlock(src, 'live-smoke');
   const builderPath = 'scripts/build-pages-artifact.mjs';
   const smokeSlugHelperPath = 'scripts/derive-live-smoke-slugs.mjs';
@@ -163,32 +168,52 @@ async function checkPagesDeploy() {
     ? await readFile(join(repoRoot, smokeSlugHelperPath), 'utf8')
     : '';
   if (!builderSrc) {
-    fail(`${builderPath}: file missing — Deploy Pages artifact assembly must live in a shared local checker`);
+    fail(`${builderPath}: file missing — Pages artifact assembly must live in a shared local checker`);
   }
   if (!smokeSlugHelperSrc) {
-    fail(`${smokeSlugHelperPath}: file missing — Deploy Pages live smoke must derive touched game slugs with a shared helper`);
+    fail(`${smokeSlugHelperPath}: file missing — Pages live smoke must derive touched game slugs with a shared helper`);
   }
 
-  if (!/^name:\s*Deploy Pages\b/m.test(src)) {
-    fail(`${path}: workflow name must be "Deploy Pages" so the Actions tab and Pages deployment history are easy to target`);
+  if (!/^name:\s*Validate Catalog\b/m.test(src)) {
+    fail(`${path}: workflow name must remain "Validate Catalog" so validation and deployment evidence share one run`);
   }
-  if (!/on:\s*[\s\S]*?\bpush:\s*[\s\S]*?branches:\s*\[\s*main\s*\]/m.test(src)) {
-    fail(`${path}: must trigger on push: branches: [main] so every main commit can publish`);
-  }
-  if (!/\bworkflow_dispatch:\s*/.test(src)) {
-    fail(`${path}: must include workflow_dispatch so a Pages deploy can be retried without a content change`);
+  for (const trigger of ['push:', 'pull_request:', 'workflow_dispatch:']) {
+    if (!src.includes(trigger)) {
+      fail(`${path}: must include the ${trigger} trigger`);
+    }
   }
 
   const topPermissions = src.match(/^permissions:\s*([\s\S]*?)(?=^\S|\Z)/m);
   const permissionBlock = topPermissions?.[1] || '';
-  for (const permission of ['contents: read', 'pages: write', 'id-token: write']) {
-    if (!permissionBlock.includes(permission)) {
-      fail(`${path}: top-level permissions must include "${permission}" for least-privilege Pages deployment`);
+  if (!permissionBlock.includes('contents: read')) {
+    fail(`${path}: top-level permissions must default to "contents: read"`);
+  }
+  for (const forbiddenPermission of ['contents: write', 'pages: write', 'id-token: write']) {
+    if (permissionBlock.includes(forbiddenPermission)) {
+      fail(`${path}: top-level permissions must not include "${forbiddenPermission}"; grant deploy privileges only to pages-deploy`);
     }
   }
 
-  if (!/concurrency:\s*[\s\S]*?group:\s*pages/.test(src) || !/cancel-in-progress:\s*false/.test(src)) {
-    fail(`${path}: must serialize Pages deploys with concurrency group "pages" and cancel-in-progress: false`);
+  if (!/concurrency:\s*[\s\S]*?group:\s*validate-catalog-\$\{\{\s*github\.ref\s*\}\}/.test(src) || !/cancel-in-progress:\s*true/.test(src)) {
+    fail(`${path}: must cancel obsolete same-ref runs with validate-catalog-\${{ github.ref }} concurrency`);
+  }
+
+  if (!pagesBuildJob) {
+    fail(`${path}: must include a "pages-build" job after validation`);
+  } else {
+    const requiredNeeds = ['catalog-docs-a11y', 'game-smoke', 'performance-audit', 'render-capture'];
+    for (const requiredNeed of requiredNeeds) {
+      if (!new RegExp(`^      - ${requiredNeed}$`, 'm').test(pagesBuildJob)) {
+        fail(`${path}: pages-build must need "${requiredNeed}" so every validation surface gates publication`);
+      }
+    }
+    const deployCondition = "success() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')";
+    if (!pagesBuildJob.includes(`if: ${deployCondition}`)) {
+      fail(`${path}: pages-build must use the main-only push/workflow_dispatch condition "${deployCondition}"`);
+    }
+    if (!pagesBuildJob.includes('ref: ${{ github.sha }}') || !/fetch-depth:\s*0\b/.test(pagesBuildJob)) {
+      fail(`${path}: pages-build checkout must pin github.sha with fetch-depth: 0`);
+    }
   }
 
   const requiredActions = [
@@ -217,17 +242,30 @@ async function checkPagesDeploy() {
     fail(`${path}: upload-pages-artifact must set include-hidden-files: true so .well-known/security.txt reaches the live site`);
   }
   if (!/environment:\s*[\s\S]*?name:\s*github-pages/.test(src)) {
-    fail(`${path}: deploy job must target the "github-pages" environment`);
+    fail(`${path}: pages-deploy job must target the "github-pages" environment`);
   }
-  if (!deployJob.includes('outputs:') || !deployJob.includes('page_url: ${{ steps.deployment.outputs.page_url }}')) {
-    fail(`${path}: deploy job must expose the Pages deployment page_url output for post-deploy smoke tests`);
+  if (!deployJob) {
+    fail(`${path}: must include a "pages-deploy" job`);
+  } else {
+    if (!/\n    needs:\s*pages-build\b/.test(deployJob)) {
+      fail(`${path}: pages-deploy must depend on pages-build`);
+    }
+    const deployPermissions = deployJob.match(/^    permissions:\s*([\s\S]*?)(?=^    [^\s]|\Z)/m)?.[1] || '';
+    for (const permission of ['contents: read', 'pages: write', 'id-token: write']) {
+      if (!deployPermissions.includes(permission)) {
+        fail(`${path}: pages-deploy permissions must include "${permission}"`);
+      }
+    }
+    if (!deployJob.includes('outputs:') || !deployJob.includes('page_url: ${{ steps.deployment.outputs.page_url }}')) {
+      fail(`${path}: pages-deploy must expose the Pages deployment page_url output for post-deploy smoke tests`);
+    }
   }
 
   if (!liveSmokeJob) {
     fail(`${path}: must include a "live-smoke" job that verifies the deployed Pages URL`);
   } else {
-    if (!/\n    needs:\s*deploy\b/.test(liveSmokeJob)) {
-      fail(`${path}: live-smoke job must depend on the deploy job`);
+    if (!/\n    needs:\s*pages-deploy\b/.test(liveSmokeJob)) {
+      fail(`${path}: live-smoke job must depend on pages-deploy`);
     }
 
     const livePermissions = liveSmokeJob.match(/^    permissions:\s*([\s\S]*?)(?=^    [^\s]|\Z)/m)?.[1] || '';
@@ -247,6 +285,9 @@ async function checkPagesDeploy() {
     }
     if (!/fetch-depth:\s*0\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke checkout must use fetch-depth: 0 so push diffs can derive touched slugs across multi-commit pushes`);
+    }
+    if (!liveSmokeJob.includes('ref: ${{ github.sha }}')) {
+      fail(`${path}: live-smoke checkout must pin the deployed github.sha`);
     }
     if (!/node-version:\s*24\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke job must run under Node 24`);
@@ -273,8 +314,8 @@ async function checkPagesDeploy() {
     if (!/run:\s*npx playwright install --with-deps chromium\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke job must install Playwright Chromium before running the deployed-site smoke`);
     }
-    if (!liveSmokeJob.includes('WORKSHOP_ARCADE_URL: ${{ needs.deploy.outputs.page_url }}')) {
-      fail(`${path}: live-smoke job must pass WORKSHOP_ARCADE_URL from needs.deploy.outputs.page_url`);
+    if (!liveSmokeJob.includes('WORKSHOP_ARCADE_URL: ${{ needs.pages-deploy.outputs.page_url }}')) {
+      fail(`${path}: live-smoke job must pass WORKSHOP_ARCADE_URL from needs.pages-deploy.outputs.page_url`);
     }
     if (!liveSmokeJob.includes('npm run test:live-pages')) {
       fail(`${path}: live-smoke job must run npm run test:live-pages`);
@@ -483,11 +524,17 @@ async function checkCurrentHeadWorkflowStatusChecker() {
     'gh',
     'run',
     'list',
+    'runGhViewJobs',
     'headSha',
     'Validate Catalog',
-    'Deploy Pages',
     'CodeQL',
     'Security Surfaces',
+    'requiredValidateJobs',
+    'validateJobs',
+    'deploymentGate',
+    'Build static artifact',
+    'Live Pages smoke',
+    "const FORBIDDEN_WORKFLOWS = ['Deploy Pages']",
     'provenance.commit',
     'provenance.isDirty !== false',
     "run.status !== 'completed'",
@@ -532,9 +579,11 @@ async function checkCurrentHeadWorkflowStatusChecker() {
       'npm run test:current-head-workflows',
       'test-results/current-head-workflows/<timestamp>/summary.json',
       'Validate Catalog',
-      'Deploy Pages',
       'CodeQL',
       'Security Surfaces',
+      'Build static artifact',
+      'Live Pages smoke',
+      'validation-gated',
       'current clean HEAD'
     ]) {
       if (!docsSrc.includes(docsNeedle)) {
@@ -558,4 +607,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Security workflows check passed: Dependabot, CodeQL, Deploy Pages, Security Surfaces, and current-HEAD workflow status automation are intact.');
+console.log('Security workflows check passed: Dependabot, CodeQL, validation-gated Pages, Security Surfaces, and current-HEAD workflow status automation are intact.');

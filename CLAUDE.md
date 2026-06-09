@@ -8,6 +8,7 @@ Use this file as the fast agent entrypoint for Workshop Arcade work. It is a com
 - The catalog has 100 games and 101 audited pages. The games 85-100 quality pass is complete: the high-mismatch expansion entries now have distinct rules, visuals, authored level logic, and rendered evidence.
 - The old sparse-tag floor cadence is retired. Unless the user explicitly asks for another game, default future work toward catalog/tooling, performance headroom, launch evidence, or playfeel polish rather than content expansion.
 - The user's workflow preference is autonomous execution with no PR. Commit directly to `main` and push when the work is ready, unless the user explicitly says otherwise.
+- GitHub Pages is deployed by validation-gated jobs inside `Validate Catalog`: all four validation jobs must pass before `Build static artifact`, `Deploy`, and `Live Pages smoke`. Pull requests never deploy, and a manual dispatch on `main` revalidates before deployment.
 
 ## Start And Handoff
 
@@ -61,6 +62,8 @@ git diff --check
 ```powershell
 npm run test:current-head-workflows
 ```
+
+- The current-HEAD evidence must show the three top-level workflows (`Validate Catalog`, `CodeQL`, and `Security Surfaces`) plus all seven Validate Catalog jobs in order. Do not restore an independent `Deploy Pages` workflow.
 
 - Run clean-HEAD launch evidence when source commits should have fresh deployed proof, especially when public Pages artifact inputs changed:
 

@@ -5,6 +5,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-catalog-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   catalog-docs-a11y:
     name: Catalog, docs, and accessibility
@@ -286,5 +293,117 @@ jobs:
             test-results/render-ranking/**/summary.json
             test-results/render-ranking/**/contact-sheet.html
             test-results/render-ranking/**/contact-sheet.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+  pages-build:
+    name: Build static artifact
+    needs:
+      - catalog-docs-a11y
+      - game-smoke
+      - performance-audit
+      - render-capture
+    if: success() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out validated revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Assemble static site
+        run: node scripts/build-pages-artifact.mjs --out _site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          include-hidden-files: true
+
+  pages-deploy:
+    name: Deploy
+    needs: pages-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  live-smoke:
+    name: Live Pages smoke
+    needs: pages-deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out deployed revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Select touched live smoke slugs
+        run: node scripts/derive-live-smoke-slugs.mjs --event-name "${{ github.event_name }}" --base "${{ github.event.before }}" --head "${{ github.sha }}" --github-env "$GITHUB_ENV"
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run post-deploy live smoke
+        shell: bash
+        env:
+          WORKSHOP_ARCADE_URL: ${{ needs.pages-deploy.outputs.page_url }}
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2 3; do
+            if npm run test:live-pages; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "Live smoke attempt ${attempt} failed; waiting for Pages propagation..."
+              sleep 15
+            fi
+          done
+
+          echo "Live smoke failed after 3 attempts."
+          exit 1
+
+      - name: Upload live smoke report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-pages-smoke
+          path: test-results/live-pages-smoke/**
           if-no-files-found: ignore
           retention-days: 14

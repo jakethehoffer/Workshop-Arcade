@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-09 Codex validation-gated Pages deployment pass
+
+- Consolidated GitHub Pages publication into `Validate Catalog` so `Build static artifact` cannot start until catalog/docs/accessibility, game smoke, performance audit, and render capture all succeed. `Deploy` and `Live Pages smoke` then run in sequence for `main` pushes or manual dispatches on `main`; pull requests never deploy, and same-ref concurrency cancels obsolete runs.
+- Removed the independent `Deploy Pages` workflow, restricted top-level workflow permissions to `contents: read`, and grants `pages: write` plus `id-token: write` only to the deploy job.
+- Expanded the security workflow guard and current-HEAD evidence contract. Post-push evidence now checks three top-level workflows, all seven Validate Catalog jobs, and timestamp ordering through `requiredValidateJobs`, `validateJobs`, and `deploymentGate`.
+- No games, manifest entries, covers, generated game surfaces, performance budgets, service-worker files, credentials, DNS, paid services, or custom-domain settings changed.
+
 ## 2026-06-08 Codex catalog headroom and runbook drift pass
 
 - Completed a non-game catalog/tooling pass after the catalog reached 100 games. No games, manifest entries, covers, capture recipes, generated game metadata, custom-domain settings, backend calls, paid services, credentials, DNS, or `SECURITY_SURFACES_TOKEN` work changed.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Derive WORKSHOP_ARCADE_TOUCHED_SLUGS from a push diff.
 //
-// The Deploy Pages workflow uses this to point the post-deploy live smoke at
+// Validate Catalog's gated deployment uses this to point live smoke at
 // game pages affected by a commit. With no game-related change, it emits no
 // environment override so check-live-pages.mjs keeps its newest-game default.
 
