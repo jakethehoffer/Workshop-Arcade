@@ -94,6 +94,20 @@ const ciEvidenceRequiredText = [
   'source revision provenance'
 ];
 
+const playwrightHarnessSurfaces = [
+  'README.md',
+  'ARCHITECTURE.md',
+  'CLAUDE.md'
+];
+
+const playwrightHarnessRequiredText = [
+  'npm run test:playwright-harness',
+  'reusable desktop and mobile browser contexts',
+  'one bounded retry',
+  'transportRetryCount',
+  'transportRetries'
+];
+
 const launchEvidenceCurrentSurfaces = [
   'README.md',
   'ARCHITECTURE.md'
@@ -233,6 +247,16 @@ for (const file of ciEvidenceSurfaces) {
   for (const requiredText of ciEvidenceRequiredText) {
     if (!text.includes(requiredText)) {
       issues.push(`${file}: missing CI evidence contract text "${requiredText}"`);
+    }
+  }
+}
+
+for (const file of playwrightHarnessSurfaces) {
+  const text = readText(file);
+  if (!text) continue;
+  for (const requiredText of playwrightHarnessRequiredText) {
+    if (!text.includes(requiredText)) {
+      issues.push(`${file}: missing Playwright harness contract text "${requiredText}"`);
     }
   }
 }

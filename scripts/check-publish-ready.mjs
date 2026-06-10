@@ -31,6 +31,12 @@ function requireMatch(path, src, pattern, label) {
   }
 }
 
+function countFastGates(packageScripts, runnerSource) {
+  const block = runnerSource.match(/EXCLUDED_SCRIPTS\s*=\s*new\s+Map\(\s*\[([\s\S]*?)\]\s*\)/);
+  const excluded = new Set([...(block?.[1] || '').matchAll(/\[\s*['"]([^'"]+)['"]/g)].map((match) => match[1]));
+  return Object.keys(packageScripts).filter((name) => name.startsWith('test:') && !excluded.has(name)).length;
+}
+
 const packageJson = JSON.parse(await readText('package.json'));
 const scripts = packageJson.scripts || {};
 if (scripts['test:publish-ready'] !== 'node scripts/run-publish-ready.mjs') {
@@ -172,7 +178,7 @@ const readmePath = 'README.md';
 const readme = await readText(readmePath);
 requireText(readmePath, readme, 'npm run test:publish-ready-contract');
 requireText(readmePath, readme, 'npm run test:publish-ready');
-requireText(readmePath, readme, '44 fast validators');
+requireText(readmePath, readme, `${countFastGates(scripts, fastRunner)} fast validators`);
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/summary.json');
 requireText(readmePath, readme, 'test-results/publish-ready/<timestamp>/report.md');
 requireText(readmePath, readme, 'npm run test:launch-evidence-current');

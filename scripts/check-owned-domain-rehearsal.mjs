@@ -28,6 +28,12 @@ function requireMatch(path, src, pattern, label) {
   }
 }
 
+function countFastGates(packageScripts, runnerSource) {
+  const block = runnerSource.match(/EXCLUDED_SCRIPTS\s*=\s*new\s+Map\(\s*\[([\s\S]*?)\]\s*\)/);
+  const excluded = new Set([...(block?.[1] || '').matchAll(/\[\s*['"]([^'"]+)['"]/g)].map((match) => match[1]));
+  return Object.keys(packageScripts).filter((name) => name.startsWith('test:') && !excluded.has(name)).length;
+}
+
 const packageJson = JSON.parse(await readText('package.json'));
 const scripts = packageJson.scripts || {};
 if (scripts['test:owned-domain-rehearsal'] !== 'node scripts/run-owned-domain-rehearsal.mjs') {
@@ -127,7 +133,7 @@ const readme = await readText(readmePath);
 for (const text of [
   'npm run test:owned-domain-rehearsal-contract',
   'npm run test:owned-domain-rehearsal',
-  '44 fast validators',
+  `${countFastGates(scripts, fastRunner)} fast validators`,
   'test-results/owned-domain-rehearsal/<timestamp>/summary.json',
   'test-results/owned-domain-rehearsal/<timestamp>/report.md',
   'WORKSHOP_ARCADE_EXPECTED_ROOT',

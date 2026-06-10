@@ -4,12 +4,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { collectEvidenceProvenance } from "./evidence-provenance.mjs";
+import {
+  createIsolatedViewportContext,
+  runWithPlaywrightTransportRetry,
+} from "./playwright-harness.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(repoRoot, "websites", "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const WORKSHOP_DRAFTS_KEY = "workshop_arcade_drafts_v1";
 const failures = [];
+const transportRetries = [];
 const startedAt = new Date().toISOString();
 const outputRoot = path.join(repoRoot, "test-results", "smoke-games", startedAt.replace(/[:.]/g, "-"));
 const categoryCounts = new Map([["All", manifest.length]]);
@@ -64,6 +69,8 @@ async function writeSummary() {
     manifestCount: manifest.length,
     failureCount: failures.length,
     passed: failures.length === 0,
+    transportRetryCount: transportRetries.length,
+    transportRetries,
     lastPhase: currentPhase,
     failures: failures.map((failure) => {
       const split = failure.indexOf(": ");
@@ -137,23 +144,23 @@ function startServer() {
   });
 }
 
-function observePage(page, baseUrl, label) {
+function observePage(page, baseUrl, label, reportFailure = addFailure) {
   page.on("console", (message) => {
     if (message.type() !== "error") return;
     const text = message.text();
     const locationUrl = message.location()?.url || "";
     if (text.toLowerCase().includes("favicon.ico")) return;
     if (isGitHubApiUrl(locationUrl)) return;
-    addFailure(label, `console error: ${text}`);
+    reportFailure(label, `console error: ${text}`);
   });
   page.on("pageerror", (error) => {
-    addFailure(label, `page error: ${error.message}`);
+    reportFailure(label, `page error: ${error.message}`);
   });
   page.on("response", (response) => {
     const url = response.url();
     if (!url.startsWith(baseUrl) || isIgnoredLocalUrl(url)) return;
     if (response.status() >= 400) {
-      addFailure(label, `HTTP ${response.status()} for ${url}`);
+      reportFailure(label, `HTTP ${response.status()} for ${url}`);
     }
   });
   page.on("requestfailed", (request) => {
@@ -161,7 +168,7 @@ function observePage(page, baseUrl, label) {
     if (!url.startsWith(baseUrl) || isIgnoredLocalUrl(url)) return;
     const failure = request.failure();
     if (failure && /ERR_ABORTED|NS_BINDING_ABORTED/i.test(failure.errorText || "")) return;
-    addFailure(label, `request failed: ${url}`);
+    reportFailure(label, `request failed: ${url}`);
   });
 }
 
@@ -1035,75 +1042,112 @@ async function checkCatalog(browser, baseUrl) {
   await checkCatalogMobileContainment(browser, baseUrl);
 }
 
-async function checkGame(browser, baseUrl, game, viewport, labelSuffix) {
+async function checkGame(context, baseUrl, game, viewport, labelSuffix) {
   const label = `${game.id} ${labelSuffix}`;
+  const attemptFailures = [];
+  const reportFailure = (failureLabel, message) => {
+    attemptFailures.push(`${failureLabel}: ${message}`);
+  };
   setPhase(label, "open page", { game: game.slug || game.id, viewport: labelSuffix });
-  const page = await browser.newPage({ viewport });
-  observePage(page, baseUrl, label);
-  setPhase(label, "navigate page", { game: game.slug || game.id, viewport: labelSuffix });
-  await page.goto(new URL(game.url, baseUrl).href, { waitUntil: "domcontentloaded", timeout: 15000 });
-  await page.waitForTimeout(900);
+  const page = await context.newPage();
+  observePage(page, baseUrl, label, reportFailure);
+  try {
+    setPhase(label, "navigate page", { game: game.slug || game.id, viewport: labelSuffix });
+    await page.goto(new URL(game.url, baseUrl).href, { waitUntil: "domcontentloaded", timeout: 15000 });
+    await page.waitForTimeout(900);
 
-  setPhase(label, "check title/content", { game: game.slug || game.id, viewport: labelSuffix });
-  const title = await page.title();
-  if (!title.trim()) {
-    addFailure(label, "document title is empty");
-  }
-
-  const hasContent = await page.evaluate(() => {
-    const textLength = (document.body?.innerText || "").trim().length;
-    const interactiveCount = document.querySelectorAll("canvas,button,input,select,textarea,[role='button']").length;
-    const visibleBox = document.body && document.body.getBoundingClientRect().width > 0 && document.body.getBoundingClientRect().height > 0;
-    return Boolean(visibleBox && (textLength > 20 || interactiveCount > 0));
-  });
-  if (!hasContent) {
-    addFailure(label, "page appears blank or non-interactive");
-  }
-
-  setPhase(label, "check diagnostics", { game: game.slug || game.id, viewport: labelSuffix });
-  const diagnostics = await page.evaluate(() => {
-    const result = {
-      hasRender: typeof window.render_game_to_text === "function",
-      hasAdvance: typeof window.advanceTime === "function",
-      parseable: false,
-      textType: null,
-      error: null
-    };
-    if (!result.hasRender) return result;
-    try {
-      const text = window.render_game_to_text();
-      result.textType = typeof text;
-      JSON.parse(String(text));
-      result.parseable = true;
-    } catch (error) {
-      result.error = error && error.message ? error.message : String(error);
+    setPhase(label, "check title/content", { game: game.slug || game.id, viewport: labelSuffix });
+    const title = await page.title();
+    if (!title.trim()) {
+      reportFailure(label, "document title is empty");
     }
-    return result;
-  });
-  if (!diagnostics.hasRender) {
-    addFailure(label, "missing render_game_to_text() diagnostic hook");
-  }
-  if (!diagnostics.hasAdvance) {
-    addFailure(label, "missing advanceTime(ms) deterministic hook");
-  }
-  if (diagnostics.hasRender && (!diagnostics.parseable || diagnostics.textType !== "string")) {
-    addFailure(label, `render_game_to_text() must return parseable JSON string (${diagnostics.error || diagnostics.textType})`);
-  }
 
-  if (labelSuffix === "mobile") {
-    setPhase(label, "check mobile overflow", { game: game.slug || game.id, viewport: labelSuffix });
-    const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
-    if (overflow > 2) {
-      addFailure(label, `horizontal overflow ${overflow}px`);
+    const hasContent = await page.evaluate(() => {
+      const textLength = (document.body?.innerText || "").trim().length;
+      const interactiveCount = document.querySelectorAll("canvas,button,input,select,textarea,[role='button']").length;
+      const visibleBox = document.body && document.body.getBoundingClientRect().width > 0 && document.body.getBoundingClientRect().height > 0;
+      return Boolean(visibleBox && (textLength > 20 || interactiveCount > 0));
+    });
+    if (!hasContent) {
+      reportFailure(label, "page appears blank or non-interactive");
     }
+
+    setPhase(label, "check diagnostics", { game: game.slug || game.id, viewport: labelSuffix });
+    const diagnostics = await page.evaluate(() => {
+      const result = {
+        hasRender: typeof window.render_game_to_text === "function",
+        hasAdvance: typeof window.advanceTime === "function",
+        parseable: false,
+        textType: null,
+        error: null
+      };
+      if (!result.hasRender) return result;
+      try {
+        const text = window.render_game_to_text();
+        result.textType = typeof text;
+        JSON.parse(String(text));
+        result.parseable = true;
+      } catch (error) {
+        result.error = error && error.message ? error.message : String(error);
+      }
+      return result;
+    });
+    if (!diagnostics.hasRender) {
+      reportFailure(label, "missing render_game_to_text() diagnostic hook");
+    }
+    if (!diagnostics.hasAdvance) {
+      reportFailure(label, "missing advanceTime(ms) deterministic hook");
+    }
+    if (diagnostics.hasRender && (!diagnostics.parseable || diagnostics.textType !== "string")) {
+      reportFailure(label, `render_game_to_text() must return parseable JSON string (${diagnostics.error || diagnostics.textType})`);
+    }
+
+    if (labelSuffix === "mobile") {
+      setPhase(label, "check mobile overflow", { game: game.slug || game.id, viewport: labelSuffix });
+      const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
+      if (overflow > 2) {
+        reportFailure(label, `horizontal overflow ${overflow}px`);
+      }
+    }
+  } catch (error) {
+    if (error && typeof error === "object") {
+      error.smokeAttemptFailures = attemptFailures;
+    }
+    throw error;
+  } finally {
+    await page.close().catch(() => {});
   }
 
-  await page.close();
+  return attemptFailures;
 }
 
 let server;
 let baseUrl;
 let browser;
+const gameContexts = new Map();
+const gameViewports = [
+  { name: "desktop", width: 1280, height: 800 },
+  { name: "mobile", width: 390, height: 844, isMobile: true, hasTouch: true },
+];
+
+async function gameContext(viewport) {
+  if (!gameContexts.has(viewport.name)) {
+    gameContexts.set(viewport.name, await createIsolatedViewportContext(browser, viewport));
+  }
+  return gameContexts.get(viewport.name);
+}
+
+async function recycleGameContext(viewport) {
+  const existing = gameContexts.get(viewport.name);
+  if (existing) await existing.close().catch(() => {});
+  gameContexts.set(viewport.name, await createIsolatedViewportContext(browser, viewport));
+}
+
+async function closeGameContexts() {
+  await Promise.all([...gameContexts.values()].map((context) => context.close().catch(() => {})));
+  gameContexts.clear();
+}
+
 try {
   setPhase("runner", "start server");
   ({ server, baseUrl } = await startServer());
@@ -1111,18 +1155,43 @@ try {
   browser = await chromium.launch({ headless: !process.env.HEADED });
   await checkCatalog(browser, baseUrl);
   for (const game of manifest) {
-    await checkGame(browser, baseUrl, game, { width: 1280, height: 800 }, "desktop");
-    await checkGame(browser, baseUrl, game, { width: 390, height: 844, isMobile: true, hasTouch: true }, "mobile");
+    for (const viewport of gameViewports) {
+      const attemptFailures = await runWithPlaywrightTransportRetry({
+        harness: "game-smoke",
+        slug: game.slug,
+        viewport: viewport.name,
+        execute: async () => checkGame(await gameContext(viewport), baseUrl, game, viewport, viewport.name),
+        recycle: async () => {
+          setPhase(`${game.id} ${viewport.name}`, "recycle viewport context", {
+            game: game.slug || game.id,
+            viewport: viewport.name,
+          });
+          await recycleGameContext(viewport);
+        },
+        onRetry: async (retry) => {
+          transportRetries.push(retry);
+          console.warn(`Retrying ${retry.slug} ${retry.viewport} after ${retry.errorCode}.`);
+        },
+      });
+      failures.push(...attemptFailures);
+    }
   }
 } catch (error) {
+  if (Array.isArray(error?.smokeAttemptFailures)) {
+    failures.push(...error.smokeAttemptFailures);
+  }
   addFailure("runner", error instanceof Error ? error.stack || error.message : String(error));
 } finally {
+  await closeGameContexts();
   if (browser) await browser.close();
   if (server) await new Promise((resolve) => server.close(resolve));
 }
 
 const summary = await writeSummary();
 console.log(`Smoke summary: ${path.join(outputRoot, "summary.json")}`);
+if (summary.transportRetryCount > 0) {
+  console.log(`Recovered ${summary.transportRetryCount} Playwright transport transient(s).`);
+}
 
 if (summary.failureCount) {
   console.error("Game smoke tests failed:");

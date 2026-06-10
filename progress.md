@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-09 Codex Windows Playwright harness stabilization pass
+
+- Replaced the roughly 400 per-page browser contexts created by consecutive full-catalog smoke and render-capture sweeps with reusable desktop and mobile browser contexts. Each game still gets a fresh page and an init script clears local/session storage before its document runs; catalog state probes and the rendered contact sheet remain isolated.
+- Added one bounded retry only for the observed Windows resource failures `ERR_NO_BUFFER_SPACE` and `ERR_INSUFFICIENT_RESOURCES`. The affected viewport context is closed and recreated before attempt two. Assertions, timeouts, console errors, HTTP failures, and other navigation errors are not retried.
+- Added `scripts/playwright-harness.mjs`, `npm run test:playwright-harness`, and `transportRetryCount` / `transportRetries` evidence in both smoke and capture summaries. Recovered transients stay visible, and a failed second attempt preserves the existing failure evidence.
+- No games, manifest entries, covers, generated game surfaces, catalog shell assets, service-worker files, performance budgets, credentials, DNS, paid services, custom-domain settings, or `SECURITY_SURFACES_TOKEN` changed.
+- Verification passed: syntax checks for all changed Node scripts; workflow YAML parse; focused harness, capture-recipe, docs, test-aggregator, publish-ready, and owned-domain contract gates; two consecutive `npm run test:games` runs for 100 games; two consecutive `npm run capture:games:ci` runs for 200 surfaces with max score 0; all summaries included retry fields with zero retries; `npm test` passed all 45 fast gates; `npm run test:pwa-runtime`; `npm run test:runtime-storage`; `npm run audit:perf:local` across 101 pages with Catalog at 158.0 KB / 6 requests and zero console/page errors; and `git diff --check`.
+
 ## 2026-06-09 Codex validation-gated Pages deployment pass
 
 - Consolidated GitHub Pages publication into `Validate Catalog` so `Build static artifact` cannot start until catalog/docs/accessibility, game smoke, performance audit, and render capture all succeed. `Deploy` and `Live Pages smoke` then run in sequence for `main` pushes or manual dispatches on `main`; pull requests never deploy, and same-ref concurrency cancels obsolete runs.

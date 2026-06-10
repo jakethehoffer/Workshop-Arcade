@@ -28,6 +28,12 @@ function requireMatch(path, src, pattern, label) {
   }
 }
 
+function countFastGates(packageScripts, runnerSource) {
+  const block = runnerSource.match(/EXCLUDED_SCRIPTS\s*=\s*new\s+Map\(\s*\[([\s\S]*?)\]\s*\)/);
+  const excluded = new Set([...(block?.[1] || '').matchAll(/\[\s*['"]([^'"]+)['"]/g)].map((match) => match[1]));
+  return Object.keys(packageScripts).filter((name) => name.startsWith('test:') && !excluded.has(name)).length;
+}
+
 const packageJson = JSON.parse(await readText('package.json'));
 const scripts = packageJson.scripts || {};
 if (scripts['test:owned-domain-cutover-preflight'] !== 'node scripts/run-owned-domain-cutover-preflight.mjs') {
@@ -102,7 +108,7 @@ const readme = await readText(readmePath);
 for (const text of [
   'npm run test:owned-domain-cutover-preflight-contract',
   'npm run test:owned-domain-cutover-preflight',
-  '44 fast validators',
+  `${countFastGates(scripts, fastRunner)} fast validators`,
   'WORKSHOP_ARCADE_CUSTOM_DOMAIN',
   'WORKSHOP_ARCADE_CHECK_DNS',
   'WORKSHOP_ARCADE_REQUIRE_PAGES_CNAME',

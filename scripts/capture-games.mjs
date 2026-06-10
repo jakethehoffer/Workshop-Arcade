@@ -4,6 +4,11 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import { collectEvidenceProvenance, formatEvidenceProvenance } from "./evidence-provenance.mjs";
+import {
+  createIsolatedViewportContext,
+  isRetryablePlaywrightTransportError,
+  runWithPlaywrightTransportRetry,
+} from "./playwright-harness.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -20,6 +25,7 @@ const viewports = [
 ];
 const expectedSurfaceCount = manifest.length * viewports.length;
 const records = [];
+const transportRetries = [];
 let lastPhase = phaseSnapshot("initializing");
 
 const mimeTypes = new Map([
@@ -49,6 +55,26 @@ await mkdir(shotsDir, { recursive: true });
 
 let server;
 let browser;
+const captureContexts = new Map();
+
+async function captureContext(viewport) {
+  if (!captureContexts.has(viewport.name)) {
+    captureContexts.set(viewport.name, await createIsolatedViewportContext(browser, viewport));
+  }
+  return captureContexts.get(viewport.name);
+}
+
+async function recycleCaptureContext(viewport) {
+  const existing = captureContexts.get(viewport.name);
+  if (existing) await existing.close().catch(() => {});
+  captureContexts.set(viewport.name, await createIsolatedViewportContext(browser, viewport));
+}
+
+async function closeCaptureContexts() {
+  await Promise.all([...captureContexts.values()].map((context) => context.close().catch(() => {})));
+  captureContexts.clear();
+}
+
 try {
   setPhase("starting server");
   const serverInfo = await startServer();
@@ -61,7 +87,28 @@ try {
   for (const game of manifest) {
     for (const viewport of viewports) {
       setPhase("capturing surface", game, viewport);
-      records.push(await captureGame(browser, baseUrl, game, viewport));
+      let record;
+      try {
+        record = await runWithPlaywrightTransportRetry({
+          harness: "render-capture",
+          slug: game.slug,
+          viewport: viewport.name,
+          execute: async () => captureGame(await captureContext(viewport), baseUrl, game, viewport),
+          recycle: async () => {
+            setPhase("recycling viewport context", game, viewport);
+            await recycleCaptureContext(viewport);
+          },
+          onRetry: async (retry) => {
+            transportRetries.push(retry);
+            console.warn(`Retrying ${retry.slug} ${retry.viewport} after ${retry.errorCode}.`);
+          },
+        });
+      } catch (error) {
+        if (!error?.captureRecord) throw error;
+        record = error.captureRecord;
+        await recycleCaptureContext(viewport);
+      }
+      records.push(record);
       setPhase("surface captured", game, viewport);
     }
   }
@@ -83,6 +130,9 @@ try {
   console.log(`Captured ${records.length} rendered surfaces for ${manifest.length} games.`);
   console.log(`Output: ${outputRoot}`);
   console.log(`Max render score: ${summary.rankedSurfaces[0]?.score ?? 0}`);
+  if (summary.transportRetryCount > 0) {
+    console.log(`Playwright transport retries: ${summary.transportRetryCount}`);
+  }
   console.log("Top ranked surfaces:");
   for (const surface of summary.rankedSurfaces.slice(0, 10)) {
     const reasonText = surface.reasons.length ? surface.reasons.join("; ") : "no automated issues";
@@ -120,6 +170,7 @@ try {
   }
   process.exitCode = 1;
 } finally {
+  await closeCaptureContexts();
   if (browser) await browser.close();
   if (server) await new Promise((resolve) => server.close(resolve));
 }
@@ -179,6 +230,8 @@ async function writeRunSummary({ status, passed, error }) {
     error,
     expectedSurfaceCount,
     capturedSurfaceCount: records.length,
+    transportRetryCount: transportRetries.length,
+    transportRetries,
     lastPhase,
     provenance: await collectEvidenceProvenance(repoRoot),
     manifestCount: manifest.length,
@@ -210,9 +263,9 @@ async function writeRunSummary({ status, passed, error }) {
   return summary;
 }
 
-async function captureGame(browserInstance, rootUrl, game, viewport) {
+async function captureGame(context, rootUrl, game, viewport) {
   const label = `${game.slug} ${viewport.name}`;
-  const page = await browserInstance.newPage({ viewport });
+  const page = await context.newPage();
   const issues = {
     console: [],
     pageErrors: [],
@@ -230,6 +283,7 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
   let renderText = null;
   let renderError = null;
   let interaction = null;
+  let retryableError = null;
 
   try {
     await page.goto(new URL(game.url, rootUrl).href, { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -353,11 +407,14 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
     } catch {
       // A navigation failure can leave the page closed before a screenshot is possible.
     }
+    if (isRetryablePlaywrightTransportError(error)) {
+      retryableError = error;
+    }
   } finally {
-    await page.close();
+    await page.close().catch(() => {});
   }
 
-  return {
+  const record = {
     slug: game.slug,
     title: game.title,
     url: game.url,
@@ -374,6 +431,11 @@ async function captureGame(browserInstance, rootUrl, game, viewport) {
     metrics,
     issues,
   };
+  if (retryableError) {
+    retryableError.captureRecord = record;
+    throw retryableError;
+  }
+  return record;
 }
 
 function rankSurface(record) {
@@ -2809,6 +2871,9 @@ async function checkCaptureRecipes() {
   const source = await readFile(fileURLToPath(import.meta.url), "utf8");
   for (const snippet of [
     'import { collectEvidenceProvenance, formatEvidenceProvenance } from "./evidence-provenance.mjs";',
+    'from "./playwright-harness.mjs";',
+    "createIsolatedViewportContext",
+    "runWithPlaywrightTransportRetry",
     "provenance: await collectEvidenceProvenance(repoRoot)",
     "formatEvidenceProvenance(summary.provenance)",
     "passed,",
@@ -2816,6 +2881,8 @@ async function checkCaptureRecipes() {
     "error,",
     "expectedSurfaceCount,",
     "capturedSurfaceCount: records.length",
+    "transportRetryCount: transportRetries.length",
+    "transportRetries,",
     "lastPhase,",
     "markFailedPhase()",
     "Rendered-quality capture failed before completing all surfaces.",
@@ -3282,7 +3349,7 @@ async function writeContactSheet(summary) {
 </style>
 <body>
   <h1>Workshop Arcade Render Ranking</h1>
-  <p class="meta">${escapeHtml(summary.createdAt)} · ${summary.manifestCount} games · ${escapeHtml(summary.status || "unknown")} · ${summary.capturedSurfaceCount}/${summary.expectedSurfaceCount} surfaces · desktop 1280x820 · mobile 390x844</p>
+  <p class="meta">${escapeHtml(summary.createdAt)} · ${summary.manifestCount} games · ${escapeHtml(summary.status || "unknown")} · ${summary.capturedSurfaceCount}/${summary.expectedSurfaceCount} surfaces · desktop 1280x820 · mobile 390x844${summary.transportRetryCount ? ` · transport retries ${summary.transportRetryCount}` : ""}</p>
   <ul class="meta">
     ${formatEvidenceProvenance(summary.provenance).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n    ")}
   </ul>
@@ -3328,10 +3395,15 @@ async function writeContactSheet(summary) {
 }
 
 async function captureContactSheet(browserInstance) {
-  const page = await browserInstance.newPage({ viewport: { width: 1500, height: 1200 } });
-  await page.goto(pathToFileURL(path.join(outputRoot, "contact-sheet.html")).href, { waitUntil: "domcontentloaded" });
-  await page.screenshot({ path: path.join(outputRoot, "contact-sheet.png"), fullPage: true, timeout: 120000 });
-  await page.close();
+  const context = await createIsolatedViewportContext(browserInstance, { width: 1500, height: 1200 });
+  const page = await context.newPage();
+  try {
+    await page.goto(pathToFileURL(path.join(outputRoot, "contact-sheet.html")).href, { waitUntil: "domcontentloaded" });
+    await page.screenshot({ path: path.join(outputRoot, "contact-sheet.png"), fullPage: true, timeout: 120000 });
+  } finally {
+    await page.close().catch(() => {});
+    await context.close().catch(() => {});
+  }
 }
 
 function escapeHtml(value) {
