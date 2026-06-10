@@ -1189,6 +1189,108 @@ function syncPlayerSessionControls(g){
     els.playerNext.setAttribute('aria-label', next ? `Play next game: ${next.title}` : 'No next game available');
   }
 }
+// Player storage bridge. Sandboxed player frames run with opaque origins, so
+// games cannot reach real localStorage and workshop-runtime.js falls back to
+// an in-memory store. The bridge restores persistence without weakening the
+// sandbox: the player seeds each game with its saved entries through a
+// #wa-storage= URL fragment (synchronous, so first reads are correct), the
+// runtime posts writes back up, and the listener below mirrors them into the
+// catalog origin's localStorage under workshop-arcade:game:<slug>:.
+const GAME_STORAGE_PREFIX = 'workshop-arcade:game:';
+const GAME_STORAGE_SEED_PARAM = 'wa-storage';
+const GAME_STORAGE_MAX_KEY = 256;
+const GAME_STORAGE_MAX_VALUE = 32768;
+const GAME_STORAGE_MAX_OPS = 64;
+const GAME_STORAGE_BUDGET = 256 * 1024;
+const GAME_STORAGE_MAX_SEED = 200000;
+function isBridgeableSlug(slug){
+  return typeof slug === 'string' && /^[A-Za-z0-9_-]+$/.test(slug);
+}
+function gameStoragePrefix(slug){
+  return `${GAME_STORAGE_PREFIX}${slug}:`;
+}
+function readGameStorageEntries(slug){
+  const entries = {};
+  if(!isBridgeableSlug(slug)) return entries;
+  const prefix = gameStoragePrefix(slug);
+  try {
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      if(key && key.startsWith(prefix)) entries[key.slice(prefix.length)] = localStorage.getItem(key) || '';
+    }
+  } catch {}
+  return entries;
+}
+function gameStorageSeedSrc(g){
+  if(!isBridgeableSlug(g.slug)) return g.url;
+  try {
+    const payload = { v: 1, origin: location.origin, slug: g.slug, entries: readGameStorageEntries(g.slug) };
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    if(encoded.length <= GAME_STORAGE_MAX_SEED) return `${g.url}#${GAME_STORAGE_SEED_PARAM}=${encoded}`;
+  } catch {}
+  return g.url;
+}
+function gameStorageSizeAfterSet(prefix, key, value){
+  let total = key.length + value.length;
+  try {
+    for(let i = 0; i < localStorage.length; i++){
+      const fullKey = localStorage.key(i);
+      if(!fullKey || !fullKey.startsWith(prefix)) continue;
+      if(fullKey === prefix + key) continue;
+      total += (fullKey.length - prefix.length) + (localStorage.getItem(fullKey) || '').length;
+    }
+  } catch {}
+  return total;
+}
+function applyGameStorageOps(slug, ops){
+  const prefix = gameStoragePrefix(slug);
+  for(const op of ops){
+    if(!op || typeof op !== 'object') continue;
+    // Quota or access failures drop the mirror write; the game keeps its
+    // in-memory copy for the session.
+    try {
+      if(op.op === 'clear'){
+        const doomed = [];
+        for(let i = 0; i < localStorage.length; i++){
+          const key = localStorage.key(i);
+          if(key && key.startsWith(prefix)) doomed.push(key);
+        }
+        for(const key of doomed) localStorage.removeItem(key);
+      } else if(op.op === 'remove' && typeof op.key === 'string' && op.key.length <= GAME_STORAGE_MAX_KEY){
+        localStorage.removeItem(prefix + op.key);
+      } else if(op.op === 'set'
+        && typeof op.key === 'string' && op.key.length <= GAME_STORAGE_MAX_KEY
+        && typeof op.value === 'string' && op.value.length <= GAME_STORAGE_MAX_VALUE
+        && gameStorageSizeAfterSet(prefix, op.key, op.value) <= GAME_STORAGE_BUDGET){
+        localStorage.setItem(prefix + op.key, op.value);
+      }
+    } catch {}
+  }
+}
+window.addEventListener('message', (event) => {
+  // Opaque-origin player frames send messages with origin "null"; require
+  // that plus the live player frame window and the active slug before
+  // touching storage, so no other window can write through the bridge.
+  if(event.origin !== 'null') return;
+  const frameWindow = els.playerFrame ? els.playerFrame.contentWindow : null;
+  if(!frameWindow || event.source !== frameWindow) return;
+  const slug = state.activeGameSlug;
+  if(!isBridgeableSlug(slug)) return;
+  const data = event.data;
+  if(!data || data.v !== 1 || data.slug !== slug) return;
+  if(data.type === 'workshop-arcade:storage-hello'){
+    // postMessage cannot name an opaque origin, so '*' is required here; the
+    // reply still only goes to the player frame window checked above, and the
+    // runtime verifies the catalog origin before accepting it.
+    try {
+      frameWindow.postMessage({ type: 'workshop-arcade:storage-snapshot', v: 1, slug, entries: readGameStorageEntries(slug) }, '*');
+    } catch {}
+    return;
+  }
+  if(data.type === 'workshop-arcade:storage-ops' && Array.isArray(data.ops)){
+    applyGameStorageOps(slug, data.ops.slice(0, GAME_STORAGE_MAX_OPS));
+  }
+});
 function openPlayer(g, trigger = document.activeElement){
   if(!g || !isSafeGameUrl(g.url)) return;
   if(modalFocus.active === els.workshopModal) closeWorkshop({ restoreFocus: false });
@@ -1196,7 +1298,7 @@ function openPlayer(g, trigger = document.activeElement){
   state.activeGameSlug = g.slug;
   els.playerTitle.textContent = g.title;
   els.playerExternalLink.href = g.url;
-  els.playerFrame.src = g.url;
+  els.playerFrame.src = gameStorageSeedSrc(g);
   els.playerFrame.title = `${g.title} player`;
   syncPlayerSessionControls(g);
   showManagedModal(els.playerModal, trigger, els.playerClose);

@@ -9,7 +9,7 @@ Every catalog game should be a standalone browser experience that works directly
 - Support touch or pointer controls for mobile play.
 - Keep text, controls, and HUD elements within the viewport at desktop and mobile widths.
 - Avoid horizontal scrolling on mobile.
-- Store scores/settings defensively, because sandboxed play can block native `localStorage`.
+- Store scores/settings defensively, because sandboxed play can block native `localStorage`. Inside the catalog player, `workshop-runtime.js` bridges those saves back to the catalog origin (`workshop-arcade:game:<slug>:` keys) so they persist between sessions; games keep using `localStorage` normally and need no bridge-specific code.
 - Keep remote scripts, trackers, fonts, heavyweight runtimes, and generated dependency folders out of game pages.
 - Keep catalog metadata, cover art, and fallback catalog entries synchronized.
 

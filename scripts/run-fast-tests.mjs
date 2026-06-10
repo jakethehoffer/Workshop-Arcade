@@ -34,6 +34,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:live-canvas-evidence', 'Browser-backed live-smoke canvas evidence fixture — needs Chromium. Run via `npm run test:live-canvas-evidence`.'],
   ['test:owned-domain-cutover-preflight', 'Slow custom-domain cutover preflight — runs the root-domain rehearsal and optional remote DNS / Pages checks. Run via `npm run test:owned-domain-cutover-preflight`.'],
   ['test:owned-domain-rehearsal', 'Slow root-domain release rehearsal — builds, serves, smokes, and audits a temporary owned-domain artifact. Run via `npm run test:owned-domain-rehearsal`.'],
+  ['test:player-storage-bridge', 'Browser-backed player storage bridge probe — needs Chromium. Run via `npm run test:player-storage-bridge`.'],
   ['test:pwa-runtime', 'Browser-backed PWA runtime probe — needs Chromium/service worker support. Run via `npm run test:pwa-runtime`.'],
   ['test:publish-ready', 'Slow local publish-readiness aggregate — runs browser, render, and performance gates. Run via `npm run test:publish-ready`.'],
   ['test:runtime-storage', 'Browser-backed sandboxed runtime storage probe — needs Chromium. Run via `npm run test:runtime-storage`.'],

@@ -22,9 +22,27 @@ CI budgets:
 | Catalog | 200 KB | 18 |
 | Lexica | 160 KB | 4 |
 | Idle Tycoon | 170 KB | 4 |
-| Arcade Jump | 110 KB | 4 |
-| Brick Breaker | 120 KB | 4 |
+| Arcade Jump | 115 KB | 4 |
+| Brick Breaker | 125 KB | 4 |
 | Other manifest games | 100 KB | 3 |
+
+## Player storage bridge pass (pass 108)
+
+Captured 2026-06-10 against a disposable local static server after adding the player storage bridge. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No gameplay rules, manifest entries, covers, generated game metadata, generated game surfaces, capture recipes, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+Sandboxed player iframes run with opaque origins, so game saves previously lived only in the in-memory fallback and vanished when the player closed. The bridge keeps the sandbox exactly as-is (`allow-scripts allow-forms allow-pointer-lock`, no `allow-same-origin`) and restores persistence: `openPlayer()` seeds each game's saved entries through a `#wa-storage=` URL fragment so first reads are synchronous and correct, `websites/workshop-runtime.js` batches writes back over `postMessage`, and a guarded catalog listener mirrors them into `workshop-arcade:game:<slug>:` keys with key/value/op caps and a 256 KB per-game budget. `clear()` stays scoped to the active game, catalog shell keys are untouchable by construction, and direct game loads keep native storage with the bridge dormant.
+
+The shared runtime grew from 1.7 KB to 4.3 KB, which counts against every game's static weight, so the Brick Breaker and Arcade Jump named exceptions moved from 120 KB to 125 KB and from 110 KB to 115 KB; both now hold 12.1 KB / 12.8 KB of named exception headroom against measured weights that did not change. `npm run test:page-weight` reports the catalog local shell at 172.1 KB / 200 KB across 9/18 files, with 27.9 KB / 9 files of catalog shell headroom. `npm run test:pwa-install-budget` reports the PWA install payload at 176.2 KB / 200 KB across 10/18 files, with 23.8 KB / 8 files headroom. The service-worker shell cache was refreshed to `SHELL_REVISION = shell-86b1c679a1b8` and `VERSION = wa-v47-shell-86b1c679a1b8`, and `npm run test:pwa` passed with that revision. The latest browser audit measured Catalog at 162.4 KB / 6 requests, up from 158.0 KB / 6 requests in pass 107 for the bridge seed/mirror code, with zero console/page errors.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 120 ms | 124 ms | 🟢 127 ms | 🟢 162.4 KB | 6 | 0 |
+| Lexica | 🟢 52 ms | 37 ms | 🟢 37 ms | 🟢 149.2 KB | 3 | 0 |
+| Idle Tycoon | 🟢 456 ms | 11 ms | 🟢 13 ms | 🟢 156.6 KB | 2 | 0 |
+| Arcade Jump | 🟢 80 ms | 54 ms | 🟢 54 ms | 🟢 102.2 KB | 2 | 0 |
+| Brick Breaker | 🟢 112 ms | 90 ms | 🟢 90 ms | 🟢 112.9 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 101 URLs and `npm run audit:perf:local` reported `CI strict audit passed`.
 
 ## Catalog headroom and runbook drift pass (pass 107)
 
