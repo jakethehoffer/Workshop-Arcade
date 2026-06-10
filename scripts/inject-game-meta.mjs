@@ -25,7 +25,28 @@ const MARK_END = "<!-- workshop-meta:end -->";
 const JSONLD_MARK_START = "<!-- workshop-jsonld:start -->";
 const JSONLD_MARK_END = "<!-- workshop-jsonld:end -->";
 
-export { MARK_START, MARK_END, JSONLD_MARK_START, JSONLD_MARK_END };
+// Per-game meta CSP, tighter than the catalog's because game pages are fully
+// self-contained: no audio elements, workers, iframes, fetch calls, or remote
+// subresources anywhere in the corpus (and validate-catalog.ps1 keeps remote
+// subresources out). 'unsafe-inline' is required because each game ships its
+// script and styles inline by design, and img-src allows data: because many
+// pages use the blank `<link rel="icon" href="data:,">` favicon to suppress
+// the browser's /favicon.ico request (favicons are governed by img-src).
+// scripts/check-csp.mjs asserts this policy on every manifest game page and
+// that it lands before the page's first <script> tag.
+const GAME_PAGE_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+export { MARK_START, MARK_END, JSONLD_MARK_START, JSONLD_MARK_END, GAME_PAGE_CSP };
 
 function escapeAttr(s) {
   return String(s || "")
@@ -47,6 +68,7 @@ export function buildBlock(game) {
   const ogImageAlt = game.title + " — Workshop Arcade share card";
   const lines = [];
   lines.push(MARK_START);
+  lines.push('<meta http-equiv="Content-Security-Policy" content="' + GAME_PAGE_CSP + '" />');
   lines.push('<meta name="description" content="' + escapeAttr(desc) + '" />');
   lines.push('<meta name="theme-color" content="#0b0f14" />');
   lines.push('<link rel="canonical" href="' + escapeAttr(canonical) + '" />');

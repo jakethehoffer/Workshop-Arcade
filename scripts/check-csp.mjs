@@ -29,6 +29,18 @@
 // directive only works as an HTTP response header). GitHub Pages
 // doesn't let us set headers, so clickjacking protection has to live
 // at the application layer if it ever becomes a real concern.
+//
+// Game pages: every websites/<slug>.html is directly reachable
+// (sitemapped, SEO'd, shareable), so each one must carry its own meta
+// CSP too — injected by scripts/inject-game-meta.mjs inside the
+// workshop-meta block. The game policy is tighter than the catalog's
+// because the corpus is fully self-contained (no audio elements,
+// workers, iframes, fetch calls, or remote subresources): frame-src
+// is 'none'. img-src allows data: because many pages suppress the
+// browser's /favicon.ico request with a blank `data:,` icon link, and
+// favicons are governed by img-src. The meta must appear before the
+// first <script> tag because a meta CSP only governs what the parser
+// sees after it.
 
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -155,7 +167,72 @@ async function checkIndex() {
   }
 }
 
+function extractMetaCsp(src) {
+  const match = src.match(/<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]*content=(?:"([^"]+)"|'([^']+)')/i);
+  if (!match) return null;
+  return { policy: match[1] || match[2], index: match.index };
+}
+
+async function checkGamePages() {
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(join(repoRoot, 'websites', 'manifest.json'), 'utf8'));
+  } catch (error) {
+    fail(`websites/manifest.json: unable to read (${error.message})`);
+    return 0;
+  }
+  if (!Array.isArray(manifest)) {
+    fail('websites/manifest.json: expected an array');
+    return 0;
+  }
+
+  let checked = 0;
+  for (const game of manifest) {
+    const path = game?.url;
+    if (!path) continue;
+    let src;
+    try {
+      src = await readFile(join(repoRoot, path), 'utf8');
+    } catch (error) {
+      fail(`${path}: unable to read (${error.message})`);
+      continue;
+    }
+    checked += 1;
+
+    const meta = extractMetaCsp(src);
+    if (!meta) {
+      fail(`${path}: missing <meta http-equiv="Content-Security-Policy"> — run npm run inject:meta`);
+      continue;
+    }
+    const firstScript = src.search(/<script\b/i);
+    if (firstScript !== -1 && meta.index > firstScript) {
+      fail(`${path}: the CSP meta must appear before the first <script> tag (a meta CSP only governs markup after it)`);
+    }
+
+    const directives = parseDirectives(meta.policy);
+    const get = (name) => directives.get(name) || [];
+    const expectExact = (name, values) => {
+      const actual = get(name);
+      if (actual.length !== values.length || values.some((value) => !actual.includes(value))) {
+        fail(`${path}: CSP ${name} must be exactly "${values.join(' ')}" (got "${actual.join(' ') || '<missing>'}")`);
+      }
+    };
+
+    expectExact('default-src', ["'self'"]);
+    expectExact('script-src', ["'self'", "'unsafe-inline'"]);
+    expectExact('style-src', ["'self'", "'unsafe-inline'"]);
+    expectExact('img-src', ["'self'", 'data:']);
+    expectExact('connect-src', ["'self'"]);
+    expectExact('frame-src', ["'none'"]);
+    expectExact('object-src', ["'none'"]);
+    expectExact('base-uri', ["'self'"]);
+    expectExact('form-action', ["'self'"]);
+  }
+  return checked;
+}
+
 await checkIndex();
+const gamePagesChecked = await checkGamePages();
 
 if (issues.length > 0) {
   console.error(`CSP check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
@@ -165,4 +242,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('CSP check passed: index.html ships a strict-by-default meta CSP with allowlists matching the catalog runtime.');
+console.log(`CSP check passed: index.html ships a strict-by-default meta CSP with allowlists matching the catalog runtime, and ${gamePagesChecked} game pages carry the tight self-contained game policy before their first script.`);

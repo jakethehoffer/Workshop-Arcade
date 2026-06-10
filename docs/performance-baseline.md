@@ -26,6 +26,24 @@ CI budgets:
 | Brick Breaker | 125 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Per-game CSP pass (pass 109)
+
+Captured 2026-06-10 against a disposable local static server after injecting a per-game Content-Security-Policy meta into every game page. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No gameplay rules, manifest entries, covers, budgets, service-worker files, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+Every `websites/<slug>.html` is directly reachable (sitemapped, SEO'd, shareable) but previously shipped with no CSP at all — only the catalog shell had one. `scripts/inject-game-meta.mjs` now writes a tight game-page policy as the first line of the generated workshop-meta block, before each page's first `<script>` tag: same-origin everything, `script-src`/`style-src` with `'unsafe-inline'` (game code and styles are inline by design), `img-src 'self' data:` for the blank `data:,` favicon pattern that suppresses `/favicon.ico` requests, and `frame-src 'none'`/`object-src 'none'`. `npm run test:csp` now asserts the full directive set and the before-first-script position on all 100 game pages alongside the existing catalog checks.
+
+The CSP meta costs roughly 0.25 KB per page: Brick Breaker measures 113.1 KB against its 125 KB budget and Arcade Jump 102.5 KB against 115 KB, keeping 11.9 KB / 12.5 KB of named exception headroom. The catalog shell is unchanged at 172.1 KB / 200 KB static weight with 27.9 KB / 9 files of catalog shell headroom, and the browser audit measured Catalog at 162.4 KB / 6 requests with zero console/page errors.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 72 ms | 52 ms | 🟢 53 ms | 🟢 162.4 KB | 6 | 0 |
+| Lexica | 🟢 36 ms | 34 ms | 🟢 34 ms | 🟢 149.5 KB | 3 | 0 |
+| Idle Tycoon | 🟢 448 ms | 43 ms | 🟢 43 ms | 🟢 156.8 KB | 2 | 0 |
+| Arcade Jump | 🟢 76 ms | 51 ms | 🟢 51 ms | 🟢 102.5 KB | 2 | 0 |
+| Brick Breaker | 🟢 80 ms | 74 ms | 🟢 74 ms | 🟢 113.1 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 101 URLs and `npm run audit:perf:local` reported `CI strict audit passed`.
+
 ## Player storage bridge pass (pass 108)
 
 Captured 2026-06-10 against a disposable local static server after adding the player storage bridge. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No gameplay rules, manifest entries, covers, generated game metadata, generated game surfaces, capture recipes, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
