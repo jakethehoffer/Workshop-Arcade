@@ -9,12 +9,28 @@ import {
   isRetryablePlaywrightTransportError,
   runWithPlaywrightTransportRetry,
 } from "./playwright-harness.mjs";
+import { parseScopedSlugs, resolveScopedGames } from "./scoped-slugs.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--ci");
 const CHECK_RECIPES = args.has("--check-recipes");
 const manifest = JSON.parse(await readFile(path.join(repoRoot, "websites", "manifest.json"), "utf8"));
+// `--slug a,b` scopes the capture loop for fast local iteration. The CI
+// rendered-quality gate refuses scoping so its evidence always means the
+// full catalog passed.
+let scoped;
+try {
+  scoped = resolveScopedGames(manifest, parseScopedSlugs(process.argv.slice(2)));
+} catch (error) {
+  console.error(`capture-games: ${error.message}`);
+  process.exit(2);
+}
+if (STRICT && scoped.scope.type !== "full") {
+  console.error("capture-games: --ci refuses --slug — the CI rendered-quality gate must cover the full catalog.");
+  process.exit(2);
+}
+const targetGames = scoped.targets;
 const startedAt = new Date().toISOString();
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outputRoot = path.join(repoRoot, "test-results", "render-ranking", stamp);
@@ -23,7 +39,7 @@ const viewports = [
   { name: "desktop", width: 1280, height: 820 },
   { name: "mobile", width: 390, height: 844, isMobile: true, hasTouch: true },
 ];
-const expectedSurfaceCount = manifest.length * viewports.length;
+const expectedSurfaceCount = targetGames.length * viewports.length;
 const records = [];
 const transportRetries = [];
 let lastPhase = phaseSnapshot("initializing");
@@ -84,7 +100,7 @@ try {
   setPhase("launching browser");
   browser = await chromium.launch({ headless: !process.env.HEADED });
 
-  for (const game of manifest) {
+  for (const game of targetGames) {
     for (const viewport of viewports) {
       setPhase("capturing surface", game, viewport);
       let record;
@@ -127,7 +143,11 @@ try {
   await writeContactSheet(summary);
   const failures = summary.rankedSurfaces.filter((surface) => surface.score > 0);
 
-  console.log(`Captured ${records.length} rendered surfaces for ${manifest.length} games.`);
+  if (scoped.scope.type === "slugs") {
+    console.log(`Captured ${records.length} rendered surfaces for ${targetGames.length} of ${manifest.length} games (scoped to ${scoped.scope.slugs.join(", ")}).`);
+  } else {
+    console.log(`Captured ${records.length} rendered surfaces for ${manifest.length} games.`);
+  }
   console.log(`Output: ${outputRoot}`);
   console.log(`Max render score: ${summary.rankedSurfaces[0]?.score ?? 0}`);
   if (summary.transportRetryCount > 0) {
@@ -235,6 +255,8 @@ async function writeRunSummary({ status, passed, error }) {
     lastPhase,
     provenance: await collectEvidenceProvenance(repoRoot),
     manifestCount: manifest.length,
+    scope: scoped.scope,
+    targetCount: targetGames.length,
     outputRoot,
     records,
     rankedSurfaces: rankedSurfaces.map((record) => ({

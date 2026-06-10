@@ -8,10 +8,21 @@ import {
   createIsolatedViewportContext,
   runWithPlaywrightTransportRetry,
 } from "./playwright-harness.mjs";
+import { parseScopedSlugs, resolveScopedGames } from "./scoped-slugs.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(repoRoot, "websites", "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+// `--slug a,b` scopes the per-game smoke loops; catalog-level probes always
+// run against the full manifest so card counts and cover checks stay honest.
+let scoped;
+try {
+  scoped = resolveScopedGames(manifest, parseScopedSlugs(process.argv.slice(2)));
+} catch (error) {
+  console.error(`smoke-games: ${error.message}`);
+  process.exit(2);
+}
+const targetGames = scoped.targets;
 const WORKSHOP_DRAFTS_KEY = "workshop_arcade_drafts_v1";
 const failures = [];
 const transportRetries = [];
@@ -67,6 +78,8 @@ async function writeSummary() {
     finishedAt: new Date().toISOString(),
     provenance: await collectEvidenceProvenance(repoRoot),
     manifestCount: manifest.length,
+    scope: scoped.scope,
+    targetCount: targetGames.length,
     failureCount: failures.length,
     passed: failures.length === 0,
     transportRetryCount: transportRetries.length,
@@ -1022,7 +1035,7 @@ async function checkCatalog(browser, baseUrl) {
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => document.getElementById("workshopModal").hidden);
 
-  for (const game of manifest) {
+  for (const game of targetGames) {
     setPhase("catalog", `deep link ${game.slug}`, { game: game.slug });
     await page.evaluate((slug) => {
       location.hash = `play=${encodeURIComponent(slug)}`;
@@ -1154,7 +1167,7 @@ try {
   setPhase("runner", "launch browser");
   browser = await chromium.launch({ headless: !process.env.HEADED });
   await checkCatalog(browser, baseUrl);
-  for (const game of manifest) {
+  for (const game of targetGames) {
     for (const viewport of gameViewports) {
       const attemptFailures = await runWithPlaywrightTransportRetry({
         harness: "game-smoke",
@@ -1201,4 +1214,8 @@ if (summary.failureCount) {
   process.exit(1);
 }
 
-console.log(`Game smoke tests passed for ${manifest.length} games.`);
+if (scoped.scope.type === "slugs") {
+  console.log(`Game smoke tests passed for ${targetGames.length} of ${manifest.length} games (scoped to ${scoped.scope.slugs.join(", ")}).`);
+} else {
+  console.log(`Game smoke tests passed for ${manifest.length} games.`);
+}

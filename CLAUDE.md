@@ -56,6 +56,7 @@ npm run audit:perf:local
 git diff --check
 ```
 
+- While iterating on one or two games, scope the slow sweeps to the touched slugs before the full battery: `npm run test:games -- --slug <a,b>` and `npm run capture:games -- --slug <a,b>`. Scoped summaries are `scope`-marked so they never count as full-catalog evidence, unknown slugs are refused, and `capture:games:ci` refuses `--slug` entirely — final verification and CI still run the full sweeps. `npm run test:scoped-verification` guards this contract.
 - Use the develop-web-game Playwright client or custom Playwright probes for touched gameplay. Inspect desktop and mobile screenshots, diagnostics, touch/keyboard controls, and console errors.
 - The full game-smoke and render-capture sweeps use reusable desktop and mobile browser contexts through `scripts/playwright-harness.mjs`. They clear local/session storage before each game document and permit one bounded retry only for `ERR_NO_BUFFER_SPACE` or `ERR_INSUFFICIENT_RESOURCES` after context recreation. Run `npm run test:playwright-harness` when changing this path; smoke and capture summaries must retain `transportRetryCount` and `transportRetries`.
 - After pushing `main`, wait for GitHub Actions and run:
