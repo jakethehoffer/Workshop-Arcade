@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-10 Codex immutable Actions pinning pass
+
+- Closed the remaining workflow supply-chain finding by replacing all 26 external action references across the five workflow files with full 40-character commit SHAs. Same-line release comments preserve human-readable versions and Dependabot update compatibility.
+- Strengthened `scripts/check-security-workflows.mjs` to scan every workflow and reject movable tags/branches, short SHAs, missing exact release comments, unexpected major versions, and inconsistent releases for the same action repository. The gate was run red first against the old major-tag references, then green after pinning.
+- Kept the pass tooling-only: no games, catalog behavior, generated metadata, service worker, or player-facing assets changed.
+- Verification passed: Node syntax checks; YAML parsing for all five workflows; `npm run test:security-workflows`; `npm run test:docs`; `npm run test:architecture-doc`; `npm run test:meta-files`; all 45 `npm test` fast gates; `git diff --check`; and GitHub API tag resolution proving each of the eight documented releases resolves to the pinned SHA.
+
 ## 2026-06-10 Claude per-game CSP pass
 
 - Closed the review's top remaining security gap: all 100 game pages (directly reachable, sitemapped, SEO'd) previously shipped with no Content-Security-Policy — only the catalog shell had one. `scripts/inject-game-meta.mjs` now writes a per-game meta CSP as the first line of the generated workshop-meta block, so it lands before each page's first `<script>` tag (a meta CSP only governs markup after it). The exported `GAME_PAGE_CSP` is tighter than the catalog's policy because the corpus is fully self-contained: `default-src 'self'`, `script-src`/`style-src` `'self' 'unsafe-inline'` (game code and styles are inline by design), `img-src 'self' data:`, `connect-src 'self'`, `frame-src 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. A remote script/exfiltration injection on any game page is now blocked by policy.

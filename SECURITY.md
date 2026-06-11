@@ -31,7 +31,7 @@ We aim to acknowledge reports within a few days and resolve confirmed issues in 
 In scope:
 
 - **XSS / injection via a game submission** (the Workshop intake flow opens a GitHub issue that a maintainer or AI agent eventually merges into `websites/manifest.json` + a new `websites/*.html` game file).
-- **Supply chain issues** in the project's npm dependencies (currently just Playwright) or the pinned GitHub Actions (see [`.github/dependabot.yml`](.github/dependabot.yml) for the auto-update surface).
+- **Supply chain issues** in the project's npm dependencies (currently just Playwright) or the full-commit-SHA-pinned GitHub Actions (see [`.github/dependabot.yml`](.github/dependabot.yml) for the auto-update surface).
 - **Catalog policy gaps** that would let a malicious manifest entry compromise visitors (e.g. a `url` field escaping the sandbox).
 - **CSP bypasses** against the [meta CSP](index.html) declared at the top of `index.html`.
 
@@ -49,5 +49,6 @@ The catalog ships several preventative measures that bound the blast radius of a
 - The player modal iframes use `sandbox="allow-scripts allow-forms allow-pointer-lock"` + `referrerpolicy="no-referrer"` — games cannot navigate the parent, access cookies, or break out of the iframe.
 - [CodeQL](.github/workflows/codeql.yml) with the `security-extended` query pack runs on every push and weekly.
 - [Dependabot](.github/dependabot.yml) auto-PRs npm + GitHub Actions updates weekly.
+- Every external workflow action is pinned to a full immutable commit SHA with a release comment; `npm run test:security-workflows` rejects movable or inconsistent refs.
 - `npm run test:csp` enforces the CSP contract in CI.
 - `npm run test:meta-files` enforces that `LICENSE`, `.well-known/security.txt`, `humans.txt`, and `SECURITY.md` all stay valid.

@@ -494,8 +494,8 @@ for (const artifactName of artifactPathRequirements.keys()) {
     continue;
   }
 
-  if (!artifactBlock.includes('uses: actions/upload-artifact@v7')) {
-    issues.push(`.github/workflows/validate-catalog.yml: "${artifactName}" artifact upload must use actions/upload-artifact@v7`);
+  if (!/uses:\s*actions\/upload-artifact@[0-9a-f]{40}\s+#\s+v7\.\d+\.\d+/.test(artifactBlock)) {
+    issues.push(`.github/workflows/validate-catalog.yml: "${artifactName}" artifact upload must use an immutable actions/upload-artifact v7 release pin`);
   }
 
   if (!artifactBlock.includes('retention-days: 14')) {

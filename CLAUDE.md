@@ -9,6 +9,7 @@ Use this file as the fast agent entrypoint for Workshop Arcade work. It is a com
 - The old sparse-tag floor cadence is retired. Unless the user explicitly asks for another game, default future work toward catalog/tooling, performance headroom, launch evidence, or playfeel polish rather than content expansion.
 - The user's workflow preference is autonomous execution with no PR. Commit directly to `main` and push when the work is ready, unless the user explicitly says otherwise.
 - GitHub Pages is deployed by validation-gated jobs inside `Validate Catalog`: all four validation jobs must pass before `Build static artifact`, `Deploy`, and `Live Pages smoke`. Pull requests never deploy, and a manual dispatch on `main` revalidates before deployment.
+- All external GitHub Actions are pinned to full immutable commit SHAs with same-line release comments; `npm run test:security-workflows` enforces the pin format, expected majors, and cross-workflow consistency.
 
 ## Start And Handoff
 

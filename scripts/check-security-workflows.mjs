@@ -18,18 +18,32 @@
 //   4. .github/workflows/security-surfaces.yml — periodically checks the
 //      GitHub-native security settings and alert backlogs that cannot be
 //      represented by repository files alone.
+//   5. Every external action use is pinned to an immutable full commit SHA,
+//      with a same-line release comment so Dependabot can keep the pin current.
 //
 // The check is intentionally structural (file presence + required
 // directives) rather than semantic — GitHub's workflow schemas evolve their
 // own schemas, and we want to update tooling configs without having to
 // rewrite the validator at the same time.
 
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const issues = [];
+let pinnedActionUseCount = 0;
+
+const EXPECTED_ACTION_MAJORS = new Map([
+  ['actions/checkout', 6],
+  ['actions/setup-node', 6],
+  ['actions/upload-artifact', 7],
+  ['actions/configure-pages', 6],
+  ['actions/upload-pages-artifact', 5],
+  ['actions/deploy-pages', 5],
+  ['actions/github-script', 9],
+  ['github/codeql-action', 4],
+]);
 
 function fail(message) {
   issues.push(message);
@@ -60,6 +74,106 @@ function getWorkflowJobBlock(src, jobId) {
   }
 
   return lines.slice(start, end).join('\n');
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function findPinnedAction(src, actionPath) {
+  const pattern = new RegExp(
+    `uses:\\s*${escapeRegExp(actionPath)}@([0-9a-f]{40})\\s+#\\s+(v\\d+\\.\\d+\\.\\d+)`
+  );
+  const match = src.match(pattern);
+  return match ? { sha: match[1], version: match[2] } : null;
+}
+
+function requirePinnedAction(src, workflowPath, actionPath, expectedMajor) {
+  const pin = findPinnedAction(src, actionPath);
+  if (!pin) {
+    fail(`${workflowPath}: must use ${actionPath}@<40-character commit SHA> # v${expectedMajor}.x.y`);
+    return null;
+  }
+  const major = Number.parseInt(pin.version.slice(1).split('.')[0], 10);
+  if (major !== expectedMajor) {
+    fail(`${workflowPath}: ${actionPath} must stay on major v${expectedMajor}, got ${pin.version}`);
+  }
+  return pin;
+}
+
+async function checkActionPins() {
+  const workflowDir = join(repoRoot, '.github', 'workflows');
+  let names;
+  try {
+    names = (await readdir(workflowDir))
+      .filter((name) => /\.ya?ml$/i.test(name))
+      .sort();
+  } catch (error) {
+    fail(`.github/workflows: unable to enumerate workflow files (${error.message})`);
+    return;
+  }
+
+  const repositoryPins = new Map();
+  for (const name of names) {
+    const workflowPath = `.github/workflows/${name}`;
+    const src = await readFile(join(workflowDir, name), 'utf8');
+    const lines = src.split(/\r?\n/);
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const match = lines[index].match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#\s*(.*?))?\s*$/);
+      if (!match) continue;
+
+      const target = match[1];
+      if (target.startsWith('./') || target.startsWith('docker://')) continue;
+
+      const atIndex = target.lastIndexOf('@');
+      if (atIndex <= 0) {
+        fail(`${workflowPath}:${index + 1}: external action use must include @<40-character commit SHA>`);
+        continue;
+      }
+
+      const actionPath = target.slice(0, atIndex);
+      const sha = target.slice(atIndex + 1);
+      const version = match[2] || '';
+      const repository = actionPath.split('/').slice(0, 2).join('/');
+
+      if (!/^[0-9a-f]{40}$/.test(sha)) {
+        fail(`${workflowPath}:${index + 1}: ${actionPath} must be pinned to a full 40-character lowercase commit SHA, got "${sha}"`);
+        continue;
+      }
+      if (!/^v\d+\.\d+\.\d+$/.test(version)) {
+        fail(`${workflowPath}:${index + 1}: ${actionPath}@${sha} must have a same-line "# vX.Y.Z" release comment`);
+        continue;
+      }
+
+      pinnedActionUseCount += 1;
+      const expectedMajor = EXPECTED_ACTION_MAJORS.get(repository);
+      const actualMajor = Number.parseInt(version.slice(1).split('.')[0], 10);
+      if (expectedMajor !== undefined && actualMajor !== expectedMajor) {
+        fail(`${workflowPath}:${index + 1}: ${repository} must stay on major v${expectedMajor}, got ${version}`);
+      }
+
+      const existing = repositoryPins.get(repository);
+      if (existing && (existing.sha !== sha || existing.version !== version)) {
+        fail(
+          `${workflowPath}:${index + 1}: ${repository} uses ${sha} # ${version}, but ${existing.workflowPath}:${existing.line} uses ${existing.sha} # ${existing.version}; keep one release per action repository`
+        );
+      } else if (!existing) {
+        repositoryPins.set(repository, {
+          sha,
+          version,
+          workflowPath,
+          line: index + 1,
+        });
+      }
+    }
+  }
+
+  for (const repository of EXPECTED_ACTION_MAJORS.keys()) {
+    if (!repositoryPins.has(repository)) {
+      fail(`.github/workflows: expected at least one pinned use of ${repository}`);
+    }
+  }
 }
 
 async function checkDependabot() {
@@ -116,26 +230,10 @@ async function checkCodeql() {
   }
 
   // CodeQL actions + language coverage
-  // Accept any non-deprecated codeql-action major. Pinning a single
-  // major (e.g. only v3) makes the Dependabot upgrade PR fail this
-  // check, which is exactly the wrong signal — Dependabot is the
-  // intended driver of these bumps. v3 and v4 are both currently
-  // supported by GitHub; older majors are out of support.
-  const supportedMajors = ['v3', 'v4'];
-  const initMatch = src.match(/uses:\s*github\/codeql-action\/init@(v\d+)/);
-  const analyzeMatch = src.match(/uses:\s*github\/codeql-action\/analyze@(v\d+)/);
-  if (!initMatch) {
-    fail(`${path}: must use github/codeql-action/init@<major>`);
-  } else if (!supportedMajors.includes(initMatch[1])) {
-    fail(`${path}: codeql-action/init pinned to ${initMatch[1]}, which is outside the supported majors (${supportedMajors.join(', ')}). Bump it or extend the allowlist.`);
-  }
-  if (!analyzeMatch) {
-    fail(`${path}: must use github/codeql-action/analyze@<major>`);
-  } else if (!supportedMajors.includes(analyzeMatch[1])) {
-    fail(`${path}: codeql-action/analyze pinned to ${analyzeMatch[1]}, which is outside the supported majors (${supportedMajors.join(', ')}). Bump it or extend the allowlist.`);
-  }
-  if (initMatch && analyzeMatch && initMatch[1] !== analyzeMatch[1]) {
-    fail(`${path}: codeql-action/init (${initMatch[1]}) and codeql-action/analyze (${analyzeMatch[1]}) must be pinned to the same major so init's output matches what analyze expects`);
+  const initPin = requirePinnedAction(src, path, 'github/codeql-action/init', 4);
+  const analyzePin = requirePinnedAction(src, path, 'github/codeql-action/analyze', 4);
+  if (initPin && analyzePin && (initPin.sha !== analyzePin.sha || initPin.version !== analyzePin.version)) {
+    fail(`${path}: codeql-action/init and codeql-action/analyze must use the same immutable release pin`);
   }
   if (!/javascript-typescript/.test(src)) {
     fail(`${path}: must analyze the "javascript-typescript" language (covers both inline JS and .mjs tooling)`);
@@ -217,17 +315,15 @@ async function checkPagesDeploy() {
   }
 
   const requiredActions = [
-    'actions/checkout@v6',
-    'actions/configure-pages@v6',
-    'actions/setup-node@v6',
-    'actions/upload-pages-artifact@v5',
-    'actions/deploy-pages@v5',
-    'actions/upload-artifact@v7'
+    ['actions/checkout', 6],
+    ['actions/configure-pages', 6],
+    ['actions/setup-node', 6],
+    ['actions/upload-pages-artifact', 5],
+    ['actions/deploy-pages', 5],
+    ['actions/upload-artifact', 7],
   ];
-  for (const action of requiredActions) {
-    if (!src.includes(`uses: ${action}`)) {
-      fail(`${path}: must use ${action}`);
-    }
+  for (const [actionPath, major] of requiredActions) {
+    requirePinnedAction(src, path, actionPath, major);
   }
   if (!/node-version:\s*24\b/.test(src)) {
     fail(`${path}: must run the Pages artifact builder under Node 24`);
@@ -278,10 +374,12 @@ async function checkPagesDeploy() {
       }
     }
 
-    for (const action of ['actions/checkout@v6', 'actions/setup-node@v6', 'actions/upload-artifact@v7']) {
-      if (!liveSmokeJob.includes(`uses: ${action}`)) {
-        fail(`${path}: live-smoke job must use ${action}`);
-      }
+    for (const [actionPath, major] of [
+      ['actions/checkout', 6],
+      ['actions/setup-node', 6],
+      ['actions/upload-artifact', 7],
+    ]) {
+      requirePinnedAction(liveSmokeJob, `${path} live-smoke job`, actionPath, major);
     }
     if (!/fetch-depth:\s*0\b/.test(liveSmokeJob)) {
       fail(`${path}: live-smoke checkout must use fetch-depth: 0 so push diffs can derive touched slugs across multi-commit pushes`);
@@ -446,10 +544,11 @@ async function checkSecuritySurfaces() {
     }
   }
 
-  for (const action of ['actions/checkout@v6', 'actions/setup-node@v6']) {
-    if (!src.includes(`uses: ${action}`)) {
-      fail(`${path}: must use ${action}`);
-    }
+  for (const [actionPath, major] of [
+    ['actions/checkout', 6],
+    ['actions/setup-node', 6],
+  ]) {
+    requirePinnedAction(src, path, actionPath, major);
   }
   if (!/node-version:\s*24\b/.test(src)) {
     fail(`${path}: must run the GitHub-native security checker under Node 24`);
@@ -593,6 +692,7 @@ async function checkCurrentHeadWorkflowStatusChecker() {
   }
 }
 
+await checkActionPins();
 await checkDependabot();
 await checkCodeql();
 await checkPagesDeploy();
@@ -607,4 +707,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Security workflows check passed: Dependabot, CodeQL, validation-gated Pages, Security Surfaces, and current-HEAD workflow status automation are intact.');
+console.log(`Security workflows check passed: ${pinnedActionUseCount} immutable action uses, Dependabot, CodeQL, validation-gated Pages, Security Surfaces, and current-HEAD workflow status automation are intact.`);

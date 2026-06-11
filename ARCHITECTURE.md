@@ -91,6 +91,8 @@ Two additional workflows and Dependabot live alongside:
 - [`.github/workflows/security-surfaces.yml`](.github/workflows/security-surfaces.yml) — Security Surfaces drift check for GitHub-native vulnerability alerts, Dependabot security updates, private vulnerability reporting, secret scanning, secret scanning push protection, and open security alert backlogs via `npm run test:github-security-settings` on push, weekly, and manual dispatch. The workflow uses `SECURITY_SURFACES_TOKEN` as the strict remote gate token when configured; otherwise it records the default `GITHUB_TOKEN` API limitation as an Actions warning and leaves the local command strict.
 - [`.github/dependabot.yml`](.github/dependabot.yml) — weekly Monday npm + github-actions update PRs, scoped commit prefixes (`deps:` / `ci:`), and a `playwright` group so the `@playwright/*` family lands in one PR.
 
+All external workflow actions use full 40-character commit SHAs rather than movable tags. Same-line `vX.Y.Z` comments retain release readability and let Dependabot update the immutable pins. `npm run test:security-workflows` scans every workflow, rejecting tags, branches, short SHAs, missing release comments, unsupported majors, and inconsistent releases for the same action repository.
+
 ## Adding a new game
 
 The end-to-end recipe a contributor should follow:
