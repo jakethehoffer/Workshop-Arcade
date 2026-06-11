@@ -7,7 +7,7 @@
 // change without reading every file. This check makes sure the doc
 // stays current as that surface evolves: every generator script must
 // be mentioned by filename, every section header must be present, and
-// the "Adding a new game" recipe must walk through every generator's
+// the dormant future-game recipe must walk through every generator's
 // regeneration command.
 
 import { readFile, readdir, stat } from 'node:fs/promises';
@@ -35,7 +35,7 @@ const REQUIRED_SECTIONS = [
   '## Generators',
   '## Validators (the fast gates)',
   '## CI workflow structure',
-  '## Adding a new game',
+  '## Content freeze and future game additions',
 ];
 
 // Generators must be named explicitly so adding a new generator
@@ -49,7 +49,7 @@ const REQUIRED_GENERATORS = [
   'scripts/validate-catalog.ps1',
 ];
 
-// The "Adding a new game" recipe must walk through every regenerator
+// The future-game recipe must walk through every regenerator
 // command. If a future generator lands, the doc has to add it here
 // before this check is happy.
 const REQUIRED_RECIPE_COMMANDS = [
@@ -88,7 +88,7 @@ async function checkArchitectureDoc() {
   }
   for (const command of REQUIRED_RECIPE_COMMANDS) {
     if (!src.includes(command)) {
-      fail(`${path}: "Adding a new game" recipe must include the command \`${command}\``);
+      fail(`${path}: future-game recipe must include the command \`${command}\``);
     }
   }
   for (const reference of REQUIRED_REFERENCES) {

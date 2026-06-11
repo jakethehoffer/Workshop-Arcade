@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-11 Codex 100-game content freeze pass
+
+- Made the user's no-more-games decision durable and executable. Added `catalog-freeze.json` plus `npm run test:catalog-freeze`, which lock the exact 100 manifest slugs, manifest game files, and `websites/*.html` game-file set until an explicit user instruction changes the policy. The legacy `solitaire` to `solitare.html` alias is recorded rather than renamed.
+- Updated `AGENTS.md`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `docs/game-contract.md`, docs/architecture validators, and Validate Catalog CI so future agents and contributors default to catalog/tooling, retention, security, performance, accessibility, or existing-game polish. The stale README count was corrected from 78 to 100 games.
+- Removed the Workshop modal's new-game submission path. Generic Suggest actions now open a disabled "Choose an existing game" placeholder, briefs/drafts/issues require an existing game, legacy `__new__` drafts are ignored, and Workshop triage explicitly blocks old new-game placeholders while the freeze is active.
+- Refreshed the catalog CSP hash and service-worker namespace to `wa-v49-shell-738d0fe5edae`.
+- Verification passed: catalog validation; all 46 `npm test` fast gates; full `npm run test:games` for 100 games after updating the issue-flow smoke to select an existing game; `npm run test:pwa-runtime`; strict `npm run audit:perf:local` across 101 pages with zero console/page errors; in-app browser desktop/mobile feedback flow, saved-draft resume, zero mobile overflow, and clean console; `git diff --check`.
+
 ## 2026-06-10 Codex immutable Actions pinning pass
 
 - Closed the remaining workflow supply-chain finding by replacing all 26 external action references across the five workflow files with full 40-character commit SHAs. Same-line release comments preserve human-readable versions and Dependabot update compatibility.

@@ -16,6 +16,10 @@ Read `.ai-sync/state.md` and `.ai-sync/handoff.md` before making assumptions abo
 
 Before implementation work, read `CLAUDE.md` for the shared Workshop Arcade agent runbook. It records the current catalog state, direct-main/no-PR convention, new-game footprint, service-worker revision rule, and verification/evidence gates used by both Claude and Codex.
 
+## Catalog Content Freeze
+
+Do not add, remove, rename, replace, or scaffold a game. The exact 100-game catalog is frozen until the user explicitly changes their mind. Existing games may be repaired, polished, rebalanced, or refactored. `catalog-freeze.json` and `npm run test:catalog-freeze` enforce the frozen identity set.
+
 ## Shared Handoff
 
 Before finishing meaningful work, update the shared state:

@@ -4,7 +4,7 @@
 [![CodeQL](https://github.com/jakethehoffer/Workshop-Arcade/actions/workflows/codeql.yml/badge.svg)](https://github.com/jakethehoffer/Workshop-Arcade/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Workshop Arcade is a player-facing static arcade: 78 browser games, instant play in a sandboxed modal, favorites, recent plays, random discovery from the catalog and player, direct game links, share links, install/offline support, and a lightweight suggestion flow for improvement ideas.
+Workshop Arcade is a player-facing static arcade: 100 browser games, instant play in a sandboxed modal, favorites, recent plays, random discovery from the catalog and player, direct game links, share links, install/offline support, and a lightweight suggestion flow for improvement ideas.
 
 Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: daily picks, for-you recommendations for returning players, quick plays, newest arrivals, continue playing, and saved favorites.
 
@@ -14,6 +14,7 @@ The current preview is published at [https://jakethehoffer.github.io/Workshop-Ar
 
 ## Product Readiness Roadmap
 
+- **Content freeze:** the exact 100-game identity set is frozen until the user explicitly changes their mind. Existing games can be polished or repaired, but `catalog-freeze.json` and `npm run test:catalog-freeze` reject additions, removals, renames, replacements, and unlisted game pages.
 - **Discovery:** keep the catalog organized around player shelves, filters, search, random play, and direct game links instead of repository activity.
 - **Retention:** improve continue/favorites, for-you recommendations, install/offline behavior, and in-player game-to-game browsing so repeat play feels natural on one device.
 - **Feedback:** keep suggestions lightweight for players, let saved local drafts resume from the catalog, then convert the saved brief into maintainer work outside the main catalog surface.
@@ -62,6 +63,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.ps1
 npm ci
 npm run test:docs
+npm run test:catalog-freeze
 npm run test:manifest-schema
 npm run test:tag-coverage
 npm run test:meta-files
@@ -116,6 +118,7 @@ npm run test:owned-domain-cutover-preflight
 
 - `validate-catalog.ps1` checks that every manifest entry has a real game file, cover asset, safe relative paths, unique ids/slugs, local subresources, no remote scripts/fonts, and a synchronized fallback catalog in `index.html`. The `-Fix` form regenerates `FALLBACK_GAMES` and then refreshes the catalog's executable inline-script CSP hash automatically.
 - `npm run test:docs` keeps contributor-facing validation docs aligned with the current publish-ready CI gates.
+- `npm run test:catalog-freeze` enforces the user-directed content freeze by comparing `websites/manifest.json` and every `websites/*.html` game page with the exact 100 frozen slugs in `catalog-freeze.json`.
 - `npm run test:manifest-schema` validates `websites/manifest.json` against [`schemas/manifest.schema.json`](schemas/manifest.schema.json) — the single source-of-truth contract that every generator (sitemap, feed, OG images, inject-meta) and downstream validator depends on. The same schema is wired into `.vscode/settings.json` so editors give contributors live autocomplete + inline validation while editing the manifest, catching typos like `tagss: [...]` at source instead of cascading into a wall of generator failures.
 - `npm run test:tag-coverage` enforces the public catalog tag floor: every tag used by manifest games must appear in at least 3 games and must be present in `index.html` `CATEGORY_ORDER` so filter-chip ordering cannot silently drift.
 - `npm run test:meta-files` enforces the OSS hygiene contract: `LICENSE` (MIT, copyright current to the calendar year), `.well-known/security.txt` (RFC 9116 with `Contact`/`Expires`/`Canonical`), `SECURITY.md` (GitHub-native disclosure policy linking to private advisories + the RFC 9116 surface), `humans.txt` (humanstxt.org format with `/* TEAM */`), `package.json` declares `"license": "MIT"`, and the README's intro slab carries the Validate Catalog + CodeQL + License: MIT badges so visitors see repo health at a glance.
@@ -179,7 +182,7 @@ npm run test:owned-domain-cutover-preflight
 
 CI runs `validate-catalog.ps1`, `npm run test:docs`, `npm run test:tools`, `npm run test:playwright-harness`, `npm run test:publish-ready-contract`, `npm run test:owned-domain-rehearsal-contract`, `npm run test:owned-domain-cutover-preflight-contract`, `npm run test:capture-recipes`, `npm run test:generated-surfaces`, `npm run test:validator-fixtures`, `npm run test:manifest-schema`, `npm run test:tag-coverage`, `npm run test:live-smoke-slugs`, `npm run test:pages-artifact`, `npm run test:owned-domain-readiness`, `npm run test:catalog-perf`, `npm run test:workshop-feedback`, `npm run test:a11y`, `npm run test:runtime-storage`, `npm run test:pwa-runtime`, `npm run test:live-canvas-evidence`, `npm run test:games`, `npm run audit:perf:ci`, and `npm run capture:games:ci` on every push. The first four Validate Catalog jobs run catalog/docs/a11y, game smoke, performance audit, and render capture in parallel, with source-identifying `game-smoke-summary`, `performance-audit`, and `render-ranking` artifacts uploaded for review (`test-results/smoke-games/<timestamp>/summary.json`, `test-results/lighthouse-baseline/<timestamp>/summary.json`, and `test-results/render-ranking/<timestamp>/summary.json`). Render-capture summaries are fail-safe evidence: even an unexpected harness abort records status, error, counts, last phase, and provenance. On `main`, and only after all four validation jobs succeed, `Build static artifact` assembles the curated `_site`, `Deploy` publishes it, and `Live Pages smoke` derives touched slugs, retries `npm run test:live-pages`, and retains source-identifying evidence for 14 days. Pull requests never deploy, and manually dispatching Validate Catalog on `main` revalidates before publication. The Security Surfaces workflow runs `npm run test:github-security-settings` on push, weekly, and by manual dispatch so GitHub-native vulnerability alerts and secret scanning push protection cannot silently drift. After workflows finish, `npm run test:current-head-workflows` records the three required top-level workflow results plus validation-gated job ordering under `test-results/current-head-workflows/<timestamp>/summary.json`. These are maintenance surfaces, not the player-facing value proposition.
 
-See `CONTRIBUTING.md` and `docs/game-contract.md` for the full add/update/remove checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (5 generators, 45 fast validators, 4 parallel validation jobs plus 3 gated deployment jobs) and ends with a step-by-step "Adding a new game" recipe.
+See `CONTRIBUTING.md` and `docs/game-contract.md` for the existing-game maintenance checklist and per-game quality contract. `ARCHITECTURE.md` walks through the script network (5 generators, 46 fast validators, 4 parallel validation jobs plus 3 gated deployment jobs), content-freeze policy, and validation-gated deployment flow.
 
 ## License & Security Reports
 

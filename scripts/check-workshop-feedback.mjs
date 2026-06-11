@@ -39,6 +39,11 @@ function requireInBlock(block, pattern, description) {
 }
 
 requireMatch(/const\s+DRAFTS_KEY\s*=\s*["']workshop_arcade_drafts_v1["']/, 'existing local draft storage key');
+for (const forbidden of ['newGameField', 'newGameTitle', 'New game submission', 'websites/your-game.html']) {
+  if (src.includes(forbidden)) {
+    fail(`${path}: content freeze forbids Workshop new-game surface "${forbidden}"`);
+  }
+}
 const localDraftKeys = new Set([...src.matchAll(/["'](workshop_arcade_[^"']+)["']/g)].map((match) => match[1]));
 if (localDraftKeys.size !== 1 || !localDraftKeys.has('workshop_arcade_drafts_v1')) {
   fail(`${path}: feedback drafts must keep using only workshop_arcade_drafts_v1, found ${[...localDraftKeys].join(', ') || 'none'}`);
@@ -72,14 +77,22 @@ for (const fn of [
 }
 
 const suggestBlock = sliceBetween('if(els.suggestImprovementBtn)', 'if(els.resumeDraftBtn)');
-requireInBlock(suggestBlock, /openWorkshop\(['"]__new__['"],\s*e\.currentTarget\)/, 'Suggest improvement opening the local Workshop modal');
+requireInBlock(suggestBlock, /openWorkshop\(['"]['"],\s*e\.currentTarget\)/, 'Suggest improvement opening the existing-game Workshop modal');
 requireInBlock(suggestBlock, /addEventListener\(\s*['"]click['"]/, 'Suggest improvement click handler');
 requireInBlock(suggestBlock, /^(?![\s\S]*(window\.open|openGitHubIssue|GITHUB_ISSUE_URL))[\s\S]*$/, 'Suggest improvement staying quiet until the player explicitly opens an issue draft');
 
 const resumeBlock = sliceBetween('function resumeLatestDraft', 'function loadDrafts');
 requireInBlock(resumeBlock, /newestWorkshopDraft\(\)/, 'Resume draft selecting the newest saved draft');
-requireInBlock(resumeBlock, /openWorkshop\(draft\.gameId \|\| ['"]__new__['"],\s*trigger\)/, 'Resume draft opening the Workshop modal');
+requireInBlock(resumeBlock, /openWorkshop\(draft\.gameId,\s*trigger\)/, 'Resume draft opening the Workshop modal for an existing game');
 requireInBlock(resumeBlock, /loadDraft\(draft\.id,\s*\{\s*focusGoal:\s*true\s*\}\)/, 'Resume draft loading the saved draft and focusing the request field');
+
+const populateBlock = sliceBetween('function populateWorkshopGames', 'function selectedWorkshopGame');
+requireInBlock(populateBlock, /placeholder\.textContent\s*=\s*['"]Choose an existing game['"]/, 'existing-game-only Workshop placeholder');
+requireInBlock(populateBlock, /placeholder\.disabled\s*=\s*true/, 'disabled Workshop placeholder');
+
+const validDraftBlock = sliceBetween('function isValidDraft', 'function sanitizeDrafts');
+requireInBlock(validDraftBlock, /typeof draft\.gameId === ['"]string['"]/, 'saved drafts requiring an existing game id');
+requireInBlock(validDraftBlock, /draft\.gameId !== ['"]__new__['"]/, 'legacy new-game drafts being rejected');
 
 const syncBlock = sliceBetween('function syncDraftResumeAction', 'function resumeLatestDraft');
 requireInBlock(syncBlock, /state\.drafts\.filter\(isValidDraft\)\.length/, 'draft count based only on valid drafts');
@@ -101,6 +114,7 @@ requireInBlock(renderBlock, /load\.addEventListener\(['"]click['"],\s*\(\)\s*=>\
 requireInBlock(renderBlock, /del\.addEventListener\(['"]click['"],\s*\(\)\s*=>\s*deleteDraft\(draft\.id\)\)/, 'saved draft Delete button wiring');
 
 const loadBlock = sliceBetween('function loadDraft', 'function deleteDraft');
+requireInBlock(loadBlock, /els\.workshopGame\.value\s*=\s*draft\.gameId/, 'loadDraft restoring an existing game selection');
 requireInBlock(loadBlock, /els\.workshopGoal\.value\s*=\s*draft\.goal \|\| ['"]['"]/, 'loadDraft restoring request text');
 requireInBlock(loadBlock, /els\.briefOutput\.value\s*=\s*draft\.brief \|\| ['"]['"]/, 'loadDraft restoring generated brief');
 requireInBlock(loadBlock, /if\(options\.focusGoal\) setTimeout\(\(\) => els\.workshopGoal\.focus\(\{\s*preventScroll:\s*true\s*\}\),\s*0\)/, 'loadDraft optional request-field focus');
@@ -109,6 +123,9 @@ const deleteBlock = sliceBetween('function deleteDraft', 'async function copyBri
 requireInBlock(deleteBlock, /state\.drafts\s*=\s*state\.drafts\.filter/, 'deleteDraft removing the selected draft');
 requireInBlock(deleteBlock, /persistDrafts\(\)/, 'deleteDraft keeping existing persistence flow');
 requireInBlock(deleteBlock, /syncDraftResumeAction\(\)/, 'deleteDraft refreshing the resume affordance');
+
+const copyBlock = sliceBetween('async function copyBrief', 'function downloadBrief');
+requireInBlock(copyBlock, /if\(!selectedWorkshopGame\(\)\)/, 'Copy Brief requiring an existing game');
 
 const resumeListenerBlock = sliceBetween('if(els.resumeDraftBtn)', 'if(els.footerSuggestBtn)');
 requireInBlock(resumeListenerBlock, /resumeLatestDraft\(e\.currentTarget\)/, 'Resume draft button click handler');

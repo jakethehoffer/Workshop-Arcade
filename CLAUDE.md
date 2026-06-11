@@ -6,7 +6,8 @@ Use this file as the fast agent entrypoint for Workshop Arcade work. It is a com
 
 - The catalog is a static single-page arcade with standalone game HTML in `websites/`, cover art in `covers/`, and catalog data in `websites/manifest.json`.
 - The catalog has 100 games and 101 audited pages. The games 85-100 quality pass is complete: the high-mismatch expansion entries now have distinct rules, visuals, authored level logic, and rendered evidence.
-- The old sparse-tag floor cadence is retired. Unless the user explicitly asks for another game, default future work toward catalog/tooling, performance headroom, launch evidence, or playfeel polish rather than content expansion.
+- The exact 100-game catalog is frozen. Do not add, remove, rename, replace, or scaffold a game until the user explicitly changes their mind. Existing games may be repaired, polished, rebalanced, or refactored. `catalog-freeze.json` and `npm run test:catalog-freeze` enforce the identity set.
+- Default future work to catalog/tooling, performance headroom, launch evidence, accessibility, security, retention, or playfeel polish.
 - The user's workflow preference is autonomous execution with no PR. Commit directly to `main` and push when the work is ready, unless the user explicitly says otherwise.
 - GitHub Pages is deployed by validation-gated jobs inside `Validate Catalog`: all four validation jobs must pass before `Build static artifact`, `Deploy`, and `Live Pages smoke`. Pull requests never deploy, and a manual dispatch on `main` revalidates before deployment.
 - All external GitHub Actions are pinned to full immutable commit SHAs with same-line release comments; `npm run test:security-workflows` enforces the pin format, expected majors, and cross-workflow consistency.
@@ -23,7 +24,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\.ai-sync\ai-sync.ps1"
 - Read `.ai-sync/state.md`, `.ai-sync/handoff.md`, and `.ai-sync/claude-context.md` when present.
 - Before finishing meaningful work, write a concise `.ai-sync` handoff with changed files, commands run, blockers, and the next useful step.
 
-## New Game Checklist
+## Frozen Catalog Policy
+
+- Treat any new-game idea, placeholder, plan, branch, issue, or generated file as out of scope while `catalog-freeze.json` is active.
+- Keep the Workshop feedback flow limited to improvements for existing games.
+- Run `npm run test:catalog-freeze` before broader validation when touching manifest, game files, catalog policy, or contributor documentation.
+- The checklist below is dormant reference material. Use it only after an explicit user instruction lifts or changes the freeze and the policy/docs are updated in the same pass.
+
+## Future Game Checklist
 
 - Keep each game as a self-contained `websites/<slug>.html` page with no remote assets and a compact request/transfer footprint.
 - Load `workshop-runtime.js` before game code touches storage.

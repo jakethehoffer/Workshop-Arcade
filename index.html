@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-WHI7EqaOMBLZs4gPa+fM0M5yLrbf+cnUDJLpPU2Abmo='; connect-src 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-D9Gh1c6RlhnUpUG77Y2Citf+6DiFsjgsXLc7yVGmgck='; connect-src 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Workshop Arcade — Browser Games</title>
   <meta name="description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
@@ -156,10 +156,6 @@
           <div class="field">
             <label for="workshopGame">Game</label>
             <select id="workshopGame"></select>
-          </div>
-          <div class="field" id="newGameField" hidden>
-            <label for="newGameTitle">New game title</label>
-            <input id="newGameTitle" type="text" maxlength="80" autocomplete="off" placeholder="Untitled browser game" />
           </div>
           <div class="field">
             <label for="workshopGoal">Upgrade request</label>
@@ -351,8 +347,6 @@ const els = {
   workshopCard: document.querySelector('.workshop-card'),
   workshopForm: document.getElementById('workshopForm'),
   workshopGame: document.getElementById('workshopGame'),
-  newGameField: document.getElementById('newGameField'),
-  newGameTitle: document.getElementById('newGameTitle'),
   workshopGoal: document.getElementById('workshopGoal'),
   briefOutput: document.getElementById('briefOutput'),
   workshopStatus: document.getElementById('workshopStatus'),
@@ -1463,10 +1457,12 @@ window.addEventListener('keydown', (e) => {
 document.getElementById('year').textContent = new Date().getFullYear();
 function populateWorkshopGames(){
   els.workshopGame.innerHTML = '';
-  const newOption = document.createElement('option');
-  newOption.value = '__new__';
-  newOption.textContent = 'New game submission';
-  els.workshopGame.appendChild(newOption);
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Choose an existing game';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  els.workshopGame.appendChild(placeholder);
   for(const g of state.games){
     const opt = document.createElement('option');
     opt.value = g.id;
@@ -1480,21 +1476,18 @@ function selectedWorkshopGame(){
 function openWorkshop(gameId = '', trigger = document.activeElement){
   if(modalFocus.active === els.playerModal) closePlayer({ restoreFocus: false });
   if(!els.workshopGame.options.length) populateWorkshopGames();
-  if(gameId) els.workshopGame.value = gameId;
-  if(!els.workshopGame.value && state.games[0]) els.workshopGame.value = state.games[0].id;
-  if(!els.workshopGame.value) els.workshopGame.value = '__new__';
+  const requestedGame = state.games.find(game => game.id === gameId);
+  els.workshopGame.value = requestedGame ? requestedGame.id : '';
   updateWorkshopMode();
-  if(!els.briefOutput.value) generateBrief();
-  const initialFocus = els.workshopGame.value === '__new__' ? els.newGameTitle : els.workshopGame;
-  showManagedModal(els.workshopModal, trigger, initialFocus);
+  if(requestedGame) generateBrief();
+  else els.briefOutput.value = '';
+  showManagedModal(els.workshopModal, trigger, els.workshopGame);
 }
 function closeWorkshop(options = {}){
   hideManagedModal(els.workshopModal, options);
 }
 function updateWorkshopMode(){
-  const isNew = els.workshopGame.value === '__new__' || !selectedWorkshopGame();
-  els.newGameField.hidden = !isNew;
-  els.openSelectedGameBtn.disabled = isNew;
+  els.openSelectedGameBtn.disabled = !selectedWorkshopGame();
 }
 function selectedFocus(){
   return [...els.workshopForm.querySelectorAll('input[name="focus"]:checked')].map(input => input.value);
@@ -1502,12 +1495,16 @@ function selectedFocus(){
 function generateBrief(){
   updateWorkshopMode();
   const game = selectedWorkshopGame();
-  const isNew = els.workshopGame.value === '__new__' || !game;
-  const title = isNew ? (els.newGameTitle.value.trim() || 'Untitled browser game') : game.title;
-  const file = isNew ? 'websites/your-game.html' : game.url;
+  if(!game){
+    els.briefOutput.value = '';
+    setStatus('Choose an existing game first.');
+    return '';
+  }
+  const title = game.title;
+  const file = game.url;
   const goal = els.workshopGoal.value.trim() || 'Improve the game so it is more fun, clearer, and easier to play on desktop and mobile.';
   const focus = selectedFocus();
-  const tags = game ? (game.tags || []).join(', ') : 'New, Arcade';
+  const tags = (game.tags || []).join(', ');
   const constraints = [
     '- Keep the game self-contained unless a shared asset is already in the repo.',
     '- Follow docs/game-contract.md.',
@@ -1517,9 +1514,7 @@ function generateBrief(){
     '- Match the catalog visual language: Workshop Arcade eyebrow + bold game title brand mark, teal/cyan gradient chrome on pills/buttons/cards, ambient radial backdrop, tabular-numeric stat values.',
     '- Keep modal/overlay accessibility: role="dialog", aria-modal="true", aria-labelledby, focus trap, Escape to close.'
   ];
-  if(!isNew){
-    constraints.push('- Preserve the game diagnostic hooks already wired up (window.render_game_to_text and window.advanceTime) so npm run capture:games and the develop-web-game client keep working.');
-  }
+  constraints.push('- Preserve the game diagnostic hooks already wired up (window.render_game_to_text and window.advanceTime) so npm run capture:games and the develop-web-game client keep working.');
   const acceptance = [
     '- The catalog loads without broken game links or missing covers.',
     '- The game starts, restarts, and handles its main controls.',
@@ -1557,6 +1552,9 @@ function isValidDraft(draft){
     && typeof draft === 'object'
     && typeof draft.id === 'string'
     && draft.id
+    && typeof draft.gameId === 'string'
+    && draft.gameId
+    && draft.gameId !== '__new__'
     && (
       typeof draft.brief === 'string'
       || typeof draft.goal === 'string'
@@ -1593,7 +1591,7 @@ function resumeLatestDraft(trigger = document.activeElement){
     syncDraftResumeAction();
     return;
   }
-  openWorkshop(draft.gameId || '__new__', trigger);
+  openWorkshop(draft.gameId, trigger);
   loadDraft(draft.id, { focusGoal: true });
 }
 function loadDrafts(){
@@ -1609,12 +1607,16 @@ function persistDrafts(){
   try { localStorage.setItem(DRAFTS_KEY, JSON.stringify(state.drafts.slice(0, 12))); } catch {}
 }
 function saveDraft(){
-  const brief = generateBrief();
   const game = selectedWorkshopGame();
+  if(!game){
+    setStatus('Choose an existing game first.');
+    return;
+  }
+  const brief = generateBrief();
   const draft = {
     id: String(Date.now()),
-    gameId: game ? game.id : '__new__',
-    title: game ? game.title : (els.newGameTitle.value.trim() || 'New game submission'),
+    gameId: game.id,
+    title: game.title,
     goal: els.workshopGoal.value.trim(),
     focus: selectedFocus(),
     brief,
@@ -1662,9 +1664,11 @@ function renderDrafts(){
 function loadDraft(id, options = {}){
   const draft = state.drafts.find(item => item.id === id);
   if(!draft) return;
-  els.workshopGame.value = draft.gameId || '__new__';
-  if(els.workshopGame.value !== draft.gameId) els.workshopGame.value = '__new__';
-  els.newGameTitle.value = draft.gameId === '__new__' ? draft.title || '' : '';
+  els.workshopGame.value = draft.gameId;
+  if(els.workshopGame.value !== draft.gameId){
+    setStatus('That draft no longer matches an existing game.');
+    return;
+  }
   els.workshopGoal.value = draft.goal || '';
   for(const input of els.workshopForm.querySelectorAll('input[name="focus"]')){
     input.checked = (draft.focus || []).includes(input.value);
@@ -1682,6 +1686,10 @@ function deleteDraft(id){
   setStatus('Draft deleted.');
 }
 async function copyBrief(){
+  if(!selectedWorkshopGame()){
+    setStatus('Choose an existing game first.');
+    return;
+  }
   if(!els.briefOutput.value) generateBrief();
   try {
     await navigator.clipboard.writeText(els.briefOutput.value);
@@ -1693,9 +1701,13 @@ async function copyBrief(){
   }
 }
 function downloadBrief(){
-  if(!els.briefOutput.value) generateBrief();
   const game = selectedWorkshopGame();
-  const title = game ? game.slug : (els.newGameTitle.value.trim() || 'new-game').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  if(!game){
+    setStatus('Choose an existing game first.');
+    return;
+  }
+  if(!els.briefOutput.value) generateBrief();
+  const title = game.slug;
   const blob = new Blob([els.briefOutput.value], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1708,9 +1720,13 @@ function downloadBrief(){
   setStatus('Brief downloaded.');
 }
 function openGitHubIssue(){
-  const brief = els.briefOutput.value || generateBrief();
   const game = selectedWorkshopGame();
-  const title = game ? game.title : (els.newGameTitle.value.trim() || 'New game submission');
+  if(!game){
+    setStatus('Choose an existing game first.');
+    return;
+  }
+  const brief = els.briefOutput.value || generateBrief();
+  const title = game.title;
   const params = new URLSearchParams({
     template: 'workshop-request.md',
     title: `Workshop: ${title}`,
@@ -1727,13 +1743,13 @@ function setStatus(message){
 }
 els.submitGameBtn.addEventListener('click', e => { e.preventDefault(); openWorkshop('', e.currentTarget); });
 if(els.suggestImprovementBtn) {
-  els.suggestImprovementBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
+  els.suggestImprovementBtn.addEventListener('click', e => openWorkshop('', e.currentTarget));
 }
 if(els.resumeDraftBtn) {
   els.resumeDraftBtn.addEventListener('click', e => resumeLatestDraft(e.currentTarget));
 }
 if(els.footerSuggestBtn) {
-  els.footerSuggestBtn.addEventListener('click', e => openWorkshop('__new__', e.currentTarget));
+  els.footerSuggestBtn.addEventListener('click', e => openWorkshop('', e.currentTarget));
 }
 els.workshopClose.addEventListener('click', () => closeWorkshop());
 els.workshopModal.addEventListener('click', e => {

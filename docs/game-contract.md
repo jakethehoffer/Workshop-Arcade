@@ -40,7 +40,7 @@ Existing games expose two diagnostic functions on `window` so the rendered-quali
 - `window.render_game_to_text()` returns a compact JSON snapshot of the active game state (score, level, player position, hazards, overlays, etc.).
 - `window.advanceTime(ms)` deterministically advances the game clock by `ms` milliseconds for tests that need to settle a frame-driven effect.
 
-New games should expose both hooks before landing.
+Every existing game must preserve both hooks during maintenance.
 
 ## Expected Checks
 

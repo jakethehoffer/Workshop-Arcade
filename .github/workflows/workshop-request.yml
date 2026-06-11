@@ -74,17 +74,17 @@ jobs:
             const fileLink = file
               ? '[`' + file + '`](https://github.com/' + owner + '/' + repo + '/blob/main/' + file + ')'
               : 'the requested game file';
-            const isNewGame = file === 'websites/your-game.html';
+            const isFrozenNewGameRequest = file === 'websites/your-game.html';
 
             const branch = 'codex/workshop-' + issue.number;
             const marker = '<!-- workshop-triage-checklist -->';
             const headerLines = [];
             if (game) headerLines.push('**Game:** ' + game);
-            if (file) headerLines.push('**File:** ' + fileLink + (isNewGame ? ' (new game placeholder — pick a real path)' : ''));
+            if (file) headerLines.push('**File:** ' + fileLink + (isFrozenNewGameRequest ? ' (blocked by the active catalog content freeze)' : ''));
             headerLines.push('**Suggested branch:** `' + branch + '`');
 
-            const diagnosticsLine = isNewGame
-              ? 'New games should expose `window.render_game_to_text()` and `window.advanceTime(ms)` so `npm run capture:games` and the develop-web-game client work.'
+            const diagnosticsLine = isFrozenNewGameRequest
+              ? 'Do not implement this request. Retarget it to an existing catalog game unless the user explicitly lifts the freeze in `catalog-freeze.json`.'
               : 'Preserve `window.render_game_to_text()` and `window.advanceTime(ms)` on the game so `npm run capture:games` and the develop-web-game client keep working.';
 
             const body_new = [

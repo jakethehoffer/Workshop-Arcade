@@ -195,10 +195,11 @@ function isGitHubApiUrl(value) {
 
 function workshopDraftFixtures() {
   const seededGame = manifest[0] || {};
+  const newestGame = manifest[1] || seededGame;
   return [
     {
       id: "1000",
-      gameId: seededGame.id || "__new__",
+      gameId: seededGame.id,
       title: "Older seeded draft",
       goal: "Older seeded feedback request.",
       focus: ["Gameplay balance"],
@@ -207,8 +208,8 @@ function workshopDraftFixtures() {
     },
     {
       id: "2000",
-      gameId: "__new__",
-      title: "Newest seeded concept",
+      gameId: newestGame.id,
+      title: newestGame.title,
       goal: "Newest seeded feedback request.",
       focus: ["Mobile controls", "Clarity"],
       brief: "Newest seeded brief",
@@ -597,11 +598,12 @@ async function checkWorkshopDraftResume(page, label) {
 
   await resume.click();
   await page.waitForSelector("#workshopModal:not([hidden])");
-  const title = await page.locator("#newGameTitle").inputValue();
+  const selectedGame = await page.locator("#workshopGame").inputValue();
   const goal = await page.locator("#workshopGoal").inputValue();
   const brief = await page.locator("#briefOutput").inputValue();
-  if (title !== "Newest seeded concept") {
-    addFailure(label, `Resume draft loaded title "${title}" instead of newest seeded draft`);
+  const expectedDraft = workshopDraftFixtures()[1];
+  if (selectedGame !== expectedDraft.gameId) {
+    addFailure(label, `Resume draft selected game "${selectedGame}" instead of "${expectedDraft.gameId}"`);
   }
   if (goal !== "Newest seeded feedback request.") {
     addFailure(label, `Resume draft loaded goal "${goal}" instead of newest seeded draft`);
@@ -1013,6 +1015,8 @@ async function checkCatalog(browser, baseUrl) {
   setPhase("catalog", "workshop issue URL flow");
   await page.locator("#submitGameBtn").click();
   await page.waitForSelector("#workshopModal:not([hidden])");
+  const issueGame = manifest[0];
+  await page.locator("#workshopGame").selectOption(issueGame.id);
   await page.locator("#workshopGoal").fill("Smoke-test the issue generation flow.");
   await page.locator("#workshopForm button[type='submit']").click();
   // Stub window.open so we capture the catalog-generated URL exactly, instead
