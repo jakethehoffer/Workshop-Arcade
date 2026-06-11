@@ -620,6 +620,97 @@ async function checkWorkshopDraftResume(page, label) {
   await page.waitForFunction(() => document.getElementById("workshopModal").hidden);
 }
 
+async function checkPlayerDataControls(page, label) {
+  const trigger = page.locator("#playerDataBtn");
+  if (!(await trigger.count())) {
+    addFailure(label, "missing Player data footer action");
+    return;
+  }
+
+  await trigger.click();
+  await page.waitForSelector("#playerDataModal:not([hidden])");
+  await page.waitForFunction(() => document.activeElement?.id === "playerDataClose");
+  const activeId = await page.evaluate(() => document.activeElement?.id || "");
+  if (activeId !== "playerDataClose") {
+    addFailure(label, `Player data modal should focus its close button, active element was "${activeId}"`);
+  }
+
+  const initialCounts = {
+    favorites: (await page.locator("#playerDataFavoritesCount").textContent())?.trim() || "",
+    recent: (await page.locator("#playerDataRecentCount").textContent())?.trim() || "",
+    drafts: (await page.locator("#playerDataDraftsCount").textContent())?.trim() || "",
+    saves: (await page.locator("#playerDataSavesCount").textContent())?.trim() || "",
+  };
+  if (!/^[1-9]\d* games?$/.test(initialCounts.favorites)) {
+    addFailure(label, `Player data favorites count should be nonzero, got "${initialCounts.favorites}"`);
+  }
+  if (!/^[1-9]\d* games?$/.test(initialCounts.recent)) {
+    addFailure(label, `Player data recent count should be nonzero, got "${initialCounts.recent}"`);
+  }
+  if (initialCounts.drafts !== "2 drafts") {
+    addFailure(label, `Player data draft count should show seeded drafts, got "${initialCounts.drafts}"`);
+  }
+  if (!/^1 game · 2 entries$/.test(initialCounts.saves)) {
+    addFailure(label, `Player data save count should show seeded mirror entries, got "${initialCounts.saves}"`);
+  }
+
+  await page.locator("#clearFavoritesBtn").click();
+  const favoritesAfter = (await page.locator("#playerDataFavoritesCount").textContent())?.trim();
+  const favoriteStore = await page.evaluate(() => localStorage.getItem("workshop-arcade:favorites:v1"));
+  if (favoritesAfter !== "0 games" || favoriteStore !== null) {
+    addFailure(label, `Clear favorites left count=${JSON.stringify(favoritesAfter)} store=${JSON.stringify(favoriteStore)}`);
+  }
+
+  await page.locator("#clearGameSavesBtn").click();
+  const savesAfter = (await page.locator("#playerDataSavesCount").textContent())?.trim();
+  const mirroredKeys = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("workshop-arcade:game:")));
+  if (savesAfter !== "0 games" || mirroredKeys.length) {
+    addFailure(label, `Clear game saves left count=${JSON.stringify(savesAfter)} keys=${mirroredKeys.join(",")}`);
+  }
+
+  const reset = page.locator("#clearAllPlayerDataBtn");
+  await reset.click();
+  const armedText = (await reset.textContent())?.trim();
+  const beforeConfirm = await page.evaluate(() => ({
+    length: localStorage.length,
+    drafts: localStorage.getItem("workshop_arcade_drafts_v1"),
+    direct: localStorage.getItem("direct-game-setting"),
+  }));
+  if (armedText !== "Click again to confirm") {
+    addFailure(label, `full reset should require confirmation, got "${armedText}"`);
+  }
+  if (!beforeConfirm.length || !beforeConfirm.drafts || beforeConfirm.direct !== "kept-until-confirmed") {
+    addFailure(label, `first full-reset click changed storage: ${JSON.stringify(beforeConfirm)}`);
+  }
+
+  await reset.click();
+  const afterConfirm = await page.evaluate(() => ({
+    length: localStorage.length,
+    railHidden: document.getElementById("sessionRail")?.hidden,
+    resumeHidden: document.getElementById("resumeDraftBtn")?.hidden,
+  }));
+  if (afterConfirm.length !== 0) {
+    addFailure(label, `confirmed full reset left ${afterConfirm.length} localStorage entries`);
+  }
+  if (afterConfirm.railHidden !== true || afterConfirm.resumeHidden !== true) {
+    addFailure(label, `confirmed full reset did not refresh local continuity UI: ${JSON.stringify(afterConfirm)}`);
+  }
+  for (const selector of ["#playerDataFavoritesCount", "#playerDataRecentCount", "#playerDataDraftsCount", "#playerDataSavesCount"]) {
+    const text = (await page.locator(selector).textContent())?.trim() || "";
+    if (!text.startsWith("0 ")) {
+      addFailure(label, `${selector} should report zero after full reset, got "${text}"`);
+    }
+  }
+
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => document.getElementById("playerDataModal").hidden);
+  await page.waitForFunction(() => document.activeElement?.id === "playerDataBtn");
+  const restoredId = await page.evaluate(() => document.activeElement?.id || "");
+  if (restoredId !== "playerDataBtn") {
+    addFailure(label, `Player data Escape close should restore footer trigger focus, active element was "${restoredId}"`);
+  }
+}
+
 async function checkSessionRailHidden(page, label) {
   const rail = page.locator("#sessionRail");
   if (!(await rail.count())) {
@@ -772,6 +863,9 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
       localStorage.setItem("workshop-arcade:recentPlays:v1", JSON.stringify([recentSlug]));
       localStorage.setItem("workshop-arcade:favorites:v1", JSON.stringify([favoriteSlug]));
       localStorage.setItem(draftKey, JSON.stringify(drafts));
+      localStorage.setItem(`workshop-arcade:game:${recentSlug}:score`, "42");
+      localStorage.setItem(`workshop-arcade:game:${recentSlug}:sound`, "true");
+      localStorage.setItem("direct-game-setting", "kept-until-confirmed");
     } catch {}
   }, {
     recentSlug: manifest[0]?.slug,
@@ -869,6 +963,7 @@ async function checkCatalogMobileContainment(browser, baseUrl) {
     addFailure("catalog mobile", "missing Today direct shelf pick after seeded session state");
   }
 
+  await checkPlayerDataControls(page, "catalog mobile");
   const overflow = await page.evaluate(() => Math.ceil(document.documentElement.scrollWidth - document.documentElement.clientWidth));
   if (overflow > 2) {
     addFailure("catalog mobile", `horizontal overflow ${overflow}px`);

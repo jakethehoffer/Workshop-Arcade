@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-11 Codex player data controls pass
+
+- Implemented the best next non-game move while preserving the durable 100-game content freeze: a footer Player data modal now shows local favorites, recently played games, feedback drafts, and mirrored in-player saves, with independent clear actions and a guarded two-click full reset. The UI states that data stays in the current browser, keeps the app/offline cache during reset, traps focus, restores the trigger, and fits a 390x844 viewport without horizontal overflow.
+- Added `npm run test:player-data-controls`, expanded the catalog mobile smoke to seed and exercise every data category, and wired the fast contract into Validate Catalog. Updated README and architecture documentation, rebuilt the catalog CSP hash, and refreshed the service worker to `wa-v50-shell-cffe7714cab1`.
+- Verification passed: in-app browser desktop/mobile inspection with clean console; all 47 `npm test` fast gates; full `npm run test:games` for 100 games; `npm run test:pwa-runtime`; `npm run test:runtime-storage`; `npm run test:player-storage-bridge`; `npm run capture:games:ci` for 200 surfaces with max score 0; strict `npm run audit:perf:local` across 101 pages with Catalog at 170.3 KB / 6 requests and zero console/page errors; catalog shell 180.0 KB / 200 KB; PWA install 184.1 KB / 200 KB.
+
 ## 2026-06-11 Codex 100-game content freeze pass
 
 - Made the user's no-more-games decision durable and executable. Added `catalog-freeze.json` plus `npm run test:catalog-freeze`, which lock the exact 100 manifest slugs, manifest game files, and `websites/*.html` game-file set until an explicit user instruction changes the policy. The legacy `solitaire` to `solitare.html` alias is recorded rather than renamed.

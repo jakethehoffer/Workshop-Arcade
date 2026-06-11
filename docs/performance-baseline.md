@@ -26,6 +26,24 @@ CI budgets:
 | Brick Breaker | 125 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Player data controls pass (pass 111)
+
+Captured 2026-06-11 against a disposable local static server after adding player-facing controls for the catalog's existing local data. The strict audit covered the catalog plus 100 manifest games, 101 pages total. The 100-game content freeze remains active: no games, manifest entries, covers, gameplay rules, generated game surfaces, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+The footer now opens an accessible Player data modal that summarizes favorites, recent plays, feedback drafts, and mirrored in-player saves. Players can clear each category independently or use a guarded two-step full reset; the full reset leaves the installed app and offline cache intact. All copy explicitly states that this data stays in the current browser. A new fast contract gate and the full catalog smoke verify counts, selective removal, the confirmation guard, complete local reset, focus management, mobile layout, and zero startup network calls.
+
+`npm run test:page-weight` reports the catalog local shell at 180.0 KB / 200 KB with 20.0 KB of headroom. `npm run test:pwa-install-budget` reports 184.1 KB / 200 KB with 15.9 KB of headroom. The browser audit measured Catalog at 170.3 KB / 6 requests with zero console/page errors. The service-worker namespace moved to `SHELL_REVISION = shell-cffe7714cab1` and `VERSION = wa-v50-shell-cffe7714cab1`.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 188 ms | 166 ms | 🟢 167 ms | 🟢 170.3 KB | 6 | 0 |
+| Lexica | 🟢 56 ms | 80 ms | 🟢 81 ms | 🟢 149.5 KB | 3 | 0 |
+| Idle Tycoon | 🟢 476 ms | 19 ms | 🟢 22 ms | 🟢 156.8 KB | 2 | 0 |
+| Arcade Jump | 🟢 184 ms | 155 ms | 🟢 155 ms | 🟢 102.5 KB | 2 | 0 |
+| Brick Breaker | 🟢 144 ms | 155 ms | 🟢 155 ms | 🟢 113.1 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 101 URLs, and the 200-surface rendered-quality sweep reported a maximum score of 0.
+
 ## Catalog hash-locked CSP pass (pass 110)
 
 Captured 2026-06-11 against a disposable local static server after replacing the catalog's executable `script-src 'unsafe-inline'` allowance with one exact SHA-256 source. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No game files, gameplay rules, manifest entries, covers, budgets, game-page CSPs, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
