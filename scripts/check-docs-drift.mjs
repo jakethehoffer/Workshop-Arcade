@@ -164,6 +164,7 @@ const agentRunbookRequiredText = [
   'npm run build:sitemap',
   'npm run build:feed',
   'npm run build:og-images',
+  'npm run build:csp',
   'SHELL_REVISION',
   'scripts/capture-games.mjs',
   'docs/performance-baseline.md',

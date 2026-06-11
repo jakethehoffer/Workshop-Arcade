@@ -46,8 +46,10 @@ if (scripts['test:owned-domain-rehearsal-contract'] !== 'node scripts/check-owne
 const runnerPath = 'scripts/run-owned-domain-rehearsal.mjs';
 const runner = await readText(runnerPath);
 requireText(runnerPath, runner, "import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';", 'evidence provenance helper import');
+requireText(runnerPath, runner, "import { assertCatalogCsp } from './catalog-csp.mjs';", 'catalog CSP validator import');
 requireText(runnerPath, runner, 'provenance: await collectEvidenceProvenance(repoRoot)', 'provenance summary field');
 requireText(runnerPath, runner, '...formatEvidenceProvenance(summary.provenance)', 'provenance report lines');
+requireText(runnerPath, runner, "assertCatalogCsp(nextIndex, 'owned-domain artifact index.html')", 'owned-domain artifact catalog CSP validation');
 for (const text of [
   'test-results',
   'owned-domain-rehearsal',

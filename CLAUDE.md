@@ -40,6 +40,7 @@ npm run build:feed
 npm run build:og-images
 ```
 
+- `validate-catalog.ps1 -Fix` refreshes the catalog's executable inline-script CSP hash after changing `FALLBACK_GAMES`. After any other direct executable JavaScript edit in `index.html`, run `npm run build:csp`; JSON-LD-only edits do not require it.
 - Update `sw.js` by recomputing the current install shell hash so `SHELL_REVISION` matches the checked shell assets. `npm run test:pwa` will fail if the revision is stale.
 
 ## Verification

@@ -12,6 +12,7 @@ import { createServer } from 'node:net';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertCatalogCsp } from './catalog-csp.mjs';
 import { collectEvidenceProvenance, formatEvidenceProvenance } from './evidence-provenance.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -185,6 +186,7 @@ async function regenerateOwnedDomainSurfaces() {
   let nextIndex = sitemapModule.refreshRootMetaUrls(indexHtml);
   nextIndex = sitemapModule.injectItemList(nextIndex, sitemapModule.renderItemListBlock(manifest));
   nextIndex = sitemapModule.injectWebSite(nextIndex, sitemapModule.renderWebSiteBlock());
+  assertCatalogCsp(nextIndex, 'owned-domain artifact index.html');
   await writeFile(indexPath, nextIndex, 'utf8');
 
   for (const game of manifest) {

@@ -5,10 +5,9 @@
 // index.html so even if an attacker manages to inject markup (e.g. via
 // the Workshop brief form), they can't smuggle in a
 // <script src="https://evil.com/..."> or exfiltrate to a non-allowlisted
-// origin. The policy intentionally allows 'unsafe-inline' for scripts
-// and styles — refactoring the catalog's ~1900 lines of inline JS + CSS
-// to nonces or hashes is a much bigger pass — but the rest of the
-// directives are tight.
+// origin. The catalog's executable inline script is authorized by its
+// exact SHA-256 hash; inline styles remain allowed because the catalog CSS
+// is intentionally embedded in index.html.
 //
 // This check locks in:
 //   1. A meta CSP exists in index.html.
@@ -21,9 +20,9 @@
 //      - base-uri is 'self' (block <base> hijacking)
 //      - frame-src includes 'self' (the player modal iframes
 //        same-origin websites/*.html files)
-//      - script-src and style-src include 'self' (not just
-//        'unsafe-inline' — so accidentally adding a remote script
-//        tag without updating the policy still gets caught)
+//      - script-src is exactly 'self' plus the hashes of every executable
+//        inline script; inert application/ld+json blocks are excluded
+//      - style-src includes 'self' and 'unsafe-inline'
 //
 // Limitations: <meta http-equiv> CSP can't set frame-ancestors (that
 // directive only works as an HTTP response header). GitHub Pages
@@ -45,8 +44,15 @@
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  catalogCspIssues,
+  executableInlineScripts,
+  parseCspDirectives,
+} from './catalog-csp.mjs';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = process.env.WORKSHOP_ARCADE_REPO_ROOT
+  ? resolve(process.env.WORKSHOP_ARCADE_REPO_ROOT)
+  : resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const issues = [];
 
 function fail(message) {
@@ -60,18 +66,6 @@ async function exists(relative) {
   } catch {
     return false;
   }
-}
-
-function parseDirectives(policy) {
-  const map = new Map();
-  for (const raw of policy.split(';')) {
-    const trimmed = raw.trim();
-    if (!trimmed) continue;
-    const [name, ...values] = trimmed.split(/\s+/);
-    if (!name) continue;
-    map.set(name.toLowerCase(), values);
-  }
-  return map;
 }
 
 async function checkIndex() {
@@ -91,7 +85,9 @@ async function checkIndex() {
     return;
   }
   const policy = match[1] || match[2];
-  const directives = parseDirectives(policy);
+  const directives = new Map(
+    parseCspDirectives(policy).map(({ name, values }) => [name, values]),
+  );
 
   const required = [
     'default-src',
@@ -116,7 +112,7 @@ async function checkIndex() {
   }
 
   // script-src + style-src must include 'self' so any future remote
-  // <script src=...> requires an explicit CSP update.
+  // dependency requires an explicit CSP update.
   if (!directiveIncludes('script-src', "'self'")) {
     fail(`${path}: script-src must include 'self' so accidentally adding a remote <script> requires an explicit CSP update`);
   }
@@ -156,14 +152,8 @@ async function checkIndex() {
     fail(`${path}: form-action must include 'self' (the Workshop form posts to GitHub via a click navigation, not a form submit, so 'self' is sufficient)`);
   }
 
-  // Sanity: the catalog has no scheme-bearing script-src entries (e.g.
-  // https://cdn.example.com). If a future change adds one, that's worth
-  // surfacing in CI so the maintainer can confirm the dependency is
-  // intentional.
-  const scriptSrc = directives.get('script-src') || [];
-  const remoteScriptHosts = scriptSrc.filter((entry) => /^https?:\/\//i.test(entry));
-  if (remoteScriptHosts.length > 0) {
-    fail(`${path}: CSP script-src declares remote script hosts (${remoteScriptHosts.join(', ')}). Please confirm this is intentional and document the dependency.`);
+  for (const issue of catalogCspIssues(src)) {
+    fail(`${path}: ${issue}${/hash/.test(issue) ? '; run npm run build:csp' : ''}`);
   }
 }
 
@@ -209,7 +199,9 @@ async function checkGamePages() {
       fail(`${path}: the CSP meta must appear before the first <script> tag (a meta CSP only governs markup after it)`);
     }
 
-    const directives = parseDirectives(meta.policy);
+    const directives = new Map(
+      parseCspDirectives(meta.policy).map(({ name, values }) => [name, values]),
+    );
     const get = (name) => directives.get(name) || [];
     const expectExact = (name, values) => {
       const actual = get(name);
@@ -242,4 +234,5 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log(`CSP check passed: index.html ships a strict-by-default meta CSP with allowlists matching the catalog runtime, and ${gamePagesChecked} game pages carry the tight self-contained game policy before their first script.`);
+const catalogScriptCount = executableInlineScripts(await readFile(join(repoRoot, 'index.html'), 'utf8')).length;
+console.log(`CSP check passed: index.html hash-locks ${catalogScriptCount} executable inline script${catalogScriptCount === 1 ? '' : 's'}, and ${gamePagesChecked} game pages carry the tight self-contained game policy before their first script.`);

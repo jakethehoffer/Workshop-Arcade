@@ -26,6 +26,22 @@ CI budgets:
 | Brick Breaker | 125 KB | 4 |
 | Other manifest games | 100 KB | 3 |
 
+## Catalog hash-locked CSP pass (pass 110)
+
+Captured 2026-06-11 against a disposable local static server after replacing the catalog's executable `script-src 'unsafe-inline'` allowance with one exact SHA-256 source. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No game files, gameplay rules, manifest entries, covers, budgets, game-page CSPs, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+`scripts/catalog-csp.mjs` now hashes executable inline scripts while excluding inert JSON-LD, normalizes Windows line endings the same way the HTML parser does, and rewrites only the catalog `script-src` directive. `npm run build:csp` is the explicit repair command, while `validate-catalog.ps1 -Fix` invokes the same generator after updating `FALLBACK_GAMES`. `npm run test:csp` rejects stale or extra hashes, nonces, remote origins, `'unsafe-eval'`, inline handlers, and restored script `'unsafe-inline'`; owned-domain dry runs and generated artifacts assert the policy remains valid after root metadata regeneration.
+
+`npm run test:page-weight` reports the catalog local shell at 172.1 KB / 200 KB with 27.9 KB of headroom. The browser audit measured Catalog at 162.4 KB / 6 requests with zero console/page errors, and the full owned-domain rehearsal measured its regenerated root artifact at 160.3 KB / 6 requests with zero errors. The service-worker namespace moved to `SHELL_REVISION = shell-813e35797999` and `VERSION = wa-v48-shell-813e35797999`.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 572 ms | 331 ms | 🟢 336 ms | 🟢 162.4 KB | 6 | 0 |
+| Lexica | 🟢 40 ms | 43 ms | 🟢 43 ms | 🟢 149.5 KB | 3 | 0 |
+| Idle Tycoon | 🟢 480 ms | 48 ms | 🟢 48 ms | 🟢 156.8 KB | 2 | 0 |
+| Arcade Jump | 🟢 112 ms | 82 ms | 🟢 82 ms | 🟢 102.5 KB | 2 | 0 |
+| Brick Breaker | 🟢 236 ms | 119 ms | 🟢 119 ms | 🟢 113.1 KB | 2 | 0 |
+
 ## Per-game CSP pass (pass 109)
 
 Captured 2026-06-10 against a disposable local static server after injecting a per-game Content-Security-Policy meta into every game page. The strict audit covered the catalog plus 100 manifest games, 101 pages total. No gameplay rules, manifest entries, covers, budgets, service-worker files, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.

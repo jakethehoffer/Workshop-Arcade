@@ -9,6 +9,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertCatalogCsp } from './catalog-csp.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DRY_RUN_ORIGIN = 'https://arcade.example.test';
@@ -130,6 +131,7 @@ const indexHtml = await readFile(join(repoRoot, 'index.html'), 'utf8');
 let generatedIndex = refreshRootMetaUrls(indexHtml);
 generatedIndex = injectItemList(generatedIndex, renderItemListBlock(manifest));
 generatedIndex = injectWebSite(generatedIndex, renderWebSiteBlock());
+assertCatalogCsp(generatedIndex, 'index.html generator dry run');
 generatedSurfaces.push(['index.html generator dry run', generatedIndex]);
 assert(generatedIndex.includes(`<link rel="canonical" href="${SITE_URL}" />`), 'index.html dry run: root canonical URL must use the owned-domain URL');
 assert(generatedIndex.includes(`<meta property="og:url" content="${SITE_URL}" />`), 'index.html dry run: root og:url must use the owned-domain URL');

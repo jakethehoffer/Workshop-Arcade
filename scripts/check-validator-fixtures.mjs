@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { extractCatalogCsp, refreshCatalogCsp } from './catalog-csp.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const issues = [];
@@ -74,6 +75,77 @@ async function checkGeneratedSurfaceNegative() {
     }
     if (!/orphan-game\.html/.test(combined) || !/orphan generated OG image/.test(combined)) {
       fail(`check-generated-surfaces fixture: expected orphan HTML and OG messages, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
+}
+
+async function checkCatalogCspFixtures() {
+  const source = `<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script type="application/ld+json">{"name":"Fixture"}</script>
+</head>
+<body>
+<script>window.fixtureValue = 1;</script>
+<script data-src="not-a-real-src" type="text/ecmascript">window.legacyFixture = 1;</script>
+</body>
+</html>`;
+  const refreshed = refreshCatalogCsp(source);
+  const refreshedAgain = refreshCatalogCsp(refreshed);
+  if (refreshedAgain !== refreshed) {
+    fail('catalog CSP fixture: generator must be idempotent');
+  }
+  const hashes = [...refreshed.matchAll(/'sha256-[A-Za-z0-9+/=]+'/g)].map((match) => match[0]);
+  if (hashes.length !== 2) {
+    fail(`catalog CSP fixture: expected two executable-script hashes and no JSON-LD hash, got ${hashes.length}`);
+  }
+  const crlfRefreshed = refreshCatalogCsp(source.replace(/\n/g, '\r\n'));
+  if (extractCatalogCsp(crlfRefreshed)?.policy !== extractCatalogCsp(refreshed)?.policy) {
+    fail('catalog CSP fixture: LF and CRLF inputs must produce the same browser-valid script hashes');
+  }
+
+  await withFixture('catalog-csp-valid', async (root) => {
+    await writeFixture(root, 'index.html', refreshed);
+    await writeFixture(root, 'websites/manifest.json', '[]');
+    const result = runValidator('scripts/check-csp.mjs', root);
+    if (result.status !== 0) {
+      fail(`catalog CSP fixture: expected generated policy to pass, got ${JSON.stringify(`${result.stdout}\n${result.stderr}`.trim())}`);
+    }
+  });
+
+  await withFixture('catalog-csp-tampered', async (root) => {
+    await writeFixture(root, 'index.html', refreshed.replace('window.fixtureValue = 1;', 'window.fixtureValue = 2;'));
+    await writeFixture(root, 'websites/manifest.json', '[]');
+    const result = runValidator('scripts/check-csp.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0 || !/missing 1 executable inline-script hash/.test(combined) || !/stale or unexpected hash/.test(combined)) {
+      fail(`catalog CSP fixture: tampered script should fail with missing/stale hash messages, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
+
+  await withFixture('catalog-csp-unsafe-inline', async (root) => {
+    const permissive = refreshed.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'");
+    await writeFixture(root, 'index.html', permissive);
+    await writeFixture(root, 'websites/manifest.json', '[]');
+    const result = runValidator('scripts/check-csp.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0 || !/must not include 'unsafe-inline'/.test(combined)) {
+      fail(`catalog CSP fixture: restored unsafe-inline should fail, got ${JSON.stringify(combined.trim())}`);
+    }
+  });
+
+  await withFixture('catalog-csp-duplicate-directive', async (root) => {
+    const duplicate = refreshed.replace(
+      "script-src 'self'",
+      "script-src 'self' 'unsafe-inline'; script-src 'self'",
+    );
+    await writeFixture(root, 'index.html', duplicate);
+    await writeFixture(root, 'websites/manifest.json', '[]');
+    const result = runValidator('scripts/check-csp.mjs', root);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    if (result.status === 0 || !/expected exactly one script-src directive, found 2/.test(combined)) {
+      fail(`catalog CSP fixture: duplicate script-src directives should fail, got ${JSON.stringify(combined.trim())}`);
     }
   });
 }
@@ -346,6 +418,7 @@ const shellAssets = [
   });
 }
 
+await checkCatalogCspFixtures();
 await checkGeneratedSurfaceNegative();
 await checkPerformanceBaselineNegative();
 await checkPageWeightNegative();
@@ -357,4 +430,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log('Validator fixture check passed: generated-surface, performance-baseline, page-weight, and PWA install-budget negative paths fail on throwaway fixtures.');
+console.log('Validator fixture check passed: catalog CSP generation/negative paths plus generated-surface, performance-baseline, page-weight, and PWA install-budget failures are covered by throwaway fixtures.');

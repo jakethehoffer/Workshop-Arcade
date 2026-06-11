@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ARCHITECTURE.md contract check.
 //
-// The repo's quality bar has grown to ~30 scripts, 4 generators, many
+// The repo's quality bar has grown to ~30 scripts, 5 generators, many
 // fast validators, and a validation-gated deployment workflow. ARCHITECTURE.md exists
 // so new contributors (and AI agents) can find the right surface to
 // change without reading every file. This check makes sure the doc
@@ -45,6 +45,7 @@ const REQUIRED_GENERATORS = [
   'scripts/build-sitemap.mjs',
   'scripts/build-feed.mjs',
   'scripts/build-og-images.mjs',
+  'scripts/catalog-csp.mjs',
   'scripts/validate-catalog.ps1',
 ];
 

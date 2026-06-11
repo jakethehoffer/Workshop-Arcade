@@ -91,6 +91,14 @@ function Update-FallbackCatalog($Games, [string]$IndexPath) {
   }
 }
 
+function Update-CatalogCsp([string]$IndexPath) {
+  $generatorPath = Join-Path $PSScriptRoot "catalog-csp.mjs"
+  & node $generatorPath $IndexPath
+  if ($LASTEXITCODE -ne 0) {
+    Add-Error "Could not refresh the catalog CSP after updating FALLBACK_GAMES."
+  }
+}
+
 function Resolve-ResourcePath([string]$GameUrl, [string]$Resource) {
   if ([string]::IsNullOrWhiteSpace($Resource)) { return $null }
   $clean = ($Resource -split "[?#]")[0]
@@ -184,6 +192,9 @@ if ($null -eq $games -or $games.Count -eq 0) {
 
 if ($Fix -and (Test-Path -LiteralPath $indexPath) -and $errors.Count -eq 0) {
   Update-FallbackCatalog $games $indexPath
+  if ($errors.Count -eq 0) {
+    Update-CatalogCsp $indexPath
+  }
 }
 
 $ids = New-Object System.Collections.Generic.HashSet[string]
