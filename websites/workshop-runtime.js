@@ -131,3 +131,29 @@
     }
   }
 })();
+
+// Accessibility baseline: game pages carry their own inline CSS with no shared
+// stylesheet, so this is the one place every game can pick up a
+// prefers-reduced-motion reset without editing each frozen game file. It only
+// collapses CSS-driven motion (transitions, keyframe animations, smooth scroll)
+// and only when the user has asked for reduced motion; canvas gameplay motion is
+// JS-driven and stays a per-game concern. Inline <style> is permitted by the
+// game-page CSP (style-src includes 'unsafe-inline').
+(function () {
+  "use strict";
+  try {
+    var css =
+      "@media (prefers-reduced-motion: reduce){" +
+      "*,*::before,*::after{" +
+      "animation-duration:0.01ms !important;" +
+      "animation-iteration-count:1 !important;" +
+      "transition-duration:0.01ms !important;" +
+      "scroll-behavior:auto !important}}";
+    var style = document.createElement("style");
+    style.setAttribute("data-workshop-reduced-motion", "");
+    style.textContent = css;
+    (document.head || document.documentElement).appendChild(style);
+  } catch (_) {
+    // A missing reduced-motion reset is a graceful degradation, never fatal.
+  }
+})();

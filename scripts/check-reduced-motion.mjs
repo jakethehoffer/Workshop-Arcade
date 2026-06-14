@@ -1,0 +1,164 @@
+#!/usr/bin/env node
+// Browser-backed reduced-motion baseline probe.
+//
+// Game pages run their own inline CSS with no shared stylesheet, so retrofitting
+// `prefers-reduced-motion` per game would mean editing every frozen game file.
+// Instead, workshop-runtime.js — which every game loads first — injects one
+// `@media (prefers-reduced-motion: reduce)` reset that neutralizes CSS
+// animations/transitions across the whole corpus from a single file. (Canvas
+// gameplay motion is JS-driven and remains a per-game concern; this covers the
+// CSS layer only.)
+//
+// This probe drives a real game page in Chromium and proves:
+//   1. The runtime injects the reduced-motion <style> on every game load.
+//   2. Under `prefers-reduced-motion: reduce`, a CSS animation/transition is
+//      neutralized (the !important reset wins over inline durations).
+//   3. Under `no-preference`, the same durations are left intact — so the reset
+//      is correctly gated to the media query and never disables motion for
+//      users who did not ask for it.
+
+import { createServer } from 'node:http';
+import { open } from 'node:fs/promises';
+import { dirname, extname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const GAME_PATH = 'websites/echo-mimic.html';
+const mimeTypes = new Map([
+  ['.html', 'text/html; charset=utf-8'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.svg', 'image/svg+xml; charset=utf-8'],
+  ['.webmanifest', 'application/manifest+json; charset=utf-8'],
+]);
+const issues = [];
+
+function fail(message) {
+  issues.push(message);
+}
+
+function resolveRequestPath(requestUrl) {
+  const pathname = decodeURIComponent(new URL(requestUrl, 'http://127.0.0.1').pathname);
+  const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  const target = resolve(repoRoot, relative);
+  return target.startsWith(repoRoot) ? target : null;
+}
+
+async function startServer() {
+  const server = createServer(async (request, response) => {
+    try {
+      const filePath = resolveRequestPath(request.url || '/');
+      if (!filePath) {
+        response.writeHead(404).end('Not found');
+        return;
+      }
+      const handle = await open(filePath, 'r');
+      let content;
+      try {
+        if (!(await handle.stat()).isFile()) {
+          response.writeHead(404).end('Not found');
+          return;
+        }
+        content = await handle.readFile();
+      } finally {
+        await handle.close();
+      }
+      response.writeHead(200, {
+        'cache-control': 'no-store',
+        'content-type': mimeTypes.get(extname(filePath).toLowerCase()) || 'application/octet-stream',
+      });
+      response.end(content);
+    } catch {
+      response.writeHead(404).end('Not found');
+    }
+  });
+
+  await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
+  const address = server.address();
+  return { server, baseUrl: `http://127.0.0.1:${address.port}/` };
+}
+
+// Returns the computed animation/transition durations (ms) for a freshly
+// inserted probe element plus whether the runtime injected its reset style.
+async function probe(browser, baseUrl, reducedMotion) {
+  const context = await browser.newContext({ reducedMotion });
+  try {
+    const page = await context.newPage();
+    page.on('pageerror', (error) => fail(`[${reducedMotion}] page error: ${error.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') fail(`[${reducedMotion}] console error: ${message.text()}`);
+    });
+    await page.goto(new URL(GAME_PATH, baseUrl).href, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => typeof window.render_game_to_text === 'function', undefined, { timeout: 8000 });
+    return await page.evaluate(() => {
+      const styleEl = document.querySelector('style[data-workshop-reduced-motion]');
+      const el = document.createElement('div');
+      el.style.animationName = 'wa-probe-spin';
+      el.style.animationDuration = '9s';
+      el.style.transitionProperty = 'opacity';
+      el.style.transitionDuration = '9s';
+      document.body.appendChild(el);
+      const computed = getComputedStyle(el);
+      const parseMs = (value) => {
+        const first = String(value || '').split(',')[0].trim();
+        if (first.endsWith('ms')) return parseFloat(first);
+        if (first.endsWith('s')) return parseFloat(first) * 1000;
+        return Number.NaN;
+      };
+      const result = {
+        injected: !!styleEl,
+        animationMs: parseMs(computed.animationDuration),
+        transitionMs: parseMs(computed.transitionDuration),
+      };
+      el.remove();
+      return result;
+    });
+  } finally {
+    await context.close();
+  }
+}
+
+let server;
+let browser;
+try {
+  const started = await startServer();
+  server = started.server;
+  const baseUrl = started.baseUrl;
+  browser = await chromium.launch({ headless: true });
+
+  const reduced = await probe(browser, baseUrl, 'reduce');
+  const normal = await probe(browser, baseUrl, 'no-preference');
+
+  if (!reduced.injected) fail('runtime did not inject style[data-workshop-reduced-motion] under reduce');
+  if (!normal.injected) fail('runtime did not inject style[data-workshop-reduced-motion] under no-preference');
+
+  // Under reduce, the !important reset must collapse CSS motion to ~0.
+  if (!(reduced.animationMs <= 1)) {
+    fail(`reduced-motion did not neutralize animation-duration (got ${reduced.animationMs}ms, expected <= 1ms)`);
+  }
+  if (!(reduced.transitionMs <= 1)) {
+    fail(`reduced-motion did not neutralize transition-duration (got ${reduced.transitionMs}ms, expected <= 1ms)`);
+  }
+
+  // Under no-preference, durations must be left intact (gating proof).
+  if (!(normal.animationMs >= 1000)) {
+    fail(`no-preference must keep animation-duration intact (got ${normal.animationMs}ms, expected >= 1000ms)`);
+  }
+  if (!(normal.transitionMs >= 1000)) {
+    fail(`no-preference must keep transition-duration intact (got ${normal.transitionMs}ms, expected >= 1000ms)`);
+  }
+} catch (error) {
+  fail(error instanceof Error ? error.stack || error.message : String(error));
+} finally {
+  if (browser) await browser.close();
+  if (server) await new Promise((resolveClose) => server.close(resolveClose));
+}
+
+if (issues.length) {
+  console.error(`Reduced-motion baseline check failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
+  for (const issue of issues) console.error(` - ${issue}`);
+  process.exit(1);
+}
+
+console.log('Reduced-motion baseline check passed: workshop-runtime.js injects a gated prefers-reduced-motion reset that neutralizes CSS motion only when the user asks for it.');

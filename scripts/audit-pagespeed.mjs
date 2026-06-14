@@ -36,15 +36,16 @@ const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jaketh
 // designs and power-up sprites; Arcade Jump = 97 KB of platformer engine
 // + procedural-level data), plus the two pre-existing wide-cap games
 // (Idle Tycoon = 151 KB save-file complexity; Lexica = 150 KB 5-letter wordlist).
-// Brick Breaker and Arcade Jump carry +5 KB over their original caps because
-// the shared workshop-runtime.js grew from 1.7 KB to 4.3 KB for the player
-// storage bridge, which counts against every game's static weight.
+// Brick Breaker and Arcade Jump carry +5 KB over their original caps, and
+// Lexica another +5 KB, because the shared workshop-runtime.js grew from
+// 1.7 KB to ~5.4 KB (the player storage bridge plus the prefers-reduced-motion
+// baseline), which counts against every game's static weight.
 const BUDGETS = {
   Catalog: { transferKb: 200, requests: 18 },
   "Brick Breaker": { transferKb: 125, requests: 4 },
   "Arcade Jump": { transferKb: 115, requests: 4 },
   "Idle Tycoon": { transferKb: 170, requests: 4 },
-  Lexica: { transferKb: 160, requests: 4 },
+  Lexica: { transferKb: 165, requests: 4 },
   default: { transferKb: 100, requests: 3 },
 };
 

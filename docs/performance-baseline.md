@@ -20,11 +20,29 @@ CI budgets:
 | Page group | Transfer | Requests |
 |------------|----------|----------|
 | Catalog | 200 KB | 18 |
-| Lexica | 160 KB | 4 |
+| Lexica | 165 KB | 4 |
 | Idle Tycoon | 170 KB | 4 |
 | Arcade Jump | 115 KB | 4 |
 | Brick Breaker | 125 KB | 4 |
 | Other manifest games | 100 KB | 3 |
+
+## Reduced-motion baseline pass (pass 112)
+
+Captured 2026-06-14 against a disposable local static server after adding a corpus-wide `prefers-reduced-motion` baseline. The strict audit covered the catalog plus 100 manifest games, 101 pages total. The 100-game content freeze remains active: no games, manifest entries, covers, gameplay rules, generated game surfaces, custom-domain settings, backend calls, paid services, credentials, or `SECURITY_SURFACES_TOKEN` work changed in this pass.
+
+Game pages carry their own inline CSS with no shared stylesheet, so only 10 of 100 games implemented `prefers-reduced-motion`. Rather than edit every frozen game file, `websites/workshop-runtime.js` — which every game loads first — now injects one gated `@media (prefers-reduced-motion: reduce)` reset that collapses CSS animation/transition durations and smooth scroll across the whole corpus from a single file. It is gated to the media query, so motion is only reduced for users who ask; canvas gameplay motion is JS-driven and remains a per-game concern. The catalog shell already shipped its own reduced-motion handling, so this brings game pages up to the same courtesy at the CSS layer.
+
+The shared runtime grew from ~4.3 KB to ~5.4 KB, which counts against every game's static weight, so Lexica's named-exception budget moved from 160 KB to 165 KB (Brick Breaker and Arcade Jump retained enough headroom from the prior +5 KB bump). Measured weights stayed within budget with comfortable named-exception headroom: Brick Breaker 114.3 KB / 125 KB, Arcade Jump 103.6 KB / 115 KB, Idle Tycoon 157.9 KB / 170 KB, and Lexica 150.6 KB / 165 KB (14.4 KB headroom). The catalog audited at 170.3 KB / 6 requests with zero console/page errors.
+
+| Page | FCP | DOMContentLoaded | Load | Transfer | Requests | Errors |
+|------|-----|------------------|------|----------|----------|--------|
+| Catalog | 🟢 60 ms | 86 ms | 🟢 88 ms | 🟢 170.3 KB | 6 | 0 |
+| Lexica | 🟢 52 ms | 59 ms | 🟢 59 ms | 🟢 150.6 KB | 3 | 0 |
+| Idle Tycoon | 🟢 476 ms | 17 ms | 🟢 19 ms | 🟢 157.9 KB | 2 | 0 |
+| Arcade Jump | 🟢 84 ms | 60 ms | 🟢 60 ms | 🟢 103.6 KB | 2 | 0 |
+| Brick Breaker | 🟢 100 ms | 98 ms | 🟢 98 ms | 🟢 114.3 KB | 2 | 0 |
+
+The strict audit reported zero console/page errors across all 101 URLs and `npm run audit:perf:local` reported `CI strict audit passed`.
 
 ## Player data controls pass (pass 111)
 
