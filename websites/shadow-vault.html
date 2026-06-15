@@ -213,6 +213,9 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
   }
   function level() { return levels[state.stage]; }
   function resetStage(mode) {
+    // Cancel a pending stage-advance so restarting/starting inside the 420ms
+    // post-clear window can't wipe the score and skip a stage on the fresh run.
+    clearTimeout(state.stageTimer);
     const l = level();
     state.mode = mode || "ready";
     state.alert = 0; state.moves = 0; state.keysHeld = 0; state.accumulator = 0; state.pulse = 0;
@@ -333,7 +336,7 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
         state.feedback = "Stage clear for " + award + ".";
         state.mode = "won";
         sfx("win");
-        window.setTimeout(nextStage, 420);
+        state.stageTimer = window.setTimeout(nextStage, 420);
       } else {
         state.feedback = "Exit remains sealed. Clear keys and doors.";
       }

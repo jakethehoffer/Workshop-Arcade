@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude audit remediation — slice 3: cross-run reset (2048, brick-breaker, shadow-vault)
+
+- Completed the S2 cross-run-corruption sweep with the three remaining confirmed games. Each had a delayed advance/commit that survived a run reset and corrupted the fresh run; all located in source before fixing.
+  - **2048** (HIGH): the slide is a `requestAnimationFrame` animation (NOT a `setTimeout` — the audit's "setTimeout" label was loose, which is why slice 2 deferred it). `move()` runs a `frame()` rAF loop that on completion rebuilds the board, adds `score += gained`, and spawns a tile; `newGame()` reset state but the in-flight `frame()` still committed onto the fresh board (non-zero score + extra tile). Fix: a `moveGen` token bumped in `newGame()`, captured in `move()`, and checked at the top of `frame()` so a slide from the old run drops itself.
+  - **brick-breaker** (HIGH): the 900ms level-clear `setTimeout(()=>resetLevel(true), 900)` was un-stored, so pressing R within the window advanced the fresh run to level 2. Fix: store `G.levelClearTimer`, `clearTimeout` it in `restartGame()`.
+  - **shadow-vault** (HIGH): the 420ms `setTimeout(nextStage, 420)` was un-stored, so restart/start inside the window wiped score and skipped a stage. Fix: store `state.stageTimer`, `clearTimeout` it in `resetStage()` (the chokepoint both restart and stage-setup pass through).
+- This closes the confirmed S2 class except **echo-mimic**, which is a different shape (a keyboard pad-press during the 600ms mimic interlude triggers a false "Wrong pad!" game-over — an input-during-interlude race, not a reset race) and will be handled with its own fix.
+- Verification (same rationale as slice 2 — sub-second races; the guard fixes are correct by inspection, a deterministic non-flaky gate would need elaborate per-game move scripting): `npm test` 47/47 fast gates (incl game-contract); scoped `npm run test:games -- --slug 2048,brick-breaker,shadow-vault` (3/3, normal slide/level-advance/stage-advance flows intact) and `npm run capture:games -- --slug ...` (6 surfaces, max score 0); `git diff --check`.
+- Remaining audit backlog: echo-mimic (input-during-interlude); the uncompletable games (orbit-salvage, nightwire, breachline, pinball-foundry, volt-sudoku, wordweave-grid — each needs a solvability check before the geometry/logic edit); S4/S5 modal-keydown guard sweep; S3 fact-match-engine.js re-entrancy lock. Reduced-motion campaign (separate) at 5/~35.
+
 ## 2026-06-15 Claude audit remediation — slice 2: stale-setTimeout cross-run (checkers, wordle)
 
 - Second remediation slice from the game-quality audit, fixing the S2 class: a delayed callback scheduled with no stored handle that fires across a run reset and corrupts the fresh run. Independently located each timer in source before fixing.

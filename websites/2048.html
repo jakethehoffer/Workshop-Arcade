@@ -312,6 +312,7 @@
   let score, best, won, over, keepPlaying;
   best = Number(localStorage.getItem('best2048')||0);
   let moving = false;      // during slide animation
+  let moveGen = 0;         // bumped on new game so an in-flight slide can't commit onto the fresh board
   let lastState = null;    // snapshot for undo
   let overlayMode = null;
   let startOverlayDismissed = false;
@@ -596,7 +597,7 @@ function clearQueue(){ inputQ.length = 0; }
     clearQueue();
     board = Array.from({length:SIZE},()=>Array(SIZE).fill(0));
     tiles = [];
-    score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null;
+    score = 0; won = false; over = false; keepPlaying = false; moving=false; lastState=null; moveGen++;
     resetFeedback();
     for(let i=0;i<START_TILES;i++) spawnRandomTile(true); // true => spawn immediately
     updateHUD();
@@ -769,10 +770,12 @@ function move(dir){
 
   // Animate slide, then commit + spawn
   moving = true;
+  const g = moveGen;                             // invalidated if a new game starts mid-slide
   syncActionButtons();
   const slideMs = effectiveSlideTime();          // ⬅️ use dynamic time
   const start = performance.now();
   function frame(){
+  if(g !== moveGen) return;                       // a new game started during the slide; drop this animation
   const p = Math.min(1,(performance.now()-start)/slideMs);  // ⬅️ use slideMs
     draw(p);
     if(p<1){ requestAnimationFrame(frame); }

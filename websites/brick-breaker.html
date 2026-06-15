@@ -1277,6 +1277,9 @@ function onBrickHit(hitX, hitY){
 }
 
 function restartGame(){
+  // Cancel a pending level-clear advance so pressing R during the 900ms
+  // celebration can't yank the fresh run forward to level 2.
+  clearTimeout(G.levelClearTimer);
   G.score=0; G.level=1; G.lives=3;
     G.riskMult = 1;                  // ← reset risk multiplier on restart
   resetFeedback(true);
@@ -2056,7 +2059,7 @@ if (br.hp<=0){
       SFX.levelClear();
       G.running = false; cardNext.hidden = false;
       announce(`Level ${G.level} cleared. Score ${G.score}.`);
-      setTimeout(()=>{ if(G.lives > 0) resetLevel(true); }, 900);
+      G.levelClearTimer = setTimeout(()=>{ if(G.lives > 0) resetLevel(true); }, 900);
     }
     updateExplosions(dt); // NEW: animate explosion FX
     updateEffects(clockDt);
