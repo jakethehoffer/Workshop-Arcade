@@ -809,6 +809,11 @@
     const helpWasOpen = !els.helpOverlay.hidden;
     handleHelpTrap(event);
     if (helpWasOpen || !els.helpOverlay.hidden) return;
+    // Let a focused on-screen control (Sound/Help/Fullscreen) handle Space/Enter
+    // itself rather than the global handler stealing it to restart the run —
+    // which otherwise made those buttons keyboard-unreachable and wiped the run.
+    const focused = event.target;
+    if (focused && focused !== canvas && typeof focused.closest === "function" && focused.closest("button, a[href], input, select, textarea")) return;
     const key = event.key.toLowerCase();
     if (laneKeys.includes(key)) {
       event.preventDefault();

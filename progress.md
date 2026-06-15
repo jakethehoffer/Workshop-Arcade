@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude audit remediation — slice 5: keydown guards (rhythm-circuit, forge-freighter)
+
+- Started the S4/S5 keydown sweep. Confirmed per-game that the audit's keydown claims need individual verification (it conflated the two classes), so this is careful per-game work, not a uniform patch.
+  - **rhythm-circuit** (HIGH, S5): its main document keydown handler ALREADY bails when the Help overlay is open (so the audit's "Space wipes a run behind Help" was stale), but it did not bail for a focused control — so a keyboard user tabbing to Sound/Help/Fullscreen and pressing Space/Enter triggered the global `startRun()` (restarting the run) instead of activating the button, making those buttons keyboard-unreachable. Fix: bail when `event.target` is a focused button/link/input (gameplay focus is the canvas, so gameplay keys are unaffected).
+  - **forge-freighter** (HIGH, S4): its `key()` handler had no open-dialog guard, so pressing R behind the open Help `<dialog>` fired `restart()` (wiped the run), and the global handler stole Enter/Space from the focused Close button. Fix: `if(els.dialog.open) return;` at the top — provably safe because it only changes behavior while the dialog is open (and native `<dialog>` still closes on Escape; Close now gets native Enter/Space).
+- Deferred **skyline-sentry** from this slice: its bug is real but not a minimal guard — `?` is Shift+`/`, so the bare `"shift"` keydown fires `pulseShield` (draining shield) before `"?"` opens Help. Fixing cleanly means removing the bare-modifier Shift control (a documented-control change across three help-text spots) or adding chord detection — a design decision for its own slice.
+- Verification (same verify-by-inspection + no-regression rationale; the guards only change behavior in the dialog-open / focused-button cases): `npm test` 47/47 fast gates; scoped `npm run test:games -- --slug rhythm-circuit,forge-freighter` (2/2) and `npm run capture:games -- --slug ...` (4 surfaces, max score 0); `git diff --check`.
+- Remaining keydown sweep (~22 games, each needs per-game verification): skyline-sentry (Shift chord), cipher-cadence + letter-foundry (S5 run damage), crosswire-clues (Tab trap), and the lower-stakes set. Also remaining: the uncompletable games (level/puzzle re-authoring with per-game solvability checks). Reduced-motion campaign (separate) at 5/~35.
+
 ## 2026-06-15 Claude audit remediation — slice 4: re-entrancy locks (echo-mimic, fact-match engine x4)
 
 - Fixed two re-entrancy/input-guard bugs from the audit.
