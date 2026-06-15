@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude audit remediation — slice 8: volt-sudoku non-unique puzzle + sudoku-unique gate
+
+- Fixed the second level/puzzle "uncompletable" game, again backed by a real deterministic gate.
+- **volt-sudoku** (HIGH, stage 2 could stall): independently confirmed the audit's claim by writing a solver — `PRISM_PUZZLE` (stage 2 "Prism Trace") had exactly TWO valid solutions, differing only at a deadly {1,8} rectangle at r7c5/r7c8/r9c5/r9c8. The game's validator only accepts the hardcoded `PRISM_SOLUTION`, so a player who entered the other perfectly-valid solution was flagged a mistake, penalized, and the stage stalled. Fix: pin one of the four deadly cells — r7c5 (string index 58) is now a given `8` (its `PRISM_SOLUTION` value) — which breaks the swap symmetry and makes the puzzle uniquely solvable. One character changed; the solution is unchanged.
+- TDD with a new FAST (no-browser) gate `npm run test:sudoku-unique` (`scripts/check-sudoku-unique.mjs`): parses each `stage("name","copy",PUZZLE,SOLUTION,...)` pairing, backtracking-solves the puzzle (capped at 2 solutions), and asserts exactly one solution equal to the declared solution. Written first and observed RED on exactly stage 2 (stages 1/3/4 passed — notably stage 4's `PRISM_HARD`, with fewer givens, is still unique, so no false positives and no other fix needed), GREEN after the one-cell fix. Extensible via `SUDOKU_GAMES`.
+- Wired as a fast gate (runs in `npm test`): `package.json`, a `Run sudoku uniqueness check` step in the Validate Catalog catalog/docs/a11y job, README gate entry, and the README "49 fast validators" count.
+- Verification: sudoku-unique RED-then-GREEN; `npm test` 49/49 fast gates (incl docs-drift + security-workflows for the workflow change); scoped `npm run test:games -- --slug volt-sudoku` (1/1) and `npm run capture:games -- --slug volt-sudoku` (2 surfaces, max score 0); `git diff --check`.
+- Remaining uncompletable games: orbit-salvage (continuous physics docking — hardest to gate deterministically), breachline (M2/M5 patrol-timing — needs a BFS over (position, patrol-phase) state space). Plus the keydown-sweep tail and S6/S7 polish. Reduced-motion campaign (separate) at 5/~35.
+
 ## 2026-06-15 Claude session-rail flake fix v2 (poll for settled rail)
 
 - The earlier reload-based fix reduced but did not eliminate the `catalog: Continue playing rail missing "Saved" action` flake — it recurred in CI on the slice-7 push, inside the `test:scoped-verification` step's spawned smoke (slice 7's own code was fine; this is purely the harness flake). The recurrence proved the cause is not only in-memory drift but also a render-timing gap: the rail can render once before recent/favorite state is read and re-render after, so a single synchronous read can catch the intermediate state.
