@@ -321,7 +321,7 @@
     lastAction: "loaded"
   };
 
-  function loadBestScore(){ try { return Math.max(0, Number(localStorage.getItem(BEST_KEY) || 0)); } catch { return 0; } }
+  function loadBestScore(){ try { const n = Number(localStorage.getItem(BEST_KEY)); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; } catch { return 0; } }
   function saveBestScore(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
   function loadSoundPref(){ try { const raw = localStorage.getItem(SOUND_KEY); return raw === null ? true : raw === "true"; } catch { return true; } }
   function saveSoundPref(value){ try { localStorage.setItem(SOUND_KEY, String(value)); } catch {} }

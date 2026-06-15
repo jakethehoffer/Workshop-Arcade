@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude audit remediation — slice 9: best-score NaN guard (arena, flappy-bird, rhythm-circuit)
+
+- Fixed the audit's S7b class: a persisted best read with `Number(localStorage.getItem(KEY) || 0)` becomes `NaN` when the stored value is non-numeric (`||0` only catches null/empty). NaN then propagates into the best/high display and serializes as `null` in `render_game_to_text()`, bricking the feature. It is reachable not just by corrupt storage but by a tampered value injected through the player storage bridge's `#wa-storage=` seed (the bridge I added earlier). rhythm-circuit's `Math.max(0, Number(...))` did not help — `Math.max(0, NaN)` is NaN.
+- Confirmed and fixed in three games with a uniform guarded parse (`const n = Number(raw); Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0`): **arena** (`canvasArena:highscore:v1`), **flappy-bird** (`skyhopper_highscore`), **rhythm-circuit** (`rhythm-circuit.bestScore.v1`).
+- TDD with a new browser-backed gate `npm run test:best-score-guard` (`scripts/check-best-score-guard.mjs`): seeds each game's best key with a non-numeric value before load and asserts the diagnostic best/high field is a finite number >= 0. Written first, RED on all three (field serialized as `null` = NaN), GREEN after the guards. Wired as a browser-backed (excluded-from-fast) gate: `package.json`, `run-fast-tests` exclusion, `check-test-aggregator` + `check-docs-drift` allowlists, a `Run best-score guard probe` step in the Validate Catalog game-smoke job, and a README entry.
+- Verification: best-score-guard RED-then-GREEN; `npm test` 49/49 fast gates (incl docs-drift + security-workflows for the workflow change); scoped `npm run test:games -- --slug arena,flappy-bird,rhythm-circuit` (3/3) and `npm run capture:games -- --slug ...` (6 surfaces, max score 0); `git diff --check`.
+- Remaining: S7 best-on-fail persistence (~8 more games show inflated best on a failing run that reverts on reload — lower stakes); the two hardest uncompletable games (orbit-salvage continuous physics, breachline patrol-timing state space — both need bespoke solvers); keydown-sweep tail; S6 dead-flash/idle-rAF cleanup. Reduced-motion campaign (separate) at 5/~35.
+
 ## 2026-06-15 Claude audit remediation — slice 8: volt-sudoku non-unique puzzle + sudoku-unique gate
 
 - Fixed the second level/puzzle "uncompletable" game, again backed by a real deterministic gate.

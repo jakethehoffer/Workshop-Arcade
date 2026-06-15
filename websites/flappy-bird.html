@@ -190,7 +190,7 @@ let started = false;
 const HS_KEY = "skyhopper_highscore";
 const SOUND_KEY = "sky-hopper.sound.v1";
 let highScore = 0;
-try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
+try { const n = Number(localStorage.getItem(HS_KEY)); highScore = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; } catch(_) {}
 let soundEnabled = true;
 try { soundEnabled = JSON.parse(localStorage.getItem(SOUND_KEY) ?? "true"); } catch(_) {}
 let lastSound = "none";

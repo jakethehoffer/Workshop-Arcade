@@ -40,6 +40,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:runtime-storage', 'Browser-backed sandboxed runtime storage probe — needs Chromium. Run via `npm run test:runtime-storage`.'],
   ['test:reduced-motion', 'Browser-backed reduced-motion baseline probe — needs Chromium. Run via `npm run test:reduced-motion`.'],
   ['test:realtime-progression', 'Browser-backed real-time progression probe — needs Chromium. Run via `npm run test:realtime-progression`.'],
+  ['test:best-score-guard', 'Browser-backed best-score NaN-guard probe — needs Chromium. Run via `npm run test:best-score-guard`.'],
   ['test:scoped-verification', 'Browser-backed scoped smoke/capture contract probe — spawns Playwright child runs and takes minutes. Run via `npm run test:scoped-verification`.'],
   ['test:live-pages', 'Post-deploy smoke test — hits GitHub Pages or WORKSHOP_ARCADE_URL. Run after Pages deploys via `npm run test:live-pages`.'],
   ['test:launch-evidence-current', 'Local launch-evidence freshness check — depends on gitignored test-results evidence. Run after publish-ready + live-pages evidence via `npm run test:launch-evidence-current`.'],

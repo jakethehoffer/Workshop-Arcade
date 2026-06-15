@@ -549,7 +549,7 @@
 
     // Load persisted high score
     try {
-      state.high = Number(localStorage.getItem(HS_KEY) || 0);
+      { const storedHigh = Number(localStorage.getItem(HS_KEY)); state.high = Number.isFinite(storedHigh) && storedHigh >= 0 ? Math.floor(storedHigh) : 0; }
     } catch {}
     if (highEl) highEl.textContent = String(Math.floor(state.high));
 
