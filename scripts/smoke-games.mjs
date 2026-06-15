@@ -735,6 +735,21 @@ async function checkSessionRailPopulated(page, label, { openFirst = false } = {}
     return;
   }
 
+  // The rail can render once before recent/favorite state is read and re-render
+  // after; poll for the settled populated state so a render-timing gap does not
+  // flake the single-read assertions below. If the rail genuinely never
+  // populates, this times out and the detailed assertions still report which
+  // action/count is wrong.
+  await page
+    .waitForFunction(() => {
+      const list = document.getElementById("sessionRailList");
+      if (!list) return false;
+      const cardCount = list.querySelectorAll(".session-rail-card").length;
+      const text = list.textContent || "";
+      return cardCount >= 2 && cardCount <= 3 && ["Resume", "Saved", "Next for you"].every((action) => text.includes(action));
+    }, undefined, { timeout: 6000 })
+    .catch(() => {});
+
   const cards = page.locator("#sessionRailList .session-rail-card");
   const count = await cards.count();
   if (count < 2 || count > 3) {

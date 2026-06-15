@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude session-rail flake fix v2 (poll for settled rail)
+
+- The earlier reload-based fix reduced but did not eliminate the `catalog: Continue playing rail missing "Saved" action` flake — it recurred in CI on the slice-7 push, inside the `test:scoped-verification` step's spawned smoke (slice 7's own code was fine; this is purely the harness flake). The recurrence proved the cause is not only in-memory drift but also a render-timing gap: the rail can render once before recent/favorite state is read and re-render after, so a single synchronous read can catch the intermediate state.
+- Robust fix: in `checkSessionRailPopulated`, poll (`page.waitForFunction`, 6s) for the settled populated rail — 2-3 cards AND all of Resume/Saved/Next-for-you present — before the existing single-read assertions. If the rail genuinely never populates, the poll times out and the detailed assertions still report exactly which action/count is wrong (no masking of real failures). This protects both the early "catalog mobile" and late "catalog" rail checks (shared function); the reload from v1 stays to guarantee the seeded favorite state is present.
+- Verification: ran the exact CI-failing path `npm run test:scoped-verification` (PASS) plus two consecutive full `npm run test:games` runs (100 games each, PASS) — the flake did not recur across all three.
+
 ## 2026-06-15 Claude audit remediation — slice 7: nightwire unwinnable stage + grid-solvability gate
 
 - Fixed the first of the level-geometry "uncompletable" games, and — unlike the inspection-only slices — backed it with a real deterministic gate.
