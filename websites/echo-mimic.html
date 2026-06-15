@@ -406,6 +406,10 @@
       return;
     }
     if (state.phase !== 'mimic') return;
+    // Round already complete and waiting on the 600ms next-round timer: ignore
+    // further presses so a keyboard tap doesn't read past the sequence end and
+    // trigger a false "Wrong pad!" game-over.
+    if (state.playerIndex >= state.sequence.length) return;
     const expected = state.sequence[state.playerIndex];
     setPadActive(idx, true);
     playPad(COLORS[idx], 180);

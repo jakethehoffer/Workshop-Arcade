@@ -403,6 +403,7 @@
     state.answer = config.items[Math.floor(Math.random() * config.items.length)];
     state.cluesShown = Math.min(3, config.fields.length);
     state.revealed = false;
+    state.resolving = false;
     state.round = (state.round || 0) + 1;
     state.lastBankPick = null;
     els.guess.value = "";
@@ -508,7 +509,7 @@
   }
 
   function submitGuess() {
-    if (state.revealed) return;
+    if (state.revealed || state.resolving) return;
     var guessed = normalize(els.guess.value);
     if (!guessed) {
       setResult("Enter a guess first.", "empty");
@@ -516,6 +517,9 @@
       return;
     }
     if (guessed === normalize(state.answer.name)) {
+      // Lock out re-entry during the 900ms advance delay so spamming Enter or a
+      // bank pick can't re-score the same correct answer and inflate streak/best.
+      state.resolving = true;
       state.streak += 1;
       if (state.streak > state.best) {
         state.best = state.streak;

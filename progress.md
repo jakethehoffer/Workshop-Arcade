@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude audit remediation — slice 4: re-entrancy locks (echo-mimic, fact-match engine x4)
+
+- Fixed two re-entrancy/input-guard bugs from the audit.
+  - **echo-mimic** (HIGH): after a round is completed, `phase` stays `'mimic'` for the 600ms next-round timer with `playerIndex` already at the sequence end, so a keyboard pad-press read `sequence[playerIndex]` as `undefined` and force-failed the run with a false "Wrong pad!" (keyboard-only; pointer pads were disabled but the document keydown path was not). Fix: bound-check `playerIndex >= sequence.length` in `onPadActivate` and ignore the press.
+  - **fact-match engine** (HIGH, shared `websites/fact-match-engine.js` → hero-fact-match, cosmic-fact-match, arena-legend-guesser, night-shift-fact-match): `submitGuess()` guarded only on `state.revealed`, which the correct branch never set, so during the 900ms `pickAnswer` advance delay, spamming Enter or a bank pick re-scored the same answer and inflated streak/best (persisted). Since `streak` is incremented only in `submitGuess`, one lock covers every path: added `state.resolving`, set at the top of the correct branch, checked in `submitGuess`, cleared in `pickAnswer`. One edit fixes all four games.
+- Verification: `npm test` 47/47 fast gates (incl storage-contract — the shared engine still loads correctly — and game-contract); scoped `npm run test:games -- --slug echo-mimic,hero-fact-match,cosmic-fact-match,arena-legend-guesser,night-shift-fact-match` (5/5) and `npm run capture:games -- --slug ...` (10 surfaces, max score 0); `git diff --check`. Same verify-by-inspection + no-regression rationale as slices 2-3 (sub-second re-entrancy windows; the lock/guard fixes are correct by inspection).
+- Remaining audit backlog: the uncompletable games (orbit-salvage, nightwire, breachline, pinball-foundry, volt-sudoku, wordweave-grid — each needs a solvability check before the geometry/logic edit, so they go one or two at a time); the S4/S5 modal-keydown guard sweep (~25 games). Reduced-motion campaign (separate) at 5/~35.
+
 ## 2026-06-15 Claude audit remediation — slice 3: cross-run reset (2048, brick-breaker, shadow-vault)
 
 - Completed the S2 cross-run-corruption sweep with the three remaining confirmed games. Each had a delayed advance/commit that survived a run reset and corrupted the fresh run; all located in source before fixing.
