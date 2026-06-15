@@ -328,7 +328,7 @@ if (agentsText && !agentsText.includes('CLAUDE.md')) {
 
 const packageJson = JSON.parse(readText('package.json') || '{}');
 const scripts = packageJson.scripts || {};
-const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:player-storage-bridge', 'test:pwa-runtime', 'test:publish-ready', 'test:reduced-motion', 'test:runtime-storage', 'test:scoped-verification', 'test:live-pages', 'test:launch-evidence-current', 'test:launch-evidence-refresh', 'test:current-head-workflows', 'test:all']);
+const fastGateExclusions = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:player-storage-bridge', 'test:pwa-runtime', 'test:publish-ready', 'test:realtime-progression', 'test:reduced-motion', 'test:runtime-storage', 'test:scoped-verification', 'test:live-pages', 'test:launch-evidence-current', 'test:launch-evidence-refresh', 'test:current-head-workflows', 'test:all']);
 const fastGateScripts = Object.keys(scripts)
   .filter((name) => name.startsWith('test:') && !fastGateExclusions.has(name))
   .sort();

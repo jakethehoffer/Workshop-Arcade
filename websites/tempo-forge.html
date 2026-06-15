@@ -420,6 +420,23 @@
     return JSON.stringify({mode:state.mode,level:state.level,pattern:clonePattern(state.pattern),playerPattern:clonePattern(state.playerPattern),beat:state.beat,activeStep:stepFeedback.activeStep,activeStepFeedback:stepFeedback.status,score:state.score,streak:state.streak,best:state.best,sound:state.sound,feedback:state.feedback,statusText:els.status.textContent,visibleFeedback:{status:els.status.textContent,stepCue:els.stepCue.textContent,active:state.mode==="playback"||state.flash>0}});
   };
   window.advanceTime = function(ms){update(Math.max(0,Number(ms)||0));sync();return window.render_game_to_text()};
+  // Real-time clock: playback must advance during live play (advanceTime is the
+  // test hook only). Without this the beat stays at 0 and the Play preview is
+  // dead for real players. Redraws only while the beat changes or a flash is
+  // decaying so the idle edit grid does not repaint every frame.
+  let rtLast = 0;
+  function realtimeLoop(now){
+    if(rtLast === 0) rtLast = now;
+    const dt = Math.min(100, now - rtLast);
+    rtLast = now;
+    if(dt > 0){
+      const prevBeat = state.beat;
+      update(dt);
+      if((state.mode === "playback" && state.beat !== prevBeat) || state.flash > 0) sync();
+    }
+    requestAnimationFrame(realtimeLoop);
+  }
+  requestAnimationFrame(realtimeLoop);
   rebuildGrid();
   loadLevel(1);
 })();

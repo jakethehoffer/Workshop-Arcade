@@ -174,6 +174,23 @@
   els.start.addEventListener("click", start); els.primary.addEventListener("click", rotateSelected); els.secondary.addEventListener("click", pulse); els.restart.addEventListener("click", start); els.sound.addEventListener("click", () => { state.userGesture = true; state.sound = !state.sound; write(SOUND_KEY, state.sound ? "1" : "0"); tone("toggle"); updateUI(); }); els.full.addEventListener("click", toggleFull); els.help.addEventListener("click", toggleHelp); els.closeHelp.addEventListener("click", () => els.dialog.close()); canvas.addEventListener("pointerdown", pointer);
   document.addEventListener("keydown", (ev) => { const tag = ev.target && ev.target.tagName; if(tag === "INPUT" || tag === "TEXTAREA" || ev.target?.isContentEditable) return; if(ev.key === "?" || (ev.key === "/" && ev.shiftKey)){ ev.preventDefault(); toggleHelp(); return; } if(ev.key.toLowerCase() === "r"){ ev.preventDefault(); start(); return; } if(ev.key.toLowerCase() === "m"){ ev.preventDefault(); els.sound.click(); return; } if(ev.key.toLowerCase() === "f"){ ev.preventDefault(); toggleFull(); return; } key(ev); });
   window.render_game_to_text = text; window.advanceTime = (ms) => { const steps = Math.max(1, Math.round(ms / 33)); for(let i=0;i<steps;i++) step(ms / steps); draw(); updateUI(); };
+  // Real-time clock: the gate beat must advance during live play (advanceTime is
+  // the test hook only). Without this the beat stays at 0 and stages 2+ — whose
+  // gates open on a later phase — are unwinnable for real players. Redraws only
+  // on a beat change so an idle board does not repaint every frame.
+  let rtLast = 0;
+  function realtimeLoop(now){
+    if(rtLast === 0) rtLast = now;
+    const dt = Math.min(100, now - rtLast);
+    rtLast = now;
+    if(dt > 0 && state.mode === "playing"){
+      const prevBeat = state.beat;
+      step(dt);
+      if(state.beat !== prevBeat){ updateUI(); draw(); }
+    }
+    requestAnimationFrame(realtimeLoop);
+  }
+  requestAnimationFrame(realtimeLoop);
   updateUI(); draw();
 })();
 </script>
