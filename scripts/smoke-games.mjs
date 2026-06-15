@@ -1098,6 +1098,14 @@ async function checkCatalog(browser, baseUrl) {
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => document.getElementById("playerModal").hidden);
   setPhase("catalog", "check populated session rail");
+  // The catalog interactions above (favorite toggles, player session controls)
+  // mutate favorites/recent state in memory, which can intermittently drift the
+  // rail's Saved/Next slots and dedupe the "Saved" action away. Reload to
+  // re-apply the deterministic seed (addInitScript re-seeds unconditionally on
+  // every load) so this assertion runs against the same clean state the early
+  // "catalog mobile" rail check already validates reliably.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction((count) => document.querySelectorAll(".card").length === count, manifest.length);
   await checkSessionRailPopulated(page, "catalog", { openFirst: true });
 
   setPhase("catalog", "resume seeded workshop draft");

@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude smoke-games session-rail flake fix (CI stabilization)
+
+- Fixed the recurring flaky test that bit CI on the slice-5 push and twice during local launch-evidence refreshes: `catalog: Continue playing rail missing "Saved" action` in `scripts/smoke-games.mjs`.
+- Root cause (traced through `buildSessionRailItems` in index.html): the harness seeds recent=`manifest[0]` and favorite=`manifest[1]` via an `addInitScript` that re-seeds unconditionally on every load. The early "catalog mobile" rail check runs on that fresh state and is reliable. But the later "catalog" rail check runs after `checkCatalog`'s interactions (favorite toggles via `#playerSave`, player session controls) have mutated `state.favorites`/`recentPlays` in memory, so the "Saved" slot (the seeded favorite) intermittently drifts/dedupes away — the rail only adds "Saved" when a favorite distinct from the recent game exists. All three observed failures were the late check, never the early one.
+- Fix: reload the page right before the late rail assertion so the `addInitScript` re-applies the deterministic seed, running the check against the same clean state the early check already validates reliably. One added `page.reload()` + card-count wait; no game/site code touched (test harness only).
+- Verification: `npm test` 47/47 fast gates (incl `test:scoped-verification`, which spawns a scoped smoke exercising `checkCatalog` + the new reload); full `npm run test:games` run TWICE consecutively, both passing for 100 games (the flake never recurred); `git diff --check`.
+- This stabilizes the `Game smoke tests` CI job and the local launch-evidence battery, which had been forcing re-runs across the remediation slices.
+
 ## 2026-06-15 Claude audit remediation — slice 5: keydown guards (rhythm-circuit, forge-freighter)
 
 - Started the S4/S5 keydown sweep. Confirmed per-game that the audit's keydown claims need individual verification (it conflated the two classes), so this is careful per-game work, not a uniform patch.
