@@ -474,7 +474,7 @@ name:"Key",color:"#dbe7ff",points:3e3}];const houseExitCooldown=.85;const houseR
 ;const ghosts=[createGhost("Redshift","#ff4d6d",houseCenter,blinkyStart,houseCenter,tileCenter(width-2,1)),createGhost("Rosewire","#ff9ff3",houseCenter,houseCenter,houseCenter,tileCenter(1,1)),createGhost("Bluewire","#4dd0ff",houseCenter,houseLeft,houseLeft,tileCenter(width-2,height-2)),createGhost("Amberline","#ffb347",houseCenter,houseRight,houseRight,tileCenter(1,height-2))]
 ;let pellets=new Set;let powerPellets=new Set;let pelletsRemaining=0;const pacman={pos:{...pacStart
 },dir:-1,nextDir:-1};const fruitState={active:false,timer:0,kindIndex:0,spawned:0,thresholds:[]}
-;const feedback={time:0,particles:[],rings:[],pops:[],screenFlash:0,screenShake:0,dangerCue:0,
+;let reducedMotion=false;try{const __wmq=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=__wmq.matches;__wmq.addEventListener("change",(e)=>{reducedMotion=e.matches})}catch(_){}const feedback={time:0,particles:[],rings:[],pops:[],screenFlash:0,screenShake:0,dangerCue:0,
 nearestGhost:null,powerPulse:0,lastPelletAge:null,lastPowerAge:null,lastFruitAge:null,
 lastGhostEatAge:null,lastHitAge:null,counters:{pellet:0,power:0,fruit:0,ghostEat:0,hit:0}}
 ;const audioLevels={master:.6,music:.24,sfx:.38};const SOUND_STORAGE_KEY="maze-chase.sound.v1"
@@ -951,12 +951,12 @@ const waveX=x+size-(i+.5)*(size*.5);const waveY=y+size-(i%2===0?wobble:-wobble)
 ;ctx.fill();ctx.fillStyle="#1d2340";ctx.beginPath()
 ;ctx.arc(x-size*.2+offsetX,y-size*.1+offsetY,size*.08,0,Math.PI*2)
 ;ctx.arc(x+size*.2+offsetX,y-size*.1+offsetY,size*.08,0,Math.PI*2);ctx.fill()}
-function drawFeedbackEffects(){ctx.save();feedback.rings.forEach((ring=>{
+function drawFeedbackEffects(){ctx.save();if(!reducedMotion)feedback.rings.forEach((ring=>{
 const progress=ring.age/ring.ttl;const alpha=Math.max(0,1-progress);const x=ring.x*tileSize
 ;const y=ring.y*tileSize;ctx.globalAlpha=alpha;ctx.strokeStyle=ring.color
 ;ctx.lineWidth=Math.max(1,tileSize*ring.lineWidth);ctx.beginPath()
 ;ctx.arc(x,y,tileSize*(ring.radius+ring.grow*progress),0,Math.PI*2);if(ring.fill){
-ctx.fillStyle=ring.color;ctx.fill()}ctx.stroke()}));feedback.particles.forEach((particle=>{
+ctx.fillStyle=ring.color;ctx.fill()}ctx.stroke()}));if(!reducedMotion)feedback.particles.forEach((particle=>{
 const alpha=Math.max(0,1-particle.age/particle.ttl);ctx.globalAlpha=alpha
 ;ctx.fillStyle=particle.color;ctx.beginPath()
 ;ctx.arc(particle.x*tileSize,particle.y*tileSize,tileSize*particle.size,0,Math.PI*2);ctx.fill()}))
@@ -970,7 +970,7 @@ if(feedback.screenFlash<=0){return}ctx.save()
 ;ctx.fillStyle=`rgba(255, 77, 109, ${Math.min(.28,feedback.screenFlash*.22)})`
 ;ctx.fillRect(0,0,boardPixelSize(),boardPixelSize());ctx.restore()}function render(time){
 ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.restore()
-;const shakeAmount=feedback.screenShake>0?feedback.screenShake*tileSize*.16:0
+;const shakeAmount=(!reducedMotion&&feedback.screenShake>0)?feedback.screenShake*tileSize*.16:0
 ;const shakeX=shakeAmount?Math.sin(feedback.time*61)*shakeAmount:0
 ;const shakeY=shakeAmount?Math.cos(feedback.time*47)*shakeAmount:0;ctx.save();if(shakeAmount){
 ctx.translate(shakeX,shakeY)}drawWalls();drawPellets(time);drawFruit(time);drawPacman(time)
@@ -980,7 +980,7 @@ ctx.translate(shakeX,shakeY)}drawWalls();drawPellets(time);drawFruit(time);drawP
 accumulator+=dt;while(accumulator>=step){update(step);accumulator-=step}}else{updateFeedback(dt)}
 render(now/1e3);requestAnimationFrame(loop)}function dirName(index){
 return DIRS[index]?DIRS[index].name:"none"}function renderGameToText(){return JSON.stringify({
-game:"Maze Chase",coordinateSystem:"maze tiles, origin top-left, x right, y down",phase:state.phase,
+game:"Maze Chase",reducedMotion:reducedMotion,coordinateSystem:"maze tiles, origin top-left, x right, y down",phase:state.phase,
 score:state.score,highScore:state.highScore,level:state.level,lives:state.lives,
 pendingNextLevel:!!state.pendingNextLevel,pelletsRemaining:pelletsRemaining,
 powerPelletsRemaining:powerPellets.size,frightenedTimer:round(state.frightenedTimer),

@@ -127,6 +127,9 @@ async function probe(browser, baseUrl, reducedMotion) {
 const MOTION_AWARE_GAMES = [
   'websites/bulwark-burst.html',
   'websites/tetris.html',
+  'websites/flappy-bird.html',
+  'websites/maze-chase.html',
+  'websites/minesweeper.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {

@@ -360,6 +360,15 @@
     flagMode: false,
   };
 
+  // Honor prefers-reduced-motion: gate decorative screen shake and reveal
+  // particles (cosmetic feedback, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener('change', (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   const feedback = {
     particles: [],
     rings: [],
@@ -869,7 +878,7 @@
     ctx.clearRect(0,0,canvas.width, canvas.height);
     ctx.save();
 
-    const shake = feedback.screenShake > 0 ? feedback.screenShake * 5 * DPR : 0;
+    const shake = (!reducedMotion && feedback.screenShake > 0) ? feedback.screenShake * 5 * DPR : 0;
     if (shake > 0) {
       const t = performance.now() * 0.028;
       ctx.translate(Math.sin(t) * shake, Math.cos(t * 1.23) * shake * 0.72);
@@ -1008,7 +1017,7 @@
       ctx.stroke();
     });
 
-    feedback.particles.forEach((particle) => {
+    if (!reducedMotion) feedback.particles.forEach((particle) => {
       const alpha = Math.max(0, particle.life / particle.maxLife);
       ctx.fillStyle = `rgba(${particle.color},${alpha})`;
       ctx.beginPath();
@@ -1759,6 +1768,7 @@ function drawRaisedTile(x, y, s, hovered) {
     const lastSoundAge = audioSoundAge();
     return JSON.stringify({
       game: 'Minesweeper',
+      reducedMotion,
       coordinateSystem: 'grid cells, origin top-left, c right, r down',
       board: { cols: state.cols, rows: state.rows, mines: state.mines },
       started: !!state.started,

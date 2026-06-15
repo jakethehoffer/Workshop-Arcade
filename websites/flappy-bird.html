@@ -202,6 +202,15 @@ let lastStatus = { kind: "ready", message: initialStatusMessage, at: 0 };
 let statusHistory = [lastStatus];
 let lastInput = { type: "none", at: 0 };
 
+// Honor prefers-reduced-motion: gate decorative screen shake and the parallax
+// cloud drift (cosmetic, no gameplay effect) for motion-sensitive players.
+let reducedMotion = false;
+try {
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  reducedMotion = motionQuery.matches;
+  motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+} catch (_) {}
+
 const feedback = {};
 function resetFeedback() {
   feedback.lastEvent = null;
@@ -758,7 +767,7 @@ function withWorldTransform(fn) {
   ctx.save();
   ctx.translate(viewOffsetX, viewOffsetY);
   ctx.scale(viewScale, viewScale);
-  if (feedback.screenShake > 0) {
+  if (!reducedMotion && feedback.screenShake > 0) {
     const shake = Math.min(9, feedback.screenShake);
     ctx.translate(
       Math.sin(frames * 1.71) * shake,
@@ -1020,7 +1029,7 @@ function drawDeviceCloud(cx, cy, w) {
 }
 function updateAndDrawClouds(step) {
   for (const c of clouds) {
-    c.x -= step * c.s * 0.3; // slow parallax (step is already dt-scaled)
+    if (!reducedMotion) c.x -= step * c.s * 0.3; // slow parallax (step is already dt-scaled)
     if (c.x < -c.w) c.x = WORLD_W + c.w;
     drawCloud(c.x, c.y, c.w);
   }
@@ -1535,6 +1544,7 @@ function renderGameToText() {
     started,
     gameOver,
     helpOpen,
+    reducedMotion,
     score,
     highScore,
     newBestThisRun,

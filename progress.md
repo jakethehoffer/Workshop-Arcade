@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-15 Claude canvas reduced-motion campaign — slice 2
+
+- Continued the canvas-motion accessibility campaign. Slice 2 gates three more games: **Flappy Bird** (screen shake + parallax cloud drift), **Maze Chase** (screen shake + decorative ring and particle bursts), and **Minesweeper** (screen shake + reveal/win particles). The campaign now covers 5 of ~35-40 games with separable decorative motion.
+- Same pattern as slice 1: each game reads `matchMedia('(prefers-reduced-motion: reduce)')` once at init with a live `change` listener, wraps only the decorative motion in `if (!reducedMotion)`, and exposes a top-level `reducedMotion` flag in `render_game_to_text()`. Core gameplay motion is untouched and the default (no-preference) render path is unchanged, so non-reduced-motion players see identical behavior.
+- Deferred two high-motion games to dedicated later slices rather than rush them in a batch: **Brick Breaker** (3146 lines with explosions, rings, particles, paddle/launch pulses, and shake — many systems) and **Doodle Jump** (rich animated background: bird flock, planes with trails, shooting stars, UFO, storm/lightning, clouds, platform bob). Each warrants its own careful pass. Remaining cleaner targets after those: **Metro Dash**, then the rest of the decorative-motion set.
+- `scripts/check-reduced-motion.mjs` `MOTION_AWARE_GAMES` grew to 5 entries; the gate asserts each reports the live reduced-motion state under `reduce` and `no-preference` with no console/page errors.
+- Verification passed: reduced-motion gate green for all 5 motion-aware games; `npm test` 47/47 fast gates (incl game-contract — all three games' `render_game_to_text()` still valid JSON, including Minesweeper's fullscreen-wrapped diagnostics); scoped `npm run test:games -- --slug flappy-bird,maze-chase,minesweeper` (3/3) and `npm run capture:games -- --slug ...` (6 surfaces, max score 0, default path unchanged); `git diff --check`. No shared-dependency change — three frozen game files plus the gate — so scoped verification suffices locally with CI's full sweep as backstop.
+
 ## 2026-06-15 Claude canvas reduced-motion campaign — slice 1
 
 - Started the canvas-motion accessibility campaign that the CSS-layer reduced-motion baseline deliberately did not cover. Discovery (adversarial Explore sweep) found ~35-40 of 100 games carry separable, non-gameplay decorative motion (screen shake on impacts, clear/kill particle bursts, ambient pulses) in a consistent, readable pattern; ~60 are pure gameplay motion that cannot be reduced. Slice 1 gates the two cleanest, highest-frequency targets: Bulwark Burst (screen shake + expanding burst rings) and Tetris (screen shake + line-clear particles).
