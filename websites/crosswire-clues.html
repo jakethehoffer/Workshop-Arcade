@@ -287,9 +287,11 @@ button{font:inherit}.app{width:min(1080px,100%);display:grid;gap:10px}.top,.hud,
   }
   function restartRun(source="button"){ markInput(source,"restart"); startRun(source); }
   function nextEntry(delta,source="keyboard"){
-    if(state.mode!=="playing")return;
-    const i=state.entries.findIndex(e=>e.id===state.selectedEntryId); const n=(i+delta+state.entries.length)%state.entries.length;
+    if(state.mode!=="playing")return false;
+    const i=state.entries.findIndex(e=>e.id===state.selectedEntryId); const n=i+delta;
+    if(n<0||n>=state.entries.length)return false; // at a clue-list boundary: let Tab release focus from the board (no keyboard trap)
     selectEntry(state.entries[n].id,source);
+    return true;
   }
   function toggleSound(source="button"){ markInput(source,"sound"); state.soundEnabled=!state.soundEnabled; write(SOUND_KEY,state.soundEnabled?"1":"0"); tone("toggle"); setFeedback(state.soundEnabled?"Sound on.":"Sound off.",900); sync(); }
   function toggleFullscreen(source="button"){
@@ -369,13 +371,13 @@ button{font:inherit}.app{width:min(1080px,100%);display:grid;gap:10px}.top,.hud,
   };
   window.advanceTime = (ms) => { update(ms); sync(); render(); return window.render_game_to_text(); };
   document.addEventListener("keydown",(event)=>{
-    const target=event.target; if(target&&/^(input|select|textarea)$/i.test(target.tagName||""))return;
+    const target=event.target; if(target&&/^(button|input|select|textarea)$/i.test(target.tagName||""))return;
     if(els.dialog.open){ if(event.key==="Escape"||event.key==="?"){ event.preventDefault(); closeHelp(); } return; }
     const k=event.key, lower=k.toLowerCase();
-    if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"," ","Enter","Backspace","?"].includes(k)||/^[a-z]$/i.test(k)||["h","r","m","f"].includes(lower))event.preventDefault();
+    if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Enter","Backspace","?"].includes(k)||/^[a-z]$/i.test(k)||["h","r","m","f"].includes(lower))event.preventDefault();
     if(/^[a-z]$/i.test(k)&&!["h","r","m","f"].includes(lower))typeLetter(k,"keyboard");
     else if(k==="ArrowLeft")moveSelection(-1,0); else if(k==="ArrowRight")moveSelection(1,0); else if(k==="ArrowUp")moveSelection(0,-1); else if(k==="ArrowDown")moveSelection(0,1);
-    else if(k==="Tab")nextEntry(event.shiftKey?-1:1,"keyboard"); else if(k===" ")toggleDirection("keyboard"); else if(k==="Enter")checkEntry("keyboard"); else if(k==="Backspace")clearLetter("keyboard");
+    else if(k==="Tab"){ if(nextEntry(event.shiftKey?-1:1,"keyboard"))event.preventDefault(); } else if(k===" ")toggleDirection("keyboard"); else if(k==="Enter")checkEntry("keyboard"); else if(k==="Backspace")clearLetter("keyboard");
     else if(lower==="h")useHint("keyboard"); else if(lower==="r")restartRun("keyboard"); else if(lower==="m")toggleSound("keyboard"); else if(lower==="f")toggleFullscreen("keyboard"); else if(k==="?"||(k==="/"&&event.shiftKey))openHelp("keyboard");
   });
   canvas.addEventListener("pointerdown",(event)=>{
