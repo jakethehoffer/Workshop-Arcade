@@ -211,6 +211,7 @@
     plungerCharge: 0,
     charging: false,
     ballSave: 0,
+    ballSaveSpent: false,
     feedback: "Hold Launch, Space, or Enter to charge the plunger.",
     feedbackTime: 1.8,
     bumperHits: 0,
@@ -343,6 +344,7 @@
     state.lastLaunchFeedback = "Ready to launch";
     state.launchSource = "";
     state.gameOver = false;
+    state.ballSaveSpent = false;
     for (const bumper of bumpers) bumper.hits = 0;
     for (const lane of lanes) lane.lit = false;
     for (const lane of rollovers) lane.lit = false;
@@ -361,16 +363,19 @@
     ball.vx = -42 - state.plungerCharge * 34;
     ball.vy = -720 * power;
     state.mode = "playing";
-    state.ballSave = 6;
+    // Arm ball save only for this ball's first launch — re-launching a saved
+    // ball must not re-arm it, or the lose condition never fires.
+    if (!state.ballSaveSpent) state.ballSave = 6;
     state.charging = false;
     state.plungerCharge = 0;
     setFeedback(state.lastLaunchFeedback + ". Ball save is lit.");
     beep(220 + power * 260, .12, .045, "sawtooth");
   }
   function drain(){
-    if (state.ballSave > 0) {
+    if (state.ballSave > 0 && !state.ballSaveSpent) {
       resetBall(true);
-      state.ballSave = 4;
+      // One save per ball: consume it so the next drain of this ball counts.
+      state.ballSaveSpent = true;
       setFeedback("Ball save returned the ball.", 1.7);
       beep(520, .11, .04, "triangle");
       return;
@@ -384,6 +389,7 @@
       setFeedback("Game over. Press R to restart.", 3);
       beep(160, .2, .045, "sawtooth");
     } else {
+      state.ballSaveSpent = false;
       resetBall(false);
       beep(190, .12, .04, "triangle");
     }

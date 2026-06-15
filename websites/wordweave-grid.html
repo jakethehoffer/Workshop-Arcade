@@ -230,6 +230,17 @@
     tone("reject");
   }
   function canTrace() { return state.mode === "playing" && state.budget > 0; }
+  // Shortest still-unfound target word; 0 when all are found.
+  function minUnfoundWordLength() {
+    const lengths = stage().words.filter((word) => !state.found.includes(word)).map((word) => word.length);
+    return lengths.length ? Math.min(...lengths) : 0;
+  }
+  // Dead end: words remain but the thread budget can no longer trace even the
+  // shortest one, so the run is unwinnable. Without this the run sits at
+  // budget > 0 forever (silent limbo) because failRun only fired at budget <= 0.
+  function isDeadEnd() {
+    return wordsFound() < stage().words.length && state.budget < minUnfoundWordLength();
+  }
   function beginTrace(cell) {
     if (!canTrace()) return;
     state.path = [{ r: cell.r, c: cell.c }];
@@ -278,7 +289,7 @@
     if (!target) {
       state.streak = 0; state.chain = 0; state.lastEnd = null; state.path = [];
       feedback(word + " is not a target. -" + length + " thread.", 1900);
-      if (state.budget <= 0) failRun(); else tone("reject");
+      if (isDeadEnd()) failRun(); else tone("reject");
       syncHud(); render(); return;
     }
     const start = state.path[0], end = state.path[state.path.length - 1];
@@ -295,7 +306,7 @@
     feedback(target + " woven. +" + points + (linked ? " chain bonus." : "."), 2100);
     tone(linked ? "chain" : "accept");
     if (wordsFound() === stage().words.length) boardComplete();
-    else if (state.budget <= 0) failRun();
+    else if (isDeadEnd()) failRun();
     syncHud(); render();
   }
   function moveCursor(dr, dc) {
