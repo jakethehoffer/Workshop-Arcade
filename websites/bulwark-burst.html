@@ -210,6 +210,14 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   let audio = null;
   let lastFrame = 0;
   let clock = 0;
+  // Honor prefers-reduced-motion: gate decorative screen shake and burst rings
+  // (cosmetic feedback, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
 
   function normalizeAngle(angle) {
     while (angle > Math.PI) angle -= TAU;
@@ -612,6 +620,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     ctx.restore();
   }
   function drawBursts() {
+    if (reducedMotion) return;
     for (const burst of state.bursts) {
       ctx.globalAlpha = clamp(burst.life * 2, 0, 1);
       ctx.strokeStyle = burst.color;
@@ -643,7 +652,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   }
   function draw() {
     ctx.save();
-    if (state.shake > 0) {
+    if (!reducedMotion && state.shake > 0) {
       const amount = state.shake * 8;
       ctx.translate(Math.sin(clock * 55) * amount, Math.cos(clock * 43) * amount);
     }
@@ -681,7 +690,8 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
       lastEvent: state.lastEvent,
       kills: state.kills,
       leaks: state.leaks,
-      soundEnabled: state.sound
+      soundEnabled: state.sound,
+      reducedMotion
     });
   }
   function step(ms) {

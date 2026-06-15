@@ -650,6 +650,15 @@
   let holdType = null;
   let holdUsed = false;
 
+  // Honor prefers-reduced-motion: gate decorative screen shake and clear-line
+  // particles (cosmetic feedback, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener('change', (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   const feedback = {
     time: 0,
     particles: [],
@@ -1295,7 +1304,7 @@
     const cw = canvas.width / W;
     const ch = canvas.height / H;
     ctx.save();
-    feedback.particles.forEach((particle)=>{
+    if(!reducedMotion) feedback.particles.forEach((particle)=>{
       const t = Math.max(0, 1 - particle.age / particle.ttl);
       ctx.globalAlpha = t;
       ctx.fillStyle = particle.color;
@@ -1328,7 +1337,7 @@
 
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    const shake = feedback.screenShake > 0 ? feedback.screenShake * Math.max(1, canvas.width / W * 0.12) : 0;
+    const shake = (!reducedMotion && feedback.screenShake > 0) ? feedback.screenShake * Math.max(1, canvas.width / W * 0.12) : 0;
     const shakeX = shake ? Math.sin(feedback.time * 0.12) * shake : 0;
     const shakeY = shake ? Math.cos(feedback.time * 0.16) * shake : 0;
     ctx.save();
@@ -1697,6 +1706,7 @@
       grid: { width: W, height: H },
       running: !!running,
       paused: !running && !gameOver && !helpUp,
+      reducedMotion,
       helpOpen: !!helpUp,
       helpMode,
       gameOver: !!gameOver,

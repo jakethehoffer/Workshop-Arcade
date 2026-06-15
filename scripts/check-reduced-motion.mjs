@@ -119,6 +119,38 @@ async function probe(browser, baseUrl, reducedMotion) {
   }
 }
 
+// Games that gate decorative canvas motion (screen shake, particles) behind a
+// prefers-reduced-motion read expose a top-level `reducedMotion` flag in
+// render_game_to_text(). This list grows as the accessibility campaign covers
+// more games; each entry is verified to report the live media state and to load
+// without console/page errors under both settings.
+const MOTION_AWARE_GAMES = [
+  'websites/bulwark-burst.html',
+  'websites/tetris.html',
+];
+
+async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {
+  const context = await browser.newContext({ reducedMotion });
+  try {
+    const page = await context.newPage();
+    page.on('pageerror', (error) => fail(`[${gamePath} ${reducedMotion}] page error: ${error.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') fail(`[${gamePath} ${reducedMotion}] console error: ${message.text()}`);
+    });
+    await page.goto(new URL(gamePath, baseUrl).href, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => typeof window.render_game_to_text === 'function', undefined, { timeout: 8000 });
+    return await page.evaluate(() => {
+      try {
+        return JSON.parse(window.render_game_to_text()).reducedMotion;
+      } catch (error) {
+        return `unparseable: ${error.message}`;
+      }
+    });
+  } finally {
+    await context.close();
+  }
+}
+
 let server;
 let browser;
 try {
@@ -148,6 +180,19 @@ try {
   if (!(normal.transitionMs >= 1000)) {
     fail(`no-preference must keep transition-duration intact (got ${normal.transitionMs}ms, expected >= 1000ms)`);
   }
+
+  // Motion-aware games must report the live reduced-motion state in their
+  // diagnostics so the canvas-motion gating is verifiable, not just visual.
+  for (const gamePath of MOTION_AWARE_GAMES) {
+    const underReduce = await gameReducedMotionFlag(browser, baseUrl, gamePath, 'reduce');
+    if (underReduce !== true) {
+      fail(`${gamePath}: render_game_to_text().reducedMotion must be true under reduce (got ${JSON.stringify(underReduce)})`);
+    }
+    const underNormal = await gameReducedMotionFlag(browser, baseUrl, gamePath, 'no-preference');
+    if (underNormal !== false) {
+      fail(`${gamePath}: render_game_to_text().reducedMotion must be false under no-preference (got ${JSON.stringify(underNormal)})`);
+    }
+  }
 } catch (error) {
   fail(error instanceof Error ? error.stack || error.message : String(error));
 } finally {
@@ -161,4 +206,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log('Reduced-motion baseline check passed: workshop-runtime.js injects a gated prefers-reduced-motion reset that neutralizes CSS motion only when the user asks for it.');
+console.log(`Reduced-motion baseline check passed: workshop-runtime.js injects a gated prefers-reduced-motion reset, and ${MOTION_AWARE_GAMES.length} motion-aware game(s) report the live reduced-motion state in diagnostics.`);
