@@ -654,6 +654,7 @@ let flipped = false; // false = Red on bottom; true = Black on bottom
 let board = [];
 let history = [];
 let locked = false;
+let aiTimer = null; // handle for a pending AI move so a new game can cancel it
 let mustContinueFrom = null;
 let focusSquare = null;
 const keyboardDiagnostics = {
@@ -1861,7 +1862,7 @@ function endTurn(){
   render();
   if(mode==='SP' && turn===aiPlays){
     locked = true;
-    setTimeout(aiMove, 160);
+    aiTimer = setTimeout(aiMove, 160);
   }
 }
 
@@ -2126,6 +2127,10 @@ window.advanceTime = function advanceTime(ms = 0){
    Game Lifecycle
    =============== */
 function newGame(soundCue = 'new-game'){
+  // Cancel any AI move scheduled by the previous run so it can't fire on the
+  // fresh board (stray history entry / inverted turn on a brand-new game).
+  clearTimeout(aiTimer);
+  aiTimer = null;
   // Reset board orientation
   flipped = false;
   hideGameOver();
@@ -2146,7 +2151,7 @@ function newGame(soundCue = 'new-game'){
   if(soundCue === 'mode-change') Sound.modeChange();
   else if(soundCue) Sound.newGame();
   if(mode==='SP' && aiPlays===RED){
-    setTimeout(aiMove, 200);
+    aiTimer = setTimeout(aiMove, 200);
   }
 }
 

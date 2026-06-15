@@ -270,6 +270,7 @@ const AudioFX = (() => {
   let guesses = [];
   let current = '';
   let finished = false;
+  let revealTimer = null; // pending end-of-round reveal so a new round can cancel it
   const inputFeedback = {
     lastEvent: null,
     lastEventAge: null,
@@ -344,6 +345,10 @@ const AudioFX = (() => {
     guesses = [];
     current = '';
     finished = false;
+    // Cancel a pending end-of-round reveal so it can't spoil the new word or
+    // force a false game-over on the fresh round.
+    clearTimeout(revealTimer);
+    revealTimer = null;
     Object.assign(inputFeedback, {
       lastEvent: null,
       lastEventAge: null,
@@ -610,11 +615,11 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));
     if(guesses[guesses.length-1]===targetWord){
       finished = true;
   setStatus('Revealing result...');
-  setTimeout(()=>showGameOver(true), REVEAL_WAIT);
+  revealTimer = setTimeout(()=>showGameOver(true), REVEAL_WAIT);
     } else if(guesses.length===6){
       finished = true;
   setStatus('Revealing result...');
-  setTimeout(()=>showGameOver(false), REVEAL_WAIT);
+  revealTimer = setTimeout(()=>showGameOver(false), REVEAL_WAIT);
     } else {
       setStatus('Keep going…');
     }
