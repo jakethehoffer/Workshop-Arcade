@@ -209,7 +209,7 @@
   }
   function startRun(){ state.userGesture = true; state.mode = "playing"; state.score = 0; loadStage(0); tone("start"); canvas.focus(); }
   function restart(){ state.lastAction = "restart"; startRun(); }
-  function fail(reason){ state.mode = "failed"; setFeedback(reason, 2200, "failed"); tone("fail"); updateUI(); draw(); }
+  function fail(reason){ state.mode = "failed"; commitBest(); setFeedback(reason, 2200, "failed"); tone("fail"); updateUI(); draw(); }
   function commitBest(){ if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } }
   function finishStage(){
     state.score += 65 + state.smoke * 9 + Math.max(0, 26 - state.moves - state.alarm * 3);
