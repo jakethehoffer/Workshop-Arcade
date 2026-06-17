@@ -1000,8 +1000,9 @@
   document.addEventListener("keydown", (event) => {
     if (event.target && /input|textarea|select/i.test(event.target.tagName)) return;
     const key = event.key.toLowerCase();
-    if (key === "escape") {
-      els.overlay.classList.remove("show");
+    if (els.overlay.classList.contains("show")) {
+      if (key === "escape") { hideHelp(); return; }
+      trapHelpTab(event);
       return;
     }
     if (key === "enter" && state.mode !== "playing") {
@@ -1051,11 +1052,14 @@
     if (soundOn) beep("start");
     updateUi();
   });
-  els.help.addEventListener("click", () => els.overlay.classList.add("show"));
-  els.closeHelp.addEventListener("click", () => els.overlay.classList.remove("show"));
-  els.overlay.addEventListener("click", (event) => {
-    if (event.target === els.overlay) els.overlay.classList.remove("show");
-  });
+  let __helpReturn = null;
+  const FOCUSABLE = 'button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+  function showHelp(){ __helpReturn = document.activeElement; els.overlay.classList.add("show"); const f = els.overlay.querySelector(FOCUSABLE); if(f) f.focus(); }
+  function hideHelp(){ if(!els.overlay.classList.contains("show")) return; els.overlay.classList.remove("show"); const t = __helpReturn; __helpReturn = null; if(t && t.focus){ try{ t.focus(); }catch(_){} } }
+  function trapHelpTab(event){ if(event.key !== "Tab") return; const f = [...els.overlay.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null); if(!f.length) return; const a = f[0], z = f[f.length-1]; if(event.shiftKey && document.activeElement === a){ event.preventDefault(); z.focus(); } else if(!event.shiftKey && document.activeElement === z){ event.preventDefault(); a.focus(); } }
+  els.help.addEventListener("click", showHelp);
+  els.closeHelp.addEventListener("click", hideHelp);
+  els.overlay.addEventListener("click", (event) => { if (event.target === els.overlay) hideHelp(); });
 
   function loop(stamp){
     if (!lastStamp) lastStamp = stamp;
