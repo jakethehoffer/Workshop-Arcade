@@ -893,9 +893,9 @@
     else if(running) pause();
     else start();
   }
-  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; setStatus('Press Space to pause', 'active'); recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); }
-  function restart(){ newGame(); }
-  function pause(){ if(!running||gameOver||gameWon) return; running=false; setStatus('Paused - Press Space', 'paused'); SFX.pause(); Music.stop(); syncStartMobileButton(); }
+  function start(){ if(running||gameOver||gameWon) return; const resuming=/^Paused/.test(statusEl.textContent || ''); running=true; setStatus('Press Space to pause', 'active'); recordSnakeFeedback(resuming ? 'resume' : 'start'); SFX.start(); Music.resume(); syncStartMobileButton(); canvas.focus({ preventScroll: true }); }
+  function restart(){ newGame(); canvas.focus({ preventScroll: true }); }
+  function pause(){ if(!running||gameOver||gameWon) return; running=false; setStatus('Paused - Press Space', 'paused'); SFX.pause(); Music.stop(); syncStartMobileButton(); canvas.focus({ preventScroll: true }); }
 
   function onKey(e){
     const c=e.code;
