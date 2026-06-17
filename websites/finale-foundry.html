@@ -176,6 +176,12 @@
   function commitBest(){ if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } }
   function fail(text){ state.mode = "failed"; setFeedback(text, 2300, "failed"); tone("miss"); updateUI(); draw(); }
   function clearStage(){
+    // A stage only locks if EVERY note was struck. strike() called this the
+    // moment all notes were resolved (hit or missed), so a player could clear a
+    // stage having hit only the last note and let the rest lapse -- about one
+    // note per stage, winning the whole foundry on a handful of strikes. Gate
+    // every clear path on all-hit here; a stage ending with any cold spark fails.
+    if(!state.notes.every((n) => n.hit)) { fail("too many cold sparks"); return; }
     state.score += 50 + state.heat * 8 + hitCount() * 6;
     if(state.stage === TRACKS.length - 1) { state.mode = "won"; commitBest(); setFeedback("Finale Foundry complete. Score " + state.score + ".", 2600, "win"); tone("clear"); }
     else { state.stage += 1; loadStage(state.stage); setFeedback("Mold locked. " + track().name + " begins.", 1600, "stage-clear"); tone("clear"); }
@@ -192,9 +198,7 @@
         note.missed = true; miss("beat " + note.beat); if(state.mode !== "playing") return;
       }
     }
-    if(state.mode === "playing" && doneCount() === state.notes.length) {
-      if(state.notes.every((n) => n.hit)) clearStage(); else fail("too many cold sparks");
-    }
+    if(state.mode === "playing" && doneCount() === state.notes.length) clearStage();
   }
   function recommendation(){
     const note = nextNote();
