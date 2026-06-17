@@ -937,8 +937,16 @@ function updateObstacles(dt60) {
       feedback.dangerCue = threat;
       feedback.dangerLane = player.targetLane;
     }
-    if (o.z > PLAYER_Z - 0.025 && o.z < PLAYER_Z + 0.025) {
-      let hit = false;
+    // Collision fires if the obstacle is at the player's plane this frame (a
+    // small window, so a player who steps into a stalled obstacle still hits)
+    // OR it crossed the plane between frames (prevZ in front, o.z now behind).
+    // The swept-crossing term is the same test the near-miss below already used;
+    // without it a fast obstacle at high speed / low frame rate jumps the whole
+    // window in one step and tunnels through with no game-over -- the sole lose
+    // condition, silently bypassed and invisible to the dt60=1 smoke harness.
+    const crossed = prevZ >= PLAYER_Z && o.z < PLAYER_Z;
+    let hit = false;
+    if (crossed || (o.z > PLAYER_Z - 0.025 && o.z < PLAYER_Z + 0.025)) {
       for (let l = 0; l < o.width; l++) {
         if (o.lane + l === player.targetLane) {
           if (o.type === "barrier" && player.isJumping) continue;
@@ -948,7 +956,7 @@ function updateObstacles(dt60) {
       }
       if (hit) setGameOver();
     }
-    if (!o.nearMissFired && prevZ >= PLAYER_Z && o.z < PLAYER_Z) {
+    if (crossed && !hit && !o.nearMissFired) {
       const centerLane = o.lane + (o.width - 1) / 2;
       const closeLane = Math.abs(centerLane - player.targetLane) <= 1.05;
       if (state === "playing" && closeLane) {
