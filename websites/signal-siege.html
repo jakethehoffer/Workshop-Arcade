@@ -179,6 +179,7 @@
     wave: 1,
     waveTime: 0,
     spawned: 0,
+    waveKills: 0,
     core: 100,
     credits: 120,
     score: 0,
@@ -278,6 +279,7 @@
     state.mode = "wave";
     state.waveTime = 0;
     state.spawned = 0;
+    state.waveKills = 0;
     setFeedback(`Wave ${state.wave} inbound.`, "start");
     beep(330, .08, .045);
     updateHud();
@@ -348,18 +350,27 @@
       saveBest(Math.max(0, state.wave - 1));
       setFeedback("Core offline. Press R to restart.", "leak");
     } else if (state.spawned >= queue.length && state.enemies.length === 0 && state.projectiles.length === 0) {
-      state.credits += 45 + state.wave * 15;
-      state.score += 180 + state.wave * 60 + state.core;
-      saveBest(state.wave);
+      // A wave only pays out if you actually defended it. Leaked enemies are
+      // pulled from the field exactly like killed ones, so without this gate a
+      // player who builds nothing and lets the whole wave leak past the towers
+      // would still bank the full clear bonus and advance bestWave while the
+      // core quietly bled -- score, credits, and best for doing nothing. The
+      // wave still advances either way so a leaked wave can't soft-lock the run.
+      const defended = state.waveKills > 0;
+      if (defended) {
+        state.credits += 45 + state.wave * 15;
+        state.score += 180 + state.wave * 60 + state.core;
+        saveBest(state.wave);
+      }
       if (state.wave >= waves.length) {
         state.mode = "complete";
         state.runComplete = true;
-        setFeedback("Run complete. The relay holds.", "waveClear");
+        setFeedback(defended ? "Run complete. The relay holds." : "Run over. The relay leaked through.", "waveClear");
         beep(820, .16, .05);
       } else {
         state.wave += 1;
         state.mode = "build";
-        setFeedback(`Wave clear. Prepare wave ${state.wave}.`, "waveClear");
+        setFeedback(defended ? `Wave clear. Prepare wave ${state.wave}.` : `Wave leaked through -- no bonus. Prepare wave ${state.wave}.`, "waveClear");
         beep(660, .1, .045);
       }
       updateHud();
@@ -375,6 +386,7 @@
     for (const enemy of [...state.enemies]) {
       if (enemy.hp <= 0) {
         state.enemies = state.enemies.filter((item) => item.id !== enemy.id);
+        state.waveKills += 1;
         state.credits += enemy.value;
         state.score += enemy.value * 4;
         setFeedback(`Signal neutralized +${enemy.value}.`, "hit");
