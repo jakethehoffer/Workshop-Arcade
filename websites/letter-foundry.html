@@ -70,7 +70,7 @@ header,footer{display:flex;align-items:center;justify-content:space-between;gap:
 main{display:grid;place-items:center}.board{width:min(100%,760px);display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px;align-items:stretch}.forge,.side{border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(19,40,58,.84),rgba(7,17,29,.94));box-shadow:0 24px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.04)}.forge{padding:16px;display:grid;gap:14px;align-content:start}.side{padding:14px;display:grid;gap:12px;align-content:start}
 .target{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.12em}.progress{height:10px;background:#07121d;border:1px solid var(--line);border-radius:999px;overflow:hidden;min-width:120px;flex:1}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--gold));transition:width .2s ease}
 .word{min-height:58px;border:1px dashed rgba(120,226,242,.34);border-radius:14px;display:grid;place-items:center;padding:8px 12px;background:rgba(4,12,22,.38);font-size:clamp(28px,7vw,44px);font-weight:900;letter-spacing:.16em;text-transform:uppercase}.word.empty{color:rgba(159,194,206,.55);font-size:15px;letter-spacing:.14em}
-.rack{display:grid;grid-template-columns:repeat(7,minmax(40px,1fr));gap:9px}.tile{height:clamp(48px,9vw,70px);border:1px solid rgba(120,226,242,.36);border-radius:14px;background:linear-gradient(180deg,#16344a,#0c1e31);color:var(--ink);font-size:clamp(22px,5vw,34px);font-weight:950;text-transform:uppercase;cursor:pointer;box-shadow:0 9px 0 rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.07);touch-action:manipulation}.tile.used{opacity:.35;transform:translateY(5px);box-shadow:0 4px 0 rgba(0,0,0,.18)}.tile:hover{border-color:rgba(255,209,102,.7)}
+.rack{display:grid;grid-template-columns:repeat(7,minmax(40px,1fr));gap:9px}.tile{height:clamp(48px,9vw,70px);border:1px solid rgba(120,226,242,.36);border-radius:14px;background:linear-gradient(180deg,#16344a,#0c1e31);color:var(--ink);font-size:clamp(22px,5vw,34px);font-weight:950;text-transform:uppercase;cursor:pointer;box-shadow:0 9px 0 rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.07);touch-action:manipulation}.tile.used{opacity:.35;transform:translateY(5px);box-shadow:0 4px 0 rgba(0,0,0,.18)}.tile:hover{border-color:rgba(255,209,102,.7)}.tile.cursor{outline:3px solid rgba(255,209,102,.85);outline-offset:2px;border-color:rgba(255,209,102,.7)}
 .feedback{min-height:28px;color:var(--muted);font-weight:800}.feedback.good{color:var(--green)}.feedback.bad{color:var(--red)}.feedback.done{color:var(--gold)}
 .found{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.chip{min-height:30px;border:1px solid rgba(120,226,242,.2);border-radius:9px;background:rgba(4,12,22,.34);display:grid;place-items:center;color:rgba(159,194,206,.72);font-weight:800;text-transform:uppercase;font-size:13px}.chip.hit{background:rgba(67,225,143,.12);border-color:rgba(67,225,143,.45);color:var(--green)}
 .listTitle{margin:0;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.16em}.rounds{display:grid;gap:7px}.roundDot{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px;border:1px solid rgba(120,226,242,.17);padding:7px 8px;border-radius:9px}.roundDot.active{border-color:rgba(255,209,102,.6);color:var(--gold)}.roundDot.clear{border-color:rgba(67,225,143,.42);color:var(--green)}
@@ -113,9 +113,10 @@ main{display:grid;place-items:center}.board{width:min(100%,760px);display:grid;g
         <div class="keys">
           <span class="kbd">A-Z</span> add letters<br>
           <span class="kbd">Enter</span> submit / next<br>
+          <span class="kbd">Space</span> add cursor tile<br>
           <span class="kbd">Backspace</span> remove<br>
-          <span class="kbd">Arrows</span> focus tiles<br>
-          <span class="kbd">R</span> restart <span class="kbd">F</span> fullscreen
+          <span class="kbd">Arrows</span> move cursor<br>
+          <span class="kbd">Shift</span>+<span class="kbd">R</span> restart <span class="kbd">Shift</span>+<span class="kbd">F</span> fullscreen
         </div>
       </aside>
     </section>
@@ -310,8 +311,6 @@ main{display:grid;place-items:center}.board{width:min(100%,760px);display:grid;g
     const len = round().rack.length;
     state.focus = (state.focus + delta + len) % len;
     render();
-    const btn = els.rack.querySelector(`[data-index="${state.focus}"]`);
-    if (btn) btn.focus();
   }
   function toggleSound() {
     state.sound = !state.sound;
@@ -341,9 +340,9 @@ main{display:grid;place-items:center}.board{width:min(100%,760px);display:grid;g
     els.rack.innerHTML = "";
     r.rack.split("").forEach((ch, i) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "tile" + (state.used[i] ? " used" : "");
-      b.textContent = ch; b.dataset.index = String(i); b.tabIndex = i === state.focus ? 0 : -1;
-      b.setAttribute("aria-label", `letter ${ch}${state.used[i] ? " used" : ""}`);
+      b.type = "button"; b.className = "tile" + (state.used[i] ? " used" : "") + (i === state.focus ? " cursor" : "");
+      b.textContent = ch; b.dataset.index = String(i); b.tabIndex = -1;
+      b.setAttribute("aria-label", `letter ${ch}${state.used[i] ? " used" : ""}${i === state.focus ? " (cursor)" : ""}`);
       b.addEventListener("pointerdown", (ev) => { ev.preventDefault(); addByIndex(i); });
       els.rack.appendChild(b);
     });
@@ -397,19 +396,20 @@ main{display:grid;place-items:center}.board{width:min(100%,760px);display:grid;g
   document.addEventListener("keydown", (ev) => {
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
     if (interactiveTarget(ev.target)) return;
-    if (ev.key.toLowerCase() === "r") { ev.preventDefault(); resetRun(); return; }
-    if (ev.key.toLowerCase() === "f") { ev.preventDefault(); toggleFullscreen(); return; }
+    if (ev.shiftKey && ev.key.toLowerCase() === "r") { ev.preventDefault(); resetRun(); return; }
+    if (ev.shiftKey && ev.key.toLowerCase() === "f") { ev.preventDefault(); toggleFullscreen(); return; }
     if (/^[a-zA-Z]$/.test(ev.key)) { ev.preventDefault(); addLetter(ev.key); return; }
     if (ev.key === "Backspace" || ev.key === "Delete") { ev.preventDefault(); backspace(); return; }
     if (ev.key === "Enter") { ev.preventDefault(); submit(); return; }
+    if (ev.key === " ") { ev.preventDefault(); addByIndex(state.focus); return; }
     if (ev.key === "ArrowRight" || ev.key === "ArrowDown") { ev.preventDefault(); moveFocus(1); return; }
     if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") { ev.preventDefault(); moveFocus(-1); return; }
   });
-  els.submit.addEventListener("click", submit);
-  els.back.addEventListener("click", backspace);
-  els.restart.addEventListener("click", resetRun);
-  els.sound.addEventListener("click", toggleSound);
-  els.full.addEventListener("click", toggleFullscreen);
+  els.submit.addEventListener("click", () => { submit(); els.submit.blur(); });
+  els.back.addEventListener("click", () => { backspace(); els.back.blur(); });
+  els.restart.addEventListener("click", () => { resetRun(); els.restart.blur(); });
+  els.sound.addEventListener("click", () => { toggleSound(); els.sound.blur(); });
+  els.full.addEventListener("click", () => { toggleFullscreen(); els.full.blur(); });
   document.addEventListener("fullscreenchange", render);
   render();
 })();
