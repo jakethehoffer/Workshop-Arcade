@@ -542,11 +542,18 @@
   }
   function missToken(token){
     if (!token || token.status !== "pending") return;
+    // Clear the in-progress input when the token it was aimed at leaks. The old
+    // guard only matched state.focusedTokenId, which a pointer tap sets but
+    // keyboard play leaves null -- so a typist's half-typed input survived the
+    // miss and the next correct keystroke landed on stale text, draining
+    // integrity against the wrong target. activeToken() is the focused column's
+    // lowest pending token: exactly the one the input was being typed against.
+    const wasActive = activeToken() === token;
     token.status = "missed";
     token.clearedAt = state.time;
     state.combo = 0;
     state.wrongChars += token.text.length;
-    state.currentInput = token.id === state.focusedTokenId ? "" : state.currentInput;
+    state.currentInput = wasActive ? "" : state.currentInput;
     if (token.id === state.focusedTokenId) state.focusedTokenId = null;
     updateAccuracy();
     feedback.missed += 1;
