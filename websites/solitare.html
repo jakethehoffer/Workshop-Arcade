@@ -159,6 +159,7 @@
   .card.hint{outline:2px solid var(--accent);outline-offset:2px}
   .card.selected{outline:2px solid var(--accent);outline-offset:3px;box-shadow:0 0 0 1px rgba(94,234,212,.36),0 10px 24px rgba(0,0,0,.36)}
   .card.foundation-ready{box-shadow:0 0 0 2px rgba(34,197,94,.42),0 4px 20px rgba(0,0,0,0.25)}
+  .pile.kb-cursor{outline:3px solid rgba(255,209,102,.95);outline-offset:3px}
   .card:active{filter:brightness(1.14) drop-shadow(0 0 10px rgba(94,234,212,.28))}
   .card.drag-hidden{opacity:0}
   .ghost{pointer-events:none;opacity:.9;filter:drop-shadow(0 10px 20px rgba(0,0,0,.35));z-index:999}
@@ -290,7 +291,7 @@
   </main>
 
   <footer>
-    <span class="help-full"><strong>How to play</strong>: Drag alternating colors down, put Kings on empty tableau spaces, tap a top card then To Foundation for eligible moves, and click Stock to draw 1 or 3.</span>
+    <span class="help-full"><strong>How to play</strong>: Drag alternating colors down, put Kings on empty tableau spaces, tap a top card then To Foundation for eligible moves, and click Stock to draw 1 or 3. Keyboard: arrow keys move the cursor between piles; Enter or Space picks up the top card, drops it on the cursor pile, or draws from Stock; Esc clears the selection.</span>
     <span class="help-short">Drag alternating colors. Tap a top card, then To Foundation. Tap Stock to draw.</span>
   </footer>
 </div>
@@ -676,6 +677,8 @@ function startAutoComplete(){
   };
   let lastAction = 'Ready';
   let selectedSource = null;
+  const KB_PILES = ['stock','waste','f0','f1','f2','f3','t0','t1','t2','t3','t4','t5','t6'];
+  let kbCursor = 0;
   const stockFeedback = {
     lastEvent: null,
     lastEventAge: null,
@@ -770,6 +773,8 @@ function startAutoComplete(){
     refreshStatusElement(won ? 'You win! Great finish.' : recommendStatus());
     updateToFoundationControl();
     updateAutoCompleteVisibility();   // <-- add this line
+    els('.pile').forEach(p=>p.classList.remove('kb-cursor'));
+    const kbEl = el('#' + KB_PILES[kbCursor]); if(kbEl) kbEl.classList.add('kb-cursor');
     
   }
 
@@ -1463,6 +1468,7 @@ function doHint(){
     return JSON.stringify({
       game: 'Klondike Solitaire',
       ready: true,
+      keyboardCursor: KB_PILES[kbCursor],
       stockCount: state.piles.stock.length,
       wasteCount: state.piles.waste.length,
       wasteTop: state.piles.waste.length ? describe(state.piles.waste[state.piles.waste.length - 1]) : null,
@@ -1590,6 +1596,60 @@ el('#drawOne').addEventListener('change', (e)=>{
     }
     // ✂ REMOVED: 'a' shortcut for auto-finish
   })
+
+  // ===== Keyboard navigation layer (a11y): arrows move a pile cursor; Enter/Space
+  // picks up the top card, drops it on the cursor pile, or draws from Stock; Esc clears.
+  // Multi-card run moves remain pointer-only. =====
+  function kbNav(delta){ kbCursor = (kbCursor + delta + KB_PILES.length) % KB_PILES.length; render(); }
+  function kbMoveSelectedToTableau(ti){
+    if(!selectedSource) return false;
+    const card = getTopCardFromSource(selectedSource.from);
+    if(!card || !sourceMatchesCard(selectedSource, card)) return false;
+    if(!canPlaceOnTableau(card, state.piles.t[ti].up)) return false;
+    pushHistory('to-tableau');
+    if(selectedSource.from === 'waste') state.piles.waste.pop();
+    else if(selectedSource.from[0] === 't') state.piles.t[+selectedSource.from.slice(1)].up.pop();
+    else if(selectedSource.from[0] === 'f') state.piles.f[+selectedSource.from.slice(1)].pop();
+    else return false;
+    clearSelectedSource(false);
+    state.piles.t[ti].up.push(card);
+    maybeFlipAfterMove(); recordLegalMove('tableau-move'); playSound('tableau-move');
+    render(); flashPile(pilesEls.t[ti]);
+    announceStatus(`Moved ${describe(card)} to Tableau ${ti + 1}.`, 'info', 'kb-move');
+    return true;
+  }
+  function kbActivate(){
+    const id = KB_PILES[kbCursor];
+    if(id === 'stock'){ clearSelectedSource(false); pilesEls.stock.click(); return; }
+    if(selectedSource){
+      if(selectedSource.from === id){ clearSelectedSource(); render(); announceStatus('Selection cleared.', 'info', 'kb-deselect'); return; }
+      let moved = false;
+      if(id[0] === 'f') moved = moveSourceToFoundation(selectedSource, 'kb-foundation');
+      else if(id[0] === 't') moved = kbMoveSelectedToTableau(+id.slice(1));
+      if(!moved) announceStatus('That card cannot move there.', 'bad', 'kb-move');
+      return;
+    }
+    if(id === 'waste' || id[0] === 't'){
+      const top = getTopCardFromSource(id);
+      if(top) selectSourceCard({from: id, s: top.s, r: top.r});
+      else announceStatus('Nothing to pick up there.', 'info', 'kb-select');
+    } else {
+      announceStatus('Move the cursor to a waste or tableau card to pick it up.', 'info', 'kb-select');
+    }
+  }
+  window.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    const k = e.key;
+    if(k === 'ArrowLeft' || k === 'ArrowUp'){ e.preventDefault(); kbNav(-1); }
+    else if(k === 'ArrowRight' || k === 'ArrowDown'){ e.preventDefault(); kbNav(1); }
+    else if(k === ' ' || k === 'Enter'){
+      if(t && t.closest && t.closest('button, a, select')) return;
+      e.preventDefault(); kbActivate();
+    } else if(k === 'Escape'){
+      if(selectedSource){ e.preventDefault(); clearSelectedSource(); render(); }
+    }
+  });
 
   // Start game
 // Start game
