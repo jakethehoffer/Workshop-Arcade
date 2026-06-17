@@ -98,7 +98,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
 <main class="app" aria-label="Skyline Sentry lane defense game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Skyline Sentry</span></div>
-    <div class="help">Arrows or W/S choose a lane. Space fires. Shift or E sends a shield pulse. Tap a lane to aim and shoot.</div>
+    <div class="help">Arrows or W/S choose a lane. Space fires. Press E to send a shield pulse. Tap a lane to aim and shoot.</div>
   </header>
   <section class="hud" aria-label="Sentry status">
     <div class="pill"><span class="label">Wave</span><span class="value" id="waveValue">1/5</span></div>
@@ -133,7 +133,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   <ul>
     <li>Arrow Up/Down or W/S: choose lane</li>
     <li>Space or Enter: fire sentry shot</li>
-    <li>Shift or E: pulse shield</li>
+    <li>E: pulse shield</li>
     <li>R: restart, F: fullscreen, ?: help</li>
   </ul>
   <button class="btn primary" id="closeHelpBtn" type="button">Close</button>
@@ -552,7 +552,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     ctx.fillText(state.feedback, W / 2, 246);
     ctx.fillStyle = "#b8c8dc";
     ctx.font = "700 16px system-ui";
-    ctx.fillText("3 lanes. Space fires. Shift pulses shield. Survive five waves.", W / 2, 286);
+    ctx.fillText("3 lanes. Space fires. E pulses shield. Survive five waves.", W / 2, 286);
   }
   function render() {
     syncHud();
@@ -599,11 +599,11 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
 
   window.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
-    if (["arrowup", "arrowdown", "w", "s", " ", "enter", "shift", "e", "r", "f", "?"].includes(key)) event.preventDefault();
+    if (["arrowup", "arrowdown", "w", "s", " ", "enter", "e", "r", "f", "?"].includes(key)) event.preventDefault();
     if (key === "arrowup" || key === "w") setLane(state.selectedLane - 1, "keyboard");
     else if (key === "arrowdown" || key === "s") setLane(state.selectedLane + 1, "keyboard");
     else if (key === " " || key === "enter") shoot("keyboard");
-    else if (key === "shift" || key === "e") pulseShield("keyboard");
+    else if (key === "e") pulseShield("keyboard");
     else if (key === "r") resetGame("playing");
     else if (key === "f") toggleFullscreen();
     else if (key === "?") openHelp();
