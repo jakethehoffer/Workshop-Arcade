@@ -204,7 +204,12 @@ els.reset.addEventListener("click",reset);
 els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("flood")});
 els.swatches.querySelectorAll(".swatch").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();applyColor(Number(btn.dataset.color))}));
 loadLevel(0);
-let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+let last=performance.now(),rafOn=false;
+function needsFrame(){return state.flash>0||(state.mode==="clear"&&state.nextAt!=null)}
+function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
+function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
+if(needsFrame())wake();
 })();
 </script>
 </body>

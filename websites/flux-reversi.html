@@ -216,7 +216,12 @@ els.neww.addEventListener("click",()=>{reset();tone("place")});
 els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("place")});
 document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const k=btn.dataset.key;if(k==="ArrowLeft")moveCursor(-1,0);else if(k==="ArrowRight")moveCursor(1,0);else if(k==="ArrowUp")moveCursor(0,-1);else if(k==="ArrowDown")moveCursor(0,1);else if(k==="Enter")tryPlace(state.cursor.x,state.cursor.y);else if(k==="n")reset()}));
 reset();
-let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+let last=performance.now(),rafOn=false;
+function needsFrame(){return state.flip>0||state.cpuThinking}
+function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
+function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
+if(needsFrame())wake();
 })();
 </script>
 </body>
