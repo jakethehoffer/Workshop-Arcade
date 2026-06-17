@@ -238,7 +238,11 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
     const used = new Set();
     const cards = [];
     for (let slot = 0; slot < 3; slot += 1) {
-      let index = (turn * 7 + slot * 5 + (turn % 3) * 2) % CARDS.length;
+      // Stride coprime with CARDS.length (gcd(5,14)=1) so the per-draw sequence
+      // is a full permutation: every card is offered across the run (the old
+      // period-6 formula never offered coil/clock/amp/over, making the advertised
+      // Coil + Capacitor combo unreachable). Dedupe stays as a safety net.
+      let index = ((turn * 3 + slot) * 5) % CARDS.length;
       while (used.has(index)) index = (index + 1) % CARDS.length;
       used.add(index);
       cards.push(CARDS[index]);
