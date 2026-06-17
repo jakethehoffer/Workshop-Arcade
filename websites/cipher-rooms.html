@@ -252,6 +252,12 @@
   function finishFail(message) { state.mode = "fail"; state.fail = true; state.doorState = "sealed"; setFeedback(message, "bad", 4000); sound("fail"); updateBest(); render(); }
   function submit() {
     if (state.complete || state.fail) return;
+    // A correct submit opens the door and starts a 520ms advance without clearing
+    // state.code, so spamming Unlock/Enter during the transition kept matching
+    // room().code and re-banked the solve bonus (and ran attempts past the
+    // limit), persisting an inflated best. Ignore re-submits while the door is
+    // already open or the room is transitioning.
+    if (state.transitionTimer > 0 || state.doorState === "open") return;
     if (state.code.length !== room().code.length) { setFeedback("The door waits for " + room().code.length + " digits.", "bad", 1500); sound("bad"); render(); return; }
     state.attempts += 1;
     if (state.code === room().code) {
