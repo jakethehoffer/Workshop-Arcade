@@ -263,7 +263,15 @@
     const allOrdersOut = state.spawnIndex >= 18 && state.queue.length === 0 && state.stationState.every((st) => !st.orderId);
     if (allOrdersOut || (state.timeMs >= DAY_MS && state.queue.length === 0 && state.stationState.every((st) => !st.orderId))) finish(true, "Day complete. Shift closed clean.");
   }
-  function step(ms) { const frames = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60))); for (let i = 0; i < frames; i++) update(1000 / 60); render(); }
+  const TICK_MS = 1000 / 60;
+  let stepAccumulator = 0;
+  function step(ms) {
+    const d = Number(ms);
+    stepAccumulator += d > 0 ? d : 0;
+    let ticks = 0;
+    while (stepAccumulator >= TICK_MS && ticks < 100000) { update(TICK_MS); stepAccumulator -= TICK_MS; ticks++; }
+    render();
+  }
   function selectStation(index) {
     state.selected = (index + stations.length) % stations.length;
     els.stationButtons.forEach((b, i) => { b.classList.toggle("primary", i === state.selected); b.setAttribute("aria-current", String(i === state.selected)); });
