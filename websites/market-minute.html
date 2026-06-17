@@ -388,8 +388,11 @@ button{font:inherit}
     return goods.reduce((sum, g) => sum + state.inventory[g.id] * prices[g.id].price, 0);
   }
   function computeScore() {
-    const contractScore = state.contracts.filter((c) => c.done).reduce((sum, c) => sum + c.pays, 0);
-    return Math.max(0, Math.round(state.cash + portfolioValue() + contractScore - START_CASH));
+    // Contract payouts are already added to state.cash in fulfillContract, so
+    // they reach the score through cash exactly once. Re-summing them here
+    // double-counted every fulfilled contract's pays, inflating the headline
+    // score and the persisted best. Score is net worth gain since the open.
+    return Math.max(0, Math.round(state.cash + portfolioValue() - START_CASH));
   }
   function setFeedback(text, kind, pulse) {
     state.feedback = text;
