@@ -185,6 +185,7 @@
   const SCROLL_SPEED = 420;
   const SHAVING_GRAVITY = 1400;
   const FLASH_MS = 380;
+  const START_DROP_GRACE_MS = 350;
 
   function safeGet(key, fallback) {
     try {
@@ -240,6 +241,7 @@
       restart: 0,
       soundToggle: 0,
     },
+    dropArmedAt: 0,
     gameOver: false,
   };
 
@@ -319,6 +321,7 @@
   }
   function newRun() {
     state.mode = "playing";
+    state.dropArmedAt = state.time + START_DROP_GRACE_MS;
     state.score = 0;
     state.combo = 0;
     state.stack = [];
@@ -347,6 +350,7 @@
       return;
     }
     if (state.mode !== "playing" || !state.platform) return;
+    if (state.time < state.dropArmedAt) return;
     const top = state.stack[state.stack.length - 1];
     const platform = state.platform;
     const leftA = platform.x;
