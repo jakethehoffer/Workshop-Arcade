@@ -159,6 +159,7 @@ const MOTION_AWARE_GAMES = [
   'websites/drift-loom.html',
   'websites/bulb-brigade.html',
   'websites/last-light.html',
+  'websites/starline-strafe.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {
