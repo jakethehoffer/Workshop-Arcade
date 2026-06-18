@@ -1031,7 +1031,7 @@ a:"left",s:"down",d:"right"};function handleKeydown(event){
 const key=event.key.length===1?event.key.toLowerCase():event.key;const direction=keyDirections[key]
 ;if(key==="f"&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!activeDialog&&!isEditableTarget(event.target)){
 event.preventDefault();toggleFullscreen();return}
-if(event.target&&event.target.closest&&event.target.closest("button, a, input, select, textarea")&&event.key!=="Escape"&&event.key!=="Tab"&&key!=="m"){
+if(event.target&&event.target.closest&&event.target.closest("button, a, input, select, textarea")&&event.key!=="Escape"&&event.key!=="Tab"&&key!=="m"&&!(state.phase==="paused"&&(key===" "||key==="p"))){
 return}if(direction||event.key===" "||key==="m"){event.preventDefault()}
 if(direction||["Enter"," ","p"].includes(key)){unlockAudio()}if(key==="m"){toggleMute()
 }else if(direction){handleDirection(direction)}else if(key==="Enter"){handleStartAction()
