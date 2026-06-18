@@ -130,6 +130,11 @@ const MOTION_AWARE_GAMES = [
   'websites/flappy-bird.html',
   'websites/maze-chase.html',
   'websites/minesweeper.html',
+  'websites/doodle-jump.html',
+  'websites/metro-dash.html',
+  'websites/arena.html',
+  'websites/slipstream-sprint.html',
+  'websites/skyline-sentry.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {

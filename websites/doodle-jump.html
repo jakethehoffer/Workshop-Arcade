@@ -484,7 +484,14 @@ const night=nightFactorAtScore(score);return score>=UNLOCK.cloudX&&night>.05}ret
 let state,running=false,paused=false,lastT=performance.now();let storm={active:false,flashT:0,
 nextFlashIn:0,bolts:[],afterglowT:0,firstFlashTime:0,hasFirstFlash:false,afterglowMax:0,
 pendingSpace:false};let best=+localStorage.getItem("doodle_best")||0;bestEl.textContent=best
-;if(menuBestEl)menuBestEl.textContent=best;const feedback={};function resetFeedback(){
+;if(menuBestEl)menuBestEl.textContent=best
+// Honor prefers-reduced-motion: gate decorative full-screen lightning strobe,
+// star twinkle, the spinning sun ornament, and bounce/break burst particles
+// (cosmetic, no gameplay effect) for motion-sensitive players.
+;let reducedMotion=false;try{const motionQuery=window.matchMedia("(prefers-reduced-motion: reduce)")
+;reducedMotion=motionQuery.matches
+;motionQuery.addEventListener("change",(event)=>{reducedMotion=event.matches})}catch(_){}
+;const feedback={};function resetFeedback(){
 feedback.lastEvent=null;feedback.lastEventAge=null;feedback.eventCount=0;feedback.startCount=0
 ;feedback.steerCount=0;feedback.bounceCount=0;feedback.doubleJumpCount=0;feedback.powerupCount=0
 ;feedback.hitCount=0;feedback.shieldSaveCount=0;feedback.gameOverCount=0;feedback.lastDirection=0
@@ -649,7 +656,7 @@ function drawEnemies(g){for(const e of state.enemies){g.save();g.translate(e.x+e
 ;g.lineTo(-10,-14);g.moveTo(6,-8);g.lineTo(10,-14);g.strokeStyle=g.strokeStyle;g.lineWidth=2
 ;g.stroke();g.fillStyle="rgba(0,0,0,.55)";roundRect(g,-e.w/2,e.h/2-4,8,4,2);g.fill()
 ;roundRect(g,e.w/2-8,e.h/2-4,8,4,2);g.fill();g.restore()}}
-function addParticles(x,y,count=10,tone="bounce"){for(let i=0;i<count;i++){let vx=rand(-120,120)
+function addParticles(x,y,count=10,tone="bounce"){if(reducedMotion)return;for(let i=0;i<count;i++){let vx=rand(-120,120)
 ;let vy=rand(-260,-20);let rmin=1.5,rmax=3.5;let col="#93c5fd";if(tone==="break"){col="#fb7185"
 }else if(tone==="spring"){col="#5eead4"}else if(tone==="vanish"){col="#a7d8ff";rmin=1.3;rmax=2.8
 }else if(tone==="breakChip"){col=Math.random()<.5?"#ef4444":"#b91c1c";vx=rand(-140,140)
@@ -765,7 +772,7 @@ return smoothstep(.9,.98,u)}function drawSkyBase(g,u){const night=skyNightFactor
 ;skyDay.addColorStop(1,"#bed6ea");g.fillStyle=skyDay;g.fillRect(0,0,W,H);if(night>0){g.save()
 ;g.globalAlpha=.65*night;g.fillStyle="#0b1530";g.fillRect(0,0,W,H);g.restore()
 ;const t=performance.now()*.001;g.save();g.fillStyle="#dbeafe";for(const s of stars){
-const tw=.65+.35*Math.sin(t*1.7+s.twinkle);g.globalAlpha=(.25+.75*night)*tw;g.beginPath()
+const tw=reducedMotion?1:.65+.35*Math.sin(t*1.7+s.twinkle);g.globalAlpha=(.25+.75*night)*tw;g.beginPath()
 ;g.arc(s.x,s.y,s.r,0,Math.PI*2);g.fill()}g.restore()}return night}function drawSun(g,u,night=0){
 const coreR=Math.max(28,Math.min(58,H*.05));const M=Math.max(40,coreR*1.4)
 ;const APEX_HEIGHT_FRAC=.18;const start={x:-M,y:H+M};const apex={x:.5*W,y:H*APEX_HEIGHT_FRAC}
@@ -780,7 +787,7 @@ const coreR=Math.max(28,Math.min(58,H*.05));const M=Math.max(40,coreR*1.4)
 ;glow.addColorStop(.45,`rgba(255,240,190,${.28*glowAlpha})`)
 ;glow.addColorStop(1,"rgba(255,240,190,0)");g.fillStyle=glow;g.beginPath()
 ;g.arc(pos.x,pos.y,coronaR,0,Math.PI*2);g.fill();g.save();g.translate(pos.x,pos.y);const rays=20
-;const spin=u*Math.PI*2;for(let i=0;i<rays;i++){const a=spin+i/rays*Math.PI*2
+;const spin=reducedMotion?0:u*Math.PI*2;for(let i=0;i<rays;i++){const a=spin+i/rays*Math.PI*2
 ;const len=coreR*(1.2+.6*Math.sin(i*1.3));g.beginPath()
 ;g.moveTo(Math.cos(a)*(coreR*.95),Math.sin(a)*(coreR*.95))
 ;g.lineTo(Math.cos(a)*(coreR+len),Math.sin(a)*(coreR+len))
@@ -850,7 +857,8 @@ storm.flashT=STORM_FLASH_DUR;storm.bolts=buildLightningBolts();storm.hasFirstFla
 ;for(let i=0;i<count;i++){const x0=rand(40,W-40);let x=x0,y=-20;const n=Math.floor(rand(6,11))
 ;const segs=[];for(let s=0;s<n;s++){const nx=clamp(x+rand(-28,28),20,W-20)
 ;const ny=y+rand(H*.08,H*.18);segs.push({x:x,y:y,nx:nx,ny:ny});x=nx;y=ny;if(y>H*.82)break}
-bolts.push(segs)}return bolts}function drawLightning(g){if(!storm.active||storm.flashT<=0)return
+bolts.push(segs)}return bolts}function drawLightning(g){if(reducedMotion)return
+;if(!storm.active||storm.flashT<=0)return
 ;const k=storm.flashT/STORM_FLASH_DUR;g.save();g.globalAlpha=.65*k;g.fillStyle="#e6f2ff"
 ;g.fillRect(0,0,W,H);g.restore();g.save();g.globalAlpha=.35*k;g.strokeStyle="#ffffff"
 ;for(const segs of storm.bolts){for(const s of segs){g.beginPath();g.moveTo(s.x,s.y)
@@ -892,7 +900,7 @@ const a=i/lights*Math.PI*2;const lx=Math.cos(a)*16;const ly=Math.sin(a)*3
 g.restore()}function drawSpaceBackground(g){g.setTransform(BG_DPR,0,0,BG_DPR,0,0)
 ;g.clearRect(0,0,W,H);const sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#04070c")
 ;sky.addColorStop(1,"#0a0f1a");g.fillStyle=sky;g.fillRect(0,0,W,H);const t=performance.now()*.001
-;g.save();for(const s of stars){const tw=.75+.45*Math.sin(t*1.8+s.twinkle);g.globalAlpha=.35*tw
+;g.save();for(const s of stars){const tw=reducedMotion?1:.75+.45*Math.sin(t*1.8+s.twinkle);g.globalAlpha=.35*tw
 ;g.fillStyle="#e6f1ff";g.beginPath();g.arc(s.x,s.y,s.r*1.1,0,Math.PI*2);g.fill()}g.restore()
 ;for(const p of space.planets){g.save();g.globalAlpha=p.a??1;drawPlanet(g,p);g.restore()}
 for(const s of space.shooters){drawShootingStarG(g,s)}for(const u of space.ufos){drawUFOG(g,u)}}
@@ -1096,6 +1104,7 @@ x:Math.round(platform.x),y:Math.round(platform.y),w:Math.round(platform.w),
 type:platform.type||"normal",moving:!!platform.moving,alive:platform.alive!==false}))):[]
 ;return JSON.stringify({
 state:!state?"menu":running?paused?"paused":"playing":gameOverVisible||state.player?.alive===false?"game-over":"menu",
+reducedMotion:reducedMotion,
 running:running,paused:paused,gameOver:!!gameOverVisible,score:Math.round(state?.score||0),
 best:best,coordinateSystem:"canvas pixels, origin top-left, x right, y down",viewport:{
 width:Math.round(W),height:Math.round(H)},player:P?{x:Math.round(P.x),y:Math.round(P.y),

@@ -216,6 +216,15 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   let audio = null;
   let lastFrame = 0;
   let simTime = 0;
+  // Honor prefers-reduced-motion: gate decorative parallax starfield, screen
+  // shake, and full-screen pickup flash (cosmetic, no gameplay effect) for
+  // motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
 
   function setFeedback(text, event = "status", duration = 1.6) {
     state.feedback = text;
@@ -559,8 +568,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     }
   }
   function draw() {
-    const shakeX = state.shake ? Math.sin(simTime * 64) * state.shake * 12 : 0;
-    const shakeY = state.shake ? Math.cos(simTime * 53) * state.shake * 8 : 0;
+    const shakeX = state.shake && !reducedMotion ? Math.sin(simTime * 64) * state.shake * 12 : 0;
+    const shakeY = state.shake && !reducedMotion ? Math.cos(simTime * 53) * state.shake * 8 : 0;
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     ctx.translate(shakeX, shakeY);
@@ -571,7 +580,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     ctx.fillRect(-20, -20, W + 40, H + 40);
     ctx.fillStyle = "rgba(231,249,255,.74)";
     for (const star of stars) {
-      const y = (star.y + state.distance * .022) % H;
+      const parallax = reducedMotion ? 0 : state.distance * .022;
+      const y = (star.y + parallax) % H;
       ctx.globalAlpha = .35 + (star.r % 1) * .45;
       ctx.beginPath();
       ctx.arc(star.x, y, star.r, 0, Math.PI * 2);
@@ -605,7 +615,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     ctx.beginPath();
     ctx.roundRect(256, 22, 448 * progress, 10, 5);
     ctx.fill();
-    if (state.flash > 0) {
+    if (state.flash > 0 && !reducedMotion) {
       ctx.fillStyle = "rgba(250,204,21," + (state.flash * .42) + ")";
       ctx.fillRect(0, 0, W, H);
     }
@@ -680,7 +690,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       finishTime: state.finishTime == null ? null : round(state.finishTime),
       activeEvents: active,
       nextEvent: next ? { id: next.id, type: next.type, lane: next.lane, distanceAhead: round(next.distance - state.distance) } : null,
-      soundEnabled: state.sound
+      soundEnabled: state.sound,
+      reducedMotion
     };
   }
   function renderText() {

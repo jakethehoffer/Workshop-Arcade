@@ -404,6 +404,7 @@ function recordActionFeedback(type, details = {}) {
   }
 }
 function drawParticles() {
+  if (reducedMotion) return; // decorative burst particles only
   for (const p of particles) {
     const a = clamp(p.life / p.maxLife, 0, 1);
     ctx.globalAlpha = a;
@@ -413,31 +414,36 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 function drawFeedback() {
-  for (const r of pickupRings) {
-    const a = clamp(r.life / r.maxLife, 0, 1);
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.strokeStyle = r.color;
-    ctx.lineWidth = 3;
-    ctx.shadowColor = r.color;
-    ctx.shadowBlur = 18;
-    ctx.beginPath();
-    ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-  for (const p of scorePops) {
-    const a = clamp(p.life / p.maxLife, 0, 1);
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.font = `bold ${18 * (0.8 + 0.25 * a)}px system-ui, -apple-system, Segoe UI, Arial`;
-    ctx.textAlign = "center";
-    ctx.strokeStyle = "rgba(0,0,0,0.72)";
-    ctx.lineWidth = 4;
-    ctx.strokeText(p.text, p.x, p.y);
-    ctx.fillStyle = p.color;
-    ctx.fillText(p.text, p.x, p.y);
-    ctx.restore();
+  // Expanding pickup rings and floating score pops are decorative bursts; skip
+  // them under reduced motion. The informational lane-change arrow and the
+  // JUMP/SLIDE/DODGE text cues below are gameplay readouts and stay on.
+  if (!reducedMotion) {
+    for (const r of pickupRings) {
+      const a = clamp(r.life / r.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = r.color;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = r.color;
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    for (const p of scorePops) {
+      const a = clamp(p.life / p.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.font = `bold ${18 * (0.8 + 0.25 * a)}px system-ui, -apple-system, Segoe UI, Arial`;
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "rgba(0,0,0,0.72)";
+      ctx.lineWidth = 4;
+      ctx.strokeText(p.text, p.x, p.y);
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
   }
   if (state === "playing" && feedback.lastEventAge !== null && feedback.lastEventAge <= 34) {
     const a = clamp(1 - feedback.lastEventAge / 34, 0, 1);
@@ -507,7 +513,7 @@ function drawFeedback() {
     ctx.fillText("CLEAN DODGE", x, y + 5);
     ctx.restore();
   }
-  if (feedback.crashFlash > 0) {
+  if (!reducedMotion && feedback.crashFlash > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(0.55, feedback.crashFlash * 0.55);
     ctx.fillStyle = "#fb3f5c";
@@ -757,7 +763,10 @@ function drawScene(dt60, speed) {
   }
 
   // === SPEED LINES (during gameplay) ===
-  if (state === "playing") {
+  // Decorative motion-streak flourish for a sense of speed; the track/obstacle
+  // scroll above is the real gameplay motion and is never gated. Skip the
+  // streaks under reduced motion.
+  if (state === "playing" && !reducedMotion) {
     const intensity = speedIntensity;
     ctx.strokeStyle = `rgba(150,210,255,${0.08 + intensity * 0.22})`;
     ctx.lineWidth = 1;
@@ -1280,6 +1289,16 @@ function stopMusic() { if (mus.timer) clearInterval(mus.timer); mus.timer = null
 
 /* ===== GAME STATE ===== */
 let state = "title", lastTime = null, gameSpeed = 3, distance = 0, coins = 0, newBest = false;
+// Honor prefers-reduced-motion: gate decorative screen shake, burst particles,
+// pickup/score-pop rings, and the speed-line flourish (cosmetic, no gameplay
+// effect) for motion-sensitive players. The track/obstacle/coin scroll and all
+// player-controlled motion stay identical so difficulty never changes.
+let reducedMotion = false;
+try {
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  reducedMotion = motionQuery.matches;
+  motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+} catch (_) {}
 const HS_KEY = "metrodash_highscore";
 let highScore = 0;
 try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
@@ -1867,6 +1886,7 @@ function renderGameToText() {
   return JSON.stringify({
     game: "Metro Dash",
     coordinateSystem: "runner lanes -1..1 and depth z 0 near to 1 far",
+    reducedMotion,
     state,
     distance: Math.floor(distance),
     coins,
@@ -2013,9 +2033,9 @@ function loop(now) {
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  // Screen shake
+  // Screen shake (decorative camera kick — suppressed under reduced motion)
   updateShake(dt60);
-  if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
+  if (!reducedMotion && (shakeX || shakeY)) ctx.translate(shakeX, shakeY);
 
   const spd = state === "playing" ? gameSpeed : 2;
 

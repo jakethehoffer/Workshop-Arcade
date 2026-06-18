@@ -547,6 +547,16 @@
       }
     };
 
+    // Honor prefers-reduced-motion: gate decorative rotating spokes, pulsing
+    // rings, scrolling grid, and full-screen flashes (cosmetic, no gameplay
+    // effect) for motion-sensitive players.
+    let reducedMotion = false;
+    try {
+      const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      reducedMotion = motionQuery.matches;
+      motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+    } catch (_) {}
+
     // Load persisted high score
     try {
       { const storedHigh = Number(localStorage.getItem(HS_KEY)); state.high = Number.isFinite(storedHigh) && storedHigh >= 0 ? Math.floor(storedHigh) : 0; }
@@ -991,36 +1001,44 @@
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, state.vw, state.vh);
 
-      const ringCount = 5;
-      ctx.save();
-      ctx.translate(cx, cy);
-      for (let i = ringCount; i >= 1; i--) {
-        const r = Math.min(state.vw, state.vh) * (0.13 + i * 0.09);
-        ctx.globalAlpha = 0.05 + i * 0.018;
-        ctx.strokeStyle = i % 2 ? '#22d3ee' : '#8b5cf6';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, r + Math.sin(state.time * 0.9 + i) * 3, 0, Math.PI * 2);
-        ctx.stroke();
+      // Decorative pulsing rings + rotating spokes: cosmetic only, gated for
+      // prefers-reduced-motion.
+      if (!reducedMotion) {
+        const ringCount = 5;
+        ctx.save();
+        ctx.translate(cx, cy);
+        for (let i = ringCount; i >= 1; i--) {
+          const r = Math.min(state.vw, state.vh) * (0.13 + i * 0.09);
+          ctx.globalAlpha = 0.05 + i * 0.018;
+          ctx.strokeStyle = i % 2 ? '#22d3ee' : '#8b5cf6';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, r + Math.sin(state.time * 0.9 + i) * 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.rotate(state.time * 0.04);
+        for (let i = 0; i < 16; i++) {
+          const a = i * Math.PI / 8;
+          ctx.globalAlpha = i % 2 ? 0.08 : 0.04;
+          ctx.strokeStyle = '#7dd3fc';
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * 34, Math.sin(a) * 34);
+          ctx.lineTo(Math.cos(a) * Math.max(state.vw, state.vh), Math.sin(a) * Math.max(state.vw, state.vh));
+          ctx.stroke();
+        }
+        ctx.restore();
       }
-      ctx.rotate(state.time * 0.04);
-      for (let i = 0; i < 16; i++) {
-        const a = i * Math.PI / 8;
-        ctx.globalAlpha = i % 2 ? 0.08 : 0.04;
-        ctx.strokeStyle = '#7dd3fc';
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a) * 34, Math.sin(a) * 34);
-        ctx.lineTo(Math.cos(a) * Math.max(state.vw, state.vh), Math.sin(a) * Math.max(state.vw, state.vh));
-        ctx.stroke();
-      }
-      ctx.restore();
 
+      // Scrolling grid: animate the offset only when motion is allowed; keep a
+      // static grid under reduced motion (idle + play).
       const s = 42;
+      const gridX = reducedMotion ? 0 : (state.time*10)%s;
+      const gridY = reducedMotion ? 0 : (state.time*8)%s;
       ctx.globalAlpha = 0.08;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let x = (state.time*10)%s; x <= state.vw; x += s) { ctx.moveTo(x, 0); ctx.lineTo(x, state.vh); }
-      for (let y = (state.time*8)%s; y <= state.vh; y += s) { ctx.moveTo(0, y); ctx.lineTo(state.vw, y); }
+      for (let x = gridX; x <= state.vw; x += s) { ctx.moveTo(x, 0); ctx.lineTo(x, state.vh); }
+      for (let y = gridY; y <= state.vh; y += s) { ctx.moveTo(0, y); ctx.lineTo(state.vw, y); }
       ctx.strokeStyle = '#7dd3fc';
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -1276,7 +1294,7 @@
       ctx.globalAlpha = 1;
       ctx.clearRect(0,0,state.vw, state.vh);
       let ox = 0, oy = 0;
-      if (state.shake > 0) {
+      if (!reducedMotion && state.shake > 0) {
         ox = (Math.random()*2-1) * 8 * (state.shake/0.3);
         oy = (Math.random()*2-1) * 8 * (state.shake/0.3);
       }
@@ -1296,7 +1314,9 @@
       }
       ctx.restore();
       drawXPBar();
-      if (state.levelFlash > 0) {
+      // Full-screen flashes are decorative and a photosensitive-seizure risk:
+      // suppress entirely under prefers-reduced-motion.
+      if (!reducedMotion && state.levelFlash > 0) {
         const t = Math.max(0, state.levelFlash / 0.42);
         const a = 0.42 * t;
         ctx.globalAlpha = a;
@@ -1304,7 +1324,7 @@
         ctx.fillRect(0,0,state.vw,state.vh);
         ctx.globalAlpha = 1;
       }
-      if (state.nukeFlash > 0) {
+      if (!reducedMotion && state.nukeFlash > 0) {
         const t = Math.max(0, state.nukeFlash / 0.42);
         const a = 0.32 * t;
         ctx.globalAlpha = a;
@@ -1312,7 +1332,7 @@
         ctx.fillRect(0,0,state.vw,state.vh);
         ctx.globalAlpha = 1;
       }
-      if (state.feedback.hitFlash > 0) {
+      if (!reducedMotion && state.feedback.hitFlash > 0) {
         const a = Math.min(0.34, state.feedback.hitFlash * 0.34);
         ctx.globalAlpha = a;
         ctx.fillStyle = '#fb7185';
@@ -1612,6 +1632,7 @@
       pendingOver: Math.round(state.pendingOver * 100) / 100,
       pendingGameOver: state.pendingOver > 0,
       highScore: state.high,
+      reducedMotion,
       audio: {
         soundEnabled: audio.soundEnabled,
         muted: audio.muted,
