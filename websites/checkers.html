@@ -873,6 +873,8 @@ function showGameOver(winnerText){
   locked = true;                  // freeze board interactions
   elGoWinner.textContent = winnerText;
   elGameOver.classList.add('show');
+  // a11y (A1): move focus to the primary control (Play again) when shown.
+  setTimeout(()=> (focusableWithin(elGameOver)[0] || elGoPlay)?.focus({preventScroll:true}), 0);
   announceStatus(winnerText === 'Draw' ? 'Game over. Draw.' : `Game over. ${winnerText} wins.`);
   // Win/loss jingle in singleplayer; local two-player treats either winner as a human win.
   if(winnerText === 'Draw'){
@@ -1139,6 +1141,12 @@ function onBoardKeyDown(e){
     return;
   }
   if(e.key === 'Escape'){
+    // When a modal dialog is open, Escape belongs to the dialog (close it),
+    // not to the board's cancel-selection. The document-level handler closes
+    // the dialog; just don't fire board cancel here.
+    if((elHelp && elHelp.classList.contains('show')) || (elGameOver && elGameOver.classList.contains('show'))){
+      return;
+    }
     e.preventDefault();
     cancelKeyboardSelection(e.key);
   }
@@ -1311,18 +1319,56 @@ function updateTurnUI(){
   elTurnDot.className = 'dot ' + (turn===RED ? 'red' : 'black');
   updateReadableStatus();
 }
+// === Modal focus management (a11y: A1) ===
+// Shared selector + helpers used by the Help and Game Over dialogs so that an
+// open overlay keeps keyboard focus inside itself (focus-in, tab-trap, restore).
+const FOCUSABLE_SELECTOR = 'button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+
+function focusableWithin(container){
+  if(!container) return [];
+  return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR))
+    .filter(el => el.offsetParent !== null); // visible only
+}
+
+// Returns true if it handled a Tab/Shift+Tab within the open overlay (wrap).
+function trapTabWithin(container, e){
+  if(e.key !== 'Tab') return false;
+  const items = focusableWithin(container);
+  if(!items.length){ e.preventDefault(); return true; }
+  const first = items[0];
+  const last = items[items.length - 1];
+  const active = document.activeElement;
+  if(e.shiftKey){
+    if(active === first || !container.contains(active)){
+      e.preventDefault();
+      last.focus({preventScroll:true});
+      return true;
+    }
+  } else {
+    if(active === last || !container.contains(active)){
+      e.preventDefault();
+      first.focus({preventScroll:true});
+      return true;
+    }
+  }
+  return false;
+}
+
 // === Help modal helpers (must exist before listeners) ===
 let helpWasLocked = null;
+let helpReturnFocus = null;             // element to restore focus to on close
 
 function openHelp(){
   if (!elHelp) return;
   if (elHelp.classList.contains('show')) return;
+  // Save the trigger so focus can return there when the dialog closes.
+  helpReturnFocus = (document.activeElement instanceof HTMLElement) ? document.activeElement : elHelpBtn;
   helpWasLocked = locked;
   locked = true;                         // pause board interactions
   elHelp.classList.add('show');
   Sound.click?.();
-  // focus the Close button for a11y
-  setTimeout(()=> elHelpClose?.focus({preventScroll:true}), 0);
+  // focus the first focusable control (Close button) for a11y
+  setTimeout(()=> (focusableWithin(elHelp)[0] || elHelpClose)?.focus({preventScroll:true}), 0);
 }
 
 function closeHelp(){
@@ -1330,6 +1376,10 @@ function closeHelp(){
   elHelp.classList.remove('show');
   if (helpWasLocked !== null) locked = helpWasLocked;
   helpWasLocked = null;
+  // Restore focus to whatever opened the dialog (usually the Help button).
+  const target = helpReturnFocus;
+  helpReturnFocus = null;
+  if (target && document.contains(target)) target.focus({preventScroll:true});
 }
 
 
@@ -2233,12 +2283,15 @@ document.addEventListener('keydown', (e)=>{
   const isOpen = elHelp.classList.contains('show');
   const gameOverOpen = elGameOver.classList.contains('show');
 
-  // Close when open: Esc, H
+  // Close when open: Esc, H (route through closeHelp so focus restores).
   if (isOpen && (key === 'Escape' || key === 'h' || key === 'H')) {
     e.preventDefault();
     closeHelp();
     return;
   }
+
+  // Game Over dialog: Escape is inert (the focused Play Again button is the only
+  // action) so pressing Escape never surprises the player by restarting the game.
 
   if (!isOpen && !gameOverOpen && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && (key === 'f' || key === 'F')) {
     e.preventDefault();
@@ -2252,6 +2305,14 @@ document.addEventListener('keydown', (e)=>{
     openHelp();
   }
 });
+
+// a11y (A1): trap Tab / Shift+Tab inside whichever dialog is open (wrap).
+// Capture phase so it runs before the board's own keydown handler.
+document.addEventListener('keydown', (e)=>{
+  if (e.key !== 'Tab') return;
+  if (elHelp && elHelp.classList.contains('show')) { trapTabWithin(elHelp, e); return; }
+  if (elGameOver && elGameOver.classList.contains('show')) { trapTabWithin(elGameOver, e); return; }
+}, true);
 
 
 elDepth.addEventListener('change', e=>{

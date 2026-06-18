@@ -559,6 +559,9 @@ function showOverlay(title){
   goEl.classList.add('show');
   announceStatus(`Game over. ${title}.`);
   playSound('game-over');
+  // Move focus into the dialog (the primary "Play Again" control). The game has
+  // ended, so there is no meaningful trigger to restore focus to on close.
+  if (goRematch && typeof goRematch.focus === 'function') goRematch.focus();
 }
 function hideOverlay(){ goEl.classList.remove('show'); }
 
@@ -673,17 +676,58 @@ const helpOverlay = document.getElementById('helpOverlay');
 const helpClose = document.getElementById('helpClose');
 const helpCard = helpOverlay ? helpOverlay.querySelector('.go-card') : null;
 let helpOpen = false;
+let helpReturnFocus = null;
 
-function openHelp(){ 
+// ---------- Modal focus management (a11y "A1") ----------
+const FOCUSABLE_SELECTOR = 'button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+
+function getFocusable(overlay){
+  if(!overlay) return [];
+  return Array.from(overlay.querySelectorAll(FOCUSABLE_SELECTOR))
+    .filter(el => el.offsetParent !== null);
+}
+
+// Trap Tab / Shift+Tab inside the given open overlay. Returns true when handled.
+function trapTabKey(e, overlay){
+  if(e.key !== 'Tab') return false;
+  const focusable = getFocusable(overlay);
+  if(focusable.length === 0){ e.preventDefault(); return true; }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+  if(e.shiftKey){
+    if(active === first || !overlay.contains(active)){
+      e.preventDefault();
+      last.focus();
+      return true;
+    }
+  } else if(active === last || !overlay.contains(active)){
+    e.preventDefault();
+    first.focus();
+    return true;
+  }
+  return false;
+}
+
+function openHelp(){
   if(helpOverlay) {
+    helpReturnFocus = document.activeElement;
     helpOpen = true;
-    helpOverlay.classList.add('show'); 
+    helpOverlay.classList.add('show');
+    // Focus the first control inside the dialog (the Close button).
+    const focusable = getFocusable(helpOverlay);
+    (focusable[0] || helpOverlay).focus();
   }
 }
-function closeHelp(){ 
+function closeHelp(){
   if(helpOverlay) {
     helpOpen = false;
-    helpOverlay.classList.remove('show'); 
+    helpOverlay.classList.remove('show');
+    // Restore focus to whatever opened the dialog (e.g. the Help button).
+    if(helpReturnFocus && typeof helpReturnFocus.focus === 'function'){
+      helpReturnFocus.focus();
+    }
+    helpReturnFocus = null;
   }
 }
 
@@ -700,6 +744,11 @@ if(helpCard) {
   });
 }
 window.addEventListener('keydown', (e) => {
+  // Trap Tab within the Help dialog while it is open.
+  if(helpOverlay && helpOverlay.classList.contains('show') && e.key === 'Tab') {
+    trapTabKey(e, helpOverlay);
+    return;
+  }
   if(e.code === 'KeyH' && !e.repeat) {
     if(helpOverlay && helpOverlay.classList.contains('show')) closeHelp();
     else openHelp();
@@ -721,6 +770,8 @@ document.addEventListener('fullscreenchange', () => {
 // Keyboard shortcuts when overlay is open
 window.addEventListener('keydown', (e)=>{
   if(!goEl.classList.contains('show')) return;
+  // Trap Tab within the game-over dialog while it is open.
+  if(e.key === 'Tab'){ trapTabKey(e, goEl); return; }
   if(e.key === 'Enter'){ goRematch.click(); }
   if(e.key === 'Escape'){ hideOverlay(); }
 });

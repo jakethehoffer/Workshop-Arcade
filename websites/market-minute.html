@@ -576,6 +576,19 @@ button{font:inherit}
     els.finalScore.textContent = String(state.score);
     els.finalText.textContent = "Cash " + money(state.cash) + " plus marked inventory " + money(portfolioValue()) + ".";
     els.overlay.classList.add("show");
+    if (els.modalRestart && els.modalRestart.focus) {
+      try { els.modalRestart.focus(); } catch (_) {}
+    }
+  }
+  const OVERLAY_FOCUSABLE = 'button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+  function overlayVisible() { return els.overlay.classList.contains("show"); }
+  function trapOverlayTab(event) {
+    if (event.key !== "Tab") return;
+    const f = [...els.overlay.querySelectorAll(OVERLAY_FOCUSABLE)].filter((el) => el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   }
   function endTurn() {
     if (state.runComplete) return;
@@ -829,6 +842,12 @@ button{font:inherit}
   document.addEventListener("fullscreenchange", render);
   document.addEventListener("keydown", (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (overlayVisible()) {
+      if (event.key === "Tab") { trapOverlayTab(event); return; }
+      if (event.key.toLowerCase() === "enter" || event.key === " ") return;
+      if (event.key.toLowerCase() === "r") { restart(); event.preventDefault(); return; }
+      return;
+    }
     if (event.target instanceof HTMLElement && event.target.matches("button,input,select,textarea,[role='button']")) return;
     const key = event.key.toLowerCase();
     if (/^[1-4]$/.test(key)) {

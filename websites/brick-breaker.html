@@ -890,14 +890,37 @@ function pulseTactile(kind){
   try { navigator.vibrate(patterns[kind] || 8); } catch {}
 }
 
+// --- Modal focus management for the start/how-to dialog (#msgStart). (Audit A1.) ---
+const FOCUSABLE = 'button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+let __startReturn = null;
+function startDialogVisible(){ return !cardStart.hidden; }
+function focusStartDialog(){
+  const f = cardStart.querySelector(FOCUSABLE);
+  if (f && f.focus){ try { f.focus(); } catch (_) {} }
+}
+function restoreStartFocus(){
+  const t = __startReturn; __startReturn = null;
+  if (t && t.focus){ try { t.focus(); } catch (_) {} }
+}
+function trapStartTab(e){
+  if (e.key !== 'Tab') return;
+  const f = [...cardStart.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+}
+
 function openHelp(){
   if (!cardStart.hidden) return;
+  __startReturn = document.activeElement; // remember trigger to restore on close
   resumeOnClose = G.running && cardOver.hidden; // remember if we should resume
   G.running = false;
   syncPauseButton();
   cardStart.hidden = false;
   if (overlayEl) overlayEl.style.pointerEvents = 'auto';
   renderLegendIcons();
+  focusStartDialog();
 }
 
 function closeHelp(){
@@ -909,6 +932,7 @@ function closeHelp(){
   }
   syncPauseButton();
   resumeOnClose = false;
+  restoreStartFocus();
 }
 
 function toggleHelp(){ cardStart.hidden ? openHelp() : closeHelp(); }
@@ -1297,6 +1321,17 @@ function restartGame(){
   addEventListener('keydown', unlockAudioOnce, {once: true, capture: true});
 
   addEventListener('keydown', (e)=>{
+    // While the start/how-to dialog is visible, trap Tab and let Escape close it.
+    // The board is paused behind the modal, so gameplay keys are intentionally ignored here.
+    if (startDialogVisible()){
+      if (e.key === 'Escape'){
+        e.preventDefault();
+        closeHelp();          // hide overlay, restore prior run state + focus the trigger
+        return;
+      }
+      if (e.key === 'Tab'){ trapStartTab(e); return; }
+      return;
+    }
     if (e.repeat) return;
     if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (shouldGuardFullscreenShortcut(e.target || document.activeElement)) return;
@@ -1352,6 +1387,7 @@ if (startGameBtn) startGameBtn.onclick = () => launchAllBalls();
 
   function launchAllBalls(){
     if (!G.waitingLaunch) return;
+    const dismissingOverlay = !cardStart.hidden; // launched from the start/how-to dialog itself
     G.waitingLaunch = false;
       const stickyActive = G.effects.some(e => e.type === 'STICKY');
 for (const b of G.balls){
@@ -1368,6 +1404,16 @@ for (const b of G.balls){
   SFX.start();
   recordLaunchFeedback();
   cardStart.hidden = true;
+  if (dismissingOverlay){
+    // Launched straight from the start/how-to dialog (it may have been re-opened
+    // as Help, which paused the run): close it cleanly and commit to play.
+    if (overlayEl) overlayEl.style.pointerEvents = 'none';
+    resumeOnClose = false;
+    G.running = true;
+    syncPauseButton();
+    __startReturn = null;          // dismissed to play; move focus to the board
+    if (canvas && canvas.focus){ try { canvas.focus(); } catch (_) {} }
+  }
   announce(`Launch. Level ${G.level}, ${G.bricks.filter(br => br.hp > 0).length} bricks remain.`);
   }
 
@@ -3143,6 +3189,8 @@ for (const e of G.effects){
   resize();          // ensure canvas matches the full window now
   restartGame();
   renderLegendIcons();
+  // The start/how-to dialog is shown at load: move focus into it. (Audit A1.)
+  if (startDialogVisible()) focusStartDialog();
 })();
 </script>
 </body>

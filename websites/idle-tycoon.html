@@ -173,11 +173,13 @@ place-items: center;
 padding: 24px;
 background: linear-gradient(180deg, rgba(9, 14, 13, 0.95), rgba(9, 14, 13, 0.78));
 z-index: 20;
-transition: opacity 0.2s ease;
+transition: opacity 0.2s ease, visibility 0s;
 }
 .main-menu.hidden {
 opacity: 0;
 pointer-events: none;
+visibility: hidden;
+transition: opacity 0.2s ease, visibility 0s 0.2s;
 }
 .menu-card {
 width: min(960px, 100%);
@@ -356,12 +358,15 @@ padding: 24px;
 background: rgba(7, 12, 11, 0.6);
 opacity: 0;
 pointer-events: none;
-transition: opacity 0.2s ease;
+visibility: hidden;
+transition: opacity 0.2s ease, visibility 0s 0.2s;
 z-index: 19;
 }
 .tutorial-overlay.active {
 opacity: 1;
 pointer-events: auto;
+visibility: visible;
+transition: opacity 0.2s ease, visibility 0s;
 }
 .tutorial-card {
 width: min(720px, 100%);
@@ -1860,11 +1865,11 @@ animation: none;
     <span class="blob b3"></span>
   </div>
 
-  <div class="main-menu" id="mainMenu">
+  <div class="main-menu" id="mainMenu" role="dialog" aria-modal="true" aria-labelledby="menuHeading">
     <div class="menu-card">
       <div class="menu-header">
         <p class="eyebrow">Arcade Ventures</p>
-        <h1>Idle Tycoon</h1>
+        <h1 id="menuHeading">Idle Tycoon</h1>
         <p class="subtitle menu-subtitle" id="menuSubtitle">Choose a save slot. Empty slots start fresh; filled slots continue from autosave.</p>
       </div>
       <div class="menu-section">
@@ -1886,7 +1891,7 @@ animation: none;
     </div>
   </div>
 
-  <div class="tutorial-overlay" id="tutorialOverlay">
+  <div class="tutorial-overlay" id="tutorialOverlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
     <div class="tutorial-card">
       <span class="tutorial-step" id="tutorialStep">Step 1 of 9</span>
       <h3 id="tutorialTitle">Welcome</h3>
@@ -2664,11 +2669,12 @@ function scheduleSwell(time,intensity){if(!audioCtx||!musicGain||!noiseBuffer)re
 ;filter.frequency.setValueAtTime(900+intensity*200,time)
 ;shapeGain(gainNode,time,.03+intensity*.02,.3,1);source.connect(filter);filter.connect(gainNode)
 ;connectToBus(gainNode,musicGain,randRange(-.3,.3),time);source.start(time);source.stop(time+1.4)}
-function startTutorial(){if(!tutorial.overlay)return;tutorialIndex=0
-;document.body.classList.add("tutorial-open");tutorial.overlay.classList.add("active")
-;updateTutorialStep()}function endTutorial(){clearTutorialTarget()
+let tutorialReturnFocus=null;function startTutorial(){if(!tutorial.overlay)return;tutorialIndex=0
+;tutorialReturnFocus=document.activeElement;document.body.classList.add("tutorial-open");tutorial.overlay.classList.add("active")
+;updateTutorialStep();focusFirstInModal(tutorial.overlay)}function endTutorial(){clearTutorialTarget()
 ;document.body.classList.remove("tutorial-open")
-;if(tutorial.overlay)tutorial.overlay.classList.remove("active")}function updateTutorialStep(){
+;if(tutorial.overlay)tutorial.overlay.classList.remove("active")
+;const target=tutorialReturnFocus;tutorialReturnFocus=null;if(target&&target.focus&&document.contains(target)){try{target.focus()}catch(_){}}}function updateTutorialStep(){
 const step=TUTORIAL_STEPS[tutorialIndex];if(!step){endTutorial();return}
 const total=TUTORIAL_STEPS.length
 ;if(tutorial.step)tutorial.step.textContent=`Step ${tutorialIndex+1} of ${total}`
@@ -2706,12 +2712,27 @@ function scrollToTutorialTarget(target){const rect=target.getBoundingClientRect(
 ;const top=Math.max(0,absoluteTop-offset);window.scrollTo({top:top,behavior:"smooth"})}
 function getTutorialScrollOffset(){const tray=document.getElementById("statTray")
 ;const trayHeight=tray?tray.getBoundingClientRect().height:0;return trayHeight+24}function boot(){
-migrateLegacySave();loadSettings();bindMenuEvents();bindTutorialEvents()
+migrateLegacySave();loadSettings();bindMenuEvents();bindTutorialEvents();bindOverlayKeys()
 ;const pendingSlot=consumePendingSlot();if(pendingSlot){startWithSlot(pendingSlot,{tutorial:false})
-;return}showMainMenu()}function showMainMenu(){if(!menu.container||!menu.slots){startWithSlot(1)
-;return}document.body.classList.add("menu-open");menu.container.classList.remove("hidden")
-;syncMenuMode();syncMenuSettings();renderSaveSlots()}function hideMainMenu(){if(!menu.container)return
-;document.body.classList.remove("menu-open");menu.container.classList.add("hidden")}
+;return}showMainMenu()}const MODAL_FOCUSABLE='button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])'
+;function focusFirstInModal(container){if(!container)return;const focusable=Array.prototype.filter.call(container.querySelectorAll(MODAL_FOCUSABLE),(el=>el.offsetParent!==null))
+;const target=focusable[0]||container;if(target&&target.focus){try{target.focus()}catch(_){}}}
+function trapModalTab(container,event){if(event.key!=="Tab"||!container)return
+;const focusable=Array.prototype.filter.call(container.querySelectorAll(MODAL_FOCUSABLE),(el=>el.offsetParent!==null))
+;if(!focusable.length){event.preventDefault();return}const first=focusable[0];const last=focusable[focusable.length-1]
+;const active=document.activeElement;if(event.shiftKey){if(active===first||!container.contains(active)){event.preventDefault();last.focus()}}else if(active===last||!container.contains(active)){event.preventDefault();first.focus()}}
+function bindOverlayKeys(){window.addEventListener("keydown",(event=>{
+if(document.body.classList.contains("tutorial-open")){
+if(event.key==="Escape"){event.preventDefault();endTutorial();return}
+if(event.key==="Tab")trapModalTab(tutorial.overlay,event);return}
+if(document.body.classList.contains("menu-open")){
+if(event.key==="Escape"){if(gameStarted&&menu.returnBtn&&!menu.returnBtn.hidden){event.preventDefault();playSfx("menu");hideMainMenu()}return}
+if(event.key==="Tab")trapModalTab(menu.container,event)}}),true)}
+let menuReturnFocus=null;function showMainMenu(){if(!menu.container||!menu.slots){startWithSlot(1)
+;return}menuReturnFocus=document.activeElement;document.body.classList.add("menu-open");menu.container.classList.remove("hidden")
+;syncMenuMode();syncMenuSettings();renderSaveSlots();focusFirstInModal(menu.container)}function hideMainMenu(){if(!menu.container)return
+;document.body.classList.remove("menu-open");menu.container.classList.add("hidden")
+;const target=menuReturnFocus;menuReturnFocus=null;if(target&&target.focus&&document.contains(target)){try{target.focus()}catch(_){}}}
 function startWithSlot(slot,options={}){if(gameStarted)return;gameStarted=true
 ;const shouldTutorial=!!options.tutorial||settings.tutorialOnStart;if(!settings.hasPlayed){
 settings.hasPlayed=true;if(settings.tutorialOnStart){settings.tutorialOnStart=false}saveSettings()}

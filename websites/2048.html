@@ -221,9 +221,9 @@
     </div>
 
     <!-- Help Menu -->
-    <div class="help-overlay" id="helpOverlay">
+    <div class="help-overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
       <div class="help-card">
-        <h2>❓ How to Play 2048</h2>
+        <h2 id="helpTitle">❓ How to Play 2048</h2>
         <p><b>Objective:</b> Combine numbered tiles to reach the 2048 tile! Keep playing to see how high you can go.</p>
         
         <div class="controls-grid">
@@ -1213,23 +1213,47 @@ function checkWinOnly(){
     draw();
   });
 
+  // --- Modal focus management (A1) ------------------------------------------
+  // Shared by the Help overlay and the win/game-over card so an open modal
+  // keeps focus inside itself and restores it on close.
+  const FOCUSABLE = 'button:not([disabled]),a[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+  function focusableIn(container){
+    return container ? [...container.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null) : [];
+  }
+  // Trap Tab/Shift+Tab within the given container's visible focusables.
+  function trapTab(event, container){
+    if(event.key !== 'Tab') return;
+    const f = focusableIn(container);
+    if(!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if(event.shiftKey && document.activeElement === first){ event.preventDefault(); last.focus(); }
+    else if(!event.shiftKey && document.activeElement === last){ event.preventDefault(); first.focus(); }
+  }
+
   // Help menu
   const helpBtn = document.getElementById('helpBtn');
   const helpOverlay = document.getElementById('helpOverlay');
   const helpClose = document.getElementById('helpClose');
   const helpCard = helpOverlay ? helpOverlay.querySelector('.help-card') : null;
   let helpOpen = false;
+  let helpReturnFocus = null;
 
-  function openHelp(){ 
+  function openHelp(){
     if(helpOverlay) {
+      helpReturnFocus = document.activeElement;
       helpOpen = true;
-      helpOverlay.classList.add('show'); 
+      helpOverlay.classList.add('show');
+      const f = focusableIn(helpOverlay);
+      if(f.length) f[0].focus();
     }
   }
-  function closeHelp(){ 
+  function closeHelp(){
     if(helpOverlay) {
       helpOpen = false;
-      helpOverlay.classList.remove('show'); 
+      helpOverlay.classList.remove('show');
+      const t = helpReturnFocus;
+      helpReturnFocus = null;
+      if(t && typeof t.focus === 'function'){ try{ t.focus(); }catch(_){} }
     }
   }
 
@@ -1301,8 +1325,15 @@ function checkWinOnly(){
       if(helpOverlay && helpOverlay.classList.contains('show')) closeHelp();
       else openHelp();
     }
-    if(e.code === 'Escape' && helpOverlay && helpOverlay.classList.contains('show')) {
-      closeHelp();
+    // Keep focus inside an open modal. Help takes precedence; otherwise the
+    // win/game-over card (the start overlay shares the same card buttons).
+    if(helpOverlay && helpOverlay.classList.contains('show')){
+      if(e.code === 'Escape'){ closeHelp(); return; }
+      trapTab(e, helpOverlay);
+      return;
+    }
+    if(overlay.classList.contains('show')){
+      trapTab(e, overlay);
     }
   });
   restartBtn.addEventListener('click',()=>{ noteAudioGesture(); newGame({ sound: true }); }); // in-page reset
@@ -1338,7 +1369,8 @@ function checkWinOnly(){
     }
     if(overlay.classList.contains('show') || helpOpen){
       // Block moves while overlay is up; let the focused button handle keys.
-      e.preventDefault();
+      // Leave Tab alone so the modal focus trap can cycle within the dialog.
+      if(k !== 'Tab') e.preventDefault();
       return;
     }
   if(dir){ e.preventDefault(); enqueue(dir); }  // ⬅️ was move(dir)
