@@ -654,6 +654,7 @@ let flipped = false; // false = Red on bottom; true = Black on bottom
 let board = [];
 let history = [];
 let locked = false;
+let gameGen = 0; // bumped on every reset; invalidates any in-flight async move (animation/AI) so it cannot stamp onto a fresh board
 let aiTimer = null; // handle for a pending AI move so a new game can cancel it
 let mustContinueFrom = null;
 let focusSquare = null;
@@ -1864,9 +1865,11 @@ function handleSquareActivation(r, c, source = 'pointer'){
 async function makePlayerMove(move){
   if(locked) return;
   locked = true;
+  const myGen = gameGen;
   pushHistory();
 
   await animateApplyMove(move);
+  if(gameGen !== myGen) return; // board was reset (New Game / mode switch) mid-move
   const end = move.steps[move.steps.length-1];
   focusSquare = {r:end[0], c:end[1]};
 
@@ -1917,6 +1920,7 @@ function endTurn(){
 }
 
 async function aiMove(){
+  const myGen = gameGen;
   // Scale thinking time with selected strength so deeper searches actually finish
   const timeMs = (aiDepth <= 3) ? 800 : (aiDepth <= 5 ? 1400 : 2400);
 
@@ -1931,6 +1935,7 @@ async function aiMove(){
 
   pushHistory();
   await animateApplyMove(mv);
+  if(gameGen !== myGen) return; // board was reset mid-AI-move
   Sound.aiMove();
 
 
@@ -1952,6 +1957,7 @@ async function aiMove(){
 
 /* Smooth, readable per-hop animation that also updates the board state */
 async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
+  const myGen = gameGen;
   let [r,c] = move.from;
   let v = board[r][c];
   const originalPiece = v;
@@ -1976,6 +1982,7 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
     }
     render();
     await sleep(stepMs);
+    if(gameGen !== myGen) return; // board was reset mid-animation; stop mutating it
 
     r = nr; c = nc;
   }
@@ -2177,6 +2184,9 @@ window.advanceTime = function advanceTime(ms = 0){
    Game Lifecycle
    =============== */
 function newGame(soundCue = 'new-game'){
+  // Invalidate any in-flight async move (move animation / AI reply suspended at
+  // an await) so it bails out instead of resuming onto the fresh board.
+  gameGen++;
   // Cancel any AI move scheduled by the previous run so it can't fire on the
   // fresh board (stray history entry / inverted turn on a brand-new game).
   clearTimeout(aiTimer);
