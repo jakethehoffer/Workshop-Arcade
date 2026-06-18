@@ -857,6 +857,8 @@ let moveHistory = [];
 // Animation state
 let currentAnimation = null; // { pieces:[{piece,col0,row0,col1,row1}], start, dur, onDone }
 const ANIM_DURATION = 180; // ms
+let turnEffectGeneration = 0;
+let aiMoveTimer = null;
 const feedback = {
   lastMove: null,
   lastMoveAge: null,
@@ -875,7 +877,20 @@ const feedback = {
 let feedbackFrame = null;
 let feedbackLastTick = 0;
 
+function cancelPendingTurnEffects() {
+  turnEffectGeneration++;
+  if (aiMoveTimer !== null) {
+    clearTimeout(aiMoveTimer);
+    aiMoveTimer = null;
+  }
+  currentAnimation = null;
+  aiThinking = false;
+  flipBtn.disabled = false;
+  undoBtn.disabled = false;
+}
+
 function newGame(options = {}) {
+  cancelPendingTurnEffects();
   // Reset board orientation
   flipped = false;
   hideOverlay();
@@ -1134,11 +1149,12 @@ function drawPieces() {
     }
 
     if (t >= 1) {
-      const cb = currentAnimation.onDone;
+      const finishedAnimation = currentAnimation;
+      const cb = finishedAnimation.onDone;
       currentAnimation = null;
       flipBtn.disabled = false;
       draw();
-      if (cb) cb();
+      if (finishedAnimation.generation === turnEffectGeneration && cb) cb();
     } else {
       requestAnimationFrame(draw);
     }
@@ -1614,11 +1630,8 @@ function onClick(evt) {
 }
 
 newBtn.addEventListener('click', () => {
-  if (!currentAnimation && !aiThinking) {
-    newGame({ announce: true, label: 'Restarted game. White to move.' });
-    playSound('restart');
-  }
-  hideOverlay();
+  newGame({ announce: true, label: 'Restarted game. White to move.' });
+  playSound('restart');
 });
 
 undoBtn.addEventListener('click', () => {
@@ -2241,10 +2254,13 @@ function thinkAndMoveAI() {
   aiThinking = true;
   setStatus('Computer thinking...');
   undoBtn.disabled = true;
+  const generation = turnEffectGeneration;
 
 const depth = Math.max(1, Math.min(6, parseInt(depthEl.value || '3', 10)));
 
-  setTimeout(() => {
+  aiMoveTimer = setTimeout(() => {
+    aiMoveTimer = null;
+    if (generation !== turnEffectGeneration) return;
     stateHistory.push(cloneState(state));
     const mv = computeBestMoveForBlack(depth) || fallbackRandomMove('b');
     if (!mv) return;
@@ -2292,7 +2308,8 @@ function startAnimation(animInfo, onDone) {
     pieces: animInfo.pieces,
     start: performance.now(),
     dur: ANIM_DURATION,
-    onDone
+    onDone,
+    generation: turnEffectGeneration
   };
   requestAnimationFrame(draw);
 }

@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-18 Codex chess restart race fix
+
+- Explored current repo state after the re-audit backlog. Main was clean and synchronized with origin; catalog remains frozen at 100 games. Chose the best next move as a small verified player-facing defect fix rather than a broad new audit or low-priority idle-rAF cleanup.
+- Reproduced the chess restart race in real Chromium before editing: clicking e2-e4 and then `Restart Game` during the 180 ms move animation left `moveCount: 1`, black to move, and `lastMove: e4`, so the restart click was swallowed.
+- Fixed `websites/chess.html` so restart is authoritative: `newGame()` now cancels pending animation state, queued AI timers, and transient disabled controls; move animation callbacks and queued AI callbacks are generation-guarded so stale turn work cannot finish against a freshly reset board.
+- Verification: focused Playwright repro now passes (`moveCount: 0`, white to move, no errors) with screenshot evidence in ignored `test-results/chess-restart-after.png`; develop-web-game client ran against Chess; strict catalog validation passed; focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/chess.html` passed; `npm run test:games -- --slug chess` passed; `npm run capture:games -- --slug chess` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-15 Claude audit remediation — slice 9: best-score NaN guard (arena, flappy-bird, rhythm-circuit)
 
 - Fixed the audit's S7b class: a persisted best read with `Number(localStorage.getItem(KEY) || 0)` becomes `NaN` when the stored value is non-numeric (`||0` only catches null/empty). NaN then propagates into the best/high display and serializes as `null` in `render_game_to_text()`, bricking the feature. It is reachable not just by corrupt storage but by a tampered value injected through the player storage bridge's `#wa-storage=` seed (the bridge I added earlier). rhythm-circuit's `Math.max(0, Number(...))` did not help — `Math.max(0, NaN)` is NaN.
