@@ -1374,7 +1374,7 @@ function checkWinOnly(){
       return;
     }
     if((k==='n'||k==='N') && !helpOpen){ newGame({ sound: true }); return; }
-    if(k==='z' || k==='Z') { if(!over) undo(); return; } // Prevent undo when game over
+    if((k==='z' || k==='Z') && !helpOpen && !overlay.classList.contains('show')) { if(!over) undo(); return; } // Prevent undo when game over or while help/overlay is open
     const dir = DIR_KEYS[k] || DIR_KEYS[String(k).toLowerCase()];
     if(dir && overlayMode === 'start' && overlay.classList.contains('show')){
       e.preventDefault();
