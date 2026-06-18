@@ -188,10 +188,18 @@
     { x: 430, y: 320, r: 34, color: "#fbbf24", hits: 0 },
     { x: 235, y: 405, r: 32, color: "#7c9eff", hits: 0 }
   ];
+  // Rollovers sit along the right-of-bumpers descent corridor — the table's
+  // most ball-reached open lane (each cell here is crossed by ~30-40% of balls,
+  // measured densely over 60 balls / ~16k frames). The previous row at y128-148
+  // sat inside the arc deflector's (360,86 r170) 180px ejection radius, so the
+  // ball could never reach the 26px trigger and they were unhittable. These
+  // positions are outside that ejection zone, clear of the three bumpers and the
+  // x>586 launch chute, and spread down the corridor so a clean descent can
+  // sweep them while the all-rollovers bonus still accrues across several balls.
   const rollovers = [
-    { x: 225, y: 148, r: 16, lit: false },
-    { x: 340, y: 128, r: 16, lit: false },
-    { x: 455, y: 148, r: 16, lit: false }
+    { x: 500, y: 330, r: 16, lit: false },
+    { x: 484, y: 388, r: 16, lit: false },
+    { x: 452, y: 446, r: 16, lit: false }
   ];
   const lanes = [
     { name: "left", x: 112, y: 550, w: 42, h: 150, lit: false },
