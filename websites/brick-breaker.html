@@ -862,6 +862,16 @@ comboTime: 0
   let resumeOnClose = false;
   let lastTactileAt = 0;
 
+  // Honor prefers-reduced-motion: gate the decorative ball trail, bomb pulse,
+  // screen shake, and burst rings (cosmetic, no gameplay effect) for
+  // motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
 function syncPauseButton(){
   if (!btnPause) return;
   const paused = !G.running && cardOver.hidden;
@@ -2160,7 +2170,7 @@ updateBullets(dt);
 
   function render(){
     ctx.clearRect(0,0,css.w,css.h);
-    const shake = G.feedback.screenShake || 0;
+    const shake = reducedMotion ? 0 : (G.feedback.screenShake || 0);
     const ox = shake > 0 ? Math.sin(G.feedback.time * 91) * 9 * shake : 0;
     const oy = shake > 0 ? Math.cos(G.feedback.time * 73) * 7 * shake : 0;
     ctx.save();
@@ -2554,7 +2564,7 @@ function drawPaddle(p){
   function drawBall(b){
     const speed = Math.hypot(b.vx || 0, b.vy || 0);
     const ballColor = b.fire ? '#fb7185' : '#a5b4fc';
-    if (speed > 10){
+    if (speed > 10 && !reducedMotion){
       const nx = (b.vx || 0) / speed;
       const ny = (b.vy || 0) / speed;
       const tail = Math.min(44, 18 + speed * 0.025);
@@ -2604,7 +2614,7 @@ function drawPaddle(p){
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
     ctx.restore();
-    if (b.fire){ // tiny trail
+    if (b.fire && !reducedMotion){ // tiny trail
       ctx.globalAlpha = 0.35; ctx.fillStyle = '#fb7185';
       ctx.fillRect(b.x-1, b.y+3, 2, 6); ctx.globalAlpha = 1;
     }
@@ -2693,6 +2703,7 @@ function updateExplosions(dt){
 }
 
 function drawExplosions(){
+  if (reducedMotion) return; // decorative bomb burst rings + sparks
   for (const FX of G.explosions){
     const { ring, sparks } = FX;
 
@@ -2740,34 +2751,38 @@ function drawExplosions(){
 function drawFeedbackEffects(){
   const f = G.feedback;
 
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
+  // Decorative burst rings + particles from brick hits — gate under reduced
+  // motion. The floating score pops below stay (informational, not motion).
+  if (!reducedMotion) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
 
-  for (const ring of f.rings){
-    const p = Math.min(1, ring.age / Math.max(0.001, ring.ttl));
-    const radius = ring.radius * (0.65 + easeOutCubic(p) * 0.75);
-    ctx.globalAlpha = Math.max(0, 1 - p) * 0.85;
-    ctx.shadowColor = ring.color;
-    ctx.shadowBlur = 14;
-    ctx.strokeStyle = ring.color;
-    ctx.lineWidth = Math.max(1, ring.lineWidth * (1 - p * 0.45));
-    ctx.beginPath();
-    ctx.arc(ring.x, ring.y, radius, 0, Math.PI * 2);
-    ctx.stroke();
+    for (const ring of f.rings){
+      const p = Math.min(1, ring.age / Math.max(0.001, ring.ttl));
+      const radius = ring.radius * (0.65 + easeOutCubic(p) * 0.75);
+      ctx.globalAlpha = Math.max(0, 1 - p) * 0.85;
+      ctx.shadowColor = ring.color;
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = ring.color;
+      ctx.lineWidth = Math.max(1, ring.lineWidth * (1 - p * 0.45));
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (const part of f.particles){
+      const p = Math.min(1, part.age / Math.max(0.001, part.ttl));
+      ctx.globalAlpha = Math.max(0, 1 - p) * 0.9;
+      ctx.shadowColor = part.color;
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = part.color;
+      ctx.beginPath();
+      ctx.arc(part.x, part.y, Math.max(0.5, part.r * (1 - p * 0.55)), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
-
-  for (const part of f.particles){
-    const p = Math.min(1, part.age / Math.max(0.001, part.ttl));
-    ctx.globalAlpha = Math.max(0, 1 - p) * 0.9;
-    ctx.shadowColor = part.color;
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = part.color;
-    ctx.beginPath();
-    ctx.arc(part.x, part.y, Math.max(0.5, part.r * (1 - p * 0.55)), 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
 
   if (f.pops.length){
     ctx.save();
@@ -2801,7 +2816,7 @@ function drawScreenFeedback(){
 
   function drawBrick(br){
     const x=br.x, y=br.y, w=br.w, h=br.h;
-    if (br.type === 'BOMB'){
+    if (br.type === 'BOMB' && !reducedMotion){
       const pulse = 0.45 + Math.sin(G.feedback.time * 8 + x * 0.03) * 0.22;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -3036,6 +3051,7 @@ for (const e of G.effects){
       game: 'Brick Breaker',
       coordinateSystem: 'canvas pixels, origin top-left, x right, y down',
       ready: !!gameReady,
+      reducedMotion: !!reducedMotion,
       running: !!G.running,
       waitingLaunch: !!G.waitingLaunch,
       helpOpen: !cardStart.hidden,

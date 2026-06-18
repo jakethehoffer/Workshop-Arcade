@@ -179,6 +179,17 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
     try { if (s) s.setItem(key, String(value)); } catch (_) {}
   }
   let audio = null;
+  // Honor prefers-reduced-motion: the spotted indicator is normally a pulsing
+  // full-screen red flash (a photosensitive-seizure risk). Under reduced motion
+  // we swap that animated flash for a static red vignette so the "you were
+  // spotted" information is preserved without any strobing. Detection logic,
+  // timers, alert, and difficulty are untouched.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
   function readSound() {
     return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
   }
@@ -483,8 +494,18 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
     ctx.font = "800 12px system-ui,Segoe UI,sans-serif";
     ctx.fillText("Origin top-left. Avoid cones, unlock doors, reach exit.", 22, 51);
     if (state.pulse > 0) {
-      ctx.fillStyle = "rgba(251,113,133," + (.09 + state.pulse * .28) + ")";
-      ctx.fillRect(0, 0, W, H);
+      if (reducedMotion) {
+        // Static red vignette border (no pulsing fill) so the spotted signal
+        // stays visible without the strobing full-screen flash.
+        ctx.save();
+        ctx.strokeStyle = "rgba(251,113,133,.85)";
+        ctx.lineWidth = 14;
+        ctx.strokeRect(7, 7, W - 14, H - 14);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = "rgba(251,113,133," + (.09 + state.pulse * .28) + ")";
+        ctx.fillRect(0, 0, W, H);
+      }
     }
     if (state.mode === "ready") overlay("SHADOW VAULT", "Start, then move tile by tile through the dark.");
     if (state.mode === "lost") overlay("LOCKDOWN", "Alert reached 100. Restart the route.");
@@ -591,6 +612,7 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
       score: state.score,
       best: state.best,
       sound: state.sound,
+      reducedMotion: reducedMotion,
       feedback: state.feedback
     };
   }

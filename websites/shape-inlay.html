@@ -827,6 +827,16 @@
           shake: 0
         };
 
+        // Honor prefers-reduced-motion: gate the decorative screen shake, scroll
+        // streaks, and burst particles (cosmetic, no gameplay effect) for
+        // motion-sensitive players.
+        let reducedMotion = false;
+        try {
+          const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+          reducedMotion = motionQuery.matches;
+          motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+        } catch (_) {}
+
         const SOUND_KEY = "slope-runner.sound.v1";
         const SOUND_COOLDOWNS = {
           steer: 160,
@@ -1508,7 +1518,7 @@
             ctx.fillRect(star.x, star.y, star.size, star.size);
           });
 
-          if (state.running) {
+          if (state.running && !reducedMotion) {
             const streaks = 14 + Math.floor(speedFactor * 18);
             ctx.lineCap = "round";
             for (let i = 0; i < streaks; i += 1) {
@@ -1683,16 +1693,18 @@
             ctx.stroke();
           });
 
-          feedbackParticles.forEach((particle) => {
-            const proj = projectPoint(particle.x, particle.z);
-            const alpha = Math.max(0, 1 - particle.age / particle.ttl);
-            ctx.fillStyle = particle.color === "#ffd46a"
-              ? `rgba(255, 212, 106, ${alpha})`
-              : `rgba(255, 107, 143, ${alpha})`;
-            ctx.beginPath();
-            ctx.arc(proj.x, proj.y, particle.size * proj.scale * (1 + alpha), 0, Math.PI * 2);
-            ctx.fill();
-          });
+          if (!reducedMotion) {
+            feedbackParticles.forEach((particle) => {
+              const proj = projectPoint(particle.x, particle.z);
+              const alpha = Math.max(0, 1 - particle.age / particle.ttl);
+              ctx.fillStyle = particle.color === "#ffd46a"
+                ? `rgba(255, 212, 106, ${alpha})`
+                : `rgba(255, 107, 143, ${alpha})`;
+              ctx.beginPath();
+              ctx.arc(proj.x, proj.y, particle.size * proj.scale * (1 + alpha), 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
 
           feedbackPops.forEach((pop) => {
             const proj = projectPoint(pop.x, pop.z);
@@ -1906,7 +1918,7 @@
 
         function render() {
           ctx.save();
-          if (state.shake > 0) {
+          if (state.shake > 0 && !reducedMotion) {
             const wobble = state.shake;
             ctx.translate(
               (Math.random() - 0.5) * wobble,
@@ -2073,6 +2085,7 @@
             running: state.running,
             paused: state.paused,
             crashed: state.crashed,
+            reducedMotion,
             distance: Math.floor(state.distance),
             best: state.best,
             speed: Math.round(state.speed),

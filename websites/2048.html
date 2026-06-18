@@ -321,6 +321,17 @@
 
   let idCounter = 1;
   const cell = (r,c)=>({r,c});
+
+  // Honor prefers-reduced-motion: gate the decorative per-move ring-expand,
+  // floating score label, and tile pop (cosmetic, no gameplay effect) for
+  // motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   const feedback = {
     lastMoveDirection: null,
     lastEventAt: null,
@@ -1013,6 +1024,9 @@ function checkWinOnly(){
   }
 
   function drawFeedbackOverlay(metrics){
+    // Decorative only: per-move ring-expand, spawn ring, invalid border, and the
+    // drifting "+N"/direction label. Tiles are already drawn; skip under reduce.
+    if(reducedMotion) return;
     const age = feedbackAge();
     const invalidAge = invalidFeedbackAge();
     if((age === null || age > 1.2) && (invalidAge === null || invalidAge > 0.75)) return;
@@ -1164,6 +1178,7 @@ function checkWinOnly(){
 
   // Short pop animation (data-driven: store start time, scale computed in drawTile)
   function animatePop(tile, duration){
+    if(reducedMotion) return; // decorative spawn/merge pop; tile still renders at scale 1
     tile.popStart = performance.now();
     tile.popDuration = duration;
   }
@@ -1439,6 +1454,7 @@ function checkWinOnly(){
       gameOver: !!over,
       keepPlaying: !!keepPlaying,
       moving: !!moving,
+      reducedMotion: !!reducedMotion,
       queuedInputs: inputQ.slice(),
       canMove: Array.isArray(board) ? canAnyMove() : false,
       emptyCells: Array.isArray(board) ? getEmptyCells().length : 0,

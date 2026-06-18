@@ -135,6 +135,17 @@ const MOTION_AWARE_GAMES = [
   'websites/arena.html',
   'websites/slipstream-sprint.html',
   'websites/skyline-sentry.html',
+  'websites/brick-breaker.html',
+  'websites/paddle-pulse.html',
+  'websites/neon-drift.html',
+  'websites/comet-cartel.html',
+  'websites/chrome-convoy.html',
+  'websites/relay-choir.html',
+  'websites/2048.html',
+  'websites/shape-inlay.html',
+  'websites/signal-siege.html',
+  'websites/shadow-switch.html',
+  'websites/shadow-vault.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {

@@ -283,6 +283,15 @@
   let audio = null;
   let lastStamp = 0;
 
+  // Honor prefers-reduced-motion: gate the decorative car trail and burst
+  // rings (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   const input = {
     left: false,
     right: false,
@@ -681,6 +690,7 @@
   }
 
   function drawFeedbackBursts(){
+    if (reducedMotion) return;
     if (feedback.checkpoint > 0 && feedback.checkpointPoint) {
       const t = feedback.checkpoint / 0.58;
       const pulse = 1 - t;
@@ -723,14 +733,16 @@
   function drawCar(){
     const car = state.car;
     ctx.save();
-    for (let i = 0; i < state.trail.length; i += 1) {
-      const p = state.trail[i];
-      const t = i / Math.max(1, state.trail.length - 1);
-      ctx.globalAlpha = t * (p.boost ? 0.48 : 0.28);
-      ctx.fillStyle = p.boost ? "#7c9eff" : "#5eead4";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 3 + t * 5, 0, Math.PI * 2);
-      ctx.fill();
+    if (!reducedMotion) {
+      for (let i = 0; i < state.trail.length; i += 1) {
+        const p = state.trail[i];
+        const t = i / Math.max(1, state.trail.length - 1);
+        ctx.globalAlpha = t * (p.boost ? 0.48 : 0.28);
+        ctx.fillStyle = p.boost ? "#7c9eff" : "#5eead4";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3 + t * 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.globalAlpha = 1;
     ctx.translate(car.x, car.y);
@@ -1020,7 +1032,8 @@
       raceComplete: state.mode === "complete",
       message: state.message,
       fullscreen: !!document.fullscreenElement,
-      soundOn
+      soundOn,
+      reducedMotion
     };
   }
 

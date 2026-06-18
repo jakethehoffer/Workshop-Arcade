@@ -269,6 +269,14 @@
   };
   let audioCtx = null;
   let lastStamp = 0;
+  // Honor prefers-reduced-motion: gate the decorative drifting backdrop dots
+  // (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
   const state = {
     mode: "playing",
     levelIndex: 0,
@@ -682,9 +690,11 @@
     ctx.fillRect(0, 0, W, H);
     ctx.save();
     ctx.globalAlpha = .2;
+    // Decorative drift is gated for reduced motion: hold the dots static.
+    const drift = reducedMotion ? 0 : state.time;
     for (let i = 0; i < 84; i += 1) {
       const x = (i * 97 + 33) % W;
-      const y = (i * 53 + 71 + state.time * (i % 5)) % H;
+      const y = (i * 53 + 71 + drift * (i % 5)) % H;
       ctx.fillStyle = i % 4 === 0 ? "#7c9eff" : "#5eead4";
       ctx.fillRect(x, y, 1 + (i % 3), 1 + (i % 2));
     }
@@ -986,6 +996,7 @@
     return {
       game: "Shadow Switch",
       coordinateSystem: `grid cells, origin top-left, x right, y down, ${state.cols} columns by ${state.rows} rows`,
+      reducedMotion,
       mode: state.mode,
       level: {
         index: state.levelIndex,

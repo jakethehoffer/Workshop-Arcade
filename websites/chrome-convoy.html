@@ -291,6 +291,15 @@ function syncHud() {
 /* ---- Scroll + road ---- */
 let scrollY = 0; // px, advances while playing for lane-dash motion
 
+// Honor prefers-reduced-motion: gate the decorative scrolling lane dashes
+// (cosmetic speed-feel, no gameplay effect) for motion-sensitive players.
+let reducedMotion = false;
+try {
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  reducedMotion = motionQuery.matches;
+  motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+} catch (_) {}
+
 function drawRoad() {
   // grass/shoulders
   ctx.fillStyle = "#04161a";
@@ -307,7 +316,7 @@ function drawRoad() {
   const dash = 34, gap = 30, period = dash + gap;
   for (let i = 1; i <= 2; i++) {
     const x = ROAD_L + (ROAD_W * i / 3) - 3;
-    let y = -(scrollY % period);
+    let y = -((reducedMotion ? 0 : scrollY) % period);
     for (; y < H; y += period) ctx.fillRect(x, y, 6, dash);
   }
 }
@@ -696,6 +705,7 @@ function snapshot() {
     threats: state.threats.slice(0, 8).map((t) => ({ type: t.type, x: round(t.x), y: round(t.y), hp: t.hp })),
     shots: state.shots.length,
     sound: state.sound,
+    reducedMotion,
     feedback: state.feedback, feedbackActive: state.feedbackTimer > 0,
     lastInput: state.lastInput, lastEvent: state.lastEvent,
     coordinateSystem: "playerX 0=left road edge ->1=right edge; distance 0->1 is progress through the current stretch; checkpoint counts stretches cleared; threats stream from y=0 (far) to y=1 (at player); fire destroys rivals, ram costs armor, do not destroy civilians; clear 5 stretches to win",

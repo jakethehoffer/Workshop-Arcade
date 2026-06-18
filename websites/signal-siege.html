@@ -173,6 +173,14 @@
   let lastStamp = 0;
   let enemyId = 1;
   let projectileId = 1;
+  // Honor prefers-reduced-motion: gate the decorative hit/burst rings
+  // (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
 
   const state = {
     mode: "build",
@@ -517,6 +525,7 @@
     ctx.shadowBlur = 0;
   }
   function drawSpark(spark){
+    if (reducedMotion) return;
     ctx.globalAlpha = Math.max(0, spark.life / .22);
     ctx.strokeStyle = spark.color;
     ctx.lineWidth = 3;
@@ -585,7 +594,8 @@
       towers: state.towers.map((tower) => ({ pad: tower.pad, lane: tower.lane, x: tower.x, y: tower.y, type: tower.type, level: tower.level, cooldown: Number(tower.cooldown.toFixed(2)), target: tower.target })),
       feedback: { ...state.feedback },
       sound: state.sound,
-      runComplete: state.runComplete
+      runComplete: state.runComplete,
+      reducedMotion
     };
   }
   function frame(stamp){

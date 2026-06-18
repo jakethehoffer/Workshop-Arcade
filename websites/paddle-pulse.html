@@ -268,6 +268,16 @@
   let lastFrame = 0;
   let helpFocusReturn = null;
 
+  // Honor prefers-reduced-motion: gate the decorative ball trail, full-arena
+  // hit flash, and pulse glow (cosmetic, no gameplay effect) for
+  // motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   function loadBestRally(){
     try { return Math.max(0, Number(localStorage.getItem(BEST_KEY) || 0)); } catch { return 0; }
@@ -520,19 +530,21 @@
     ctx.setLineDash([]);
 
     const hitAge = state.now - feedback.lastHitAt;
-    if (hitAge < 220) {
+    if (!reducedMotion && hitAge < 220) {
       const a = 1 - hitAge / 220;
       ctx.fillStyle = `rgba(94,234,212,${0.11 * a})`;
       ctx.fillRect(18,18,W-36,H-36);
     }
 
-    ball.trail.forEach((p) => {
-      const a = Math.max(0, 1 - p.age / 0.28) * 0.35;
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,ball.r * (1.8 - p.age),0,Math.PI*2);
-      ctx.fillStyle = `rgba(94,234,212,${a})`;
-      ctx.fill();
-    });
+    if (!reducedMotion) {
+      ball.trail.forEach((p) => {
+        const a = Math.max(0, 1 - p.age / 0.28) * 0.35;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,ball.r * (1.8 - p.age),0,Math.PI*2);
+        ctx.fillStyle = `rgba(94,234,212,${a})`;
+        ctx.fill();
+      });
+    }
 
     const paddleFill = "rgba(230,237,243,0.92)";
     const playerActive = state.now - feedback.lastControlAt < 520 || state.now - feedback.lastPlayerHitAt < 620;
@@ -549,8 +561,10 @@
     }
     drawRoundedRect(ai.x,ai.y,paddle.w,paddle.h,9,"rgba(160,179,211,0.86)",aiActive ? "rgba(124,158,255,0.9)" : "rgba(124,158,255,0.55)");
     ctx.shadowBlur = 0;
-    ctx.shadowColor = pulseAlpha > 0.65 ? "rgba(94,234,212,0.75)" : "rgba(94,234,212,0.35)";
-    ctx.shadowBlur = 18 + pulseAlpha * 16;
+    if (!reducedMotion) {
+      ctx.shadowColor = pulseAlpha > 0.65 ? "rgba(94,234,212,0.75)" : "rgba(94,234,212,0.35)";
+      ctx.shadowBlur = 18 + pulseAlpha * 16;
+    }
     ctx.beginPath();
     ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
     ctx.fillStyle = "#dffff8";
@@ -746,6 +760,7 @@
       ai: { x: Math.round(ai.x), y: Math.round(ai.y), centerY: Math.round(paddleCenter(ai)), targetY: Math.round(ai.target), vy: Math.round(ai.vy), w: paddle.w, h: paddle.h },
       ball: { x: Math.round(ball.x), y: Math.round(ball.y), vx: Math.round(ball.vx), vy: Math.round(ball.vy), r: ball.r },
       soundEnabled,
+      reducedMotion,
       fullscreen: Boolean(document.fullscreenElement),
       ui: {
         compactControls: els.controls.dataset.compact === "true",

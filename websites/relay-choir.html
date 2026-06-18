@@ -249,6 +249,17 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
   let audio = null;
   let pulseId = 0;
 
+  // Honor prefers-reduced-motion: gate the decorative pulse scale-throb and the
+  // transient flash (cosmetic, no gameplay effect) for motion-sensitive
+  // players. Beat timing, pulse travel, and WIN-window glow are gameplay and
+  // are left intact.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   function emptyGrid() {
     return Array.from({ length: ROWS }, () => Array.from({ length: STEPS }, () => ""));
   }
@@ -824,7 +835,7 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
   function drawPulses() {
     for (const pulse of state.pulses) {
       const p = center(pulse.r, pulse.c);
-      const scale = 1 + Math.sin((state.beatMs / BEAT_MS) * Math.PI) * 0.18;
+      const scale = reducedMotion ? 1 : 1 + Math.sin((state.beatMs / BEAT_MS) * Math.PI) * 0.18;
       ctx.save();
       ctx.shadowColor = pulse.color;
       ctx.shadowBlur = 24;
@@ -841,6 +852,7 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
     }
   }
   function drawFlashes() {
+    if (reducedMotion) return;
     for (const flash of state.flashes) {
       const p = center(flash.r, flash.c);
       const alpha = Math.max(0, Math.min(1, flash.ttl / 420));
@@ -943,7 +955,8 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
       },
       feedbackActive: state.feedbackMs > 0 || state.flashes.length > 0,
       solvedStages: state.solvedStages.slice(),
-      fullscreen: !!document.fullscreenElement
+      fullscreen: !!document.fullscreenElement,
+      reducedMotion: reducedMotion
     });
   }
 
