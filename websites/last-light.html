@@ -125,6 +125,16 @@ const els={pegs:$("pegsValue"),moves:$("movesValue"),best:$("bestValue"),result:
 const saved=readStats();
 const state={board:[],cursor:{x:3,y:1},sel:-1,moves:0,mode:"playing",result:null,best:saved.best,solves:saved.solves,perfect:saved.perfect,sound:readSound(),feedback:"Select a lit peg, then jump it over a neighbor into an empty hole.",history:[],flash:0,flashIdx:-1,time:0};
 let audio=null;
+// Honor prefers-reduced-motion: gate the decorative post-jump flash glow
+// (cosmetic shimmer on the just-cleared hole, no gameplay effect) for
+// motion-sensitive players. Peg/hole rendering, selection, and legal-move
+// highlights are gameplay and are left intact.
+let reducedMotion=false;
+try{
+  const motionQuery=window.matchMedia("(prefers-reduced-motion: reduce)");
+  reducedMotion=motionQuery.matches;
+  motionQuery.addEventListener("change",(event)=>{reducedMotion=event.matches});
+}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
 function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(typeof v.best==="number"?v.best:null),solves:v.solves|0,perfect:v.perfect|0}}catch(_){}return{best:null,solves:0,perfect:0}}
@@ -144,7 +154,7 @@ function centerPeg(b){return b[CENTER]===1&&pegCount(b)===1}
 
 function snapshot(){state.history.push({board:state.board.slice(),moves:state.moves,sel:state.sel});if(state.history.length>400)state.history.shift()}
 function doJump(from,land){const r=(from/N)|0,c=from%N,lr=(land/N)|0,lc=land%N;const over=((r+lr)/2)*N+((c+lc)/2);
-  snapshot();state.board[from]=0;state.board[over]=0;state.board[land]=1;state.moves++;state.sel=-1;state.flash=1;state.flashIdx=over;tone("jump");vibe(10);
+  snapshot();state.board[from]=0;state.board[over]=0;state.board[land]=1;state.moves++;state.sel=-1;if(!reducedMotion){state.flash=1;state.flashIdx=over}tone("jump");vibe(10);
   state.cursor={x:lc,y:lr};
   if(!anyJump(state.board))endGame();else{say(pegCount(state.board)+" pegs left. Keep jumping.");update();draw()}}
 
@@ -192,7 +202,7 @@ function drawSide(g){const px=g.x+g.cell*N+30;let py=g.y+10;ctx.textAlign="left"
 
 function tick(dt){state.time+=dt;if(state.flash>0){state.flash=Math.max(0,state.flash-dt/240);if(state.flash===0)state.flashIdx=-1}draw()}
 window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){let legal=0;for(let i=0;i<state.board.length;i++)if(state.board[i]===1)legal+=jumpsFrom(state.board,i).length;return JSON.stringify({mode:state.mode,result:state.result,pegs:pegCount(state.board),moves:state.moves,legalMoves:legal,selected:state.sel<0?null:state.sel,cursor:{x:state.cursor.x,y:state.cursor.y},best:state.best,solves:state.solves,perfect:state.perfect,sound:state.sound,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"7x7 grid, index=row*7+col; -1 wall, 0 empty hole, 1 peg; center index "+CENTER+"; jump a peg over an adjacent peg into an empty hole 2 away"})};
+window.render_game_to_text=function render_game_to_text(){let legal=0;for(let i=0;i<state.board.length;i++)if(state.board[i]===1)legal+=jumpsFrom(state.board,i).length;return JSON.stringify({mode:state.mode,result:state.result,pegs:pegCount(state.board),moves:state.moves,legalMoves:legal,selected:state.sel<0?null:state.sel,cursor:{x:state.cursor.x,y:state.cursor.y},best:state.best,solves:state.solves,perfect:state.perfect,sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"7x7 grid, index=row*7+col; -1 wall, 0 empty hole, 1 peg; center index "+CENTER+"; jump a peg over an adjacent peg into an empty hole 2 away"})};
 
 document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
   if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Enter"||k===" ")activate(state.cursor.y*N+state.cursor.x);else if(k==="u"||k==="z")undo();else if(k==="r")reset();else if(k==="n")reset();

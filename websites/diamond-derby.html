@@ -149,6 +149,15 @@ const saved=readStats();
 const state={round:0,pitch:1,homers:0,angle:ANGLE_DEFAULT,phase:"pitch",t:0,swingT:null,grade:null,distance:0,isHR:false,lastResult:"",longest:saved.longest,bestRound:saved.bestRound,sound:readSound(),feedback:"Swing in the lit zone — Space or tap.",flight:0,settle:0,time:0,flash:0};
 let audio=null;
 
+// Honor prefers-reduced-motion: gate the decorative bat-tip recoil flash
+// (cosmetic, no gameplay effect) for motion-sensitive players.
+let reducedMotion=false;
+try{
+  const motionQuery=window.matchMedia("(prefers-reduced-motion: reduce)");
+  reducedMotion=motionQuery.matches;
+  motionQuery.addEventListener("change",(event)=>{reducedMotion=event.matches;});
+}catch(_){}
+
 function cfg(){return ROUNDS[state.round]}
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
 function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{longest:Number(v.longest)||0,bestRound:Number(v.bestRound)||0}}catch(_){}return{longest:0,bestRound:0}}
@@ -220,7 +229,7 @@ function draw(){
   // home plate + batter silhouette
   ctx.fillStyle="#dfeaf2";ctx.beginPath();ctx.moveTo(PX-13,PY+10);ctx.lineTo(PX+13,PY+10);ctx.lineTo(PX+13,PY+2);ctx.lineTo(PX,PY-6);ctx.lineTo(PX-13,PY+2);ctx.closePath();ctx.fill();
   ctx.fillStyle="#13283b";roundRect(PX-30,PY-72,18,70,6,true,false);ctx.beginPath();ctx.arc(PX-21,PY-82,11,0,7);ctx.fill();
-  ctx.strokeStyle="#7dd3fc";ctx.lineWidth=5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(PX-16,PY-58);ctx.lineTo(PX+14,PY-78-(state.flash>0?6:0));ctx.stroke();ctx.lineCap="butt";
+  ctx.strokeStyle="#7dd3fc";ctx.lineWidth=5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(PX-16,PY-58);ctx.lineTo(PX+14,PY-78-((!reducedMotion&&state.flash>0)?6:0));ctx.stroke();ctx.lineCap="butt";
 
   if(state.phase==="pitch"){
     // pitched ball travelling from the mound toward the plate, tied to meter t
@@ -264,7 +273,7 @@ function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.f
   else if(state.phase==="homeRun"||state.phase==="out"){state.settle+=dt;if(state.settle>=900)nextPitch()}
   draw()}
 window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){const c=cfg();return JSON.stringify({phase:state.phase,round:state.round+1,total:TOTAL,pitch:state.pitch,pitches:c.pitches,homers:state.homers,quota:c.quota,fence:c.fence,angle:ANGLES[state.angle],angleIndex:state.angle,meter:{t:Number(state.t.toFixed(4)),zoneLo:ZONE_LO,zoneHi:ZONE_HI,perfLo:PERF_LO,perfHi:PERF_HI},grade:state.grade,swingT:state.swingT===null?null:Number(state.swingT.toFixed(4)),distance:state.distance,isHomeRun:state.isHR,lastResult:state.lastResult,longest:state.longest,bestRound:state.bestRound,sound:state.sound,feedback:state.feedback,coordinateSystem:"meter.t 0(release)->1(plate); swing while t within [zoneLo,zoneHi], best inside [perfLo,perfHi]; distance ft >= fence clears for a home run; ANGLES middle index carries farthest"})};
+window.render_game_to_text=function render_game_to_text(){const c=cfg();return JSON.stringify({phase:state.phase,round:state.round+1,total:TOTAL,pitch:state.pitch,pitches:c.pitches,homers:state.homers,quota:c.quota,fence:c.fence,angle:ANGLES[state.angle],angleIndex:state.angle,meter:{t:Number(state.t.toFixed(4)),zoneLo:ZONE_LO,zoneHi:ZONE_HI,perfLo:PERF_LO,perfHi:PERF_HI},grade:state.grade,swingT:state.swingT===null?null:Number(state.swingT.toFixed(4)),distance:state.distance,isHomeRun:state.isHR,lastResult:state.lastResult,longest:state.longest,bestRound:state.bestRound,sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,coordinateSystem:"meter.t 0(release)->1(plate); swing while t within [zoneLo,zoneHi], best inside [perfLo,perfHi]; distance ft >= fence clears for a home run; ANGLES middle index carries farthest"})};
 
 // ---- Input -----------------------------------------------------------------
 document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();

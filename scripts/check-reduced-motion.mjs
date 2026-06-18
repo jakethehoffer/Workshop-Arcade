@@ -146,6 +146,19 @@ const MOTION_AWARE_GAMES = [
   'websites/signal-siege.html',
   'websites/shadow-switch.html',
   'websites/shadow-vault.html',
+  'websites/circuit-putt.html',
+  'websites/snake.html',
+  'websites/stack-tide.html',
+  'websites/pinball-foundry.html',
+  'websites/harbor-switchboard.html',
+  'websites/service-shift.html',
+  'websites/slipsort.html',
+  'websites/orbit-salvage.html',
+  'websites/gridline-tactics.html',
+  'websites/diamond-derby.html',
+  'websites/drift-loom.html',
+  'websites/bulb-brigade.html',
+  'websites/last-light.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {

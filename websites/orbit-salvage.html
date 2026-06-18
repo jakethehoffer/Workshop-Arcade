@@ -226,6 +226,16 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
   let audio = null;
   let rafTime = 0;
 
+  // Honor prefers-reduced-motion: gate the decorative ship trail echo
+  // (cosmetic, no gameplay effect) for motion-sensitive players. The skiff,
+  // gravity wells, orbital physics, pods, and beacon are gameplay and stay.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   function activeLevel() { return levels[state.level]; }
   function allRescued() { return state.pods.every((p) => p.rescued); }
   function storageBest() {
@@ -627,14 +637,16 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     drawBeacon(level);
     drawStation(level);
     drawAim(level);
-    state.trail.forEach((p, i) => {
-      ctx.globalAlpha = (i + 1) / state.trail.length * .36;
-      ctx.fillStyle = "#67e8f9";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 2.2 + i * .03, 0, TAU);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    });
+    if (!reducedMotion) {
+      state.trail.forEach((p, i) => {
+        ctx.globalAlpha = (i + 1) / state.trail.length * .36;
+        ctx.fillStyle = "#67e8f9";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.2 + i * .03, 0, TAU);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+    }
     drawPods();
     drawShip();
     ctx.fillStyle = "#c7d7e7";
@@ -751,6 +763,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
       sound: state.sound,
       lastSound: state.lastSound,
       fullscreen: state.fullscreen,
+      reducedMotion,
       runComplete: state.mode === "complete",
       crashed: state.mode === "crashed"
     });

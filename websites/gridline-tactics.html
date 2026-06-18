@@ -132,6 +132,15 @@
     {name:"Last Grid",goal:{x:6,y:5},cover:[[1,1],[3,1],[5,1],[2,3],[4,3]],units:[[0,0],[0,5]],enemies:[[6,0,5],[5,2,4],[6,4,5],[3,5,4]]}
   ];
   let audioCtx = null, lastTime = 0;
+  // Honor prefers-reduced-motion: gate the decorative floating feedback labels
+  // (rising/fading "-2"/"move"/"down" flourishes, cosmetic, no gameplay effect)
+  // for motion-sensitive players. Status is still conveyed via announceStatus().
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
   const state = {
     mode:"playing", mission:0, score:0, best:loadBest(), selected:0, cursor:{x:0,y:0},
     units:[], enemies:[], cover:[], goal:{x:0,y:0}, turn:"player", action:"ready",
@@ -193,7 +202,7 @@
   function dist(a,b){ return Math.abs(a.x-b.x)+Math.abs(a.y-b.y); }
   function coverBetween(a,b){ return state.cover.some(c => c.hp > 0 && ((c.x === a.x && c.x === b.x && between(c.y,a.y,b.y)) || (c.y === a.y && c.y === b.y && between(c.x,a.x,b.x)))); }
   function between(v,a,b){ return v > Math.min(a,b) && v < Math.max(a,b); }
-  function float(text,x,y,color){ state.feedback.push({text,x,y,color,life:42}); }
+  function float(text,x,y,color){ if (reducedMotion) return; state.feedback.push({text,x,y,color,life:42}); }
   function cycleUnit(){
     const live = aliveUnits(); if (!live.length) return;
     let idx = state.selected;
@@ -354,6 +363,7 @@
       cover:state.cover.filter(c=>c.hp>0).map(c=>({x:c.x,y:c.y,hp:c.hp})), goal:state.goal,
       cursor:state.cursor, turn:state.turn, action:state.action, selectedAction:state.action, sound:state.sound, fullscreen:state.fullscreen,
       lastStatus:state.lastStatus, lastInput:state.lastInput, lastFeedback:state.lastFeedback,
+      reducedMotion: reducedMotion,
       feedbackActive: state.feedback.length > 0,
       feedback: { effects: state.feedback.length, last: state.feedback[0]?.text || "", lastAge: state.feedback[0] ? Math.round(state.feedback[0].life / 10) / 10 : 0 },
       runComplete:state.runComplete, gameOver:state.gameOver, note:"grid origin top-left, x right, y down"

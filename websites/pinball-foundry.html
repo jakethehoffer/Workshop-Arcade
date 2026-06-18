@@ -229,6 +229,14 @@
   let lastStamp = 0;
   const pressed = new Set();
   const pointers = new Map();
+  // Honor prefers-reduced-motion: gate the decorative ball trail and bumper-hit
+  // rings (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
 
   function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   function setFeedback(text, seconds = 1.4){
@@ -576,13 +584,16 @@
       ctx.stroke();
     }
     for (const bumper of bumpers) {
-      const pulse = Math.min(.35, bumper.hits * .025);
-      ctx.fillStyle = bumper.color;
-      ctx.globalAlpha = .18 + pulse;
-      ctx.beginPath();
-      ctx.arc(bumper.x, bumper.y, bumper.r + 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      // Decorative hit-ring halo (scales with hit count): gate under reduced motion.
+      if (!reducedMotion) {
+        const pulse = Math.min(.35, bumper.hits * .025);
+        ctx.fillStyle = bumper.color;
+        ctx.globalAlpha = .18 + pulse;
+        ctx.beginPath();
+        ctx.arc(bumper.x, bumper.y, bumper.r + 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       ctx.fillStyle = "#111827";
       ctx.beginPath();
       ctx.arc(bumper.x, bumper.y, bumper.r, 0, Math.PI * 2);
@@ -614,16 +625,20 @@
     ctx.stroke();
   }
   function drawBall(){
-    ctx.globalAlpha = .28;
-    ctx.fillStyle = "#f8fbff";
-    for (let i = 0; i < ball.trail.length; i += 1) {
-      const p = ball.trail[i];
-      ctx.globalAlpha = .05 + i / ball.trail.length * .18;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, BALL_R * (i / ball.trail.length), 0, Math.PI * 2);
-      ctx.fill();
+    // Decorative trailing echo behind the ball: gate under reduced motion.
+    // The solid ball body below always renders so gameplay stays visible.
+    if (!reducedMotion) {
+      ctx.globalAlpha = .28;
+      ctx.fillStyle = "#f8fbff";
+      for (let i = 0; i < ball.trail.length; i += 1) {
+        const p = ball.trail[i];
+        ctx.globalAlpha = .05 + i / ball.trail.length * .18;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, BALL_R * (i / ball.trail.length), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
     const g = ctx.createRadialGradient(ball.x - 4, ball.y - 5, 2, ball.x, ball.y, BALL_R + 5);
     g.addColorStop(0, "#ffffff");
     g.addColorStop(.48, "#dbeafe");
@@ -816,6 +831,7 @@
       sound: state.sound,
       gameOver: state.gameOver,
       ballSave: Number(state.ballSave.toFixed(2)),
+      reducedMotion,
       coordinateSystem: "canvas pixels, origin top-left, y increases downward"
     };
   }

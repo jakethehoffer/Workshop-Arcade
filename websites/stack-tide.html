@@ -245,6 +245,15 @@
     gameOver: false,
   };
 
+  // Honor prefers-reduced-motion: gate the decorative full-screen flash
+  // (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   let audioCtx = null;
   function ensureAudio() {
     if (!state.userGesture || !state.soundEnabled) return null;
@@ -512,9 +521,9 @@
     // Shavings
     for (const sh of state.shavings) drawBlock(sh, sh.y);
     ctx.restore();
-    // Flash overlay
+    // Flash overlay (decorative juice; suppressed under reduced motion)
     const remaining = Math.max(0, state.flashUntil - state.time);
-    if (remaining > 0) {
+    if (!reducedMotion && remaining > 0) {
       const alpha = (remaining / FLASH_MS) * 0.22;
       ctx.fillStyle = state.flashKind === "perfect" ? `rgba(94,234,212,${alpha})`
                     : state.flashKind === "miss" ? `rgba(251,113,133,${alpha})`
@@ -633,6 +642,7 @@
       time: Math.round(state.time),
       flashKind: state.flashKind,
       flashRemaining: Math.round(Math.max(0, state.flashUntil - state.time)),
+      reducedMotion,
       feedbackActive: feedbackActive(),
       lastDrop: state.lastDrop,
       eventCounters: { ...state.feedbackEventCounters },

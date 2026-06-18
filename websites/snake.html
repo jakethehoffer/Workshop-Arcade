@@ -492,6 +492,15 @@
   let best=0; try{ best=Number(localStorage.getItem(HS_KEY)||0);}catch(_){ }
   bestEl.textContent='Best: '+best;
 
+  // Honor prefers-reduced-motion: gate decorative eat/event rings and glow
+  // flourishes (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   let snake=[], prevSnake=[], dir={x:1,y:0}, dirQueue=[], food=null, running=false, gameOver=false, gameWon=false, score=0, acc=0, stepMs=140;
   const feedback = {
     lastEvent: null,
@@ -833,7 +842,7 @@
       else if(look.x===0&&look.y===1){ ex1=hx+cw*0.35; ey1=hy+ch*0.62; ex2=hx+cw*0.65; ey2=hy+ch*0.62; }
       else { ex1=hx+cw*0.35; ey1=hy+ch*0.38; ex2=hx+cw*0.65; ey2=hy+ch*0.38; }
       drawEye(ex1,ey1,eyeR); drawEye(ex2,ey2,eyeR);
-      const cue = feedbackCue();
+      const cue = !reducedMotion ? feedbackCue() : null;
       if(cue){
         ctx.save();
         ctx.strokeStyle=cue.ring;
@@ -1039,6 +1048,7 @@
       running: !!running,
       gameOver: !!gameOver,
       gameWon: !!gameWon,
+      reducedMotion: !!reducedMotion,
       score,
       best,
       status: statusEl.textContent,

@@ -170,6 +170,15 @@
     return !["0","false","off","muted"].includes(raw);
   }
 
+  // Honor prefers-reduced-motion: gate decorative particle bursts and event
+  // rings (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+
   let audioContext = null;
   let lastTs = 0;
   let nextId = 1;
@@ -603,6 +612,7 @@
     ctx.restore();
   }
   function drawParticles() {
+    if (reducedMotion) return;
     ctx.save();
     state.particles.forEach((p) => {
       ctx.globalAlpha = clamp(p.life / 850, 0, 1);
@@ -684,6 +694,7 @@
       vehicles: state.vehicles.map((vehicle) => ({ id: vehicle.id, name: vehicle.name, x: norm(vehicle.x), y: norm(vehicle.y), lane: lanes[vehicle.lane].id, targetLane: lanes[vehicle.targetLane].id, held: vehicle.held, route: vehicle.trace })),
       upcoming: cargoPlan.slice(state.spawnIndex, state.spawnIndex + 5).map((target) => lanes[target].id),
       sound: state.sound,
+      reducedMotion,
       fullscreen: Boolean(document.fullscreenElement),
       runComplete: state.runComplete,
       "run-complete": state.runComplete,

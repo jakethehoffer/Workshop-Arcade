@@ -125,6 +125,8 @@ const els={level:$("levelValue"),size:$("sizeValue"),moves:$("movesValue"),order
 const saved=readStats();
 const state={idx:0,size:3,board:[],blank:0,moves:0,mode:"playing",best:saved.best,solvedSizes:saved.solved,sound:readSound(),feedback:"Slide the tiles into ascending order, gap last.",lastMoved:-1,flash:0,time:0};
 let audio=null;
+let reducedMotion=false;
+try{const motionQuery=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=motionQuery.matches;motionQuery.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
 function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(v.best&&typeof v.best==="object")?v.best:{},solved:Array.isArray(v.solved)?v.solved.filter(n=>typeof n==="number"):[]}}catch(_){}return{best:{},solved:[]}}
@@ -181,7 +183,7 @@ function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.creat
     const home=v===i+1;
     if(home){const gr=ctx.createLinearGradient(lx,ly,lx,ly+sz);gr.addColorStop(0,"#2dd4bf");gr.addColorStop(1,"#168f86");ctx.fillStyle=gr}
     else{const gr=ctx.createLinearGradient(lx,ly,lx,ly+sz);gr.addColorStop(0,"#1b314f");gr.addColorStop(1,"#122237");ctx.fillStyle=gr}
-    if(i===state.lastMoved&&state.flash>0){ctx.shadowColor="rgba(126,249,255,.8)";ctx.shadowBlur=cell*.2}
+    if(!reducedMotion&&i===state.lastMoved&&state.flash>0){ctx.shadowColor="rgba(126,249,255,.8)";ctx.shadowBlur=cell*.2}
     roundRect(lx,ly,sz,sz,Math.min(14,cell*.14),true,false);ctx.shadowBlur=0;
     ctx.strokeStyle=home?"rgba(255,255,255,.4)":"rgba(94,234,212,.22)";ctx.lineWidth=2;roundRect(lx+.5,ly+.5,sz-1,sz-1,Math.min(14,cell*.14),false,true);
     ctx.fillStyle=home?"#04221f":"#eaf6ff";ctx.font="950 "+Math.round(cell*.34)+"px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(v),lx+sz/2,ly+sz/2+1);ctx.textAlign="left";ctx.textBaseline="alphabetic"}
@@ -198,7 +200,7 @@ function drawSide(g){const px=g.x+g.cell*g.n+34;let py=g.y+10;ctx.textAlign="lef
 
 function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/200);if(state.mode==="clear"&&state.nextAt!=null){state.clearWait+=dt;if(state.clearWait>=600){const ni=state.nextAt;state.nextAt=null;loadLevel(ni);say("Level "+(ni+1)+" — sort the "+SIZES[ni]+"×"+SIZES[ni]+" grid.")}}draw()}
 window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,size:state.size,moves:state.moves,ordered:orderedCount(),tiles:state.size*state.size-1,best:state.best[String(state.size)]??null,solved:state.solvedSizes.length,blank:state.blank,lastMoved:state.lastMoved,sound:state.sound,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"board is row-major length size*size; 0 is the gap; solved = 1..size*size-1 then 0"})};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,size:state.size,moves:state.moves,ordered:orderedCount(),tiles:state.size*state.size-1,best:state.best[String(state.size)]??null,solved:state.solvedSizes.length,blank:state.blank,lastMoved:state.lastMoved,sound:state.sound,reducedMotion,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"board is row-major length size*size; 0 is the gap; solved = 1..size*size-1 then 0"})};
 
 document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
   if(k==="ArrowLeft"||k==="a")moveGap("left");else if(k==="ArrowRight"||k==="d")moveGap("right");else if(k==="ArrowUp"||k==="w")moveGap("up");else if(k==="ArrowDown"||k==="s")moveGap("down");else if(k==="r")reset();else if(k==="n")newGame()});

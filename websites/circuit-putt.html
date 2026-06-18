@@ -273,6 +273,14 @@
   ];
 
   const totalPar = holes.reduce((sum, hole) => sum + hole.par, 0);
+  // Honor prefers-reduced-motion: gate decorative trail/rings/glow flourishes
+  // (cosmetic, no gameplay effect) for motion-sensitive players.
+  let reducedMotion = false;
+  try {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
   let soundOn = storage.get(keys.sound, "1") !== "0";
   let audio = null;
   let lastStamp = 0;
@@ -813,14 +821,16 @@
   function drawBall(){
     const b = state.ball;
     ctx.save();
-    for (let i = 0; i < state.trail.length; i += 1) {
-      const p = state.trail[i];
-      const t = i / Math.max(1, state.trail.length - 1);
-      ctx.globalAlpha = t * 0.36;
-      ctx.fillStyle = "#6cf0d8";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, b.r * (0.35 + t * 0.45), 0, Math.PI * 2);
-      ctx.fill();
+    if (!reducedMotion) {
+      for (let i = 0; i < state.trail.length; i += 1) {
+        const p = state.trail[i];
+        const t = i / Math.max(1, state.trail.length - 1);
+        ctx.globalAlpha = t * 0.36;
+        ctx.fillStyle = "#6cf0d8";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, b.r * (0.35 + t * 0.45), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.globalAlpha = 1;
     ctx.shadowColor = "rgba(94,234,212,0.62)";
@@ -1141,7 +1151,8 @@
       },
       runComplete: state.mode === "complete",
       message: state.message,
-      soundOn
+      soundOn,
+      reducedMotion
     };
   }
 
