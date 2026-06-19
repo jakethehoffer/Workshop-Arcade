@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-19 Codex Tempo Forge keyboard restart fix
+
+- Chose the best next move from the verified re-audit backlog: fix **Tempo Forge** keyboard `R` restart retaining score and streak. This was higher value than idle-rAF cleanup because it was player-visible and enabled replaying level 1 with accumulated score/streak.
+- Reproduced the bug in real Chromium before editing: solved level 1 for `score: 125` and `streak: 1`, pressed `R`, and confirmed the game returned to level 1 but kept `score: 125` and `streak: 1` instead of behaving like the Restart button.
+- Fixed `websites/tempo-forge.html` by introducing a shared `restartRun()` path that resets score and streak before loading level 1, then routing both keyboard `R` and the Restart button through it.
+- Verification: focused Playwright repro now passes (`score: 0`, `streak: 0`, level 1 edit mode, no errors) with screenshot evidence in ignored `test-results/tempo-forge-r-restart-after.png`; develop-web-game client ran and inspected scratch screenshot/state; strict catalog validation passed; focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/tempo-forge.html` passed; `npm run test:games -- --slug tempo-forge` passed; `npm run capture:games -- --slug tempo-forge` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-18 Codex chess restart race fix
 
 - Explored current repo state after the re-audit backlog. Main was clean and synchronized with origin; catalog remains frozen at 100 games. Chose the best next move as a small verified player-facing defect fix rather than a broad new audit or low-priority idle-rAF cleanup.

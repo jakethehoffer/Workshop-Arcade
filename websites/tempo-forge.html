@@ -247,6 +247,11 @@
     setFeedback("Forge the target rhythm, then check the loop.");
     sync();
   }
+  function restartRun(){
+    state.score = 0;
+    state.streak = 0;
+    loadLevel(1);
+  }
   function toggleCell(pad,step,play){
     state.playerPattern[pad][step] = state.playerPattern[pad][step] ? 0 : 1;
     state.focusPad = pad;
@@ -408,12 +413,12 @@
     else if(/^[1-4]$/.test(key)) toggleCell(state.focusPad,Number(key)-1,true);
     else if(key === "p") playLoop();
     else if(key === "enter") state.mode === "complete" ? loadLevel(state.level+1) : checkPattern();
-    else if(key === "r") loadLevel(1);
+    else if(key === "r") restartRun();
   });
   els.play.addEventListener("click",playLoop);
   els.check.addEventListener("click",checkPattern);
   els.next.addEventListener("click",()=>loadLevel(state.mode === "complete" ? state.level + 1 : state.level));
-  els.restart.addEventListener("click",()=>{state.score=0;state.streak=0;loadLevel(1)});
+  els.restart.addEventListener("click",restartRun);
   els.sound.addEventListener("click",()=>{state.sound=!state.sound;safeStorage.set(SOUND_KEY,state.sound?"1":"0");setFeedback(state.sound?"Sound enabled.":"Sound disabled.");sync()});
   window.render_game_to_text = function(){
     const stepFeedback = getStepFeedback();
