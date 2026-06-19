@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-19 Codex Chrome Convoy help-modal keydown guard
+
+- Chose the best next move from the verified re-audit backlog: fix **Chrome Convoy** gameplay shortcuts leaking through the open Help dialog. This was higher value than idle-rAF cleanup because it could reset a live run from a focused modal.
+- Reproduced the bug in real Chromium before editing: started a run, advanced to `distance: 0.07` and `score: 8`, opened Help, pressed `R`, and confirmed the playing run reset to `distance: 0` and `score: 0` while the overlay stayed open.
+- Fixed `websites/chrome-convoy.html` by making the document-level gameplay `keydown` handler return while Help is open, leaving the dialog's Escape/Tab handler and native Close-button activation in control.
+- Verification: focused Playwright repro now passes (`distance: 0.07`, `score: 8` unchanged after `R` inside Help) with screenshot evidence in ignored `test-results/chrome-convoy-help-guard-after.png`; develop-web-game client ran and inspected scratch screenshot/state; strict catalog validation passed; focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/chrome-convoy.html` passed; `npm run test:games -- --slug chrome-convoy` passed; `npm run capture:games -- --slug chrome-convoy` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-19 Codex Tempo Forge keyboard restart fix
 
 - Chose the best next move from the verified re-audit backlog: fix **Tempo Forge** keyboard `R` restart retaining score and streak. This was higher value than idle-rAF cleanup because it was player-visible and enabled replaying level 1 with accumulated score/streak.

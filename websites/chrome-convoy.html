@@ -616,6 +616,7 @@ function loop(ts) {
 function setSteer(dir) { state.steer = dir; state.lastInput = "steer:" + dir; }
 
 document.addEventListener("keydown", (e) => {
+  if (isHelpOpen()) return;
   const k = e.key.toLowerCase();
   if (k === "arrowleft" || k === "a") { e.preventDefault(); setSteer(-1); }
   else if (k === "arrowright" || k === "d") { e.preventDefault(); setSteer(1); }
