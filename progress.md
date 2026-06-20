@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-20 Codex Slipstream Sprint reset timer fix
+
+- Chose the best next move from the verified re-audit backlog: fix **Slipstream Sprint** stale Boost/Brake button auto-off timers crossing a race restart. This was higher value than idle-rAF cleanup because it could cancel a player's freshly held boost or brake after restart.
+- Reproduced the bug in real Chromium before editing: clicked Boost to schedule its auto-off timer, restarted before the timer fired, held Space for the fresh run, and confirmed the stale timer forced `boosting: false` while Space was still down.
+- Fixed `websites/slipstream-sprint.html` by tracking Boost and Brake auto-off timer ids, clearing any pending timer in `resetRace()`, and canceling older same-button timers before scheduling a new auto-off callback.
+- Verification: focused Chromium regression now passes for both Boost and Brake held across the old timer windows; screenshot evidence is in ignored `test-results/slipstream-sprint-timer-guard-after.png`; develop-web-game client ran and inspected scratch screenshot/state; strict catalog validation passed; focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/slipstream-sprint.html` passed; `npm run test:games -- --slug slipstream-sprint` passed; `npm run capture:games -- --slug slipstream-sprint` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-19 Codex Chrome Convoy help-modal keydown guard
 
 - Chose the best next move from the verified re-audit backlog: fix **Chrome Convoy** gameplay shortcuts leaking through the open Help dialog. This was higher value than idle-rAF cleanup because it could reset a live run from a focused modal.
