@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-20 Codex Arcade Jump mid-width HUD fix
+
+- Chose the best next move from the current verified backlog: fix **Arcade Jump** HUD clipping/overlap at mid-widths. This was higher value than idle-rAF cleanup because visible score, state, power-up, action, and controls pills were colliding or spilling off-screen during normal play around 600-1150 px widths.
+- Reproduced the defect in real Chromium before editing with a HUD layout probe at 600, 700, 840, 1000, and 1150 px: several pills were outside the viewport at smaller mid-widths, and score/state/power-up/action controls overlapped through 1150 px.
+- Fixed `websites/doodle-jump.html` by adding a compact responsive HUD override: the desktop strip switches to a bounded grid before it runs out of room, the long controls hint moves to its own row, and narrower viewports use a centered stack with controls hidden as before.
+- Verification: post-fix Chromium HUD probe passed at 320, 390, 520, 600, 700, 840, 1000, and 1150 px with no outside, overlapping, or clipped pills; focused static checks passed (`validate-catalog.ps1`, game-contract, keyboard-help, a11y-polish, a11y, `git diff --check`); `npm run test:games -- --slug doodle-jump` passed; `npm run capture:games -- --slug doodle-jump` captured desktop/mobile with max render score 0 and inspected contact sheet; develop-web-game client ran and inspected scratch state/screenshot; `npm test` passed all 51 fast gates after compacting the override to keep Arcade Jump over the page-weight headroom floor; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-20 Codex Gridfront Orders quick-order fix
 
 - Chose the best next move from the verified re-audit backlog: fix **Gridfront Orders** canvas double-click / double-tap quick-order. This was higher value than idle-rAF cleanup because a documented pointer shortcut was dead in Chromium: `pointerdown.detail` stayed `0`, so the existing `ev.detail > 1` branch never ordered.
