@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-20 Codex Gridfront Orders quick-order fix
+
+- Chose the best next move from the verified re-audit backlog: fix **Gridfront Orders** canvas double-click / double-tap quick-order. This was higher value than idle-rAF cleanup because a documented pointer shortcut was dead in Chromium: `pointerdown.detail` stayed `0`, so the existing `ev.detail > 1` branch never ordered.
+- Reproduced the bug in real Chromium before editing: double-clicked an adjacent empty grid cell that should move unit A; the cursor moved to the cell, but `orders` stayed `2` and unit A stayed at `0,0`.
+- Fixed `websites/gridfront-orders.html` by tracking the last pointer grid cell and timestamp, treating a second tap/click on the same cell inside a short window as `pointer:quick-order`, and clearing that tracker on mission start/restart and after firing the quick order.
+- Verification: focused Chromium regression now passes for single-click selection, mouse double-click ordering, touch double-tap ordering, and restart-then-single-click guard; screenshot evidence is in ignored `test-results/gridfront-orders-double-click-after.png`; develop-web-game client ran and inspected scratch screenshot/state; strict catalog validation passed; focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/gridfront-orders.html` passed; `npm run test:games -- --slug gridfront-orders` passed; `npm run capture:games -- --slug gridfront-orders` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-20 Codex Slipstream Sprint reset timer fix
 
 - Chose the best next move from the verified re-audit backlog: fix **Slipstream Sprint** stale Boost/Brake button auto-off timers crossing a race restart. This was higher value than idle-rAF cleanup because it could cancel a player's freshly held boost or brake after restart.
