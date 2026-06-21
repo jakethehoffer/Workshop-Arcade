@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-21 Codex Fact Match stale advance timer fix
+
+- Chose the best next move from the current verified backlog: fix the shared **Fact Match** stale auto-advance timer race in `websites/fact-match-engine.js`. This was higher value than low-priority idle-rAF cleanup because one shared bug affected four playable catalog entries: Hero Fact Match, Night Shift Fact Match, Arena Legend Guesser, and Cosmic Fact Match.
+- Reproduced the bug in real Chromium before editing: after a correct guess, clicking **New Round** within the 900 ms correct-answer delay moved to round 2, then the old queued `pickAnswer()` still fired and silently advanced to round 3. A matching **Reveal** race could also be clobbered by the stale timer.
+- Fixed the shared engine by owning the pending correct-answer auto-advance timer id, clearing it before installing any answer, clearing it before manual Reveal, and resetting `state.resolving` when Reveal takes over.
+- Verification: pre-fix Chromium repro failed on Hero Fact Match, post-fix regression passed for both New Round and Reveal races across all four shared wrappers; develop-web-game client ran on Hero Fact Match and scratch screenshot/state were inspected; `node --check websites/fact-match-engine.js`, strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/fact-match-engine.js` passed; `npm run test:games -- --slug hero-fact-match,night-shift-fact-match,arena-legend-guesser,cosmic-fact-match` passed; `npm run capture:games -- --slug hero-fact-match,night-shift-fact-match,arena-legend-guesser,cosmic-fact-match` captured 8 surfaces with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-20 Codex Arcade Jump mid-width HUD fix
 
 - Chose the best next move from the current verified backlog: fix **Arcade Jump** HUD clipping/overlap at mid-widths. This was higher value than idle-rAF cleanup because visible score, state, power-up, action, and controls pills were colliding or spilling off-screen during normal play around 600-1150 px widths.

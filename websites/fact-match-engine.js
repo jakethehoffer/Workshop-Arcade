@@ -34,6 +34,7 @@
     visibleBankCount: 0,
     lastBankPick: null
   };
+  var pendingAdvanceTimer = 0;
   var audio = {
     enabled: safeGet(soundStorageKey, "true") !== "false",
     ctx: null,
@@ -400,6 +401,7 @@
 
   function pickAnswer(options) {
     options = options || {};
+    clearPendingAdvance();
     state.answer = config.items[Math.floor(Math.random() * config.items.length)];
     state.cluesShown = Math.min(3, config.fields.length);
     state.revealed = false;
@@ -416,6 +418,12 @@
       noteStatus("New round ready.", "new-round");
       recordFeedback("new-round", { resultState: "new-round" });
     }
+  }
+
+  function clearPendingAdvance() {
+    if (!pendingAdvanceTimer) return;
+    clearTimeout(pendingAdvanceTimer);
+    pendingAdvanceTimer = 0;
   }
 
   function renderClues() {
@@ -528,7 +536,11 @@
       setResult("Correct: " + state.answer.name, "correct");
       updateStats();
       recordFeedback("correct", { resultState: "correct" });
-      setTimeout(function () { pickAnswer({ record: true }); }, 900);
+      clearPendingAdvance();
+      pendingAdvanceTimer = setTimeout(function () {
+        pendingAdvanceTimer = 0;
+        pickAnswer({ record: true });
+      }, 900);
     } else {
       state.streak = 0;
       setResult("Not it. Try another clue or a bank pick.", "wrong");
@@ -638,7 +650,9 @@
   });
   els.revealBtn.addEventListener("click", function () {
     recordInput("button:reveal");
+    clearPendingAdvance();
     state.revealed = true;
+    state.resolving = false;
     state.streak = 0;
     setResult("Answer: " + state.answer.name, "revealed");
     updateStats();
