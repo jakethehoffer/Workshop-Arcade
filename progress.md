@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-21 Codex Market Minute mixed-input hotkey fix
+
+- Chose the best next move from the remaining verified backlog: fix **Market Minute** mixed mouse-to-keyboard hotkeys being swallowed by a still-focused action button. This was higher value than idle-rAF cleanup or Dice Dynamo focus polish because it affected normal play flow after clicking an action and then using keyboard shortcuts.
+- Reproduced the bug in real Chromium before editing: clicked **Buy**, confirmed `#buyBtn` retained focus, pressed `2`, and `selection.good` stayed `ore` instead of switching to `grain`.
+- Fixed `websites/market-minute.html` by narrowing the global keydown focus guard: text-entry controls still own all keys, focused buttons still own native Enter/Space activation, and game hotkeys like `1-4`, arrows/WASD, `R`, `F`, and `M` continue to work after a mouse click.
+- Verification: post-fix Chromium regression passed (`2` selects grain after mouse Buy, and focused Enter still triggers native Buy); develop-web-game client ran and scratch screenshot/state were inspected; executable inline script parse, strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/market-minute.html` passed; `npm run test:games -- --slug market-minute` passed; `npm run capture:games -- --slug market-minute` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed for 200 surfaces with max render score 0.
+
 ## 2026-06-21 Codex Fact Match stale advance timer fix
 
 - Chose the best next move from the current verified backlog: fix the shared **Fact Match** stale auto-advance timer race in `websites/fact-match-engine.js`. This was higher value than low-priority idle-rAF cleanup because one shared bug affected four playable catalog entries: Hero Fact Match, Night Shift Fact Match, Arena Legend Guesser, and Cosmic Fact Match.

@@ -590,6 +590,11 @@ button{font:inherit}
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   }
+  function focusedControlOwnsKey(event) {
+    if (!(event.target instanceof HTMLElement)) return false;
+    if (event.target.matches("input,select,textarea")) return true;
+    return event.target.matches("button,[role='button']") && (event.key === "Enter" || event.key === " ");
+  }
   function endTurn() {
     if (state.runComplete) return;
     if (state.turn >= MAX_TURNS) {
@@ -848,7 +853,7 @@ button{font:inherit}
       if (event.key.toLowerCase() === "r") { restart(); event.preventDefault(); return; }
       return;
     }
-    if (event.target instanceof HTMLElement && event.target.matches("button,input,select,textarea,[role='button']")) return;
+    if (focusedControlOwnsKey(event)) return;
     const key = event.key.toLowerCase();
     if (/^[1-4]$/.test(key)) {
       state.selection = "goods";
