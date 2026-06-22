@@ -182,6 +182,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   let audio = null;
   let stamp = 0;
   let manualClock = false;
+  let raf = 0;
 
   function storage() {
     if (window.workshopStorage) return window.workshopStorage;
@@ -233,6 +234,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     return { x: stage.start[0], y: stage.start[1], vx: stage.start[2], vy: stage.start[3], angle: 0, spin: 0, fuel: stage.fuel, r: 18 };
   }
   function resetStage(mode) {
+    stopLoop();
     state.mode = mode || "ready";
     state.lander = makeLander(stageData());
     state.thrusting = false;
@@ -380,6 +382,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     }
     canvas.focus();
     draw();
+    ensureLoop();
   }
   function restartRun() {
     state.stage = 0;
@@ -790,13 +793,32 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   window.render_game_to_text = () => JSON.stringify(snapshot());
   window.advanceTime = (ms) => {
     manualClock = true;
+    stopLoop();
     const steps = Math.max(1, Math.min(1200, Math.round(Math.max(0, Number(ms) || 0) / (STEP * 1000))));
     for (let i = 0; i < steps; i++) step(STEP);
     draw();
     return window.render_game_to_text();
   };
 
+  function feedbackActive() {
+    const f = state.feedback;
+    return state.flashes > 0 || f.startPulse > 0 || f.thrustPulse > 0 || f.landingPulse > 0 || f.crashFlash > 0;
+  }
+  function loopActive() {
+    return !manualClock && (state.mode === "flying" || feedbackActive());
+  }
+  function ensureLoop() {
+    if (raf || !loopActive()) return;
+    stamp = performance.now();
+    raf = requestAnimationFrame(frame);
+  }
+  function stopLoop() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    stamp = 0;
+  }
   function frame(time) {
+    raf = 0;
     if (!stamp) stamp = time;
     const elapsed = manualClock ? 0 : clamp(time - stamp, 0, 80);
     stamp = time;
@@ -805,12 +827,13 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
       for (let i = 0; i < steps; i++) step(STEP);
     }
     draw();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
+    else stamp = 0;
   }
   resetStage("ready");
   syncFull();
   draw();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>

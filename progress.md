@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-22 Codex Lumen Lander idle-loop cleanup
+
+- Chose **Lumen Lander** as the next low-priority idle-rAF cleanup target because a real Chromium probe measured 65 idle rAF callbacks and 198 large canvas operations in one ready-screen second, the highest waste among the named remaining candidates.
+- Fixed `websites/lumen-lander.html` by adding a tiny scheduler around the existing `frame()` loop: rAF runs only during live flight or while start/thrust/landing/crash feedback is visibly settling. Static ready, restart, stage-clear, complete, and settled-crash states draw once and stop; deterministic `advanceTime(ms)` now cancels the live loop before manual stepping.
+- Verification so far: post-fix browser probe showed ready idle at 0 rAF callbacks after boot, active flight still advanced with 43 callbacks in 700 ms, restart settled to 0 callbacks, crash feedback settled to 0 callbacks, and `advanceTime(600)` advanced the lander without leaking a live loop; develop-web-game client screenshot/state were inspected; strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, realtime-progression, and `git diff --check` passed; scoped `npm run test:games -- --slug lumen-lander` passed; scoped `npm run capture:games -- --slug lumen-lander` captured desktop/mobile with max render score 0; `npm test` passed all 51 fast gates; full `npm run test:games` passed 100 games; full `npm run capture:games:ci` passed 200 surfaces with max render score 0.
+
 ## 2026-06-22 Codex Rail Yard Relay idle-loop cleanup
 
 - Chose the best next move after the concrete input backlog was exhausted: fix **Rail Yard Relay** idle rAF repainting in non-playing states. This was a bounded performance/playfeel cleanup from the verified audit backlog, lower risk than resuming the broad re-audit workflow mid-turn.
