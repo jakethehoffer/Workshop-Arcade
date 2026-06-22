@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-22 Codex Dice Dynamo die focus preservation
+
+- Chose the best next move from the remaining verified backlog: fix **Dice Dynamo** keyboard focus loss after locking a die. This was the last concrete input/accessibility defect in the current backlog and was higher value than broad low-priority idle-rAF cleanup.
+- Reproduced the bug in real Chromium before editing: focused die 1, activated it with Space, confirmed the die locked, and `document.activeElement` fell back to `BODY` because `renderDice()` rebuilt the tray with `innerHTML`.
+- Fixed `websites/dice-dynamo.html` by preserving the active die index across `renderDice()` and refocusing the matching rebuilt die button with `preventScroll`, without changing scoring, RNG, lock rules, or keyboard hotkeys.
+- Verification: post-fix Chromium regression passed for Space lock, Space release, and `2` hotkey locking die 2 while focus remained stable; develop-web-game client ran and scratch screenshot/state were inspected; executable inline script parse, strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/dice-dynamo.html` passed; `npm run test:games -- --slug dice-dynamo` passed; `npm run capture:games -- --slug dice-dynamo` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` initially exited early with no summary artifact, then reran successfully for all 100 games; full `npm run capture:games:ci` passed 200 surfaces with max render score 0 and inspected contact sheet.
+
 ## 2026-06-21 Codex Market Minute mixed-input hotkey fix
 
 - Chose the best next move from the remaining verified backlog: fix **Market Minute** mixed mouse-to-keyboard hotkeys being swallowed by a still-focused action button. This was higher value than idle-rAF cleanup or Dice Dynamo focus polish because it affected normal play flow after clicking an action and then using keyboard shortcuts.

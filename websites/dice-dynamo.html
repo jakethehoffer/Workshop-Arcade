@@ -313,7 +313,11 @@
     render();
   }
   function renderDice() {
+    const activeDie = document.activeElement instanceof HTMLElement && els.tray.contains(document.activeElement)
+      ? document.activeElement.dataset.die
+      : null;
     els.tray.innerHTML = state.dice.map((value, index) => `<button class="die" type="button" data-die="${index}" aria-pressed="${state.locked[index]}" aria-label="Die ${index + 1} showing ${value}, ${state.locked[index] ? "locked" : "unlocked"}"><span class="face">${value}</span><small>${state.locked[index] ? "Locked" : "Lock " + (index + 1)}</small></button>`).join("");
+    if (activeDie != null) els.tray.querySelector(`[data-die="${activeDie}"]`)?.focus({ preventScroll: true });
   }
   function render() {
     const contract = activeContract();
