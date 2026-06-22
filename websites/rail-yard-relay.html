@@ -238,10 +238,17 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     };
   }
   function feedbackActive(){ return state.feedbackTtl > 0 || state.spark.length > 0; }
+  function loopActive(){ return state.mode === "playing" || feedbackActive(); }
+  function ensureLoop(){
+    if (raf || !loopActive()) return;
+    last = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
   function announce(text,type="status"){
     state.feedback = text; state.lastFeedback = type;
     state.feedbackTtl = Math.max(state.feedbackTtl, type === "status" ? .25 : 1.35);
     el.statusOut.textContent = text; el.liveOut.textContent = text;
+    if (!manual) ensureLoop();
   }
   function beep(type){
     state.lastSound = type;
@@ -406,8 +413,9 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     }
   }
   function loop(ts){
+    raf = 0;
     if (!manual) { const dt = last ? clamp((ts-last)/1000,0,.05) : 0; if (dt) update(dt); last = ts; }
-    raf = requestAnimationFrame(loop);
+    if (loopActive()) raf = requestAnimationFrame(loop);
   }
   function canvasPoint(e){
     const r = canvas.getBoundingClientRect();
@@ -463,7 +471,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     for (let i=0;i<steps;i++) update(STEP);
     manual = false; last = performance.now(); render();
   };
-  reset(true); updateHud(); render(); raf = requestAnimationFrame(loop);
+  reset(true); updateHud(); render(); ensureLoop();
   window.addEventListener("pagehide", () => cancelAnimationFrame(raf));
 })();
 </script>

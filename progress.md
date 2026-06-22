@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-22 Codex Rail Yard Relay idle-loop cleanup
+
+- Chose the best next move after the concrete input backlog was exhausted: fix **Rail Yard Relay** idle rAF repainting in non-playing states. This was a bounded performance/playfeel cleanup from the verified audit backlog, lower risk than resuming the broad re-audit workflow mid-turn.
+- Reproduced the idle CPU issue in real Chromium before editing: the ready screen still called canvas `clearRect` 64 times in one second after load.
+- Fixed `websites/rail-yard-relay.html` by adding a small scheduler around the existing loop: rAF stays alive while the yard is playing or while feedback/spark animations are active, then stops after static ready/complete/won/failed screens settle. State changes that announce feedback restart the loop when needed.
+- Verification: post-fix browser probe reduced ready idle clears to 15 short-settle clears in one second while active play still produced 56 live clears and advanced time/trains; restart-to-ready settled to 0 additional clears after feedback expired; develop-web-game client ran and scratch screenshot/state were inspected; executable inline script parse, strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, and `git diff --check -- websites/rail-yard-relay.html` passed; `npm run test:games -- --slug rail-yard-relay` passed; `npm run capture:games -- --slug rail-yard-relay` captured desktop/mobile with max render score 0 and inspected contact sheet; `npm test` passed all 51 fast gates; full `npm run test:games` passed for 100 games; full `npm run capture:games:ci` passed 200 surfaces with max render score 0 and inspected contact sheet; `npm run test:pwa-runtime`, `npm run test:runtime-storage`, and `npm run audit:perf:local` passed across 101 pages with Rail Yard Relay at 36.7 KB / 2 requests and zero console/page errors.
+
 ## 2026-06-22 Codex Dice Dynamo die focus preservation
 
 - Chose the best next move from the remaining verified backlog: fix **Dice Dynamo** keyboard focus loss after locking a die. This was the last concrete input/accessibility defect in the current backlog and was higher value than broad low-priority idle-rAF cleanup.
