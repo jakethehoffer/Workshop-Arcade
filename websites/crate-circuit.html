@@ -252,6 +252,8 @@
 
   let audioCtx = null;
   let pointerStart = null;
+  let raf = 0;
+  let last = 0;
 
   function storage() {
     try { return window.localStorage; } catch (_) { return window.workshopStorage || null; }
@@ -397,6 +399,7 @@
   function setFeedback(message, ms) {
     state.feedback = message;
     state.feedbackMs = Math.max(state.feedbackMs, ms || 520);
+    ensureLoop();
   }
 
   function crateIndexAt(x, y) {
@@ -627,6 +630,22 @@
     render();
   }
 
+  function loopActive() {
+    return state.feedbackMs > 0;
+  }
+
+  function ensureLoop() {
+    if (raf || !loopActive()) return;
+    last = performance.now();
+    raf = requestAnimationFrame(frame);
+  }
+
+  function stopLoop() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    last = 0;
+  }
+
   function drawBackground() {
     const grad = ctx.createLinearGradient(0, 0, W, H);
     grad.addColorStop(0, "#071018");
@@ -850,7 +869,9 @@
 
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms) {
+    stopLoop();
     stepTime(ms);
+    ensureLoop();
     return renderGameToText();
   };
 
@@ -923,18 +944,18 @@
   window.addEventListener("resize", render);
   document.addEventListener("fullscreenchange", render);
 
-  let last = performance.now();
   function frame(now) {
-    const dt = Math.min(50, now - last);
+    raf = 0;
+    const dt = Math.min(50, last ? now - last : 0);
     last = now;
     state.feedbackMs = Math.max(0, state.feedbackMs - dt);
     state.timeMs += dt;
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
+    else last = 0;
   }
 
   startRun(true);
-  requestAnimationFrame(frame);
 })();
 </script>
 </body>

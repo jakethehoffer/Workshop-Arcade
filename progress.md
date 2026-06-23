@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-23 Codex Crate Circuit idle-loop cleanup
+
+- Chose **Crate Circuit** as the next best move because it was the last named idle-rAF cleanup lane from the measured backlog after Gridline Tactics. A pre-fix Chromium probe confirmed the page still scheduled 60 rAF callbacks and 60 large canvas fills in one settled idle second after startup feedback had expired.
+- Fixed `websites/crate-circuit.html` by making the existing feedback timer own the scheduler: `setFeedback()` starts the short rAF loop, the loop stops when `feedbackMs` reaches zero, and `advanceTime(ms)` cancels any live frame before deterministic stepping so browser probes do not double-advance.
+- Verification: post-fix Chromium probe showed settled startup idle at 0 rAF / 0 large canvas fills, move feedback at 18 rAF callbacks with the runner moved to x=2, and post-move settled idle back at 0 rAF / 0 fills with feedback cleared; develop-web-game client screenshot/state were inspected through a room-complete sequence; strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, scoped `npm run test:games -- --slug crate-circuit`, scoped `npm run capture:games -- --slug crate-circuit`, `npm test`, full `npm run test:games`, full `npm run capture:games:ci`, and `git diff --check` passed.
+
 ## 2026-06-23 Codex Gridline Tactics idle-loop cleanup
 
 - Chose **Gridline Tactics** as the next low-risk idle-rAF cleanup target because its existing loop only ages decorative floating feedback labels, making it safer than Crate Circuit where the active loop owns the room timer.
