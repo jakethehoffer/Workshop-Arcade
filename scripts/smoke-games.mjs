@@ -650,8 +650,30 @@ async function checkPlayerDataControls(page, label) {
   if (initialCounts.drafts !== "2 drafts") {
     addFailure(label, `Player data draft count should show seeded drafts, got "${initialCounts.drafts}"`);
   }
-  if (!/^1 game · 2 entries$/.test(initialCounts.saves)) {
-    addFailure(label, `Player data save count should show seeded mirror entries, got "${initialCounts.saves}"`);
+  const saveSummary = await page.evaluate(() => {
+    const prefix = "workshop-arcade:game:";
+    const savedGames = new Set();
+    let saveEntries = 0;
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+      saveEntries += 1;
+      const remainder = key.slice(prefix.length);
+      const separator = remainder.indexOf(":");
+      if (separator > 0) savedGames.add(remainder.slice(0, separator));
+    }
+    const labelValue = (n, word) => `${n} ${n === 1 ? word : word === "entry" ? "entries" : `${word}s`}`;
+    return {
+      saveEntries,
+      savedGames: savedGames.size,
+      text: savedGames.size ? `${labelValue(savedGames.size, "game")} · ${labelValue(saveEntries, "entry")}` : "0 games",
+    };
+  });
+  if (saveSummary.saveEntries < 2 || saveSummary.savedGames < 1) {
+    addFailure(label, `Player data should retain seeded mirror entries before clearing, got ${JSON.stringify(saveSummary)}`);
+  }
+  if (initialCounts.saves !== saveSummary.text) {
+    addFailure(label, `Player data save count should match mirrored storage summary, got "${initialCounts.saves}" expected "${saveSummary.text}"`);
   }
 
   await page.locator("#clearFavoritesBtn").click();

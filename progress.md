@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-23 Codex Switchback Rally idle-loop cleanup
+
+- Chose **Switchback Rally** as the next low-priority idle-rAF cleanup target because a real Chromium probe measured 65 idle rAF callbacks and 132 large canvas operations in one planning-screen second, higher than the other sampled candidates.
+- Fixed `websites/switchback-rally.html` by adding a small scheduler around the existing replay loop: rAF now runs only during replay or while feedback is actively settling. Static planning, restart, stage-complete, and completed states draw once and stop, while gear changes and feedback still redraw immediately.
+- Tightened `scripts/smoke-games.mjs` after the scoped smoke exposed a stale catalog-mobile assertion: the Player data modal now checks its save count against the actual mirrored localStorage summary, while still requiring seeded save entries, so legitimate shelf-opened game settings do not fail the smoke.
+- Verification: post-fix browser probe reduced planning idle to 0 rAF callbacks after boot, kept planning adjustments at 0 rAF, advanced replay with 69 rAF callbacks in 800 ms, and settled stage-complete back to 0 rAF / 0 large fills; develop-web-game client screenshot/state were inspected; fresh capture screenshot confirmed replay HUD feedback no longer clips; strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, scoped `npm run test:games -- --slug switchback-rally`, scoped `npm run capture:games -- --slug switchback-rally`, `npm test`, full `npm run test:games`, full `npm run capture:games:ci`, tool syntax, player-data-controls, and `git diff --check` passed.
+
 ## 2026-06-22 Codex Lumen Lander idle-loop cleanup
 
 - Chose **Lumen Lander** as the next low-priority idle-rAF cleanup target because a real Chromium probe measured 65 idle rAF callbacks and 198 large canvas operations in one ready-screen second, the highest waste among the named remaining candidates.
