@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-23 Codex Orbit Salvage idle-loop cleanup
+
+- Chose **Orbit Salvage** as the next low-risk idle-rAF cleanup target after a fresh Chromium sample showed the static start screen still scheduling 47 rAF callbacks and 94 large canvas fills in one second. Crate Circuit and Gridline Tactics also repaint, but they start in active playing states where loop gating is a larger design change.
+- Fixed `websites/orbit-salvage.html` by adding a small scheduler around the existing flight loop: rAF now starts only when the skiff launches, stops when flight ends, and `advanceTime(ms)` cancels any live frame before deterministic stepping so browser tests do not double-advance.
+- Verification: post-fix browser probe showed start idle at 0 rAF / 0 fills, ready aim adjustment at 0 rAF, live flight still advanced with 51 rAF callbacks in 800 ms, and post-advance recovery settled to 0 rAF / 0 fills; develop-web-game client screenshot/state were inspected; strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, orbit-salvage-solvable, scoped `npm run test:games -- --slug orbit-salvage`, scoped `npm run capture:games -- --slug orbit-salvage`, `npm test`, full `npm run test:games`, full `npm run capture:games:ci`, and `git diff --check` passed.
+
 ## 2026-06-23 Codex Switchback Rally idle-loop cleanup
 
 - Chose **Switchback Rally** as the next low-priority idle-rAF cleanup target because a real Chromium probe measured 65 idle rAF callbacks and 132 large canvas operations in one planning-screen second, higher than the other sampled candidates.

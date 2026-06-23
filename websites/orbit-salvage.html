@@ -225,6 +225,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
 
   let audio = null;
   let rafTime = 0;
+  let raf = 0;
 
   // Honor prefers-reduced-motion: gate the decorative ship trail echo
   // (cosmetic, no gameplay effect) for motion-sensitive players. The skiff,
@@ -364,6 +365,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     state.message = "Skiff away.";
     tone("launch");
     syncUi();
+    ensureLoop();
   }
   function crash(reason) {
     const level = activeLevel();
@@ -454,10 +456,12 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     else if (state.elapsed > 16) crash("Signal window expired.");
   }
   function advance(ms) {
+    stopLoop();
     const frames = Math.max(1, Math.round((Number(ms) || 0) / (1000 / 60)));
     for (let i = 0; i < frames; i += 1) update(1 / 60);
     syncUi();
     draw();
+    ensureLoop();
     return textState();
   }
 
@@ -771,7 +775,21 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
   window.render_game_to_text = textState;
   window.advanceTime = advance;
 
+  function loopActive() {
+    return state.mode === "flight";
+  }
+  function ensureLoop() {
+    if (raf || !loopActive()) return;
+    rafTime = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+  function stopLoop() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    rafTime = 0;
+  }
   function loop(ts) {
+    raf = 0;
     if (!rafTime) rafTime = ts;
     const delta = Math.min(50, ts - rafTime);
     rafTime = ts;
@@ -780,11 +798,11 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
       syncUi();
       draw();
     }
-    requestAnimationFrame(loop);
+    if (loopActive()) raf = requestAnimationFrame(loop);
+    else rafTime = 0;
   }
 
   resetLevel(false);
-  requestAnimationFrame(loop);
 })();
 </script>
 </body>
