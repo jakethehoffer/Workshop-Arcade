@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-23 Codex Gridline Tactics idle-loop cleanup
+
+- Chose **Gridline Tactics** as the next low-risk idle-rAF cleanup target because its existing loop only ages decorative floating feedback labels, making it safer than Crate Circuit where the active loop owns the room timer.
+- Fixed `websites/gridline-tactics.html` by adding a small feedback scheduler: the game no longer starts a perpetual rAF on boot, `float()` starts the loop only while transient feedback exists, and `advanceTime(ms)` cancels any live frame before deterministic stepping.
+- Verification: post-fix Chromium probe showed initial idle at 0 rAF / 0 large canvas fills, cursor idle at 0 rAF / 0 fills, active move feedback at 24 rAF callbacks with feedback visible, and post-feedback idle back at 0 rAF / 0 fills; develop-web-game client screenshot/state were inspected; strict catalog validation, focused game-contract, keyboard-help, a11y-polish, a11y, scoped `npm run test:games -- --slug gridline-tactics`, scoped `npm run capture:games -- --slug gridline-tactics`, `npm test`, full `npm run test:games`, full `npm run capture:games:ci`, and `git diff --check` passed.
+
 ## 2026-06-23 Codex Orbit Salvage idle-loop cleanup
 
 - Chose **Orbit Salvage** as the next low-risk idle-rAF cleanup target after a fresh Chromium sample showed the static start screen still scheduling 47 rAF callbacks and 94 large canvas fills in one second. Crate Circuit and Gridline Tactics also repaint, but they start in active playing states where loop gating is a larger design change.
