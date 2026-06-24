@@ -442,6 +442,7 @@
   }
   function startRun(){
     state.mode = "playing";
+    ensureLoop();
     state.wave = 1;
     state.time = 0;
     state.score = 0;
@@ -804,13 +805,18 @@
       els.typed.innerHTML = "Column <span>" + (state.focusedColumn + 1) + "</span>: waiting for token";
     }
   }
+  let raf = 0;
+  function loopActive(){ return state.mode === "playing"; }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(frame); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame(ts){
+    raf = 0;
     if (!lastFrame) lastFrame = ts;
     const dt = Math.min(0.033, Math.max(0, (ts - lastFrame) / 1000));
     lastFrame = ts;
     update(dt);
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
   function canvasPoint(event){
     const rect = canvas.getBoundingClientRect();
@@ -982,15 +988,17 @@
   }
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms){
+    stopLoop();
     const steps = Math.max(1, Math.round((Number(ms) || 0) / (1000 / 60)));
     for (let i = 0; i < steps; i += 1) update(1 / 60);
     render();
+    ensureLoop();
     return renderGameToText();
   };
 
   updateHud();
   render();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>

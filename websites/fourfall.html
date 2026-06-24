@@ -152,7 +152,7 @@ function tryDrop(c){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking
   if(state.winLine){endGame("win");return}
   if(!validCols(state.board).length){endGame("draw");return}
   say("You dropped in column "+(c+1)+". CPU is thinking…");scheduleCpu()}
-function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;update();draw()}
+function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;update();draw();ensureLoop()}
 function doCpu(){if(state.mode!=="playing")return;const c=bestCpuCol();drop(c,2);tone("cpu");vibe(8);
   if(state.winLine){endGame("loss");return}
   if(!validCols(state.board).length){endGame("draw");return}
@@ -194,7 +194,7 @@ function drawSide(g){const px=g.x+g.cell*COLS+34;let py=g.y+12;ctx.textAlign="le
   block("STREAK · BEST",state.streak+" · "+state.best,null)}
 
 function tick(dt){state.time+=dt;if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
+window.advanceTime=ms=>{stopLoop();const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);ensureLoop();return window.render_game_to_text()};
 window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,result:state.result,turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),cpuThinking:state.cpuThinking,moveCount:state.moveCount,cursor:state.cursor,lastMove:state.lastMove,winLine:state.winLine,wins:state.wins,streak:state.streak,best:state.best,sound:state.sound,feedback:state.feedback,board:state.board.map(row=>row.join("")),coordinateSystem:"board[row][col], row 0 top..5 bottom, col 0 left..6 right; 1=dark(you), 2=light(cpu)"})};
 
 document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
@@ -204,7 +204,12 @@ els.neww.addEventListener("click",()=>{reset();tone("drop")});
 els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("drop")});
 document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const k=btn.dataset.key;if(k==="ArrowLeft")moveCursor(-1);else if(k==="ArrowRight")moveCursor(1);else if(k==="Enter")tryDrop(state.cursor);else if(k==="n")reset()}));
 reset();
-let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+let raf=0,last=0;
+function loopActive(){return state.cpuThinking}
+function ensureLoop(){if(raf||!loopActive())return;last=performance.now();raf=requestAnimationFrame(frame)}
+function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0}
+function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);if(loopActive())raf=requestAnimationFrame(frame);else last=0}
+ensureLoop();
 })();
 </script>
 </body>

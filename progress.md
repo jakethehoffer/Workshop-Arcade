@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 3 (6 active-sim games)
+
+- Extended the census-backed cleanup to the active-sim tier — games whose loop drives real-time motion during play, so they need a per-game active-mode predicate plus a loop-kick on start, not just a transient gate.
+- Gated 6 games: **drift-loom** (`mode==="playing"||feedbackMs>0`), **comet-cartel** (`mode==="playing"||feedbackMs>0||shots.length>0`), **canopy-courier** (`mode==="flying"||feedbackMs>0`), **typeforge-cipher** (`mode==="playing"`, kicked in startRun), **vector-pool** (`mode==="rolling"||mode==="stage-clear"||feedbackTimer>0`), **fourfall** (`cpuThinking` — loop runs only during the CPU think-delay).
+- Verified each in real Chromium under REAL time with the extended verify probe: menu idle 0 → loop resumes + sim advances on play → settles to 0. Stop-after-play confirmed empirically by driving comet-cartel / canopy-courier / typeforge-cipher / vector-pool to game-over via `advanceTime` and measuring idle 0; fourfall returns to the player's turn (idle 0) after the AI move. Every state-changing action redraws explicitly (checked per game — e.g. vector-pool's pointer/keyboard aim, fourfall's moveCursor), so gating never leaves a stale frame.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session running total (batches 1–3): 17 games gated; catalog idle-rAF offenders 63 → ~46.
+- Remaining backlog: ~17 action-game loopers (neon-drift, circuit-putt, signal-siege, skyline-sentry, slipstream-sprint, doodle-jump, pinball-foundry, snake, paddle-pulse, shadow-vault, penalty-circuit, ledger-lanes, beacon-bastion, nightwire, rhythm-circuit, reflex-spark, memory-match, echo-mimic, minesweeper, arena) — same active-mode pattern; each needs per-game render-coverage + predicate verification. EXCLUDE realtime: signal-loom, tempo-forge, cipher-rooms, finale-foundry.
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 2 (5 games)
 
 - Continued the census-backed idle-rAF cleanup. Re-ran the census (`test-results/idle-census/probe.mjs`): the 6 games gated on 2026-06-23 all hold at 0 idle rAF; offender count down to 56.
