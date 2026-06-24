@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 6 (2 render-first games)
+
+- Started the render-first tier — games where one handler repaints ONLY via the always-on loop, so an explicit render/draw must be added BEFORE gating. Strengthened the verify probe with a `canvasChangedOnActivate` check (largest-canvas pixel signature before/after the activating action) to prove the previously-loop-dependent action now repaints on its own.
+- **shadow-vault**: added `draw()` at the end of `tickTurn()` so every move repaints the board independently of the loop; gated the loop on `state.pulse>0` (the spotted-flash transient), kicked in `resolveVision` where pulse is set. Verified: idle 0, `canvasChangedOnActivate=true` on a move, no errors (pulse-flash loop is the same proven pattern as breachline).
+- **skyline-sentry**: added `render()` to the ready-mode `setLane()` (lane cursor) and to `resetGame()` (boot draw + start); gated on `state.mode==="playing" || state.shake>0 || state.bursts.length>0` (shake/bursts age before the mode guard, so they're in the predicate). Verified: ready-cursor repaints without the loop (`canvasChangedOnActivate=true`, activeRaf 0), playing runs the loop (activeRaf 56), idle 0.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–6): 29 games gated; catalog idle-rAF offenders 63 → ~34.
+- Remaining render-first backlog (each needs render-additions + FULL visual verification of every input path before gating): **minesweeper** (HIGHEST idle waste at ~78k canvas ops/sec; ~8 input handlers — hover/keyboard-nav/reveal/flag/chord — repaint only via the loop; needs renderFrame() in each), snake (queueDir/start cue), nightwire (tryMove/endTurn/setPeek — no action draws), slipstream-sprint (laneMove lane-slide), pinball-foundry (setFlipper/beginLaunchCharge flipper+plunger), arena (multi-branch frame + showMenu/showGameOver/pauseGame/resize draws). EXCLUDE: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit (realtime), doodle-jump (page-weight).
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 5 (4 games — low-risk tier complete)
 
 - Gated the last 4 low-risk loopers from the workflow spec sheet: **neon-drift** (`mode==="racing" || any feedback-event timer >0`), **circuit-putt** (`(mode==="playing" && ball.moving) || any feedback timer >0`), **paddle-pulse** (`mode==="playing" || recent hit/control time-windows`), **penalty-circuit** (`mode==="flying" || mode==="result"`). This completes all 10 low-risk games (6 in batch 4 + 4 here).

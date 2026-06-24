@@ -374,6 +374,7 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
       }
     });
     resolveVision();
+    draw();
   }
   function visibleCells(guard) {
     const [dx, dy] = dirVec[guard.dir];
@@ -403,6 +404,7 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
     if (spotted) {
       state.alert = Math.min(100, state.alert + 28);
       state.pulse = .6;
+      ensureLoop();
       state.feedback = "Spotted. Alert climbing.";
       sfx("alert");
       if (state.alert >= 100) {
@@ -618,20 +620,27 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
   }
   window.render_game_to_text = () => JSON.stringify(snapshot());
   window.advanceTime = (ms) => {
+    stopLoop();
     const frames = Math.max(1, Math.min(1200, Math.round((Number(ms) || 0) / STEP)));
     for (let i = 0; i < frames; i++) stepFrame();
     draw();
+    ensureLoop();
     return window.render_game_to_text();
   };
+  let raf = 0;
+  function loopActive() { return state.pulse > 0; }
+  function ensureLoop() { if (raf || !loopActive()) return; raf = requestAnimationFrame(frame); }
+  function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame() {
+    raf = 0;
     stepFrame();
     draw();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
   resetStage("ready");
   syncFull();
   draw();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>

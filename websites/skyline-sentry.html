@@ -280,6 +280,8 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     state.bursts.length = 0;
     setFeedback(state.mode === "playing" ? "Wave 1 online. Hold the skyline." : "Press Start. Defend the skyline core through five waves.");
     syncHud();
+    render();
+    ensureLoop();
   }
   function startGame() {
     resetGame("playing");
@@ -341,6 +343,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     state.lastInput = source || "lane";
     setFeedback(`${laneNames[state.selectedLane]} lane selected.`);
     if (fire) shoot(source || "pointer");
+    render();
   }
   function spawnDue() {
     const list = waves[state.wave] || [];
@@ -580,13 +583,18 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     ctx.restore();
     drawOverlay();
   }
+  let raf = 0;
+  function loopActive() { return state.mode === "playing" || state.shake > 0 || state.bursts.length > 0; }
+  function ensureLoop() { if (raf || !loopActive()) return; stamp = 0; raf = requestAnimationFrame(frame); }
+  function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame(now) {
+    raf = 0;
     if (!stamp) stamp = now;
     const dt = clamp((now - stamp) / 1000, 0, .05);
     stamp = now;
     update(dt);
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
   function step(ms) {
     const steps = Math.max(1, Math.round(ms / (STEP * 1000)));
@@ -611,7 +619,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     });
   }
   window.render_game_to_text = renderGameToText;
-  window.advanceTime = (ms) => step(Number(ms) || 0);
+  window.advanceTime = (ms) => { stopLoop(); step(Number(ms) || 0); ensureLoop(); };
 
   window.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
@@ -669,7 +677,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   document.addEventListener("fullscreenchange", () => setFeedback(document.fullscreenElement ? "Fullscreen sentry view active." : "Fullscreen closed."));
 
   resetGame("ready");
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>
