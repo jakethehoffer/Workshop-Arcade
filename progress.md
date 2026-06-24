@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 10 (slipstream-sprint)
+
+- Gated **slipstream-sprint**, a render-first game with an *animating interaction*: at the ready screen a lane change eases `laneX` toward the target lane over several frames (the car slide), and `update` ages `feedbackTimer`/`shake`/`flash`/`laneX` BEFORE the `mode!=="running"` guard — so those animate even when not racing.
+- Gate: `loopActive()` = `mode==="running" || feedbackTimer>0 || shake>0 || flash>0 || Math.abs(laneX - LANES[targetLane]) > 0.5` (the last term keeps the loop alive through the lane slide). `laneMove` always calls `setFeedback`, so a single `ensureLoop()` in `setFeedback` covers the slide; `resetRace` (which sets mode + draws) covers start/boot. `advanceTime` (was `= stepMs`) now cancels/re-arms.
+- Verified in real Chromium: ready-screen lane change repaints the slide without the always-on loop (`canvasChangedOnActivate=true`, activeRaf 53, idle 0); race runs (activeRaf 80) and idles at 0 at the ready screen. No errors.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–10): 33 games gated; catalog idle-rAF offenders 63 → ~30.
+- Remaining render-first: pinball-foundry (flipper-angle easing + plunger charge + ball physics — predicate needs flipper-not-at-rest with an epsilon), arena (multi-branch frame + showMenu/showGameOver/pauseGame/resize each need one draw). EXCLUDE: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit (realtime), doodle-jump (page-weight).
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 9 (nightwire — render-first dirty-flag)
 
 - Gated **nightwire**, the render-first tier's most dangerous case: NO player action called `draw()` — every visible change (moves, end-turn, peek) relied on the always-on loop, and several paths set no feedback at all.
