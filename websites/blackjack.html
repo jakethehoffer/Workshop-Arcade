@@ -152,14 +152,14 @@ function dealHand(){if(state.chips<=0){state.mode="result";state.outcome="lose";
   if(state.di>state.deck.length-15){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}
   state.stake=Math.max(BET_STEP,Math.min(state.stake,state.chips));state.wager=state.stake;state.chips-=state.wager;
   state.player=[];state.dealer=[];state.player.push(nextCard());state.dealer.push(nextCard());state.player.push(nextCard());state.dealer.push(nextCard());
-  state.mode="player";state.outcome=null;state.flash=1;tone("deal");vibe(8);
+  state.mode="player";state.outcome=null;state.flash=1;ensureLoop();tone("deal");vibe(8);
   if(isBJ(state.player)||isBJ(state.dealer)){resolve()}else{say("Your move — "+handValue(state.player)+". Hit, stand, or double.");update();draw()}}
 
-function hit(){if(state.mode!=="player")return;state.player.push(nextCard());state.flash=1;tone("hit");vibe(6);
+function hit(){if(state.mode!=="player")return;state.player.push(nextCard());state.flash=1;ensureLoop();tone("hit");vibe(6);
   if(handValue(state.player)>21){resolve()}else{say("Hit — you have "+handValue(state.player)+".");update();draw()}}
 function stand(){if(state.mode!=="player")return;tone("stand");dealerPlay();resolve()}
 function double(){if(state.mode!=="player"||state.player.length!==2)return;if(state.chips<state.wager){say("Not enough chips to double.");tone("bad");return}
-  state.chips-=state.wager;state.wager*=2;state.player.push(nextCard());state.flash=1;tone("hit");vibe(10);
+  state.chips-=state.wager;state.wager*=2;state.player.push(nextCard());state.flash=1;ensureLoop();tone("hit");vibe(10);
   if(handValue(state.player)>21){resolve()}else{dealerPlay();resolve()}}
 function dealerPlay(){while(handValue(state.dealer)<17)state.dealer.push(nextCard())}
 
@@ -174,7 +174,7 @@ function resolve(){const pv=handValue(state.player),dv=handValue(state.dealer),p
   else{payout=state.wager;result="push";msg="Push at "+pv+"."}
   state.chips+=payout;state.hands++;if(result==="win"){state.wins++;state.streak++}else if(result==="lose"){state.streak=0}
   if(state.chips>state.best.chips)state.best.chips=state.chips;if(state.streak>state.best.streak)state.best.streak=state.streak;
-  state.outcome=result;state.mode="result";state.flash=1;saveStats();
+  state.outcome=result;state.mode="result";state.flash=1;ensureLoop();saveStats();
   tone(result==="lose"?"bad":(result==="push"?"push":"win"));vibe(result==="win"?[24,24]:10);
   say(msg+" Chips "+state.chips+(state.chips<=0?" — New Game to rebuy.":". Deal for the next hand."));update();draw()}
 
@@ -211,7 +211,7 @@ function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.creat
   if(state.mode==="result"){const col=state.outcome==="win"?"#5eead4":(state.outcome==="push"?"#ffd166":"#fca5a5");ctx.textAlign="center";ctx.fillStyle="rgba(3,7,18,.55)";roundRect(canvas.width/2-250,242,500,52,12,true,false);ctx.fillStyle=col;ctx.font="950 26px system-ui";ctx.fillText(state.outcome==="win"?"YOU WIN":(state.outcome==="push"?"PUSH":"DEALER WINS"),canvas.width/2,277);ctx.textAlign="left"}}
 
 function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
+window.advanceTime=ms=>{stopLoop();const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);ensureLoop();return window.render_game_to_text()};
 window.render_game_to_text=function render_game_to_text(){const pm=state.mode==="player";return JSON.stringify({mode:state.mode,chips:state.chips,stake:state.stake,wager:state.wager,streak:state.streak,hands:state.hands,wins:state.wins,bestChips:state.best.chips,bestStreak:state.best.streak,player:{cards:state.player.map(c=>({rank:RANKS[c.r],suit:SUITS[c.s]})),total:handValue(state.player),blackjack:isBJ(state.player),bust:handValue(state.player)>21},dealer:{cards:state.dealer.map((c,i)=>(pm&&i===1)?{hidden:true}:{rank:RANKS[c.r],suit:SUITS[c.s]}),total:pm?cardVal(state.dealer[0].r):handValue(state.dealer),hiddenHole:pm},outcome:state.outcome,feedback:state.feedback,coordinateSystem:"hit draws a card, stand holds, double draws one then stands; dealer draws below 17; aces count 1 or 11; beat the dealer total without exceeding 21"})};
 
 document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
@@ -225,8 +225,13 @@ $("betDownBtn").addEventListener("click",()=>adjustStake(-BET_STEP));
 $("betUpBtn").addEventListener("click",()=>adjustStake(BET_STEP));
 $("newBtn").addEventListener("click",newGame);
 els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("deal")});
+let raf=0,last=0;
+function loopActive(){return state.flash>0}
+function ensureLoop(){if(raf||!loopActive())return;last=performance.now();raf=requestAnimationFrame(frame)}
+function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0}
+function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);if(loopActive())raf=requestAnimationFrame(frame);else last=0}
 loadGame();
-let last=performance.now();function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+ensureLoop();
 })();
 </script>
 </body>

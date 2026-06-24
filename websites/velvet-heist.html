@@ -178,7 +178,7 @@
   function blocked(x, y){ return !inBounds(x, y) || wallSet().has(keyOf(x, y)); }
   function activeCases(){ return state.cases.filter((c) => !c.taken); }
   function caseAt(x, y){ return state.cases.find((c) => !c.taken && c.x === x && c.y === y); }
-  function setFeedback(text, ms = 1200, event = "feedback"){ state.feedback = text; state.feedbackMs = ms; state.lastEvent = event; els.status.textContent = text; els.live.textContent = text; }
+  function setFeedback(text, ms = 1200, event = "feedback"){ state.feedback = text; state.feedbackMs = ms; state.lastEvent = event; els.status.textContent = text; els.live.textContent = text; ensureLoop(); }
   function ensureAudio(){ if(!state.sound || !state.userGesture) return null; try { if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if(audio.state === "suspended") audio.resume().catch(() => {}); return audio; } catch (_) { audio = null; return null; } }
   function tone(name){ state.lastSound = state.sound ? name : "muted-" + name; if(!state.sound) return; state.toneCount += 1; const ac = ensureAudio(); if(!ac) return; const now = ac.currentTime, osc = ac.createOscillator(), gain = ac.createGain(); const base = { start: 260, move: 420, steal: 740, smoke: 180, wait: 330, fail: 120, win: 880, toggle: 360 }[name] || 420; osc.type = name === "fail" ? "sawtooth" : "triangle"; osc.frequency.setValueAtTime(base, now); if(name === "win") osc.frequency.linearRampToValueAtTime(base + 260, now + .16); gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.055, now + .012); gain.gain.exponentialRampToValueAtTime(.0001, now + .18); osc.connect(gain).connect(ac.destination); osc.start(now); osc.stop(now + .22); }
   function guardPose(g, tick = state.guardTick){ const p = g.path[tick % g.path.length], n = g.path[(tick + 1) % g.path.length]; return { x: p[0], y: p[1], dx: Math.sign(n[0] - p[0]), dy: Math.sign(n[1] - p[1]) }; }
@@ -335,16 +335,20 @@
   function toggleFull(){ if(document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else els.app.requestFullscreen?.().catch(() => {}); }
   function openHelp(){ if(typeof els.dialog.showModal === "function" && !els.dialog.open) els.dialog.showModal(); }
   function closeHelp(){ if(els.dialog.open) els.dialog.close(); canvas.focus(); }
-  function loop(){ update(1000 / 60); updateUI(); draw(); requestAnimationFrame(loop); }
+  let raf = 0;
+  function loopActive(){ return state.feedbackMs > 0; }
+  function ensureLoop(){ if(raf || !loopActive()) return; raf = requestAnimationFrame(loop); }
+  function stopLoop(){ if(raf) cancelAnimationFrame(raf); raf = 0; }
+  function loop(){ raf = 0; update(1000 / 60); updateUI(); draw(); if(loopActive()) raf = requestAnimationFrame(loop); }
   window.render_game_to_text = text;
-  window.advanceTime = (ms) => { const steps = Math.max(1, Math.round(ms / (1000 / 60))); for(let i = 0; i < steps; i++) update(ms / steps); updateUI(); draw(); return text(); };
+  window.advanceTime = (ms) => { stopLoop(); const steps = Math.max(1, Math.round(ms / (1000 / 60))); for(let i = 0; i < steps; i++) update(ms / steps); updateUI(); draw(); ensureLoop(); return text(); };
   els.start.addEventListener("click", startRun); els.actionBtn.addEventListener("click", () => submitAction("button")); els.restart.addEventListener("click", restart);
   els.sound.addEventListener("click", toggleSound); els.full.addEventListener("click", toggleFull); els.help.addEventListener("click", openHelp); els.closeHelp.addEventListener("click", closeHelp);
   canvas.addEventListener("pointerdown", pointer); document.addEventListener("keydown", key);
   document.querySelectorAll("[data-key]").forEach((button) => button.addEventListener("click", () => {
     const keyName = button.dataset.key; if(keyName === "ArrowUp") submitMove("N", "pad"); else if(keyName === "ArrowDown") submitMove("S", "pad"); else if(keyName === "ArrowLeft") submitMove("W", "pad"); else if(keyName === "ArrowRight") submitMove("E", "pad"); else submitAction("pad");
   }));
-  loadStage(0); state.mode = "menu"; state.score = 0; setFeedback("Press Start.", 1400, "ready"); updateUI(); draw(); requestAnimationFrame(loop);
+  loadStage(0); state.mode = "menu"; state.score = 0; setFeedback("Press Start.", 1400, "ready"); updateUI(); draw(); ensureLoop();
 })();
 </script>
 </body>
