@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 4 (6 games, workflow-assisted)
+
+- Ran a Workflow fan-out (5 agents) to analyze the remaining 20 looper games and produce per-game gating specs: active predicate, transients, and a render-coverage safety check. It triaged them into **10 low-risk**, **2 medium** (doodle-jump, arena), **7 high** (an action repaints only via the always-on loop — needs an explicit `render()` added first: skyline-sentry, slipstream-sprint, pinball-foundry, snake, shadow-vault, nightwire, minesweeper), and confirmed **rhythm-circuit is a realtime beat head** (exclude — the static-frame classifier mislabeled it).
+- Gated 6 low-risk games from that spec sheet, each verified in real Chromium with the verify probe (extended with `--active-sim`, `--advance-to-end`, `--click-sel`): **ledger-lanes** (`feedbackMs>0`), **beacon-bastion** (`mode==="playing"`), **signal-siege** (`mode==="wave"||feedback.timer>0||sparks>0`), **reflex-spark** (`phase==="waiting"`), **echo-mimic** (`phase==="watch"`), **memory-match** (`(started&&!won)||busy` — the game-timer loop).
+- Verified menu/idle 0 → loop resumes on play → settles; turn-based ones return to idle 0, active ones keep looping during play and stop when the play state ends (proven by idle-at-rest equivalence; comet-cartel/canopy-courier stop-after-play confirmed empirically in batch 3).
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–4): 23 games gated; catalog idle-rAF offenders 63 → ~40.
+- Remaining backlog: 4 low-risk (neon-drift, circuit-putt, paddle-pulse, penalty-circuit — specs in hand); 2 medium (doodle-jump, arena); 7 high-risk needing an explicit `render()` in the offending handler before gating (see triage above). EXCLUDE realtime: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit. Regenerate specs via the idle-raf-gate-specs workflow; verify with test-results/idle-census/verify.mjs.
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 3 (6 active-sim games)
 
 - Extended the census-backed cleanup to the active-sim tier — games whose loop drives real-time motion during play, so they need a per-game active-mode predicate plus a loop-kick on start, not just a transient gate.

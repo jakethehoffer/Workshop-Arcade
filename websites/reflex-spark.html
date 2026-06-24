@@ -479,6 +479,7 @@
       state.waitDeadline = state.now + wait;
       setStage('waiting', 'Wait', 'Round ' + state.round + ' is armed. Tap only after green.', 'Hold steady');
       updateHud();
+      ensureLoop();
     }
   }
 
@@ -626,17 +627,21 @@
   els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
 
   // RAF tick — drives the wait → ready transition
-  let lastFrame = 0;
+  let lastFrame = 0, raf = 0;
+  function loopActive(){ return state.phase === 'waiting'; }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(tick); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function tick(t){
+    raf = 0;
     if (!lastFrame) lastFrame = t;
     const dt = t - lastFrame; lastFrame = t;
     state.now += dt;
     if (state.phase === 'waiting' && state.now >= state.waitDeadline){
       arm();
     }
-    requestAnimationFrame(tick);
+    if (loopActive()) raf = requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  ensureLoop();
 
   // Diagnostic hooks
   function ageSeconds(at){
@@ -671,9 +676,11 @@
     });
   };
   window.advanceTime = function advanceTime(ms){
+    stopLoop();
     const dt = Math.max(0, Number(ms) || 0);
     state.now += dt;
     if (state.phase === 'waiting' && state.now >= state.waitDeadline) arm();
+    ensureLoop();
     return state.now;
   };
 

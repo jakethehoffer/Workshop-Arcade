@@ -371,6 +371,7 @@
     }
     state.playbackQueue.push({ type: 'mimic', at: t + 100 });
     state.phase = 'watch';
+    ensureLoop();
     setPadsDisabled(true);
   }
 
@@ -565,15 +566,19 @@
   });
 
   // ----- Tick loop -----
-  let lastFrame = 0;
+  let lastFrame = 0, raf = 0;
+  function loopActive(){ return state.phase === 'watch'; }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(tick); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function tick(t){
+    raf = 0;
     if (!lastFrame) lastFrame = t;
     state.now += t - lastFrame;
     lastFrame = t;
     drivePlayback();
-    requestAnimationFrame(tick);
+    if (loopActive()) raf = requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  ensureLoop();
 
   // ----- Diagnostic hooks -----
   function ageSeconds(at){

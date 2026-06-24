@@ -211,6 +211,7 @@
     state.feedback.text = text;
     state.feedback.timer = 1.4;
     state.feedback[kind] = (state.feedback[kind] || 0) + 1;
+    ensureLoop();
   }
   function ensureAudio(){
     if (!state.sound || audioCtx) return;
@@ -285,6 +286,7 @@
     if (state.mode !== "build") return;
     if (state.wave > waves.length) return;
     state.mode = "wave";
+    ensureLoop();
     state.waveTime = 0;
     state.spawned = 0;
     state.waveKills = 0;
@@ -598,13 +600,18 @@
       reducedMotion
     };
   }
+  let raf = 0;
+  function loopActive(){ return state.mode === "wave" || state.feedback.timer > 0 || state.sparks.length > 0; }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastStamp = 0; raf = requestAnimationFrame(frame); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame(stamp){
+    raf = 0;
     if (!lastStamp) lastStamp = stamp;
     const dt = (stamp - lastStamp) / 1000;
     lastStamp = stamp;
     update(dt);
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
 
   canvas.addEventListener("pointerdown", (event) => {
@@ -648,9 +655,11 @@
 
   window.render_game_to_text = () => JSON.stringify(snapshot());
   window.advanceTime = (ms) => {
+    stopLoop();
     const steps = Math.max(1, Math.min(600, Math.round(ms / (1000 / 60))));
     for (let i = 0; i < steps; i += 1) update(1 / 60);
     render();
+    ensureLoop();
   };
 
   if (!("roundRect" in CanvasRenderingContext2D.prototype)) {
@@ -667,7 +676,7 @@
   selectTower("bolt");
   updateHud();
   render();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 <script>

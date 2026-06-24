@@ -595,6 +595,7 @@
     if (state.flipped.length >= 2) return;
 
     if (!state.started) state.started = state.now;
+    ensureLoop();
     card.state = 'up';
     state.flipped.push(id);
     state.lastFlipAt = state.now;
@@ -773,8 +774,12 @@
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
   // ----- Tick loop for time + pending flip-back resolution -----
-  let lastFrame = 0;
+  let lastFrame = 0, raf = 0;
+  function loopActive(){ return (state.started && !state.won) || state.busy; }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(tick); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function tick(timestamp){
+    raf = 0;
     if (!lastFrame) lastFrame = timestamp;
     const delta = timestamp - lastFrame;
     lastFrame = timestamp;
@@ -785,9 +790,9 @@
     if (state.started && !state.won){
       els.time.textContent = formatTime(state.now - state.started);
     }
-    requestAnimationFrame(tick);
+    if (loopActive()) raf = requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  ensureLoop();
 
   // ----- Wire controls -----
   els.newGame.addEventListener('click', newGame);
@@ -852,10 +857,12 @@
     });
   };
   window.advanceTime = function advanceTime(ms){
+    stopLoop();
     const dt = Math.max(0, Number(ms) || 0);
     state.now += dt;
     if (state.busy && state.now >= state.pendingResolveAt) resolvePendingMismatch();
     if (state.started && !state.won) els.time.textContent = formatTime(state.now - state.started);
+    ensureLoop();
     return state.now;
   };
 
