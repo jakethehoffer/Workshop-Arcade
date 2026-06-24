@@ -377,6 +377,7 @@
       feedback.sand = 0.24;
     }
     feedback.lastEvent = name;
+    ensureLoop();
   }
 
   function updateAimToCup(){
@@ -1071,13 +1072,18 @@
   els.closeHelp.addEventListener("click", hideHelp);
   els.overlay.addEventListener("click", (event) => { if (event.target === els.overlay) hideHelp(); });
 
+  let raf = 0;
+  function loopActive(){ return (state.mode === "playing" && state.ball.moving) || ["stroke","wall","bumper","sand","cup","reset"].some((k) => feedback[k] > 0); }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastStamp = 0; raf = requestAnimationFrame(loop); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function loop(stamp){
+    raf = 0;
     if (!lastStamp) lastStamp = stamp;
     const dt = clamp((stamp - lastStamp) / 1000, 0, 1 / 24);
     lastStamp = stamp;
     update(dt);
     render();
-    requestAnimationFrame(loop);
+    if (loopActive()) raf = requestAnimationFrame(loop);
   }
 
   function snapshot(){
@@ -1158,17 +1164,19 @@
 
   window.render_game_to_text = () => JSON.stringify(snapshot());
   window.advanceTime = (ms) => {
+    stopLoop();
     const steps = Math.max(1, Math.round(Number(ms || 0) / (1000 / 60)));
     for (let i = 0; i < steps; i += 1) update(1 / 60);
     updateUi();
     render();
+    ensureLoop();
     return window.render_game_to_text();
   };
 
   updateAimToCup();
   updateUi();
   render();
-  requestAnimationFrame(loop);
+  ensureLoop();
 })();
 </script>
 <script>

@@ -364,7 +364,7 @@
     state.playerScore = 0;
     state.aiScore = 0;
     state.winner = null;
-    state.mode = "playing";
+    state.mode = "playing"; ensureLoop();
     state.message = "Return the serve.";
     centerPaddles();
     resetBall(-1);
@@ -374,7 +374,7 @@
 
   function continueAfterPoint(){
     if (state.mode === "over") return startMatch();
-    state.mode = "playing";
+    state.mode = "playing"; ensureLoop();
     state.message = "Return the serve.";
     centerPaddles();
     resetBall(state.serveDir);
@@ -631,13 +631,18 @@
     updateFullscreenButton();
   }
 
+  let raf = 0;
+  function loopActive(){ return state.mode === "playing" || state.now - feedback.lastHitAt < 260 || state.now - feedback.lastControlAt < 850 || state.now - feedback.lastPlayerHitAt < 850 || state.now - feedback.lastAiHitAt < 850; }
+  function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(frame); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame(ts){
+    raf = 0;
     if (!lastFrame) lastFrame = ts;
     const dt = Math.min(0.033, Math.max(0, (ts - lastFrame) / 1000));
     lastFrame = ts;
     update(dt);
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
 
   function setPaddleFromClientY(clientY){
@@ -782,15 +787,17 @@
     });
   };
   window.advanceTime = function(ms){
+    stopLoop();
     const steps = Math.max(1, Math.round(ms / (1000 / 60)));
     for (let i = 0; i < steps; i += 1) update(1 / 60);
     render();
+    ensureLoop();
   };
 
   updateSoundButton();
   resetBall(-1);
   render();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>

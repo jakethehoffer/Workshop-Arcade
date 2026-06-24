@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 5 (4 games — low-risk tier complete)
+
+- Gated the last 4 low-risk loopers from the workflow spec sheet: **neon-drift** (`mode==="racing" || any feedback-event timer >0`), **circuit-putt** (`(mode==="playing" && ball.moving) || any feedback timer >0`), **paddle-pulse** (`mode==="playing" || recent hit/control time-windows`), **penalty-circuit** (`mode==="flying" || mode==="result"`). This completes all 10 low-risk games (6 in batch 4 + 4 here).
+- Per-game fix worth noting: **paddle-pulse** — I dropped the spec's `ball.trail.length>0` term from the predicate. The trail is only decayed inside the playing block, so after a point it would freeze non-empty and pin the loop on forever; `mode==="playing"` already covers the trail's live span, and the hit-window terms self-clear because `state.now` advances every frame before the mode guard.
+- Verified each in real Chromium (`--active-sim`/`--advance-to-end`/`--click-sel`): menu idle 0 → loop runs on play → settles to 0 (stop-after-play confirmed for circuit-putt/penalty-circuit by driving the shot to rest via advanceTime).
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–5): 27 games gated; catalog idle-rAF offenders 63 → ~36.
+- Remaining backlog: 2 medium (doodle-jump, arena); 7 high-risk needing an explicit `render()` added to the offending handler before gating (skyline-sentry, slipstream-sprint, pinball-foundry, snake, shadow-vault, nightwire, minesweeper). EXCLUDE realtime: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit.
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 4 (6 games, workflow-assisted)
 
 - Ran a Workflow fan-out (5 agents) to analyze the remaining 20 looper games and produce per-game gating specs: active predicate, transients, and a render-coverage safety check. It triaged them into **10 low-risk**, **2 medium** (doodle-jump, arena), **7 high** (an action repaints only via the always-on loop — needs an explicit `render()` added first: skyline-sentry, slipstream-sprint, pinball-foundry, snake, shadow-vault, nightwire, minesweeper), and confirmed **rhythm-circuit is a realtime beat head** (exclude — the static-frame classifier mislabeled it).

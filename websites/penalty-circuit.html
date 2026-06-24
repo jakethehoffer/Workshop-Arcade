@@ -286,6 +286,7 @@
     state.drag = null;
     play("kick");
     syncUi();
+    ensureLoop();
   }
   function resolveShot() {
     if (state.mode !== "flying") return;
@@ -566,9 +567,14 @@
     drawBall();
     drawOverlayText();
   }
+  let raf = 0;
+  function loopActive(){ return state.mode === "flying" || state.mode === "result"; }
+  function ensureLoop(){ if (raf || !loopActive()) return; raf = requestAnimationFrame(loop); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function loop() {
+    raf = 0;
     stepMs(1000 / 60);
-    requestAnimationFrame(loop);
+    if (loopActive()) raf = requestAnimationFrame(loop);
   }
 
   window.render_game_to_text = () => JSON.stringify({
@@ -592,11 +598,11 @@
     roundComplete: state.roundComplete,
     gameOver: state.gameOver
   });
-  window.advanceTime = stepMs;
+  window.advanceTime = (ms) => { stopLoop(); stepMs(ms); ensureLoop(); };
 
   syncUi();
   draw();
-  requestAnimationFrame(loop);
+  ensureLoop();
 })();
 </script>
 </body>
