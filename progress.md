@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 9 (nightwire — render-first dirty-flag)
+
+- Gated **nightwire**, the render-first tier's most dangerous case: NO player action called `draw()` — every visible change (moves, end-turn, peek) relied on the always-on loop, and several paths set no feedback at all.
+- Applied the **needsRender dirty-flag pattern** (same as minesweeper): `loopActive()` = `needsRender || feedbackTimer>0`; the loop renders, clears `needsRender`, and reschedules only while active; `markDirty()` (dirty + ensureLoop) is called from `tryMove`, `endTurn`, `setPeek`, and `setFeedback`. `advanceTime` cancels/re-arms; boot draws once then arms.
+- Verified in real Chromium: at the menu the loop is off (idle 0, was ~59 rAF); after Enter to start, each move repaints via markDirty (`canvasChangedOnActivate=true`, activeRaf 62), and the turn-based game idles at 0 between moves. No errors.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–9): 32 games gated; catalog idle-rAF offenders 63 → ~31.
+- Remaining render-first: slipstream-sprint (laneMove lane-slide easing — predicate needs laneX-vs-target), pinball-foundry (setFlipper/beginLaunchCharge flipper+plunger animate during the gesture), arena (multi-branch frame + showMenu/showGameOver/pauseGame/resize each need one draw). EXCLUDE: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit (realtime), doodle-jump (page-weight).
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 8 (snake)
 
 - Gated **snake** (Neon Snake), a render-first game whose only render-gap was the eat/turn feedback cue: `queueDir`/`start` spawn a cue ring via `recordSnakeFeedback` but never `draw()`, so at the Press-Space / paused / game-over screens the cue relied on the always-on loop.

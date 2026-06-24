@@ -257,7 +257,7 @@ state.best = Number(readStore(BEST_KEY, 0)) || 0;
 state.sound = readStore(SOUND_KEY, "1") !== "0";
 
 /* ---------- Feedback, HUD, render loop ---------- */
-function setFeedback(text, dur = 1.6) { state.feedback = text; state.feedbackTimer = dur; els.status.textContent = text; }
+function setFeedback(text, dur = 1.6) { state.feedback = text; state.feedbackTimer = dur; els.status.textContent = text; markDirty(); }
 
 function syncHud() {
   els.stage.textContent = Math.min(state.stage + 1, TOTAL_STAGES) + " / " + TOTAL_STAGES;
@@ -460,13 +460,19 @@ function drawOverlay() {
   ctx.fillText(hint, W / 2, H / 2 + 22);
 }
 
-let lastFrame = 0;
+let lastFrame = 0, raf = 0, needsRender = false;
+function loopActive() { return needsRender || state.feedbackTimer > 0; }
+function ensureLoop() { if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(loop); }
+function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
+function markDirty() { needsRender = true; ensureLoop(); }
 function loop(ts) {
+  raf = 0;
   if (!lastFrame) lastFrame = ts;
   const dt = clamp((ts - lastFrame) / 1000, 0, 0.05); lastFrame = ts;
   if (state.feedbackTimer > 0) state.feedbackTimer = Math.max(0, state.feedbackTimer - dt);
   draw(); syncHud();
-  requestAnimationFrame(loop);
+  needsRender = false;
+  if (loopActive()) raf = requestAnimationFrame(loop);
 }
 
 /* ---------- Run lifecycle ---------- */
@@ -502,6 +508,7 @@ function tryMove(dx, dy) {
   if (cellInCones(state.agent.x, state.agent.y)) onSpotted(); // step-into-cone (current pos; safe after a stage advance)
   if (state.mode !== "playing") return;                 // alarm may have maxed
   if (state.ap <= 0) endTurn();
+  markDirty();
 }
 function pickups() {
   if (!state.asset.taken && state.agent.x === state.asset.x && state.agent.y === state.asset.y) {
@@ -514,6 +521,7 @@ function endTurn() {
   guardsTurn();
   if (state.mode !== "playing") return;
   state.turn += 1; state.ap = MAX_AP; state.pendingDistract = false;
+  markDirty();
 }
 
 /* ---------- Guards: patrol stepping, hearing, the guards' turn ---------- */
@@ -672,7 +680,7 @@ function advanceStage() {
 function winRun() { state.mode = "win"; commitBest(); setFeedback("Extracted! Enter to play again", 5); tone(523, 0.12, 0.05, "triangle"); }
 
 /* ---------- Input: keyboard ---------- */
-function setPeek(on) { state.peek = on; }
+function setPeek(on) { state.peek = on; markDirty(); }
 function moveOrDistract(dx, dy) {
   if (state.pendingDistract) { throwLure(dx, dy); return; }
   tryMove(dx, dy);
@@ -760,15 +768,16 @@ function snapshot() {
 }
 function renderText() { return JSON.stringify(snapshot()); }
 function advanceTime(ms) {
+  stopLoop();
   const sec = clamp(Number(ms) || 0, 0, 10000) / 1000;
   if (state.feedbackTimer > 0) state.feedbackTimer = Math.max(0, state.feedbackTimer - sec);
-  draw(); syncHud(); return renderText();
+  draw(); syncHud(); needsRender = false; ensureLoop(); return renderText();
 }
 window.render_game_to_text = renderText;
 window.advanceTime = advanceTime;
 
 /* ---------- Boot ---------- */
-syncHud(); draw(); requestAnimationFrame(loop);
+syncHud(); draw(); needsRender = false; ensureLoop();
 </script>
 </body>
 </html>
