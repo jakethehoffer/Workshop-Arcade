@@ -177,6 +177,7 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     state.feedback = text;
     state.feedbackMs = ms;
     els.status.textContent = text;
+    ensureLoop();
   }
   function persist() {
     if (state.score > state.best) state.best = state.score;
@@ -637,6 +638,7 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
   });
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms = 0) {
+    stopLoop();
     const total = Math.max(0, Number(ms) || 0);
     if (total === 0) update(0);
     let left = total;
@@ -645,17 +647,22 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
       update(step);
       left -= step;
     }
+    ensureLoop();
     return renderGameToText();
   };
-  let last = performance.now();
+  let last = performance.now(), raf = 0;
+  function loopActive() { return state.feedbackMs > 0; }
+  function ensureLoop() { if (raf || !loopActive()) return; last = performance.now(); raf = requestAnimationFrame(frame); }
+  function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame(now) {
+    raf = 0;
     const dt = Math.min(50, Math.max(0, now - last));
     last = now;
     update(dt);
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
   loadStage(0, false);
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>

@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 2 (5 games)
+
+- Continued the census-backed idle-rAF cleanup. Re-ran the census (`test-results/idle-census/probe.mjs`): the 6 games gated on 2026-06-23 all hold at 0 idle rAF; offender count down to 56.
+- Gated 5 more static-frame loopers with the same scheduler pattern, each verified in real Chromium under REAL time (idle 0 → loop resumes on activation → idle 0, no errors): **crown-circuit** (predicate `feedbackMs>0 || any cell.lastPulse>0`), **wordweave-grid**, **prism-relay** (`feedbackMs>0 || rotateFlashMs>0`), **bloomkeeper-grid**, **breachline** (pulse-only; loop-resume confirmed by forcing a swap-block since the pulse only fires on block/spotted). Each game's `update`/`tick`/`step` only ages a transient and every action already redraws explicitly, so gating cannot leave a stale frame.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Remaining backlog: ~27 static-frame loopers — the harder active-sim tier whose loop drives a real-time sim/AI/clock during play (drift-loom, comet-cartel, fourfall, ledger-lanes, volt-sudoku, vector-pool, typeforge-cipher, etc.) needs a per-game active predicate + loop-kick on activation; plus the realtime-excluded trio (signal-loom, tempo-forge, cipher-rooms) and rhythm game finale-foundry (effectively realtime). Regenerate the ranked list with the census/classify probes.
+
 ## 2026-06-23 Claude idle-rAF census + turn-based gate fixes (6 games)
 
 - Built a complete idle-waste census (throwaway probes under gitignored `test-results/idle-census/`: `probe.mjs`, `classify.mjs`, `verify.mjs`). The probe loads every catalog game, settles it, then measures one idle second of `requestAnimationFrame` callbacks, canvas clears/draws, and live timers via instrumented init scripts. Finding: **63 of 100 games still spin a ~60fps rAF loop at their as-loaded resting state** — the prior "named idle-rAF backlog" was a hand-maintained list, not a measured census, so this replaces guesswork with evidence.

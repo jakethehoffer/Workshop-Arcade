@@ -417,7 +417,7 @@ function executeBeat() {
   if (blocked) {
     say("Route blocked. Re-queue the beat.");
     state.lastEvent = "blocked";
-    state.pulse = 1;
+    state.pulse = 1; ensureLoop();
     sfx("block");
     vibrate(18);
     draw();
@@ -459,7 +459,7 @@ function checkSight(reason) {
       if ((guard.x === agent.x && guard.y === agent.y) || vision.some(([x, y]) => x === agent.x && y === agent.y)) {
         state.mode = "failed";
         agent.seen = true;
-        state.pulse = 1;
+        state.pulse = 1; ensureLoop();
         state.lastEvent = "spotted-" + reason;
         say(agent.id + " was spotted by " + guard.id + ". Press Restart.");
         sfx("fail");
@@ -754,9 +754,11 @@ function snapshot() {
 }
 window.render_game_to_text = () => JSON.stringify(snapshot());
 window.advanceTime = (ms) => {
+  stopLoop();
   const frames = Math.max(1, Math.min(1200, Math.round((Number(ms) || 0) / STEP)));
   for (let i = 0; i < frames; i += 1) step(STEP);
   draw();
+  ensureLoop();
   return window.render_game_to_text();
 };
 document.addEventListener("keydown", (event) => {
@@ -783,14 +785,19 @@ document.querySelectorAll("[data-key]").forEach((button) => {
     handleKey(button.dataset.key);
   });
 });
+let raf = 0;
+function loopActive() { return state.pulse > 0; }
+function ensureLoop() { if (raf || !loopActive()) return; raf = requestAnimationFrame(frame); }
+function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
 function frame() {
+  raf = 0;
   step(16.7);
   draw();
-  requestAnimationFrame(frame);
+  if (loopActive()) raf = requestAnimationFrame(frame);
 }
 resetMission(false);
 syncFull();
-requestAnimationFrame(frame);
+ensureLoop();
 })();
 </script>
 </body>

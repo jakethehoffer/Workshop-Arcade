@@ -149,7 +149,7 @@
   function control(side){return state.board.filter(c=>c.owner === side).length}
   function relics(side){return state.board.filter(c=>c.relic && c.owner === side).length}
   function blocked(x,y){return cell(x,y).blocked}
-  function setFeedback(text, ms, event){state.feedback=text;state.feedbackMs=ms||1400;state.lastEvent=event||"feedback";els.status.textContent=text;els.live.textContent=text}
+  function setFeedback(text, ms, event){state.feedback=text;state.feedbackMs=ms||1400;state.lastEvent=event||"feedback";els.status.textContent=text;els.live.textContent=text;ensureLoop()}
   function ensureAudio(){if(!state.soundEnabled)return null;try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==="suspended")audio.resume().catch(()=>{});return audio}catch(_){audio=null;return null}}
   function tone(name){state.lastSound=state.soundEnabled?name:"muted-"+name;if(!state.soundEnabled)return;state.toneCount++;const ac=ensureAudio();if(!ac)return;const now=ac.currentTime,osc=ac.createOscillator(),gain=ac.createGain();osc.type=name==="bad"?"sawtooth":"triangle";osc.frequency.value={start:280,claim:520,relic:720,turn:360,win:900,bad:150,toggle:420}[name]||430;gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.045,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+.18);osc.connect(gain).connect(ac.destination);osc.start(now);osc.stop(now+.2)}
   function setupStage(i){
@@ -240,9 +240,14 @@
   function key(e){const k=e.key.toLowerCase();if(["arrowup","w"].includes(k)){e.preventDefault();moveCursor(0,-1)}else if(["arrowdown","s"].includes(k)){e.preventDefault();moveCursor(0,1)}else if(["arrowleft","a"].includes(k)){e.preventDefault();moveCursor(-1,0)}else if(["arrowright","d"].includes(k)){e.preventDefault();moveCursor(1,0)}else if(e.key==="Enter"||e.code==="Space"){e.preventDefault();playerAction()}else if(k==="e"){e.preventDefault();endTurn()}else if(k==="r"){e.preventDefault();restart()}else if(k==="m"){e.preventDefault();toggleSound()}else if(k==="f"){e.preventDefault();toggleFull()}else if(e.key==="?"||(e.key==="/"&&e.shiftKey)){e.preventDefault();openHelp()}}
   function pointer(e){const r=canvas.getBoundingClientRect();const x=Math.floor(((e.clientX-r.left)/r.width*W-OX)/CELL),y=Math.floor(((e.clientY-r.top)/r.height*H-OY)/CELL);if(!inBoard(x,y))return;const sameCursor=state.cursor.x===x&&state.cursor.y===y;state.cursor={x,y};if(sameCursor)playerAction();else{updateUI();render()}canvas.focus()}
   function renderText(){const rec=recommended("p"), data=stage();return JSON.stringify({title:"Crown Circuit",mode:state.mode,running:state.mode==="playing",coordinateSystem:"7x7 board, x right, y down, origin top-left",stage:state.stage+1,stageName:data.name,turn:state.turn,ap:state.ap,cursor:{...state.cursor},player:{...state.player},rival:{...state.rival},control:{player:control("p"),rival:control("r"),target:data.target},crests:{player:relics("p"),rival:relics("r"),target:data.relicGoal},score:state.score,best:Math.max(state.best,state.score),legalTargets:legalTargets("p"),recommended:rec,board:state.board.map(c=>({x:c.x,y:c.y,owner:c.owner||"neutral",blocked:c.blocked,relic:c.relic})),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount})}
-  window.render_game_to_text=renderText;window.advanceTime=ms=>{const steps=Math.max(1,Math.round(ms/(1000/60)));for(let i=0;i<steps;i++)update(1/60);updateUI();render();return renderText()};
+  window.render_game_to_text=renderText;window.advanceTime=ms=>{stopLoop();const steps=Math.max(1,Math.round(ms/(1000/60)));for(let i=0;i<steps;i++)update(1/60);updateUI();render();ensureLoop();return renderText()};
   els.start.addEventListener("click",start);els.action.addEventListener("click",playerAction);els.end.addEventListener("click",endTurn);els.restart.addEventListener("click",restart);els.sound.addEventListener("click",toggleSound);els.full.addEventListener("click",toggleFull);els.help.addEventListener("click",openHelp);els.closeHelp.addEventListener("click",closeHelp);document.addEventListener("keydown",key);canvas.addEventListener("pointerdown",pointer);document.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>{document.dispatchEvent(new KeyboardEvent("keydown",{key:b.dataset.key,code:b.dataset.key,bubbles:true,cancelable:true}))}));
-  setupStage(0);state.mode="menu";updateUI();render();requestAnimationFrame(function loop(){update(1/60);updateUI();render();requestAnimationFrame(loop)});
+  let raf=0;
+  function loopActive(){return state.feedbackMs>0||state.board.some(c=>c.lastPulse>0)}
+  function ensureLoop(){if(raf||!loopActive())return;raf=requestAnimationFrame(loop)}
+  function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0}
+  function loop(){raf=0;update(1/60);updateUI();render();if(loopActive())raf=requestAnimationFrame(loop)}
+  setupStage(0);state.mode="menu";updateUI();render();ensureLoop();
 })();
 </script>
 </body>

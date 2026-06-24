@@ -323,7 +323,7 @@
   };
 
   let audioCtx = null;
-  let lastFrame = performance.now();
+  let lastFrame = performance.now(), raf = 0;
 
   function cloneComponent(component, index) {
     return {
@@ -497,6 +497,7 @@
   function setFeedback(text, ms) {
     state.feedback = text;
     state.feedbackMs = Math.max(state.feedbackMs, ms);
+    ensureLoop();
   }
 
   function loadStage(index, baseScore) {
@@ -1050,12 +1051,16 @@
     updateHud();
   }
 
+  function loopActive() { return state.feedbackMs > 0 || state.rotateFlashMs > 0; }
+  function ensureLoop() { if (raf || !loopActive()) return; lastFrame = performance.now(); raf = requestAnimationFrame(frame); }
+  function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
   function frame(now) {
+    raf = 0;
     const dt = Math.min(50, now - lastFrame);
     lastFrame = now;
     tick(dt);
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
 
   function renderGameToText() {
@@ -1185,6 +1190,7 @@
 
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms = 0) {
+    stopLoop();
     let left = Math.max(0, Number(ms) || 0);
     if (left === 0) {
       tick(0);
@@ -1195,12 +1201,13 @@
         left -= step;
       }
     }
+    ensureLoop();
     render();
     return renderGameToText();
   };
 
   loadStage(0, 0);
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>
