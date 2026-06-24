@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 11 (pinball-foundry — caught a deadlock bug)
+
+- Gated **pinball-foundry**, the most intricate animating-interaction game: flipper angles ease toward their target every frame (`updateFlippers`), the plunger charge ramps while held, and the ball has physics during play. Predicate: `mode==="playing" || charging || feedbackTime>0 || flippers.left.down || flippers.right.down || |flippers.*.angle - rest| > 0.01`. Kicks: `setFlipper` (flipper press) and `setFeedback` (covers charge/launch/feedback). `advanceTime` cancels/re-arms; boot draws then arms.
+- **Bug caught by the hold-test:** the first predicate checked only `angle != rest`, but at the instant a flipper is pressed the angle is still at rest (the loop hasn't run yet to move it) — so `ensureLoop` saw `loopActive=false` and never started, leaving the flipper frozen (chicken-and-egg deadlock). Fix: include `flippers.*.down` (pressed) so the loop kicks immediately on press. This validated adding a `--hold` mode to the verify probe (hold a key across the active window) — instant key-presses were too fast to expose the swing.
+- Verified in real Chromium: holding a flipper at the ready screen swings it (`canvasChangedOnActivate=true`, activeRaf 38) and settles to 0 on release (epsilon stops the asymptotic ease — no infinite loop); launch→play runs and idles at 0. No errors.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–11): 34 games gated; catalog idle-rAF offenders 63 → ~29.
+- Remaining render-first: arena ONLY (multi-branch frame: non-playing/death-sequence/playing; showMenu/showGameOver/pauseGame/resize each need one draw() on entry; gate on mode==="playing"). EXCLUDE: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit (realtime), doodle-jump (page-weight).
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 10 (slipstream-sprint)
 
 - Gated **slipstream-sprint**, a render-first game with an *animating interaction*: at the ready screen a lane change eases `laneX` toward the target lane over several frames (the car slide), and `update` ages `feedbackTimer`/`shake`/`flash`/`laneX` BEFORE the `mode!=="running"` guard — so those animate even when not racing.
