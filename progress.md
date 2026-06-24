@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 8 (snake)
+
+- Gated **snake** (Neon Snake), a render-first game whose only render-gap was the eat/turn feedback cue: `queueDir`/`start` spawn a cue ring via `recordSnakeFeedback` but never `draw()`, so at the Press-Space / paused / game-over screens the cue relied on the always-on loop.
+- Gate: `loopActive()` = `running || (feedback.lastEventAge !== null && feedback.lastEventAge <= 1.1)` (active play OR the ~1.1s cue window, which `tick` ages before the running-guard). Single kick point: `ensureLoop()` in `recordSnakeFeedback` (called by queueDir, step, and start), plus boot. `advanceTime` cancels/re-arms. `newGame` already draws the rest board.
+- Verified in real Chromium: (1) render-first — an arrow at the rest screen renders the cue without the loop (`canvasChangedOnActivate=true`, activeRaf 47, idle 0); (2) play — snake auto-runs (activeRaf 120) and, driven to a wall via advanceTime, settles to 0 (stop-after-play). No errors.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–8): 31 games gated; catalog idle-rAF offenders 63 → ~32.
+- Remaining render-first: nightwire (turn-based; add draw() to tryMove/endTurn/setPeek — use the needsRender dirty-flag pattern), slipstream-sprint (laneMove lane-slide easing), pinball-foundry (setFlipper/beginLaunchCharge flipper+plunger), arena (multi-branch frame + showMenu/showGameOver/pauseGame/resize draws). EXCLUDE: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit (realtime), doodle-jump (page-weight).
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 7 (minesweeper — biggest single win)
 
 - Gated **minesweeper**, the catalog's worst idle waster by far: the census measured **78,141 canvas ops/sec at idle** (it redrew the entire grid every frame forever). Now **0** at idle.

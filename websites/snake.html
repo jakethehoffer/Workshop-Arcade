@@ -691,6 +691,7 @@
     }
     if(type === 'food') feedback.foodCount += 1;
     if(type === 'death') feedback.deathCount += 1;
+    ensureLoop();
   }
 
   function stepSnakeFeedback(dt){
@@ -1096,23 +1097,28 @@
 
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms = 0){
+    stopLoop();
     const steps = Math.max(1, Math.round(Math.max(0, ms) / (1000 / 60)));
     for(let i = 0; i < steps; i++){
       tick(1000 / 60);
     }
     draw();
+    ensureLoop();
     return renderGameToText();
   };
 
-  let last=performance.now();
-  function loop(){ const now=performance.now(); const dt=Math.min(500, now-last); last=now; tick(dt); draw(); requestAnimationFrame(loop); }
+  let last=performance.now(), raf=0;
+  function loopActive(){ return running || (feedback.lastEventAge !== null && feedback.lastEventAge <= 1.1); }
+  function ensureLoop(){ if(raf||!loopActive())return; last=performance.now(); raf=requestAnimationFrame(loop); }
+  function stopLoop(){ if(raf)cancelAnimationFrame(raf); raf=0; }
+  function loop(){ raf=0; const now=performance.now(); const dt=Math.min(500, now-last); last=now; tick(dt); draw(); if(loopActive())raf=requestAnimationFrame(loop); }
 
   // init
   Music.updateLabels();
   updateSoundLabels();
   syncFullscreenButton();
   newGame();
-  requestAnimationFrame(loop);
+  ensureLoop();
 })();
 </script>
 </body>
