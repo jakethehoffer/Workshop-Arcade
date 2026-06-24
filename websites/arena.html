@@ -710,6 +710,7 @@
       state.vw = w; state.vh = h;
       state.player.x = Math.max(state.player.r, Math.min(state.player.x, w - state.player.r));
       state.player.y = Math.max(state.player.r, Math.min(state.player.y, h - state.player.r));
+      draw();
     }
     window.addEventListener('resize', resize);
 
@@ -772,6 +773,7 @@
       startBtn.tabIndex = 0;
       activateDialog(menuEl, null, startBtn, () => startGameImmediate());
       pauseBtn.textContent = '⏸'; // reset icon
+      draw();
     }
     function showGameOver() {
       const final = Math.floor(state.score);
@@ -790,11 +792,13 @@
       pausedEl.hidden = true; // ensure not shown
       activateDialog(overEl, canvas, restartBtn, () => startGameImmediate());
       pauseBtn.textContent = '⏸';
+      draw();
     }
 
     function resetGame() {
       Sound.gameStart('restart');
       state.mode = 'playing';
+      ensureLoop();
       state.time = 0;
       state.score = 0;
       state.enemies.length = 0;
@@ -830,6 +834,7 @@
       Sound.gameStart(startKind);
 
       state.mode = 'playing';
+      ensureLoop();
       state.time = 0;
       state.score = 0;
       state.enemies.length = 0;
@@ -1360,12 +1365,14 @@
       activateDialog(pausedEl, pauseBtn, resumeBtn, () => resumeGame());
       pauseBtn.textContent = '▶️';
       Sound.stopMusic();
+      draw();
     }
     function resumeGame() {
       if (state.mode !== 'paused') return;
       deactivateDialog(pausedEl);
       pausedEl.hidden = true;
       state.mode = 'playing';
+      ensureLoop();
       pauseBtn.textContent = '⏸';
       Sound.resumeIfSuspended();
       Sound.startMusic();
@@ -1504,15 +1511,19 @@
     }
     if (fullscreenBtn) fullscreenBtn.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); });
 
-    let last = performance.now();
+    let last = performance.now(), raf = 0;
+    function loopActive() { return state.mode === 'playing'; }
+    function ensureLoop() { if (raf || !loopActive()) return; last = performance.now(); raf = requestAnimationFrame(frame); }
+    function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
     function frame(now) {
+      raf = 0;
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
 
       if (state.mode !== 'playing') {
         updateFeedback(dt);
         draw();
-        requestAnimationFrame(frame);
+        if (loopActive()) raf = requestAnimationFrame(frame);
         return;
       }
 
@@ -1530,7 +1541,7 @@
           showGameOver();
         }
         draw();
-        requestAnimationFrame(frame);
+        if (loopActive()) raf = requestAnimationFrame(frame);
         return;
       }
 
@@ -1562,7 +1573,7 @@
       draw();
       drawPopups(dt);
       drawLevelText(dt);
-      requestAnimationFrame(frame);
+      if (loopActive()) raf = requestAnimationFrame(frame);
     }
 
     resize();
@@ -1711,13 +1722,15 @@
       });
     };
     window.advanceTime = (ms = 0) => {
+      stopLoop();
       const total = Math.max(0, Number(ms) || 0);
       const steps = Math.max(1, Math.ceil(total / (1000 / 60)));
       const dt = Math.min(0.05, total / steps / 1000 || 1 / 60);
       for (let i = 0; i < steps; i += 1) advanceArena(dt);
+      ensureLoop();
       return window.render_game_to_text();
     };
-    requestAnimationFrame(frame);
+    ensureLoop();
     syncFullscreenButton();
   })();
   </script>

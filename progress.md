@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 12 (arena — render-first tier COMPLETE)
+
+- Gated **arena**, the last and most structurally complex render-first game: a 3-branch animation loop (non-playing / death-sequence / playing). Gate on `state.mode === 'playing'`; all three `requestAnimationFrame(frame)` sites now reschedule only `if (loopActive())`, so the loop stops the moment the game leaves `playing` (menu / paused / game-over).
+- Because the menu/paused/game-over screens previously relied on the always-on loop to paint, added one `draw()` on entry to `showMenu`, `showGameOver`, `pauseGame`, and `resize` (live resizes while idle now repaint). `ensureLoop()` kicks from `resetGame`, `startGameImmediate`, and `resumeGame` (every `mode → 'playing'` transition). `advanceTime` (drives `advanceArena`) cancels/re-arms; boot draws (resize + showMenu) then arms.
+- Verified in real Chromium: menu idles at 0 rAF (was ~61/sec); Play starts the loop and renders (`canvasChangedOnActivate=true`, activeRaf 49); driving the sim to game-over via advanceTime stops the loop (idleAfter 0, showGameOver paints the final frame). No errors from the new boot-time draws. Smoke + capture 0 issues (menu and game-over screens render correctly, no blank frames).
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression (signal-loom + tempo-forge still advance under real time), pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- **Milestone — render-first tier complete.** All static-frame idle-loopers are now resolved: 35 games gated across batches 1–12, plus 6 excluded with reason (signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit = realtime/must-loop-during-play; doodle-jump = page-weight headroom). Remaining catalog rAF schedulers at rest are games that legitimately animate at idle (intended motion), not waste.
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 11 (pinball-foundry — caught a deadlock bug)
 
 - Gated **pinball-foundry**, the most intricate animating-interaction game: flipper angles ease toward their target every frame (`updateFlippers`), the plunger charge ramps while held, and the ball has physics during play. Predicate: `mode==="playing" || charging || feedbackTime>0 || flippers.left.down || flippers.right.down || |flippers.*.angle - rest| > 0.01`. Kicks: `setFlipper` (flipper press) and `setFeedback` (covers charge/launch/feedback). `advanceTime` cancels/re-arms; boot draws then arms.
