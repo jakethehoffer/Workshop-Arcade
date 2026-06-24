@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude idle-rAF gate fixes batch 7 (minesweeper — biggest single win)
+
+- Gated **minesweeper**, the catalog's worst idle waster by far: the census measured **78,141 canvas ops/sec at idle** (it redrew the entire grid every frame forever). Now **0** at idle.
+- minesweeper is fully event-driven (grid static between moves; timer/mines-left are DOM), so the loop only needs to run for feedback transients. Implemented a `needsRender` dirty-flag + transient gate: `loopActive()` = `needsRender || screenFlash>0 || screenShake>0 || rings/pops/particles non-empty`; `draw()` reschedules only while active and clears `needsRender`; `markDirty()` (sets dirty + ensureLoop) is called from every canvas state-changer — `setSelectedCell`, `setPointerCell`, `reveal`, `toggleFlag`, `chordReveal`, the `mousemove` (hover) and `blur` listeners, and the `resize` listener. `advanceTime` cancels the loop, steps, then re-arms.
+- This is the render-first tier's hardest case (renderFrame was called ONLY by the loop). Verified in real Chromium that EVERY input path now repaints without the always-on loop, via the verify probe's `canvasChangedOnActivate` check: keyboard cursor-move/reveal/flag → canvas changes (true), mouse click → canvas changes (true); idle 0, loop runs only during feedback (activeRaf 33–44), settles to 0, no errors.
+- Full battery green: validate-catalog (100), 51 fast gates, full `test:games` (100), full `capture:games:ci` (200 surfaces, max render score 0), realtime-progression, pwa-runtime, runtime-storage, audit:perf:local (CI strict), git diff --check.
+- Session total (batches 1–7): 30 games gated; catalog idle-rAF offenders 63 → ~33.
+- Remaining render-first: snake, nightwire, slipstream-sprint, pinball-foundry, arena (each needs render-additions + per-input-path visual verification). EXCLUDE: signal-loom, tempo-forge, cipher-rooms, finale-foundry, rhythm-circuit (realtime), doodle-jump (page-weight).
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 6 (2 render-first games)
 
 - Started the render-first tier — games where one handler repaints ONLY via the always-on loop, so an explicit render/draw must be added BEFORE gating. Strengthened the verify probe with a `canvasChangedOnActivate` check (largest-canvas pixel signature before/after the activating action) to prove the previously-loop-dependent action now repaints on its own.

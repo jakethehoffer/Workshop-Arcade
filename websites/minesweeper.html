@@ -270,6 +270,7 @@
 
   // ===== rAF handle =====
   let rafId = null;
+  let needsRender = true;
 
   // ===== Canvas + DPI scaling =====
   const canvas = document.getElementById('game');
@@ -519,6 +520,7 @@
     state.lastInput = input;
     if (state.keyboardMode) addRing(state.selected.c, state.selected.r, '94,234,212', 0.18, 0.5);
     syncBoardStatus(announce ? `Selected ${selectedCellLabel()}.` : '');
+    markDirty();
   }
 
   function setPointerCell(cell, input) {
@@ -528,6 +530,7 @@
       state.selected = { c: cell.c, r: cell.r };
       syncBoardStatus('');
     }
+    markDirty();
   }
 
   function vibrate(pattern) {
@@ -688,6 +691,7 @@
     if (state.over) return;
     const cell = state.grid[r][c];
     if (cell.revealed || cell.flagged) return;
+    markDirty();
     const revealedCells = [];
 
     if (!state.started) {
@@ -739,6 +743,7 @@
     if (state.over) return;
     const cell = state.grid[r][c];
     if (cell.revealed) return;
+    markDirty();
     cell.flagged = !cell.flagged;
     state.flagsPlaced += cell.flagged ? 1 : -1;
     addFlagFeedback(c, r, cell.flagged);
@@ -750,6 +755,7 @@
     // If the number equals flags around it, reveal all unflagged neighbors
     const cell = state.grid[r][c];
     if (!cell.revealed || cell.adj <= 0) return;
+    markDirty();
     let flags = 0, hidden = [];
     forEachNbr(c,r,(nc,nr)=>{
       const n = state.grid[nr][nc];
@@ -865,12 +871,21 @@
 
   let lastDrawTime = performance.now();
 
+  function loopActive() {
+    return needsRender || feedback.screenFlash > 0 || feedback.screenShake > 0 ||
+      feedback.rings.length > 0 || feedback.pops.length > 0 || feedback.particles.length > 0;
+  }
+  function ensureLoop() {
+    if (!rafId && loopActive()) { lastDrawTime = performance.now(); rafId = requestAnimationFrame(draw); }
+  }
+  function markDirty() { needsRender = true; ensureLoop(); }
   function draw(now = performance.now()) {
     const dt = clamp((now - lastDrawTime) / 1000, 0, 0.05);
     lastDrawTime = now;
     stepFeedback(dt);
     renderFrame();
-    rafId = requestAnimationFrame(draw);
+    needsRender = false;
+    rafId = loopActive() ? requestAnimationFrame(draw) : null;
   }
 
   function renderFrame() {
@@ -1144,6 +1159,7 @@ function drawRaisedTile(x, y, s, hovered) {
   canvas.addEventListener('mousemove', (e)=>{
     const cell = cellFromEvent(e);
     state.hover = cell || {c:-1,r:-1};
+    markDirty();
   });
 
   canvas.addEventListener('mousedown', (e)=>{
@@ -1268,6 +1284,7 @@ function drawRaisedTile(x, y, s, hovered) {
     state.keyboardMode = false;
     state.lastInput = 'keyboard:blur';
     syncBoardStatus('');
+    markDirty();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -1739,6 +1756,7 @@ function drawRaisedTile(x, y, s, hovered) {
   window.addEventListener('resize', ()=>{
     const dims = resizeCanvasForBoard(state.cols, state.rows);
     state.tile = dims.tile; state.pad = dims.pad;
+    markDirty();
   });
 
   // Diagnostics for automated smoke/debug tooling.
@@ -1826,12 +1844,15 @@ function drawRaisedTile(x, y, s, hovered) {
 
   window.render_game_to_text = renderGameToText;
   window.advanceTime = function advanceTime(ms = 0){
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     const seconds = Math.max(0, Math.min(5, Number(ms) || 0) / 1000);
     const steps = Math.max(1, Math.ceil(seconds / (1 / 60)));
     const dt = seconds > 0 ? seconds / steps : 0;
     for (let i = 0; i < steps; i++) stepFeedback(dt);
     renderFrame();
+    needsRender = false;
     lastDrawTime = performance.now();
+    ensureLoop();
     return renderGameToText();
   };
 
