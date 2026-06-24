@@ -1,5 +1,11 @@
 Original prompt: Do this for me
 
+## 2026-06-24 Claude tooling fix — page-weight gate measures LF (served) bytes
+
+- Fixed a recurring false-failure in `scripts/check-page-weight.mjs`: it summed raw `stat().size`, which on a Windows checkout (`core.autocrlf=true`, no `.gitattributes`) includes one extra CRLF byte per line. That inflated `Arcade Jump` (doodle-jump) past its 10 KB named-exception headroom **locally only** — every idle-rAF batch had to hand-convert doodle-jump to LF before `npm test`, and `test:launch-evidence-refresh` (which requires a clean worktree) was unrunnable locally (clean tree = CRLF = page-weight fails; LF = dirty tree = preflight fails).
+- The gate now measures text assets (`.html/.css/.js/.mjs/.json/.svg/.webmanifest/.xml/.txt/.map`) by counting bytes with CRLF normalized to LF — the exact bytes GitHub Pages serves (CI builds on Linux/LF). Binary assets stay `stat()`-measured (a stray 0x0D0A in their bytes is data, not a line ending). On CI (already LF) this is a no-op, so there is zero parity risk; on Windows the working tree now reports the same weight as production.
+- Verified: with doodle-jump CRLF on a clean tree, `test:page-weight` passes (Arcade Jump 104.9 KB / 10.1 KB headroom, identical to the LF measurement) and all 51 fast gates pass — no game file touched, no more LF dance.
+
 ## 2026-06-24 Claude idle-rAF gate fixes batch 12 (arena — render-first tier COMPLETE)
 
 - Gated **arena**, the last and most structurally complex render-first game: a 3-branch animation loop (non-playing / death-sequence / playing). Gate on `state.mode === 'playing'`; all three `requestAnimationFrame(frame)` sites now reschedule only `if (loopActive())`, so the loop stops the moment the game leaves `playing` (menu / paused / game-over).

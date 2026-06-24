@@ -10,7 +10,7 @@
 // the desktop eager cover set.
 
 import { readFile, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = process.env.WORKSHOP_ARCADE_REPO_ROOT
@@ -22,6 +22,15 @@ const MIN_CATALOG_SHELL_REQUEST_HEADROOM = 5;
 const MIN_NAMED_EXCEPTION_HEADROOM_KB = 10;
 const MIN_NAMED_EXCEPTION_REQUEST_HEADROOM = 1;
 const NAMED_EXCEPTION_TITLES = new Set(['Lexica', 'Idle Tycoon', 'Arcade Jump', 'Brick Breaker']);
+// Text assets whose transfer size must be measured the way GitHub Pages serves
+// them: from the committed LF bytes. A local checkout on Windows (core.autocrlf)
+// rewrites text files to CRLF on disk, which inflates stat().size by one byte
+// per line and does not reflect production. We normalize CRLF -> LF for these
+// so a Windows working tree reports the same weight as CI/Linux. Binary assets
+// are never normalized (a stray 0x0D0A in their bytes is data, not a line end).
+const TEXT_TRANSFER_EXTENSIONS = new Set([
+  '.html', '.htm', '.css', '.js', '.mjs', '.json', '.svg', '.webmanifest', '.xml', '.txt', '.map',
+]);
 const issues = [];
 
 function fail(message) {
@@ -51,6 +60,16 @@ async function readText(relativePath) {
 
 async function fileSize(relativePath) {
   try {
+    if (TEXT_TRANSFER_EXTENSIONS.has(extname(relativePath).toLowerCase())) {
+      // Count served (LF) bytes: subtract one byte for each CRLF pair so a
+      // Windows autocrlf checkout matches the LF artifact GitHub Pages serves.
+      const buffer = await readFile(join(repoRoot, relativePath));
+      let crlf = 0;
+      for (let i = 1; i < buffer.length; i += 1) {
+        if (buffer[i] === 0x0a && buffer[i - 1] === 0x0d) crlf += 1;
+      }
+      return buffer.length - crlf;
+    }
     const info = await stat(join(repoRoot, relativePath));
     return info.size;
   } catch (error) {
