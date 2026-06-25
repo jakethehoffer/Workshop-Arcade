@@ -472,7 +472,7 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   }
 
   function commitRoute() {
-    if (state.route.length < 2 || state.mode === "running") return;
+    if (state.route.length < 2 || (state.mode !== "planning" && state.mode !== "drawing")) return;
     state.mode = "running";
     state.routeIndex = 1;
     state.courier.x = state.route[0].x;

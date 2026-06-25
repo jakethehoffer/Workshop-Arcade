@@ -2162,8 +2162,8 @@ animation: none;
 
   <div class="toast" id="toast" aria-live="polite"></div>
 
-  <style>.confirm-dialog{border:1px solid #2dd4bf59;border-radius:12px;background:#0b1220;color:#e2e8f0;max-width:330px;padding:18px}.confirm-dialog::backdrop{background:#020617a8}.confirm-dialog h2{margin:0 0 6px;font-size:17px;color:#5eead4}.confirm-dialog p{margin:0 0 16px;font-size:14px;line-height:1.5}.confirm-actions{display:flex;gap:8px;justify-content:flex-end}.confirm-actions button{padding:8px 14px;border-radius:9px;border:1px solid #94a3b866;background:#1e293b;color:#e2e8f0;font:inherit;font-weight:700}#confirmDialogYes{border-color:#2dd4bf99;background:#0891b2;color:#04222b}</style>
-  <dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmDialogTitle"><h2 id="confirmDialogTitle">Confirm</h2><p id="confirmDialogMsg"></p><div class="confirm-actions"><button type="button" id="confirmDialogNo">Cancel</button><button type="button" id="confirmDialogYes">Confirm</button></div></dialog>
+  <style>.confirm-dialog{border:1px solid #2dd4bf59;border-radius:10px;background:#0b1220;color:#e2e8f0;max-width:320px;padding:16px}.confirm-dialog::backdrop{background:#020617a8}.confirm-dialog p{margin:0 0 14px;font-size:14px}.confirm-actions{display:flex;gap:8px;justify-content:flex-end}.confirm-actions button{padding:8px 14px;border-radius:8px;border:1px solid #94a3b866;background:#1e293b;color:#e2e8f0;font-weight:700}#confirmDialogYes{border-color:#2dd4bf99;background:#0891b2;color:#04222b}</style>
+  <dialog class="confirm-dialog" id="confirmDialog" aria-label="Confirm"><p id="confirmDialogMsg"></p><div class="confirm-actions"><button type="button" id="confirmDialogNo">Cancel</button><button type="button" id="confirmDialogYes">Confirm</button></div></dialog>
 
   <template id="businessTemplate">
     <article class="business-card">
@@ -3296,7 +3296,7 @@ perks.forEach((perk=>{perk.purchased=false}))}function resetRun(){state.cash=0;s
 ;state.quests=[];ensureQuests();renderQuests()}function handlePrestige(){
 const potential=calcAngelPotential(state.allTime)
 ;const gain=Math.max(0,potential-state.angelInvestors);if(gain<=0)return
-;domConfirm(`Prestige for +${gain} angels? This resets your run progress.`).then((ok)=>{if(!ok)return;state.angelInvestors+=gain;state.prestigeCount+=1;resetRun();playSfx("reward");showToast(`Prestige complete. +${gain} angels earned.`);saveGame()})}
+;domConfirm(`Prestige for +${gain} angels? This resets your run progress.`).then((ok)=>{if(!ok)return;const g=Math.max(0,calcAngelPotential(state.allTime)-state.angelInvestors);if(g<=0)return;state.angelInvestors+=g;state.prestigeCount+=1;resetRun();playSfx("reward");showToast(`Prestige complete. +${g} angels earned.`);saveGame()})}
 function getSynergyMultiplier(biz){const index=businesses.findIndex((entry=>entry.id===biz.id))
 ;if(index<=0)return 1;const feeder=businesses[index-1]
 ;const tiers=Math.floor(feeder.owned/SYNERGY_STEP);return 1+tiers*SYNERGY_BONUS}

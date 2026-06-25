@@ -450,7 +450,7 @@ preventScroll:true})}else if(!event.shiftKey&&document.activeElement===last){eve
 ;for(let row=0;row<height;row+=1){for(let col=0;col<width;col+=1){const tile=map[row][col]
 ;const index=row*width+col;if(tile==="."){basePellets.push(index)}else if(tile==="o"){
 basePower.push(index)}}}const totalPellets=basePellets.length+basePower.length;const state={
-phase:"ready",score:0,highScore:Number(localStorage.getItem("mazeChaseHigh")||0),level:1,lives:3,
+phase:"ready",score:0,highScore:(()=>{const h=Number(localStorage.getItem("mazeChaseHigh"));return Number.isFinite(h)&&h>=0?Math.floor(h):0;})(),level:1,lives:3,
 frightenedTimer:0,eatStreak:0,pendingNextLevel:false};const house={timer:0,exitCooldown:0,
 dotTimer:0,globalCounter:0,globalCounterActive:false,pendingRelease:null,
 disableGlobalAfterRelease:false};const dotReleaseOrder=["Rosewire","Bluewire","Amberline"]
@@ -880,7 +880,7 @@ const dx=pacman.pos.x-ghost.pos.x;const dy=pacman.pos.y-ghost.pos.y
 ghost.state="normal"}}))}}if(advanceGhostMode(dt)){reverseGhostsOnModeChange()}updateFruit(dt)}
 function update(dt){updateTimers(dt);updatePacman(dt);checkFruitPickup()
 ;ghosts.forEach((ghost=>updateGhost(ghost,dt)));checkCollisions();updateFeedback(dt)
-;if(pelletsRemaining<=0&&!state.pendingNextLevel){state.pendingNextLevel=true;playLevelClearSound()
+;if(state.phase==="playing"&&pelletsRemaining<=0&&!state.pendingNextLevel){state.pendingNextLevel=true;playLevelClearSound()
 ;setPhase("levelcomplete","Level Clear","Press Enter for the next wave.")
 ;announceStatus(`Level ${state.level} clear. Press Enter for the next wave.`)}}function drawWalls(){
 ctx.save();ctx.fillStyle="#0c1a3f";ctx.strokeStyle="rgba(76, 201, 240, 0.8)"

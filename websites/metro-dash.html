@@ -1301,7 +1301,7 @@ try {
 } catch (_) {}
 const HS_KEY = "metrodash_highscore";
 let highScore = 0;
-try { highScore = Number(localStorage.getItem(HS_KEY) || 0); } catch(_) {}
+try { const n=Number(localStorage.getItem(HS_KEY)); highScore = Number.isFinite(n)&&n>0?Math.floor(n):0; } catch(_) {}
 
 function syncGameShellState() {
   document.body.classList.toggle("game-title", state === "title");

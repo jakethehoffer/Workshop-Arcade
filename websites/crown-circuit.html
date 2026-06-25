@@ -209,7 +209,7 @@
       else{setupStage(state.stage+1);setFeedback("Duel won. "+stage().name+" opens.",1800,"stage-clear");tone("win")}
       return true;
     }
-    if((rc>=data.target+1 && rr>=data.relicGoal)||state.turn>data.maxTurns){state.mode="failed";setFeedback("Rival circuit prevails. Restart the duel.",2400,"failed");tone("bad");return true}
+    if((rc>=data.target+1 && rr>=data.relicGoal)||state.turn>data.maxTurns){state.mode="failed";if(state.score>state.best){state.best=state.score;write(BEST_KEY,state.best)}setFeedback("Rival circuit prevails. Restart the duel.",2400,"failed");tone("bad");return true}
     return false;
   }
   function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(SIZE-1,state.cursor.x+dx));state.cursor.y=Math.max(0,Math.min(SIZE-1,state.cursor.y+dy));state.lastAction="cursor";updateUI();render()}

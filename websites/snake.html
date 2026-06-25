@@ -489,7 +489,7 @@
 
   const COLS=24, ROWS=24;
   const HS_KEY='neonsnake_best';
-  let best=0; try{ best=Number(localStorage.getItem(HS_KEY)||0);}catch(_){ }
+  let best=0; try{ const n=Number(localStorage.getItem(HS_KEY)); best=Number.isFinite(n)&&n>=0?n:0; }catch(_){ }
   bestEl.textContent='Best: '+best;
 
   // Honor prefers-reduced-motion: gate decorative eat/event rings and glow

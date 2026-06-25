@@ -189,7 +189,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     lastInput:"none", lastSound:"none", lastFeedback:"status", feedbackTtl:0, spark:[]
   };
   function store(){ try { return window.localStorage; } catch (_) { return window.workshopStorage || null; } }
-  function readNum(key,fallback){ try { const v=(store()||{}).getItem(key); return v == null ? fallback : Number(v) || fallback; } catch (_) { return fallback; } }
+  function readNum(key,fallback){ try { const v=(store()||{}).getItem(key); if (v == null) return fallback; const n=Number(v); return Number.isFinite(n) ? n : fallback; } catch (_) { return fallback; } }
   function readBool(key,fallback){ try { const v=(store()||{}).getItem(key); return v == null ? fallback : v === "true" || v === "1"; } catch (_) { return fallback; } }
   function write(key,value){ try { (store()||{}).setItem(key,String(value)); } catch (_) {} }
   function stage(){ return stages[state.stage]; }

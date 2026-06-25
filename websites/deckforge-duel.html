@@ -201,7 +201,7 @@
     bestStreak: 0,
     focus: 0,
     score: 0,
-    best: Number(storage.get(keys.best, "0")) || 0,
+    best: (function(){ const n=Number(storage.get(keys.best, "0")); return Number.isFinite(n)&&n>=0?Math.floor(n):0; })(),
     sound: storage.get(keys.sound, "1") !== "0",
     player: { hp: 44, maxHp: 44, block: 0 },
     enemy: { name: "", hp: 1, maxHp: 1, block: 0, charge: 0, color: "#fb7185" },

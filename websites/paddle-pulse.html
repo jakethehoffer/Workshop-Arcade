@@ -280,7 +280,7 @@
 
   function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   function loadBestRally(){
-    try { return Math.max(0, Number(localStorage.getItem(BEST_KEY) || 0)); } catch { return 0; }
+    try { const n=Number(localStorage.getItem(BEST_KEY)); return Number.isFinite(n)&&n>0?Math.round(n):0; } catch { return 0; }
   }
   function saveBestRally(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
   function loadSoundPref(){

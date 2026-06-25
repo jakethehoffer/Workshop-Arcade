@@ -628,7 +628,7 @@ window.addEventListener('keydown', (e) => {
 }
 
 function updateGun(dt){
-  if (!G.effects.some(e=>e.type==='GUN')) return;
+  if (G.waitingLaunch || !G.effects.some(e=>e.type==='GUN')) return;
   G.gunCooldown -= dt;
   if (G.gunCooldown <= 0){
     fireGuns();
@@ -637,6 +637,7 @@ function updateGun(dt){
 }
 
 function updateBullets(dt){
+  if (G.waitingLaunch) return;
   for (let i=G.bullets.length-1; i>=0; i--){
     const b = G.bullets[i];
     b.y += b.vy * dt;
@@ -1246,6 +1247,7 @@ G.portals = computePortals(G.bricks);
     G.effects = []; // reset active effects
     G.speedMod = 1;
     G.shrinkDebt = 0;
+    G.expandDebt = 0;
     G.bullets = [];         // ← NEW
     G.gunCooldown = 0;      // ← NEW
     G.riskMult = 1;    // ← ensure no lingering risk badge
@@ -1824,7 +1826,7 @@ case 'MULTI': {
         pushTimed('EXPAND', EFFECT_DUR.EXPAND);
         const addedW = Math.min(200, G.paddle.w + 60) - G.paddle.w;
         G.paddle.w += addedW;
-        G.expandDebt = addedW;
+        G.expandDebt = (G.expandDebt || 0) + addedW;
         break;
       }
         case 'GUN':

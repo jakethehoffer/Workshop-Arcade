@@ -465,7 +465,7 @@
       if (circleBounce(bumper.x, bumper.y, bumper.r, 210)) {
         bumper.hits += 1;
         state.bumperHits += 1;
-        state.multiplier = Math.min(5, 1 + Math.floor(state.bumperHits / 4));
+        state.multiplier = Math.min(5, Math.max(state.multiplier, 1 + Math.floor(state.bumperHits / 4)));
         award(250, "Bumper forged", 620 + bumper.hits * 22);
       }
     }

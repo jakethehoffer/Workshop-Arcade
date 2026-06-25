@@ -554,7 +554,7 @@
     // Two packets can cross into the target on the same frame; only award the
     // stage bonus and transition once (deliverPacket uses >= goal, so a second
     // same-frame delivery would otherwise re-enter and double-count the bonus).
-    if (state.mode === "stage-clear" || state.complete) return;
+    if (state.mode === "stage-clear" || state.complete || state.gameOver) return;
     const current = stage();
     state.score += 300 + Math.round(state.timeRemaining * 10) + state.stepsRemaining * 18;
     updateBest();
@@ -573,6 +573,7 @@
   }
 
   function endGame(reason) {
+    if (state.gameOver || state.complete || state.mode === "stage-clear") return;
     state.mode = "game-over";
     state.gameOver = true;
     state.complete = false;

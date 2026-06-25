@@ -156,7 +156,7 @@
   let audioCtx = null, lastFrame = 0, raf = 0;
   const state = {
     mode: "planning", stageIndex: 0, cornerIndex: 0, plan: [], replay: [], replayMs: 0, stageMs: 0, totalMs: 0,
-    score: 0, damage: 0, crashes: 0, slowdowns: 0, bestTime: Number(safeStore.get(BEST_KEY, 0)) || 0,
+    score: 0, damage: 0, crashes: 0, slowdowns: 0, bestTime: (function(){const n=Number(safeStore.get(BEST_KEY, 0));return Number.isFinite(n)&&n>0?n:0;})(),
     command: { gear: 3, brake: 1, apex: "mid" }, feedback: "Call the first corner.", feedbackKind: "info", feedbackTtl: 0,
     car: { x: 96, y: 424, angle: 0, speed: 0 }, ghost: [], stageResults: [], runComplete: false, gameOver: false,
     sound: loadSound(), userGesture: false, lastSound: "none", fullscreen: false

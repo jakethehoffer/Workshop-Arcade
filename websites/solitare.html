@@ -804,6 +804,7 @@ function startAutoComplete(){
 
   // ===== Dealing / New Game =====
   function deal(seed, options = {}){
+    autoRunning = false; // cancel any in-flight auto-complete before re-dealing
     // ✅ CHANGED: seed ignores any DOM input; uses provided seed or random
     state.seed = (seed ?? (Math.floor(Math.random()*1e9)>>>0));
     lastAction = 'new-deal';
@@ -1574,6 +1575,7 @@ function doHint(){
     if(state.initial){
       clearSelectedSource(false);
       restore(state.initial);
+      state.history = []; state.future = []; autoRunning = false;
       lastAction = 'restart';
       render();
       announceStatus('Deal restarted.', 'info', 'restart');
@@ -1608,6 +1610,7 @@ el('#drawOne').addEventListener('change', (e)=>{
       if(state.initial){
         clearSelectedSource(false);
         restore(state.initial);
+        state.history = []; state.future = []; autoRunning = false;
         announceStatus('Deal restarted.', 'info', 'restart');
       }
     }

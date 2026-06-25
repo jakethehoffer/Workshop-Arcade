@@ -310,7 +310,7 @@
   let tiles = [];          // {id,value,r,c,fromR,fromC,toR,toC,scale,popStart,removing,mergedInto}
   let board;               // 2D array holding tile id or 0
   let score, best, won, over, keepPlaying;
-  best = Number(localStorage.getItem('best2048')||0);
+  { const b=Number(localStorage.getItem('best2048')); best = Number.isFinite(b)&&b>=0?Math.floor(b):0; }
   let moving = false;      // during slide animation
   let moveGen = 0;         // bumped on new game so an in-flight slide can't commit onto the fresh board
   let lastState = null;    // snapshot for undo

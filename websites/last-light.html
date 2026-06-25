@@ -168,11 +168,11 @@ function activate(idx){if(state.mode!=="playing")return;
   say("Not a legal landing — pick a highlighted hole.");tone("bad");draw()}
 
 function endGame(){state.mode="over";const pegs=pegCount(state.board);if(state.best==null||pegs<state.best)state.best=pegs;
-  if(pegs===1){if(centerPeg(state.board)){state.result="perfect";state.perfect++;state.solves++;say("Perfect — one last light, dead center! Press New Game.");tone("perfect");vibe([30,30,40])}else{state.result="win";state.solves++;say("Solved — down to the last light! Press New Game.");tone("win");vibe([26,26])}}
+  if(pegs===1){const credit=!state.scored;state.scored=true;if(centerPeg(state.board)){state.result="perfect";if(credit){state.perfect++;state.solves++}say("Perfect — one last light, dead center! Press New Game.");tone("perfect");vibe([30,30,40])}else{state.result="win";if(credit)state.solves++;say("Solved — down to the last light! Press New Game.");tone("win");vibe([26,26])}}
   else{state.result="stuck";say("No moves left — "+pegs+" pegs remain. Undo, or press New Game.");tone("stuck");vibe(40)}
   saveStats();update();draw()}
 
-function reset(){state.board=newBoard();state.cursor={x:3,y:1};state.sel=-1;state.moves=0;state.mode="playing";state.result=null;state.history=[];state.flashIdx=-1;say("New board — clear the cross down to one last light.");update();draw()}
+function reset(){state.board=newBoard();state.cursor={x:3,y:1};state.sel=-1;state.moves=0;state.mode="playing";state.result=null;state.scored=false;state.history=[];state.flashIdx=-1;say("New board — clear the cross down to one last light.");update();draw()}
 function undo(){if(!state.history.length){say("Nothing to undo.");tone("bad");return}const h=state.history.pop();state.board=h.board;state.moves=h.moves;state.sel=h.sel;state.mode="playing";state.result=null;state.flashIdx=-1;say("Undid a jump — "+pegCount(state.board)+" pegs.");tone("undo");update();draw()}
 function moveCursor(dx,dy){let x=state.cursor.x,y=state.cursor.y;for(let s=0;s<N;s++){x+=dx;y+=dy;if(!isHole(y,x))break;state.cursor={x,y};return}}
 

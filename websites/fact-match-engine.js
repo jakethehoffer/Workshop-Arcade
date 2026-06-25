@@ -29,7 +29,7 @@
     answer: null,
     cluesShown: 3,
     streak: 0,
-    best: Number(safeGet(storageKey, "0") || 0),
+    best: (function(){ var n = Number(safeGet(storageKey, "0")); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; })(),
     revealed: false,
     visibleBankCount: 0,
     lastBankPick: null

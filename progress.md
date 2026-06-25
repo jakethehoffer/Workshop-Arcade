@@ -1,5 +1,33 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude deep correctness re-audit — 26 verified fixes
+
+A sharp second-pass correctness Workflow (20 auditors, waved) targeting subtle classes the general sweep underweights — numeric overflow/NaN/precision, save/load corruption, double-activation/timer races, boundary/empty/max states — each finding adversarially verified: **28 raw → 26 confirmed** (2 refuted). Fixed all 26 across 24 files, verified with live probes + the full battery.
+
+**Storage hardening (NaN/Infinity/negative no longer poison best-score/progress; 10 games):** snake, 2048, maze-chase, the shared `fact-match-engine.js` (all fact-match games), paddle-pulse, switchback-rally, metro-dash, rail-yard-relay (`readNum`), deckforge-duel — `Number(x)||0` let `Infinity` survive and `parseInt`→NaN persist, permanently freezing Best at NaN/Infinity in the HUD; breachline crashed on a negative stored progress. All now sanitize on load (`Number.isFinite(n) && n>=0 ? … : 0`; breachline clamps both ends). Verified with a dedicated probe that seeds Infinity/NaN/negative/garbage into each → finite, no crash, no HUD "NaN".
+
+**Boundary / terminal-state:**
+- **finale-foundry (HIGH)** — an early/mistimed strike in the correct lane permanently marked the note missed, making the stage **unwinnable** with otherwise-flawless play. Now only a genuinely *late* strike retires a note (directional check mirroring `autoMissLate`). Live-probed: an early strike no longer dooms the stage.
+- **maze-chase** — clearing the last pellet the same frame a ghost catches you overrode Game Over and advanced a level with 0 lives → gate the level-clear on `phase==="playing"`.
+- **dungeon-circuit** — the floor-5 exit still ran the enemy turn, so a post-win ambush could flip the win to game-over → early-return from `afterTurn` when won.
+- **moonbase-mutex** — completing the objective on the exact tick air hit 0 declared FAIL → check win before air-exhaustion.
+- **packet-pilot** — a same-frame deliver + over-budget loss left an inconsistent terminal state → terminal guards on `clearStage`/`endGame`.
+- **pinball-foundry** — the all-rollovers multiplier bonus was overwritten by the next bumper hit → max-merge.
+- **inkline-courier** — "Run Route" re-ran the stale finished route after game end → `commitRoute` only from planning/drawing.
+- **brick-breaker** — GUN auto-fired while the ball was parked (scoring with no ball in play) → gate on a launched ball; stacking EXPAND leaked paddle width → accumulate `expandDebt` (+reset on level).
+
+**Save / undo / misc:**
+- **solitare** — Restart Deal kept the undo history (Undo teleported into the abandoned game) and a pending Auto-Complete tick mutated a fresh deal → clear history/future + cancel auto-complete on deal/restart.
+- **last-light** — undo→redo the final jump double-counted Solves/Perfect (persisted, unbounded) → per-board first-solve guard.
+- **crown-circuit** — the HUD advertised a best that was only persisted on a full win → persist on fail too.
+- **idle-tycoon** — prestige applied the angel gain captured *before* the async confirm dialog → recompute at confirm time.
+
+**advanceTime / rAF determinism:** aster-vault, chrome-convoy, tempo-tunnels — `advanceTime` didn't stop the live loop, so physics/time integrated off the wall clock around deterministic steps → handle-based loop + `stopLoop`/`ensureLoop` so `advanceTime` is the exclusive clock during a step (the loop still runs continuously otherwise). Live-probed all three: `advanceTime` works, loop intact.
+
+Refuted (correctly): switchback-rally "double-advance", canopy-courier "unbounded boost skips collision".
+
+Verification: `validate-catalog`; live probes (storage-corruption across 10 games, finale-foundry early-strike, advanceTime trio) all pass; `npm test` 51/51; full `test:games` 100; `capture:games:ci` 200 surfaces max score 0; `test:reduced-motion`; `test:realtime-progression`; `test:runtime-storage`; `test:pwa-runtime`; `audit:perf:local`; `git diff --check` clean. Compacted idle-tycoon's confirm dialog (dropped the `<h2>` for an `aria-label`) to stay under its page-weight floor.
+
 ## 2026-06-25 Claude keyboard-reachability sweep — 2 stranded sound toggles
 
 Completeness follow-up to the deep audit: first confirmed the **sandbox-dead-modal class is fully closed** (a catalog-wide grep for `confirm(`/`alert(`/`prompt(` returns only the guarded fixes plus chess's unreachable in-DOM-picker fallback). Then ran a focused single-dimension Workflow (20 auditors, waved) asserting every interactive control in all 100 games is operable by keyboard alone, each finding adversarially verified. Result: **2 findings, both confirmed, both LOW** — no keyboard soft-locks remain anywhere (the rail-yard-relay Start soft-lock was the only blocking one, already fixed). Both are stranded **Sound toggles**, the same class as the earlier gridfront-orders fix:

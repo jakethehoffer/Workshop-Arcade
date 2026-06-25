@@ -222,7 +222,8 @@
       setFeedback("Spark " + note.id + " fused.", 900, "hit"); tone("hit");
       if(doneCount() === state.notes.length) clearStage(); else { updateUI(); draw(); }
     } else {
-      if(offset > WINDOW) note.missed = true;
+      const late = state.time - noteTime(note) > WINDOW;
+      if(state.lane === note.lane && late) note.missed = true;
       miss(state.lane !== note.lane ? "lane " + (note.lane + 1) : "timing");
     }
   }
