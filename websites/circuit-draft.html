@@ -308,12 +308,20 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
     const occupied = state.lanes.filter((lane) => lane.length > 0).length;
     const tags = Object.create(null);
     allModules().forEach((card) => { tags[card.tag] = (tags[card.tag] || 0) + 1; });
+    // Pass 1: total charge + signal across ALL modules first, so charge/signal-
+    // dependent cards score against the finalized totals (matching the card text
+    // "your charge"/"charge plus signal") regardless of placement order.
     state.lanes.forEach((lane, laneIndex) => {
       lane.forEach((card) => {
         if (card.id === "spark") charge += 2 + (laneIndex === 0 ? 1 : 0);
         else if (card.id === "coil") charge += 3;
-        else if (card.id === "cell") output += Math.floor(charge / 2);
         else if (card.id === "bus") signal += Math.max(1, lane.length);
+      });
+    });
+    // Pass 2: score outputs. Heat stays sequential (a genuine processing chain).
+    state.lanes.forEach((lane, laneIndex) => {
+      lane.forEach((card) => {
+        if (card.id === "cell") output += Math.floor(charge / 2);
         else if (card.id === "gate") output += signal + (laneIndex === 1 ? 2 : 0);
         else if (card.id === "diode") output += occupied * 2;
         else if (card.id === "clock") output += state.turn + 1;

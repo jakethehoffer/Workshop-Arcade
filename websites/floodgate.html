@@ -93,7 +93,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Floodgate flood-fill puzzle">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Floodgate</span></div>
-    <div class="help">Pick a color (the swatches below, or keys 1-6) to flood the region from the top-left corner. Make the whole board one color in as few moves as you can. N starts a new game, R reshuffles.</div>
+    <div class="help">Pick a color (the swatches below, or keys 1-6) to flood the region from the top-left corner. Make the whole board one color in as few moves as you can. N starts a new game, R resets the level.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Level</span><span class="value" id="levelValue">1/3</span></div>
@@ -108,7 +108,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Floodgate ready.</div>
   <section class="bar" aria-label="Actions">
     <button class="btn primary" id="newBtn" type="button">New Game</button>
-    <button class="btn" id="resetBtn" type="button">Reshuffle</button>
+    <button class="btn" id="resetBtn" type="button">Reset Level</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
   </section>
   <section class="swatches" id="swatches" aria-label="Flood colors">
@@ -160,7 +160,7 @@ function solveLevel(){const key=String(state.idx),prev=state.best[key];if(prev==
   update();draw()}
 
 function loadLevel(i){state.idx=i;state.n=LEVELS[i].n;state.colors=LEVELS[i].colors;state.grid=makeGrid(state.n,state.colors,LEVELS[i].seed);state.moves=0;state.mode="playing";update();draw()}
-function reset(){loadLevel(state.idx);say("Level "+(state.idx+1)+" reshuffled.");tone("flood")}
+function reset(){loadLevel(state.idx);say("Level "+(state.idx+1)+" reset.");tone("flood")}
 function newGame(){loadLevel(0);say("New run — flood each board to a single color.");tone("flood")}
 
 function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.size.textContent=state.n+"×"+state.n;els.moves.textContent=String(state.moves);els.par.textContent=String(par());const total=state.n*state.n;els.filled.textContent=Math.round(filledCount()/total*100)+"%";const b=state.best[String(state.idx)];els.best.textContent=b==null?"—":String(b);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));

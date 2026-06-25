@@ -95,7 +95,7 @@
     <button class="btn right" data-move="1,0" type="button" aria-label="Move cursor right">&rarr;</button>
     <button class="btn cycle" id="cycleTouchBtn" type="button">Route</button>
   </div>
-  <div class="help">Pointer/touch cycles a node. Arrows/WASD move focus. Space/Enter routes. S starts or pauses. R restarts. F fullscreen. M sound.</div>
+  <div class="help">Pointer/touch cycles a node. Arrows (or W/A/D) move focus. Space/Enter routes. S starts or pauses. R restarts. F fullscreen. M sound.</div>
 </main>
 <script>
 (() => {
@@ -946,9 +946,9 @@
     const key = event.key;
     const movement = {
       ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
-      w: [0, -1], W: [0, -1], s: [0, 1], S: [0, 1], a: [-1, 0], A: [-1, 0], d: [1, 0], D: [1, 0]
+      w: [0, -1], W: [0, -1], a: [-1, 0], A: [-1, 0], d: [1, 0], D: [1, 0]
     };
-    if (movement[key] || [" ", "Enter", "r", "R", "f", "F", "m", "M"].includes(key)) event.preventDefault();
+    if (movement[key] || [" ", "Enter", "r", "R", "f", "F", "m", "M", "s", "S"].includes(key)) event.preventDefault();
     markGesture();
     if ((key === "s" || key === "S") && !event.ctrlKey && !event.metaKey && !event.altKey) return startPause();
     if (movement[key]) return moveCursor(...movement[key]);

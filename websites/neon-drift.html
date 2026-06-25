@@ -789,7 +789,7 @@
     ctx.fillText(`LAP ${Math.min(state.lap, maxLaps)}/${maxLaps}`, 58, 52);
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(94,234,212,0.84)";
-    ctx.fillText(`GATE ${state.checkpointIndex + 1}/${track.length}`, W - 58, 52);
+    ctx.fillText(`GATE ${state.checkpointIndex === 0 ? track.length : state.checkpointIndex}/${track.length}`, W - 58, 52);
     ctx.restore();
   }
 
@@ -818,7 +818,7 @@
   function updateUi(){
     els.lap.textContent = `${Math.min(state.lap, maxLaps)}/${maxLaps}`;
     els.time.textContent = state.elapsed > 0 ? state.elapsed.toFixed(2) : "0.00";
-    els.check.textContent = `${state.checkpointIndex + 1}/${track.length}`;
+    els.check.textContent = `${state.checkpointIndex === 0 ? track.length : state.checkpointIndex}/${track.length}`;
     els.boost.textContent = String(Math.round(state.boost * 100));
     els.best.textContent = state.bestTime ? formatTime(state.bestTime) : "-";
     els.status.textContent = state.message;

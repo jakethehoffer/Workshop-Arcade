@@ -126,7 +126,7 @@
     <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
     <button class="btn" type="button" id="restartBtn">Restart</button>
   </div>
-  <div class="help">Pointer/touch builds or upgrades pads. 1/2/3 choose towers. Arrows/WASD move pad cursor. Enter/Space builds or upgrades. S starts, R restarts, F fullscreen.</div>
+  <div class="help">Pointer/touch builds or upgrades pads. 1/2/3 choose towers. Arrows (or W/A/D) move pad cursor. Enter/Space builds or upgrades. S starts the wave, R restarts, F fullscreen.</div>
 </main>
 <script>
 (() => {
@@ -631,10 +631,9 @@
     else if (key === "arrowleft" || key === "a") moveCursor(-1, 0);
     else if (key === "arrowright" || key === "d") moveCursor(1, 0);
     else if (key === "arrowup" || key === "w") moveCursor(0, -1);
-    else if (key === "arrowdown" || key === "s") {
-      if (key === "s" && !event.repeat && state.mode === "build") startWave();
-      else moveCursor(0, 1);
-    } else if (key === "enter" || key === " ") buildOrUpgrade();
+    else if (key === "arrowdown") moveCursor(0, 1);
+    else if (key === "s") { if (!event.repeat && state.mode === "build") startWave(); }
+    else if (key === "enter" || key === " ") buildOrUpgrade();
     else if (key === "r") reset();
     else if (key === "f") toggleFullscreen();
     else if (key === "m") {
