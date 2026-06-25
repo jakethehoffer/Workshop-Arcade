@@ -1,5 +1,16 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude reduced-motion JS audit — gate lumen-lander's crash flash
+
+Investigated the one remaining documented in-scope gap: `scripts/check-reduced-motion.mjs` notes its CSS-layer reset doesn't cover JS-driven canvas motion. Censused the corpus and found the gap is **already largely handled**, so this was a characterization pass that closed the one genuine remainder rather than the big campaign the surface suggested:
+
+- **42 games already read `prefers-reduced-motion` in their own JS** (the neon-drift pattern: a `reducedMotion` flag from `matchMedia`, gating decorative motion).
+- Most apparent "gap" games are false positives: their `state.flash` is **vestigial** — set + decayed only to keep the idle-rAF loop briefly alive (`needsFrame`/`loopActive`), never read in `draw()`, so they render no visible flash (e.g. pylon-shift, seedline, eclipse-grid, floodgate, blackjack, chromalock). Others (e.g. wordle's invalid-guess shake) are **CSS animations**, already neutralized by the runtime's shared `prefers-reduced-motion` reset. Neither needs a JS gate.
+- The one genuine JS-canvas gap: **lumen-lander** paints a full-screen red crash flash (`ctx.fillRect(0,0,W,H)` at rgba 251,113,133) that the CSS reset can't reach — a real photosensitivity concern. Gated it behind the standard `reducedMotion` flag (`flashes > 0 && !reducedMotion`), keeping the "CRASH" text so the outcome is still conveyed.
+- Verified in real Chromium (`verify-lumen.mjs`): with `reducedMotion: 'reduce'` the lander still crashes and shows CRASH but the full-screen flash is suppressed (canvas signature differs from the normal crash); both reach `crashed`, no errors. `test:reduced-motion` (CSS layer) still passes; full battery green.
+
+Net: the catalog's reduced-motion coverage is now complete for genuinely-visible JS motion (CSS reset + 42 per-game JS gates + this one). Remaining `flashKind`/`flashLane`/`flashGood` feedback indicators (typeforge-cipher, cipher-cadence, market-minute) are small local outcome cues, not full-screen motion — left as-is.
+
 ## 2026-06-25 Claude catalog audit — design-decision fixes (the final 7 + neon-drift)
 
 Jake delegated the remaining design calls ("choose the best options for each, then implement"). Made + implemented each on the frozen catalog, choosing the option that best matches each game's own stated intent at the lowest gameplay risk. All verified in real Chromium (`verify-design.mjs`, 7/7, 0 errors) plus the full battery.
