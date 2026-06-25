@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude catalog quality audit — fix batch 5 (three clear correctness/UX bugs)
+
+Picked the clear, low-risk remainders and skipped the design-/determinism-/solvability-risky ones (gemline fixed-seed, dungeon energy, beacon walls, signal-siege/packet-pilot `s`-key, breachline Tab — left in the backlog as design calls).
+
+- **blackjack — wager could exceed chips into negative balance.** `dealHand` set `wager = stake` after forcing `stake` up to `BET_STEP` via `Math.max`, so with `0 < chips < BET_STEP` the deal subtracted more than held and the balance went negative. Now `wager = Math.min(stake, chips)` — you bet your remaining chips, never below zero (websites/blackjack.html).
+- **fourfall — winning line highlight spanned only part of the run.** `lineAt` builds the run as `[placed, …forward, …backward]`, so `winLine[0]` is the placed (often interior) disc; drawing `winLine[0]→winLine[last]` clipped the line. Now sort the cells by (row, col) to the true endpoints before drawing — correct for horizontal, vertical, and both diagonals (websites/fourfall.html).
+- **catalog shell — `?` stacked help over the open game player.** The `?`/`/`-shift handler lacked the `if (modalFocus.active) return;` guard the `R` handler has, so opening catalog help over the player let Escape close the player instead of help. Added the guard; `toggleHelpDialog` uses a native `<dialog>` (no `modalFocus`), so `?` still closes help when only help is open. Ran `build:csp` to refresh the catalog inline-script hash, and — since index.html is an install-shell asset — bumped `sw.js` `SHELL_REVISION`/`VERSION` (v50→v51, `shell-d34346f3cbd0`) so `test:pwa` matches. Kept the catalog-shell page-weight under its 20 KB headroom floor by trimming the new comment to one line.
+- Skipped this pass with reason: **rhythm-circuit advanceTime "race"** — `advanceTime` is synchronous so the live rAF can't fire mid-call; the change was a no-op for the real path and not a demonstrable bug, so I didn't ship it. **neon-drift HUD 2/8** — lowest-confidence (0.57), cosmetic, and the checkpoint-cycle semantics make a "correct" display non-obvious (risks 0/8 on a lap).
+- Verified the shell guard in real Chromium (`verify-shell.mjs`): `?` toggles help with no modal, and is blocked over the open player, with zero console/CSP errors. blackjack + fourfall are 1-line, inspection-clear fixes covered by the full battery (validate, 51 fast gates incl. CSP, test:games 100, capture 200 score 0, pwa, storage, perf, a11y, git diff --check).
+
 ## 2026-06-25 Claude catalog quality audit — fix batch 4 (chess: undo soft-lock + promotion picker)
 
 The two flagship chess findings, the highest-impact medium remainders.

@@ -150,7 +150,7 @@ function newGame(){state.games++;loadGame();say("New game — "+START_CHIPS+" ch
 
 function dealHand(){if(state.chips<=0){state.mode="result";state.outcome="lose";say("Out of chips — press New Game to rebuy.");update();draw();return}
   if(state.di>state.deck.length-15){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}
-  state.stake=Math.max(BET_STEP,Math.min(state.stake,state.chips));state.wager=state.stake;state.chips-=state.wager;
+  state.stake=Math.max(BET_STEP,Math.min(state.stake,state.chips));state.wager=Math.min(state.stake,state.chips);state.chips-=state.wager;
   state.player=[];state.dealer=[];state.player.push(nextCard());state.dealer.push(nextCard());state.player.push(nextCard());state.dealer.push(nextCard());
   state.mode="player";state.outcome=null;state.flash=1;ensureLoop();tone("deal");vibe(8);
   if(isBJ(state.player)||isBJ(state.dealer)){resolve()}else{say("Your move — "+handValue(state.player)+". Hit, stand, or double.");update();draw()}}

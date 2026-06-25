@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-B0G15U30O+1PO6IPh+HZ1e0jIci3lolHAIeInl6X6do='; connect-src 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-BMfiia8YUUk4rcU+MYKFlOrVff98IDtytqPdA29xmsk='; connect-src 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Workshop Arcade — Browser Games</title>
   <meta name="description" content="A clean, fast catalog of HTML5 web games. Search, filter, and play instantly in your browser." />
@@ -679,6 +679,7 @@ if (els.helpBtn) {
   });
 }
 window.addEventListener('keydown', (e) => {
+  if (modalFocus.active) return; // don't stack help over the player modal (matches the R handler below)
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key !== '?' && !(e.key === '/' && e.shiftKey)) return;
   if (isTypingInEditableSurface(e.target)) return;
