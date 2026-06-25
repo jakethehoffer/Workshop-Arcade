@@ -453,6 +453,19 @@ canvas:focus-visible {
   </div>
 </div>
 
+<div class="overlay" id="promoOverlay" role="dialog" aria-modal="true" aria-labelledby="promoTitle">
+  <div class="go-card">
+    <h3 class="go-title" id="promoTitle">Promote your pawn</h3>
+    <div class="go-sub">Choose the piece your pawn becomes (Q, R, B, or N).</div>
+    <div class="go-actions" id="promoChoices">
+      <button type="button" class="promo-btn" data-piece="q" data-label="Queen" aria-label="Promote to Queen">♕ Queen</button>
+      <button type="button" class="promo-btn" data-piece="r" data-label="Rook" aria-label="Promote to Rook">♖ Rook</button>
+      <button type="button" class="promo-btn" data-piece="b" data-label="Bishop" aria-label="Promote to Bishop">♗ Bishop</button>
+      <button type="button" class="promo-btn" data-piece="n" data-label="Knight" aria-label="Promote to Knight">♘ Knight</button>
+    </div>
+  </div>
+</div>
+
 
 
 <script>
@@ -775,6 +788,58 @@ window.addEventListener('keydown', (e)=>{
   if(e.key === 'Enter'){ goRematch.click(); }
   if(e.key === 'Escape'){ hideOverlay(); }
 });
+
+// --- Pawn promotion picker. Replaces a blocking window.prompt() so a human can
+// underpromote and so promotion works inside the sandboxed catalog player (where
+// prompt() returns null and silently auto-queened). The AI path is unchanged
+// (it calls applyMove with 'q' directly). ---
+const promoOverlay = document.getElementById('promoOverlay');
+const promoButtons = promoOverlay ? Array.from(promoOverlay.querySelectorAll('.promo-btn')) : [];
+const PROMO_GLYPHS = { w: { q: '♕', r: '♖', b: '♗', n: '♘' }, b: { q: '♛', r: '♜', b: '♝', n: '♞' } };
+let promotionPending = false;
+let promotionResolve = null;
+
+function showPromotionPicker(color, onChoose) {
+  promotionPending = true;
+  promotionResolve = typeof onChoose === 'function' ? onChoose : null;
+  const glyphs = PROMO_GLYPHS[color] || PROMO_GLYPHS.w;
+  for (const btn of promoButtons) btn.textContent = glyphs[btn.dataset.piece] + ' ' + btn.dataset.label;
+  promoOverlay.classList.add('show');
+  (promoButtons[0] || promoOverlay).focus();
+}
+
+function resolvePromotion(choice) {
+  if (!promotionPending) return;
+  promotionPending = false;
+  promoOverlay.classList.remove('show');
+  const cb = promotionResolve;
+  promotionResolve = null;
+  try { canvas.focus(); } catch (_) {}
+  if (cb) cb(choice);
+}
+
+for (const btn of promoButtons) btn.addEventListener('click', () => resolvePromotion(btn.dataset.piece));
+
+// Capture phase: while the picker is open it fully owns the keyboard, ahead of
+// the help / game-over / board keydown handlers.
+window.addEventListener('keydown', (e) => {
+  if (!promotionPending) return;
+  if (e.key === 'Tab') { trapTabKey(e, promoOverlay); e.stopImmediatePropagation(); return; }
+  const k = e.key.toLowerCase();
+  if (k === 'q' || k === 'r' || k === 'b' || k === 'n') resolvePromotion(k);
+  else if (e.key === 'Escape') resolvePromotion(null);
+  else if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) {
+    const i = promoButtons.indexOf(document.activeElement);
+    const dir = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+    const next = ((i < 0 ? 0 : i) + dir + promoButtons.length) % promoButtons.length;
+    if (promoButtons[next]) promoButtons[next].focus();
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    const i = promoButtons.indexOf(document.activeElement);
+    if (i >= 0) resolvePromotion(promoButtons[i].dataset.piece);
+  }
+  e.preventDefault();
+  e.stopImmediatePropagation();
+}, true);
 
 
 let SIZE = 640;   // logical CSS pixels; JS will keep this in sync with the canvas
@@ -1402,6 +1467,7 @@ function draw() {
 
 // ---------- Input handling ----------
 function boardBusyMessage() {
+  if (promotionPending) return 'Choose a promotion piece.';
   if (helpOpen) return 'Close help before moving on the board.';
   if (goEl.classList.contains('show')) return 'Close the game over dialog before moving on the board.';
   if (currentAnimation) return 'Wait for the current move animation to finish.';
@@ -1441,29 +1507,41 @@ function handleSquareActivation(col, row, options = {}) {
     const selectedName = selectedSquareName();
     const mv = legalMovesForSelected.find(m => m.toCol === col && m.toRow === row);
     if (mv) {
-      stateHistory.push(cloneState(state));
-      const animInfo = buildAnimationFromMove(mv);
-      applyMove(mv, null);
-      ensureKeyboardFocus({ col: mv.toCol, row: mv.toRow });
-      recordKeyboardInput(input, null);
-      setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
-      updateBoardAriaLabel();
-      startAnimation(animInfo, () => {
-        postMoveChecks();
-        selected = null;
-        legalMovesForSelected = [];
+      // Commit the move, optionally with a chosen promotion piece. Deferred into
+      // a closure so a promotion can wait on the in-DOM picker instead of a
+      // blocking prompt; non-promotion moves commit immediately.
+      const commitMove = (choice) => {
+        stateHistory.push(cloneState(state));
+        const animInfo = buildAnimationFromMove(mv);
+        applyMove(mv, choice);
+        ensureKeyboardFocus({ col: mv.toCol, row: mv.toRow });
+        recordKeyboardInput(input, null);
         setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
         updateBoardAriaLabel();
-        // Auto-flip board in 2-player mode if enabled (applyMove already handles this, but we need to redraw)
-        if(!vsComputer && autoFlipEl && autoFlipEl.checked) {
-          flipped = (state.turn === 'b'); // Flip to show black on bottom when it's black's turn
-        }
-        if (vsComputer && !state.gameOver && state.turn === 'b') {
-          thinkAndMoveAI();
-        } else {
-          draw();
-        }
-      });
+        startAnimation(animInfo, () => {
+          postMoveChecks();
+          selected = null;
+          legalMovesForSelected = [];
+          setKeyboardMode(keyboardState.active ? 'navigation' : 'inactive');
+          updateBoardAriaLabel();
+          // Auto-flip board in 2-player mode if enabled (applyMove already handles this, but we need to redraw)
+          if(!vsComputer && autoFlipEl && autoFlipEl.checked) {
+            flipped = (state.turn === 'b'); // Flip to show black on bottom when it's black's turn
+          }
+          if (vsComputer && !state.gameOver && state.turn === 'b') {
+            thinkAndMoveAI();
+          } else {
+            draw();
+          }
+        });
+      };
+      if (mv.promotion) {
+        // Open the picker; commit only once the player chooses (Escape cancels
+        // and leaves the pawn selected so they can retry).
+        showPromotionPicker(state.turn, (choice) => { if (choice) commitMove(choice); });
+        return { handled: true, awaitingPromotion: true, from: selectedName, to: targetSquare };
+      }
+      commitMove(null);
       return { handled: true, moved: true, from: selectedName, to: targetSquare };
     }
 
@@ -1649,13 +1727,13 @@ undoBtn.addEventListener('click', () => {
   }
 
   if (vsComputer) {
-    // In vs Computer mode, undo TWO plies (AI + player) if possible.
-    // First ply (AI's move)
-    const did1 = undoOnePly();
-    // Second ply (player's move)
-    const did2 = undoOnePly();
-
-    if (!did1 && !did2) return;
+    // Undo the human's last move, then undo the AI's reply too — but only if one
+    // was actually made. After popping the human's move it is the AI's turn ('b')
+    // again when a reply existed; if it is already the human's turn ('w') the
+    // human's move ended the game with no AI reply, so stop. (Always popping two
+    // would rewind an extra move-pair and soft-lock the board on the AI's turn.)
+    if (!undoOnePly()) return;
+    if (state.turn === 'b') undoOnePly();
   } else {
     // Two-player mode: undo a single ply
     if (!undoOnePly()) return;

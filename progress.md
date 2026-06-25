@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude catalog quality audit — fix batch 4 (chess: undo soft-lock + promotion picker)
+
+The two flagship chess findings, the highest-impact medium remainders.
+
+- **Undo soft-lock (vs Computer).** The undo handler always popped two plies (AI + human). But when the human's move ends the game (checkmate/stalemate), the AI never replies and pushes no snapshot, so popping two rewound an extra move-pair and left the board on the AI's turn with no AI to move — a soft-lock. Now it pops one ply, then a second only if it is still the AI's turn (`state.turn === 'b'`); a human move with no AI reply undoes just the one ply. Normal undo (after a real AI reply) still pops both.
+- **Blocking promotion prompt → in-DOM picker.** Human promotion used a synchronous `window.prompt()`, which returns null in the sandboxed catalog iframe (`sandbox` without `allow-modals`) and silently auto-queened — you could never underpromote, and it blocked diagnostic drivers. Added an in-DOM promotion picker (`#promoOverlay`, mirroring the existing modal pattern): `handleSquareActivation` defers the move into a `commitMove()` closure and shows the picker on a promotion, committing only when the player chooses. A capture-phase keydown handler owns the keyboard while open (q/r/b/n letters, arrow nav, Enter/Space, Escape cancels, Tab focus-trap), `boardBusyMessage` blocks board input via a `promotionPending` flag, and focus returns to the board after choosing. The AI path (`applyMove(mv,'q')`) is untouched; the old `prompt()` stays as an unreached fallback. No CSP/SHELL changes (chess CSP already allows inline scripts; the picker wires via addEventListener).
+- Verified in real Chromium (`verify-chess.mjs`, 6/6, 0 errors): picker resolves via keyboard letter, arrow+Enter, click, and Escape-cancel; a real end-to-end move marches a pawn to b7xa8 and **underpromotes to a knight** (white knight on a8, not auto-queened) through the actual wiring; vs-Computer undo returns to the start position (no regression). The undo bug-case (human-mate with no AI reply) is a 2-line logical change reasoned through — it can't be driven against the live AI, but the normal path is verified and the battery confirms no crash. Also ran a 3-lens adversarial review of the diff (regression / promotion-edge / state-machine).
+
 ## 2026-06-24 Claude catalog quality audit — fix batch 3 (gameplay correctness)
 
 Five confirmed gameplay-correctness findings across 4 games. Behaviorally verified in real Chromium (`test-results/idle-census/verify-fixes2.mjs`, all pass); velvet-heist + inkline-radius are code-reviewed (mirror proven patterns / constant alignment) and covered by the full battery.
