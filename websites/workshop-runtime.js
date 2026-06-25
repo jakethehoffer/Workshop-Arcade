@@ -12,7 +12,10 @@
 
   // The catalog seeds saved entries via a #wa-storage= fragment so reads are
   // correct from the first statement (postMessage can't beat sync startup reads).
-  // Without a seed the fallback stays in-memory and posts nothing.
+  // The fragment is kept (not stripped) and refreshed on every write so a
+  // game-initiated location.reload() re-reads current data — the opaque sandboxed
+  // frame has no other synchronous store. Without a seed the fallback stays
+  // in-memory and posts nothing.
   var bridge = null;
   try {
     var seedMatch = /[#&]wa-storage=([^&]*)/.exec(window.location.hash || "");
@@ -37,15 +40,10 @@
         memory[seededKey] = bridge.entries[seededKey];
       }
     }
-    try {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    } catch (_) {
-      // Leaving the fragment in place is harmless.
-    }
   }
 
-  // Write-behind: ops are batched per task tick (one message per tick).
-  var dirty = false;
+  // Write-behind: ops are batched per task tick (one message per tick) to the
+  // catalog, which persists them across sessions in its own localStorage.
   var pendingOps = [];
   var flushTimer = 0;
 
@@ -57,10 +55,20 @@
     try { window.parent.postMessage({ type: "workshop-arcade:storage-ops", v: 1, slug: bridge.slug, ops: ops }, bridge.origin); } catch (_) {}
   }
 
+  // Mirror current memory back into the #wa-storage= fragment synchronously so a
+  // game-initiated location.reload() re-reads the latest data on the next load.
+  function persistSeed() {
+    if (!bridge) return;
+    try {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search +
+        "#wa-storage=" + encodeURIComponent(JSON.stringify({ v: 1, origin: bridge.origin, slug: bridge.slug, entries: memory })));
+    } catch (_) {}
+  }
+
   function queueOp(op) {
     if (!bridge) return;
-    dirty = true;
     pendingOps.push(op);
+    persistSeed();
     if (flushTimer) return;
     flushTimer = window.setTimeout(flushPending, 0);
   }
@@ -103,29 +111,11 @@
   }
 
   if (bridge) {
-    // The catalog answers this hello with a fresh snapshot; only matters on a
-    // reload with a stale seed, and is ignored once the game has written.
-    window.addEventListener("message", function (event) {
-      if (event.source !== window.parent) return;
-      if (event.origin !== bridge.origin) return;
-      var data = event.data;
-      if (!data || data.type !== "workshop-arcade:storage-snapshot" || data.v !== 1) return;
-      if (dirty || !data.entries || typeof data.entries !== "object") return;
-      var next = Object.create(null);
-      for (var key in data.entries) {
-        if (Object.prototype.hasOwnProperty.call(data.entries, key) && typeof data.entries[key] === "string") {
-          next[key] = data.entries[key];
-        }
-      }
-      memory = next;
-    });
-    try {
-      window.parent.postMessage({ type: "workshop-arcade:storage-hello", v: 1, slug: bridge.slug }, bridge.origin);
-    } catch (_) {
-      // Without the hello the seed alone still covers the normal open path.
-    }
     // Flush synchronously on teardown so a save made right before
-    // hide/navigate/close survives the setTimeout(0) batch gap.
+    // hide/navigate/close survives the setTimeout(0) batch gap. (The kept-fresh
+    // #wa-storage= fragment, not a hello/snapshot round-trip, now recovers a
+    // game-initiated reload — the fragment is always at least as fresh as the
+    // catalog mirror, so a snapshot reply could only clobber it with older data.)
     window.addEventListener("pagehide", flushPending);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") flushPending(); });
   }

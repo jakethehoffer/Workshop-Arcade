@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude catalog audit — fix runtime #2 (self-reload severed persistence, HIGH)
+
+The last HIGH audit finding. A game-initiated `location.reload()` inside the sandboxed (opaque-origin) catalog player stripped the `#wa-storage=` seed fragment on load, so after the reload the storage bridge was null and every read returned empty — losing the save. Only **idle-tycoon** self-reloads (switch-slot, delete-slot, reset-save), and its boot reads `PENDING_SLOT_KEY` then the slot's `SAVE_KEY` **synchronously** (`consumePendingSlot` + `loadGame`), so the fix had to make the data readable synchronously on the next load. The opaque frame has no other synchronous store (localStorage *and* sessionStorage both throw there), so the URL fragment is the only channel.
+
+- **Fix (websites/workshop-runtime.js):** stop stripping the seed and add `persistSeed()` — synchronously `replaceState`s current memory back into `#wa-storage=` on every write (inside `queueOp`, the single funnel for set/remove/clear). A reload then re-reads the latest data synchronously. Removed the now-obsolete hello + storage-snapshot listener (the kept-fresh fragment is always at least as fresh as the catalog mirror, so a snapshot reply could only clobber it with older data) and the now-unused `dirty` flag. Kept the batched storage-ops postMessage to the catalog (cross-session persistence) and the pagehide/visibilitychange flush. Net **−199 bytes** (the runtime shrank), so page-weight has *more* headroom (Arcade Jump 10.3 KB).
+- Only the bridged player path is touched (the non-sandboxed/direct-load path returns early when real localStorage works). index.html keeps a now-dead parent hello-handler (harmless; touching index.html would force a CSP+SHELL_REVISION rebuild for no behavior gain).
+- Verified in real Chromium (`verify-reload-persist.mjs`): in a seeded sandboxed frame, two writes then `location.reload()` → the latest values are re-read **synchronously** after the reload (`B/2`, was `null/null` with the bug), fragment kept, no errors. Storage/PWA gates all green (runtime-storage, player-storage-bridge incl. reload persistence, storage-contract, pwa-runtime) — no regression. Ran a 3-lens adversarial-review Workflow (correctness / perf-robustness / security-scope) and the full battery.
+
 ## 2026-06-25 Claude idle-rAF re-census — gate rhythm-circuit (campaign miss)
 
 Re-censused the two idle-rAF candidates the catalog audit flagged (aster-vault, rhythm-circuit ran ungated loops). A throwaway probe measured idle rAF + whether the largest canvas changes over an idle window:
