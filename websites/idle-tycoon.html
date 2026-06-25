@@ -2162,6 +2162,9 @@ animation: none;
 
   <div class="toast" id="toast" aria-live="polite"></div>
 
+  <style>.confirm-dialog{border:1px solid #2dd4bf59;border-radius:12px;background:#0b1220;color:#e2e8f0;max-width:330px;padding:18px}.confirm-dialog::backdrop{background:#020617a8}.confirm-dialog h2{margin:0 0 6px;font-size:17px;color:#5eead4}.confirm-dialog p{margin:0 0 16px;font-size:14px;line-height:1.5}.confirm-actions{display:flex;gap:8px;justify-content:flex-end}.confirm-actions button{padding:8px 14px;border-radius:9px;border:1px solid #94a3b866;background:#1e293b;color:#e2e8f0;font:inherit;font-weight:700}#confirmDialogYes{border-color:#2dd4bf99;background:#0891b2;color:#04222b}</style>
+  <dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmDialogTitle"><h2 id="confirmDialogTitle">Confirm</h2><p id="confirmDialogMsg"></p><div class="confirm-actions"><button type="button" id="confirmDialogNo">Cancel</button><button type="button" id="confirmDialogYes">Confirm</button></div></dialog>
+
   <template id="businessTemplate">
     <article class="business-card">
       <div class="business-top">
@@ -2757,14 +2760,10 @@ if(readSlotData(slot))return slot}return null}function handleSlotSelection(slot)
 recordInteractionFeedback("slot-select",{slot:slot});playSfx("menu");if(!gameStarted){
 startWithSlot(slot);return}const currentSlot=activeSlot||getLastActiveSlot();if(currentSlot===slot){
 hideMainMenu();if(settings.tutorialOnStart){startTutorial()}return}
-const ok=window.confirm(`Switch to Save Slot ${slot}? Current progress will be saved.`)
-;if(!ok)return;saveGame();localStorage.setItem(PENDING_SLOT_KEY,String(slot))
-;window.location.reload()}function handleDeleteSlot(slot,hasData){if(!hasData)return
+domConfirm(`Switch to Save Slot ${slot}? Current progress will be saved.`).then((ok)=>{if(!ok)return;saveGame();localStorage.setItem(PENDING_SLOT_KEY,String(slot));window.location.reload()})}function handleDeleteSlot(slot,hasData){if(!hasData)return
 ;const isActiveSlot=(activeSlot||getLastActiveSlot())===slot
 ;const message=isActiveSlot?`Delete Save Slot ${slot}? This will erase the active save and return to the menu.`:`Delete Save Slot ${slot}? This cannot be undone.`
-;const ok=window.confirm(message);if(!ok)return;localStorage.removeItem(getSaveKey(slot))
-;if(getLastActiveSlot()===slot){localStorage.removeItem(ACTIVE_SLOT_KEY)}
-if(gameStarted&&isActiveSlot){window.location.reload();return}syncMenuMode();renderSaveSlots();syncMenuSettings()}
+;domConfirm(message).then((ok)=>{if(!ok)return;localStorage.removeItem(getSaveKey(slot));if(getLastActiveSlot()===slot){localStorage.removeItem(ACTIVE_SLOT_KEY)}if(gameStarted&&isActiveSlot){window.location.reload();return}syncMenuMode();renderSaveSlots();syncMenuSettings()})}
 function renderSaveSlots(){if(!menu.slots)return;menu.slots.innerHTML=""
 ;const lastSlot=getLastActiveSlot();for(let slot=1;slot<=SAVE_SLOT_COUNT;slot+=1){
 const data=readSlotData(slot);const card=document.createElement("div");card.className="slot-card"
@@ -3297,9 +3296,7 @@ perks.forEach((perk=>{perk.purchased=false}))}function resetRun(){state.cash=0;s
 ;state.quests=[];ensureQuests();renderQuests()}function handlePrestige(){
 const potential=calcAngelPotential(state.allTime)
 ;const gain=Math.max(0,potential-state.angelInvestors);if(gain<=0)return
-;const ok=window.confirm(`Prestige for +${gain} angels? This resets your run progress.`)
-;if(!ok)return;state.angelInvestors+=gain;state.prestigeCount+=1;resetRun();playSfx("reward")
-;showToast(`Prestige complete. +${gain} angels earned.`);saveGame()}
+;domConfirm(`Prestige for +${gain} angels? This resets your run progress.`).then((ok)=>{if(!ok)return;state.angelInvestors+=gain;state.prestigeCount+=1;resetRun();playSfx("reward");showToast(`Prestige complete. +${gain} angels earned.`);saveGame()})}
 function getSynergyMultiplier(biz){const index=businesses.findIndex((entry=>entry.id===biz.id))
 ;if(index<=0)return 1;const feeder=businesses[index-1]
 ;const tiers=Math.floor(feeder.owned/SYNERGY_STEP);return 1+tiers*SYNERGY_BONUS}
@@ -3443,8 +3440,7 @@ if(!ui.saveStatus)return;ui.saveStatus.textContent=message;ui.saveStatus.classLi
 ;ui.saveStatus.classList.remove("is-fresh")}),2200)}function showToast(message){if(!ui.toast)return
 ;ui.toast.textContent=message;ui.toast.classList.add("show");clearTimeout(toastTimer)
 ;toastTimer=setTimeout((()=>ui.toast.classList.remove("show")),2600)}function handleReset(){
-playSfx("menu");const ok=window.confirm("Reset all progress? This clears the local save.")
-;if(!ok)return;if(!SAVE_KEY)return;localStorage.removeItem(SAVE_KEY);window.location.reload()}
+playSfx("menu");domConfirm("Reset all progress? This clears the local save.").then((ok)=>{if(!ok)return;if(!SAVE_KEY)return;localStorage.removeItem(SAVE_KEY);window.location.reload()})}
 function scheduleSave(){if(saveTimer)return;saveTimer=setTimeout((()=>{saveTimer=null;saveGame()
 }),1e3)}function saveGame(){if(!SAVE_KEY)return;const data={cash:state.cash,lifetime:state.lifetime,
 allTime:state.allTime,angelInvestors:state.angelInvestors,prestigeCount:state.prestigeCount,
@@ -3499,7 +3495,12 @@ const total=Math.max(0,Math.ceil(seconds));const hours=Math.floor(total/3600)
 ;return`${mins}:${secs.toString().padStart(2,"0")}`}function formatDuration(seconds){
 const total=Math.max(0,Math.floor(seconds));const hours=Math.floor(total/3600)
 ;const minutes=Math.floor(total%3600/60);if(hours>0)return`${hours}h ${minutes}m`
-;if(minutes>0)return`${minutes}m`;return`${total}s`}boot()})();
+;if(minutes>0)return`${minutes}m`;return`${total}s`}
+;function $cd(i){return document.getElementById(i)}var confirmDlg=$cd("confirmDialog"),confirmMsg=$cd("confirmDialogMsg"),confirmResolver=null;
+function domConfirm(m){if(!confirmDlg||!confirmDlg.showModal)return Promise.resolve(confirm(m));if(confirmMsg)confirmMsg.textContent=m;return new Promise(function(r){confirmResolver=r;confirmDlg.returnValue="cancel";confirmDlg.showModal()})}
+;[["confirmDialogYes","confirm"],["confirmDialogNo","cancel"]].forEach(function(p){var b=$cd(p[0]);if(b)b.addEventListener("click",function(){confirmDlg.close(p[1])})});
+if(confirmDlg)confirmDlg.addEventListener("close",function(){var r=confirmResolver;confirmResolver=null;if(r)r(confirmDlg.returnValue==="confirm")});
+boot()})();
 </script>
 </body>
 </html>

@@ -764,9 +764,12 @@ evals.forEach((e,i)=> AudioFX.tile(e.state, i));
     });
   };
   newBtn.addEventListener('click', () => {
-    if(!finished && guesses.length > 0){
-      if(!confirm('Abandon current game?')) return;
-    }
+    // window.confirm() is suppressed (returns false) inside the catalog's
+    // sandboxed iframe (no allow-modals), which would make this button dead.
+    // Only gate on the prompt when a real dialog can show; otherwise abandon
+    // (the round is freely restartable).
+    const canPrompt = (() => { try { return self.origin !== 'null'; } catch(e){ return false; } })();
+    if(!finished && guesses.length > 0 && canPrompt && !confirm('Abandon current game?')) return;
     startNew({fromOverlay: true});
   });
   hardChk.addEventListener('change', ()=>{ save(); setStatus('Hard mode '+(hardChk.checked?'on':'off')); });

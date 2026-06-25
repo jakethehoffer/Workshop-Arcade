@@ -434,9 +434,10 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
   window.addEventListener("keydown", e => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const k = e.key.toLowerCase();
-    if (["tab"," ","enter","arrowleft","arrowright","arrowup","arrowdown","r","f","m"].includes(k) || e.key === " ") e.preventDefault();
+    if (["tab"," ","enter","arrowleft","arrowright","arrowup","arrowdown","r","f","m","s"].includes(k) || e.key === " ") e.preventDefault();
     if (k === "tab" || k === "arrowright" || k === "arrowdown") selectDelta(1);
     else if (k === "arrowleft" || k === "arrowup") selectDelta(-1);
+    else if ((k === "s" || k === "enter") && state.mode !== "playing") startOrAdvance();
     else if (e.key === " " || k === "enter") toggleSwitch();
     else if (k === "r") restart();
     else if (k === "m") { state.sound = !state.sound; write(SOUND_KEY,state.sound); updateHud(); }

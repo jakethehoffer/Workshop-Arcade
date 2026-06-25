@@ -754,7 +754,11 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   });
   els.boostBtn.addEventListener("pointerup", () => setBoost(false, "button"));
   els.boostBtn.addEventListener("pointerleave", () => setBoost(false, "button"));
-  els.boostBtn.addEventListener("click", () => {
+  els.boostBtn.addEventListener("click", (event) => {
+    // pointerdown/up already drive press-and-hold boost; the trailing
+    // synthesized click (detail>=1) would re-toggle boost on after release.
+    // Only honor click for keyboard activation (detail===0).
+    if (event.detail !== 0) return;
     if (state.mode === "running") {
       setBoost(!state.boosting, "button");
       if (state.boosting) {
@@ -772,7 +776,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   });
   els.brakeBtn.addEventListener("pointerup", () => setBrake(false, "button"));
   els.brakeBtn.addEventListener("pointerleave", () => setBrake(false, "button"));
-  els.brakeBtn.addEventListener("click", () => {
+  els.brakeBtn.addEventListener("click", (event) => {
+    if (event.detail !== 0) return;
     if (state.mode === "running") {
       setBrake(!state.braking, "button");
       if (state.braking) {

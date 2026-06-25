@@ -1943,7 +1943,10 @@
         startBtn.addEventListener("click", () => {
           noteInput("button:start");
           noteAudioGesture();
-          if (state.running && !confirm("Abandon current run?")) return;
+          // confirm() is suppressed in the sandboxed catalog iframe (no
+          // allow-modals); only gate on it when a real dialog can show.
+          const canPrompt = (() => { try { return self.origin !== "null"; } catch (e) { return false; } })();
+          if (state.running && canPrompt && !confirm("Abandon current run?")) return;
           startGame();
         });
         overlayBtn.addEventListener("click", () => {

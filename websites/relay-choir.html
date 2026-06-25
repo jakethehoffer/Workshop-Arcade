@@ -574,13 +574,16 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
     const usedTriggers = countTriggers();
     const usedGates = countGates();
     const bonus = Math.max(80, 240 + stage().targets.length * 120 + (stage().maxTriggers - usedTriggers) * 35 + (stage().maxGates - usedGates) * 35 - state.moves * 4);
-    state.score += bonus;
-    if (!state.solvedStages.includes(state.stageIndex)) state.solvedStages.push(state.stageIndex);
+    const firstSolve = !state.solvedStages.includes(state.stageIndex);
+    if (firstSolve) {
+      state.score += bonus;
+      state.solvedStages.push(state.stageIndex);
+    }
     if (state.stageIndex === STAGES.length - 1) {
       state.runComplete = true;
       state.feedback = "Run complete. Score " + state.score + ".";
     } else {
-      state.feedback = "Stage solved. +" + bonus;
+      state.feedback = firstSolve ? "Stage solved. +" + bonus : "Stage already solved.";
     }
     state.feedbackMs = 2600;
     persist();

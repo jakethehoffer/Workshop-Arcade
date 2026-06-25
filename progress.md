@@ -1,5 +1,29 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude catalog deep audit — 14 verified correctness/touch/a11y fixes
+
+Ran a 20-auditor adversarial Workflow (low-concurrency waves to dodge the server rate-limit the memory warned about) across all 100 games hunting genuine correctness, mobile-touch, and accessibility bugs. Each raw finding was independently re-verified by a skeptic agent that traced the real code: **15 raw → 14 confirmed, 1 refuted** (aster-vault's "held thrust sticks on" was wrong — touch implicit pointer capture delivers `pointerup` to the original button). Fixed all 14 (every one low fix-risk), then verified with 4 live-Chromium probes plus the full battery. Touched 13 game files only; no shell/runtime/CSP/SHELL_REVISION changes.
+
+**Sandbox dead-controls** (the chess-prompt class: `window.confirm()`/`prompt()` returns false in the catalog's sandboxed iframe, which has no `allow-modals`):
+- **idle-tycoon (HIGH)** — Prestige (the sole income-scaling/meta-progression loop) plus Reset, slot-switch, and slot-delete were all gated on `window.confirm()`, so each was a dead button inside the catalog player. Added a native `<dialog>`-backed `domConfirm()` and routed all four through it. A `<dialog>.showModal()` works in the sandbox (`allow-modals` governs only alert/confirm/prompt, not `<dialog>`) and gives focus-trap/Escape/focus-restore for free. Live-probed: Reset opens the in-DOM dialog with the right message; Cancel closes without resetting. Compacted the dialog markup/CSS to stay under the 170 KB named-exception's 10 KB-headroom floor (159.9 KB).
+- **wordle / shape-inlay (low)** — mid-game "Play Again" / top "Start run" `confirm()` was dead in the sandbox, stranding touch players. These are freely-restartable, so only gate on the prompt when a real dialog can show (`self.origin !== 'null'`), else proceed.
+
+**Correctness:**
+- **penalty-circuit** — tapping the pitch while the ball was in flight flipped mode to `aiming`, froze the ball mid-air, abandoned the shot (no goal/save scored), and corrupted the next shot's launch origin (pointer-only path; keyboard immune). Excluded `flying` from the pointerdown guard.
+- **solitare** — Auto-Complete infinite-looped (tab hard-lock) on an all-face-up but blocked board, recycling the stock at 90ms/step forever. Added per-pass termination: a full stock pass with zero foundation moves now stops with a "stuck — finish by hand" status instead of looping.
+- **comet-cartel** — holding Shift hijacked every key as boost (the `||e.shiftKey` boost alias sat before the fire/restart/mute branches), blocking the disruptor and the `?` shortcut and latching boost. Dropped the undocumented Shift alias (keyUp too).
+- **packet-pilot** — two packets reaching the target on the same frame double-counted the stage bonus (`deliverPacket` uses `>= goal`, `clearStage` had no re-entry guard) and could persist the inflated Best. Added a re-entry guard.
+- **relay-choir (low)** — re-solving a stage (erase + replace the same valid layout) re-awarded the completion bonus unbounded and persisted it to Best. Gated the score add + `solvedStages` push on first solve.
+- **circuit-putt (low)** — Reset Hole while `between` (hole just sunk) replayed the already-scored hole and double-counted its strokes in the Total HUD. Clear the recorded score before replay (a no-op in `playing`).
+
+**Accessibility / mobile-touch:**
+- **rail-yard-relay (HIGH)** — keyboard-only players could never Start (no Start key bound; Tab globally hijacked to cycle switches; Enter/Space toggled a switch), a full soft-lock. Bound `s` / Enter-when-not-playing to `startOrAdvance`. Live-probed ready→playing for both keys.
+- **gridfront-orders (low)** — sound toggle keyboard-unreachable (no key + Tab suppressed). Bound `M` (and added it to the help text).
+- **slipstream-sprint** — Boost/Brake fired a phantom 520/420ms actuation after release because the un-prevented trailing click re-toggled the pointer-driven state. Gated the click handlers to keyboard activation (`event.detail===0`).
+- **drift-loom** — a canvas tap force-cleared a held Up-pad throttle after 350ms (shared `keys.up` + an unconditional clearing timeout). Decoupled the tap into a separate `performance.now()`-based throttle window so the d-pad/keyboard solely own `keys.up`. Live-probed: held throttle survives a tap (controls.up still true after 460ms).
+
+Verification: `validate-catalog`; 4 live-Chromium probes (all pass, zero console errors); `npm test` (51 fast gates incl. a11y / CSP / page-weight); full `test:games` (100); `capture:games:ci` (200 surfaces, max score 0); `test:pwa-runtime`; `test:runtime-storage` (opaque sandbox); `audit:perf:local` (strict); `git diff --check` clean.
+
 ## 2026-06-25 Claude reduced-motion JS audit — gate lumen-lander's crash flash
 
 Investigated the one remaining documented in-scope gap: `scripts/check-reduced-motion.mjs` notes its CSS-layer reset doesn't cover JS-driven canvas motion. Censused the corpus and found the gap is **already largely handled**, so this was a characterization pass that closed the one genuine remainder rather than the big campaign the surface suggested:

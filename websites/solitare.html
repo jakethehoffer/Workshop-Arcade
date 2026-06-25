@@ -560,6 +560,7 @@ function stepStockFeedback(ms){
 }
 
 let autoRunning = false;
+let autoPassFoundationMoves = 0; // foundation moves since the last stock recycle
 
 function runAutoCompleteStep(){
   if(!autoRunning) return;
@@ -573,7 +574,7 @@ function runAutoCompleteStep(){
     return;
   }
 
-  let moved = false;
+  let moved = false, foundationMove = false;
 
   // 2) Prefer tableau → foundation moves
   for(let ti=0; ti<7 && !moved; ti++){
@@ -589,6 +590,7 @@ function runAutoCompleteStep(){
       recordLegalMove('foundation-move');
       playSound('foundation-move');
       moved = true;
+      foundationMove = true;
     }
   }
 
@@ -603,13 +605,27 @@ function runAutoCompleteStep(){
       recordLegalMove('foundation-move');
       playSound('foundation-move');
       moved = true;
+      foundationMove = true;
     }
   }
+
+  if(foundationMove) autoPassFoundationMoves++;
 
   // 4) If no foundation move, advance the stock/waste (unlimited passes)
   if(!moved){
     if(state.piles.stock.length===0){
       if(state.piles.waste.length>0){
+        // A full stock pass that produced no foundation move means the board is
+        // blocked (a needed low card is buried under a higher one). Stop instead
+        // of recycling the stock forever (which would hard-lock the tab).
+        if(autoPassFoundationMoves===0){
+          autoRunning = false;
+          render();
+          flashStatus('Auto-complete stuck — finish by hand.','bad');
+          updateAutoCompleteVisibility();
+          return;
+        }
+        autoPassFoundationMoves = 0;
         state.piles.stock = state.piles.waste.reverse();
         state.piles.waste = [];
         state.stockCycles++;
@@ -639,6 +655,7 @@ function runAutoCompleteStep(){
 function startAutoComplete(){
   if(autoRunning) return;
   autoRunning = true;
+  autoPassFoundationMoves = 0;
   runAutoCompleteStep();
 }
 
