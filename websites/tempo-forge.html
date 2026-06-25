@@ -142,7 +142,7 @@
       </div>
     </div>
   </div>
-  <p class="hint">Arrows move focus. Space toggles. 1-4 toggle the focused pad's steps. P plays, Enter checks, R restarts.</p>
+  <p class="hint">Arrows move focus. Space toggles. 1-4 toggle the focused pad's steps. P plays, Enter checks, R restarts, M toggles sound.</p>
   <div class="sr" id="liveLine" aria-live="polite"></div>
 </main>
 <script>
@@ -409,7 +409,7 @@
   }
   document.addEventListener("keydown",(ev)=>{
     const key = ev.key.toLowerCase();
-    if(["arrowup","arrowdown","arrowleft","arrowright"," ","enter","p","r"].includes(key) || /^[1-4]$/.test(key)) ev.preventDefault();
+    if(["arrowup","arrowdown","arrowleft","arrowright"," ","enter","p","r","m"].includes(key) || /^[1-4]$/.test(key)) ev.preventDefault();
     if(key === "arrowup") moveFocus(-1,0);
     else if(key === "arrowdown") moveFocus(1,0);
     else if(key === "arrowleft") moveFocus(0,-1);
@@ -419,6 +419,7 @@
     else if(key === "p") playLoop();
     else if(key === "enter") state.mode === "complete" ? loadLevel(state.level+1) : checkPattern();
     else if(key === "r") restartRun();
+    else if(key === "m") els.sound.click();
   });
   els.play.addEventListener("click",playLoop);
   els.check.addEventListener("click",checkPattern);

@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude keyboard-reachability sweep — 2 stranded sound toggles
+
+Completeness follow-up to the deep audit: first confirmed the **sandbox-dead-modal class is fully closed** (a catalog-wide grep for `confirm(`/`alert(`/`prompt(` returns only the guarded fixes plus chess's unreachable in-DOM-picker fallback). Then ran a focused single-dimension Workflow (20 auditors, waved) asserting every interactive control in all 100 games is operable by keyboard alone, each finding adversarially verified. Result: **2 findings, both confirmed, both LOW** — no keyboard soft-locks remain anywhere (the rail-yard-relay Start soft-lock was the only blocking one, already fixed). Both are stranded **Sound toggles**, the same class as the earlier gridfront-orders fix:
+
+- **gridline-tactics** — the Sound button had no key binding, and the canvas hijacks Tab (`preventDefault`, no shiftKey/target guard) so focus is trapped on the canvas and never reaches the button rail; Restart/Fullscreen survived via their `r`/`f` keys, Sound had none. Factored the click body into `toggleSound()` and bound `m` in `handleKey`; updated the hint.
+- **tempo-forge** — the Sound button is Tab-focusable, but the global document keydown `preventDefault`s Space/Enter and routes them to grid-cell/Check actions, suppressing the button's native activation, and no sound key existed. Bound `m` (→ `els.sound.click()`), added it to the preventDefault list, and updated the hint.
+
+Verified: live probe (M toggles sound keyboard-only in both, 0 console errors); scoped smoke; `npm test` (51 fast gates); full `test:games` (100); `capture:games:ci` (200 surfaces, max score 0). Additive, no gameplay coupling; mirrors the shipped gridfront-orders M→toggleSound pattern.
+
 ## 2026-06-25 Claude catalog deep audit — 14 verified correctness/touch/a11y fixes
 
 Ran a 20-auditor adversarial Workflow (low-concurrency waves to dodge the server rate-limit the memory warned about) across all 100 games hunting genuine correctness, mobile-touch, and accessibility bugs. Each raw finding was independently re-verified by a skeptic agent that traced the real code: **15 raw → 14 confirmed, 1 refuted** (aster-vault's "held thrust sticks on" was wrong — touch implicit pointer capture delivers `pointerup` to the original button). Fixed all 14 (every one low fix-risk), then verified with 4 live-Chromium probes plus the full battery. Touched 13 game files only; no shell/runtime/CSP/SHELL_REVISION changes.

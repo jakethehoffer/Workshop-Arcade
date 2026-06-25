@@ -88,7 +88,7 @@
 <main class="shell">
   <div class="top">
     <h1 class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Gridline Tactics</span></h1>
-    <div class="hint">Arrows/WASD move cursor. Enter/Space moves or attacks. Tab switches unit. R restarts. F fullscreen.</div>
+    <div class="hint">Arrows/WASD move cursor. Enter/Space moves or attacks. Tab switches unit. R restarts. F fullscreen. M toggles sound.</div>
   </div>
   <section class="hud" aria-label="Game status">
     <div class="pill">Mission<b id="mission">1/5</b></div>
@@ -283,6 +283,7 @@
   function handleKey(key, source="keyboard"){
     const k = key.length === 1 ? key.toLowerCase() : key;
     setInput(source, k === " " ? "Space" : k);
+    if (k === "m") return toggleSound();
     if (k === "r") return restart(true);
     if (k === "f") return toggleFull();
     if (k === "Tab") return cycleUnit();
@@ -293,6 +294,7 @@
     if (k === "ArrowDown" || k === "s") return moveCursor(0,1);
   }
   function toggleFull(){ try { if (!document.fullscreenElement) canvas.requestFullscreen(); else document.exitFullscreen(); announceStatus(document.fullscreenElement ? "Exited fullscreen." : "Fullscreen requested.", "status"); } catch (_) {} }
+  function toggleSound(){ state.sound = !state.sound; saveSound(); updateHud(); if (state.sound) beep("select"); announceStatus(state.sound ? "Sound on." : "Sound off.", "status"); }
   function updateHud(){
     const u = selectedUnit();
     hud.mission.textContent = (state.mission + 1) + "/" + missions.length;
@@ -366,7 +368,7 @@
     for (let y=0;y<H;y++) for (let x=0;x<W;x++){ const r=cellRect(x,y); if(px>=r.x&&px<=r.x+r.s&&py>=r.y&&py<=r.y+r.s){ state.cursor={x,y}; playerAction(); return; } }
   });
   document.getElementById("restart").addEventListener("click", () => { setInput("button", "restart"); restart(true); });
-  document.getElementById("sound").addEventListener("click", () => { setInput("button", "sound"); state.sound = !state.sound; saveSound(); updateHud(); if (state.sound) beep("select"); announceStatus(state.sound ? "Sound on." : "Sound off.", "status"); });
+  document.getElementById("sound").addEventListener("click", () => { setInput("button", "sound"); toggleSound(); });
   document.getElementById("full").addEventListener("click", () => { setInput("button", "fullscreen"); toggleFull(); });
   document.querySelectorAll("[data-key]").forEach(btn => btn.addEventListener("click", () => { canvas.focus(); handleKey(btn.dataset.key, "touch"); }));
   document.addEventListener("fullscreenchange", () => { updateHud(); render(); });
