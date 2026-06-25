@@ -308,6 +308,7 @@
   let soundEnabled = loadSoundPref();
   let audioCtx = null;
   let lastFrame = 0;
+  let rafId = 0;
   let helpFocusReturn = null;
   let lastUiAction = "loaded";
   const fullscreenDiagnostics = {
@@ -503,6 +504,7 @@
     playStart();
     canvas.focus({ preventScroll: true });
     render();
+    ensureLoop();
   }
   function finishRun(){
     if (state.mode !== "playing") return;
@@ -728,13 +730,21 @@
     els.start.textContent = state.mode === "playing" ? "Restart" : state.mode === "complete" ? "New Run" : "Start Run";
     els.laneButtons.forEach((btn, lane) => { btn.dataset.active = state.time < state.laneFlashUntil[lane] ? "true" : "false"; });
   }
+  // The loop only needs to run while a run is playing — the ready/complete
+  // screens are static, so gate the rAF off at idle instead of repainting a dead
+  // frame 60x/sec. (Also makes advanceTime authoritative: it stops the live loop
+  // before stepping and resumes after, so the two can't double-advance.)
+  function loopActive(){ return state.mode === "playing"; }
+  function ensureLoop(){ if (!rafId && loopActive()) { lastFrame = 0; rafId = requestAnimationFrame(frame); } }
+  function stopLoop(){ if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
   function frame(ts){
+    rafId = 0;
     if (!lastFrame) lastFrame = ts;
     const dt = Math.min(0.033, Math.max(0, (ts - lastFrame) / 1000));
     lastFrame = ts;
     update(dt);
     render();
-    requestAnimationFrame(frame);
+    if (loopActive()) rafId = requestAnimationFrame(frame);
   }
   function showHelp(){
     helpFocusReturn = document.activeElement;
@@ -903,15 +913,17 @@
     });
   };
   window.advanceTime = function(ms){
+    stopLoop();
     const steps = Math.max(1, Math.round(ms / (1000 / 60)));
     for (let i = 0; i < steps; i += 1) update(1 / 60);
     render();
+    ensureLoop();
   };
 
   updateSoundButton();
   syncFullscreenButton();
   render();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>

@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-25 Claude idle-rAF re-census — gate rhythm-circuit (campaign miss)
+
+Re-censused the two idle-rAF candidates the catalog audit flagged (aster-vault, rhythm-circuit ran ungated loops). A throwaway probe measured idle rAF + whether the largest canvas changes over an idle window:
+
+- **aster-vault — LEFT ALONE.** Canvas *changes* while idle (its `update` advances `state.tick` before the playing-guard, driving an ambient background animation), so the loop is intended motion, not waste — same class as the campaign's "animating-at-idle" exclusions.
+- **rhythm-circuit — GATED.** 91 idle rAF/1.5s but the canvas is *static* at the ready/complete screens (the beat head only animates during play; at ready/complete a lane key calls `startRun()` rather than flashing, and `update` only advances `state.time` while playing). It was originally excluded as "realtime", but the census shows idle is a dead 60fps repaint. Applied the standard gate: `loopActive() = mode==="playing"`, `ensureLoop`/`stopLoop`, the frame re-arms only while playing, `startRun` kicks it, `advanceTime` does `stopLoop…step…ensureLoop`, and boot arms via `ensureLoop` (no-op at ready). This also properly resolves the audit's "advanceTime race" finding (the live loop can no longer double-advance during manual stepping). rhythm-circuit is not in the `realtime-progression` protected set (only signal-loom + tempo-forge are), so the gate is safe there.
+- Verified in real Chromium (`verify-rhythm.mjs`): idle rAF 91 → **0** at the ready menu, loop runs during play (activeRaf 37), driven to completion the loop settles back to **0** (stop-after-play), no errors. Full battery green incl. realtime-progression (still 2 time-driven games advancing under real time).
+
 ## 2026-06-25 Claude catalog quality audit — fix batch 5 (three clear correctness/UX bugs)
 
 Picked the clear, low-risk remainders and skipped the design-/determinism-/solvability-risky ones (gemline fixed-seed, dungeon energy, beacon walls, signal-siege/packet-pilot `s`-key, breachline Tab — left in the backlog as design calls).
