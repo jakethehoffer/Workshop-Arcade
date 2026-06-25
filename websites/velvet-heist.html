@@ -252,7 +252,11 @@
     if(rec.type === "move" && rec.dir === dir) { applyPlanned(stage().plan[state.routeIndex]); return; }
     const [dx, dy] = DIRS[dir], nx = state.thief.x + dx, ny = state.thief.y + dy;
     if(blocked(nx, ny)) { wrongAction("wall"); return; }
-    state.thief = { x: nx, y: ny }; wrongAction("move");
+    state.thief = { x: nx, y: ny };
+    // The sightline mechanic must apply to every move, not just planned ones:
+    // an off-route step into a lit cell is a catch, same as in afterStep().
+    if(state.mode === "playing" && dangerAt(state.thief.x, state.thief.y) && state.cloak <= 0) { fail("Caught in a museum sightline."); return; }
+    wrongAction("move");
   }
   function submitAction(source = "key"){
     state.userGesture = true; if(state.mode === "menu"){ startRun(); return; } if(state.mode !== "playing") return;

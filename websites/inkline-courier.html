@@ -114,7 +114,7 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const round = (v) => Math.round(v * 100) / 100;
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const routeHitRadius = 29;
+  const routeHitRadius = 24;  // shared by route-readiness and in-run pickup so a "viable" route always collects
 
   const stages = [
     {
@@ -534,7 +534,7 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   }
   function checkNodes() {
     for (const n of stageDef().nodes) {
-      if (dist(state.courier, n) > 24) continue;
+      if (dist(state.courier, n) > routeHitRadius) continue;
       if (n.kind === "pickup" && !state.inventory[n.pair]) {
         state.inventory[n.pair] = true;
         state.pickups += 1;
@@ -847,7 +847,13 @@ button{border:1px solid rgba(103,232,249,.25);border-radius:8px;background:linea
   canvas.addEventListener("keydown", handleKey);
   window.addEventListener("keydown", (ev) => {
     if (ev.target === canvas) return;
-    if (["r", "f", "m"].includes(ev.key.toLowerCase())) handleKey(ev);
+    // Planning keys (arrows/WASD/Space/Enter) are only bound on the canvas, so a
+    // fresh load with focus on <body> ignored them. Forward all game keys when
+    // focus is elsewhere — except on an interactive control, where Space/Enter
+    // must activate the control, not the game.
+    const tag = (ev.target && ev.target.tagName || "").toLowerCase();
+    if (tag === "button" || tag === "input" || tag === "select" || tag === "textarea") return;
+    handleKey(ev);
   });
   els.run.addEventListener("click", () => { canvas.focus(); commitRoute(); });
   els.restart.addEventListener("click", fullRestart);

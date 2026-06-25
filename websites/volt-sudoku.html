@@ -325,6 +325,7 @@ button{font:inherit}.app{min-height:100dvh;width:min(1160px,100%);margin:auto;pa
     const index = state.selected;
     if (state.mode !== "playing" || state.givens[index]) { setStatus("Choose a blank cell before charging a digit.", "", 1200); render(); return; }
     if (state.noteMode && !fromHint) { toggleNote(digit); return; }
+    if (!fromHint && state.values[index] === digitAt(index)) { setStatus("Cell already charged correctly.", "", 1000); render(); return; }
     if (!fromHint && digit !== digitAt(index)) {
       state.mistakes += 1; state.stageMistakes += 1; state.score = Math.max(0, state.score - 28); state.errorCell = index; state.errorMs = 520;
       state.lastAction = "mistake"; state.lastMistake = { row: row(index) + 1, col: col(index) + 1, guess: digit };

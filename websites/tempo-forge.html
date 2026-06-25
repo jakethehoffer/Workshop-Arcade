@@ -239,6 +239,7 @@
     state.pattern = makePattern(level);
     state.playerPattern = blank();
     state.mode = "edit";
+    state.cleared = false;
     state.beat = 0;
     state.beatTimer = 0;
     state.flash = 0;
@@ -288,6 +289,9 @@
     return {activeStep:step + 1,status:label + " ready. " + padNames[state.focusPad] + " focused. Target " + counts.target + ", forged " + counts.forged + "."};
   }
   function checkPattern(){
+    // Once a level is cleared it stays locked until loadLevel (Next) advances,
+    // so toggling a cell off/on and re-checking can't farm the same award again.
+    if(state.cleared) return;
     const result = compare();
     if(result.complete){
       const gain = 100 + state.level * 25 + state.streak * 15;
@@ -296,6 +300,7 @@
       state.best = Math.max(state.best,state.score);
       safeStorage.set(BEST_KEY,state.best);
       state.mode = "complete";
+      state.cleared = true;
       setFeedback("Level complete. +" + gain + " points.");
       [0,1,2,3].forEach((pad,i)=>setTimeout(()=>tone(pad,.08),i*55));
     } else {
