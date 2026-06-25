@@ -652,6 +652,11 @@ document.addEventListener("keyup", (e) => {
   if (k === " " || k === "arrowup" || k === "w") state.firing = false;
 });
 
+// Releasing a held key over another window delivers keyup there, not here, so
+// clear all held input when the page loses focus to avoid stuck steering/fire.
+window.addEventListener("blur", () => { setSteer(0); state.firing = false; });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { setSteer(0); state.firing = false; } });
+
 els.start.addEventListener("click", startRun);
 els.restart.addEventListener("click", restartRun);
 canvas.addEventListener("pointerdown", () => { if (state.mode !== "playing") startRun(); });

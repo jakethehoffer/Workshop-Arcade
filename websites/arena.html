@@ -779,13 +779,20 @@
       const final = Math.floor(state.score);
       finalScoreEl.textContent = 'Score: ' + final;
 
-      if (final > state.high) {
-        state.high = final;
+      // The loop pre-bumps state.high live as the score climbs, so a
+      // `final > state.high` test here is always false and a record would
+      // never persist. Compare against the value actually in storage and write
+      // the new best, so it survives a reload.
+      let storedHigh = 0;
+      try { const v = Number(localStorage.getItem(HS_KEY)); if (Number.isFinite(v) && v >= 0) storedHigh = Math.floor(v); } catch {}
+      const isNewRecord = final > storedHigh;
+      if (isNewRecord) {
         try { localStorage.setItem(HS_KEY, String(final)); } catch {}
-        if (highEl) highEl.textContent = String(final);
       }
+      if (final > state.high) state.high = final;
+      if (highEl) highEl.textContent = String(state.high);
       if (bestEl) {
-        const newTag = final === state.high ? ' (NEW!)' : '';
+        const newTag = isNewRecord ? ' (NEW!)' : '';
         bestEl.textContent = 'Best: ' + state.high + newTag;
       }
       overEl.hidden = false;

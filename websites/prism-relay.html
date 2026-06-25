@@ -1141,13 +1141,15 @@
   els.restart.addEventListener("click", () => {
     markGesture();
     restartStage();
+    focusCanvas();
   });
   els.next.addEventListener("click", () => {
     markGesture();
     nextStage();
+    focusCanvas();
   });
-  els.sound.addEventListener("click", toggleSound);
-  els.fullscreen.addEventListener("click", toggleFullscreen);
+  els.sound.addEventListener("click", () => { toggleSound(); focusCanvas(); });
+  els.fullscreen.addEventListener("click", () => { toggleFullscreen(); focusCanvas(); });
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLButtonElement || event.target instanceof HTMLSelectElement) return;

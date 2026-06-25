@@ -749,6 +749,10 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     aimAt(point.x, point.y);
   });
   document.addEventListener("keydown", (event) => {
+    // A focused control button receives Space/Enter as a native click; don't
+    // also run a game action on the same press (double-fire / accidental start).
+    const tgt = event.target;
+    if (tgt && /^(button|input|select|textarea)$/i.test(tgt.tagName || "")) return;
     if (event.key === "Escape" && els.dialog.open) return;
     if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
       event.preventDefault();
