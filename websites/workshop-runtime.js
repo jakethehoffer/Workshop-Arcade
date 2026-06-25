@@ -10,11 +10,9 @@
     // Sandboxed games run with an opaque origin, where the localStorage getter can throw.
   }
 
-  // The catalog player seeds saved entries through a #wa-storage= fragment so
-  // reads are correct from the first script statement (postMessage alone
-  // cannot beat synchronous startup reads). Without a seed — direct loads,
-  // foreign embeds, test harnesses — the fallback stays purely in-memory and
-  // never posts messages anywhere.
+  // The catalog seeds saved entries via a #wa-storage= fragment so reads are
+  // correct from the first statement (postMessage can't beat sync startup reads).
+  // Without a seed the fallback stays in-memory and posts nothing.
   var bridge = null;
   try {
     var seedMatch = /[#&]wa-storage=([^&]*)/.exec(window.location.hash || "");
@@ -46,27 +44,25 @@
     }
   }
 
-  // Write-behind: ops are batched per task tick so a game saving every frame
-  // sends one message per tick, not one per setItem call.
+  // Write-behind: ops are batched per task tick (one message per tick).
   var dirty = false;
   var pendingOps = [];
   var flushTimer = 0;
+
+  function flushPending() {
+    if (flushTimer) { window.clearTimeout(flushTimer); flushTimer = 0; }
+    if (!bridge || !pendingOps.length) return;
+    var ops = pendingOps; pendingOps = [];
+    // A lost batch only costs persistence for those writes.
+    try { window.parent.postMessage({ type: "workshop-arcade:storage-ops", v: 1, slug: bridge.slug, ops: ops }, bridge.origin); } catch (_) {}
+  }
 
   function queueOp(op) {
     if (!bridge) return;
     dirty = true;
     pendingOps.push(op);
     if (flushTimer) return;
-    flushTimer = window.setTimeout(function () {
-      flushTimer = 0;
-      var ops = pendingOps;
-      pendingOps = [];
-      try {
-        window.parent.postMessage({ type: "workshop-arcade:storage-ops", v: 1, slug: bridge.slug, ops: ops }, bridge.origin);
-      } catch (_) {
-        // A lost batch only costs persistence for those writes.
-      }
-    }, 0);
+    flushTimer = window.setTimeout(flushPending, 0);
   }
 
   var fallbackStorage = {
@@ -107,9 +103,8 @@
   }
 
   if (bridge) {
-    // The catalog answers the hello below with a fresh snapshot. That only
-    // matters when the frame reloaded with a stale seed fragment; it is
-    // ignored once the game has written anything this session.
+    // The catalog answers this hello with a fresh snapshot; only matters on a
+    // reload with a stale seed, and is ignored once the game has written.
     window.addEventListener("message", function (event) {
       if (event.source !== window.parent) return;
       if (event.origin !== bridge.origin) return;
@@ -129,16 +124,17 @@
     } catch (_) {
       // Without the hello the seed alone still covers the normal open path.
     }
+    // Flush synchronously on teardown so a save made right before
+    // hide/navigate/close survives the setTimeout(0) batch gap.
+    window.addEventListener("pagehide", flushPending);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") flushPending(); });
   }
 })();
 
-// Accessibility baseline: game pages carry their own inline CSS with no shared
-// stylesheet, so this is the one place every game can pick up a
-// prefers-reduced-motion reset without editing each frozen game file. It only
-// collapses CSS-driven motion (transitions, keyframe animations, smooth scroll)
-// and only when the user has asked for reduced motion; canvas gameplay motion is
-// JS-driven and stays a per-game concern. Inline <style> is permitted by the
-// game-page CSP (style-src includes 'unsafe-inline').
+// Accessibility baseline: game pages have no shared stylesheet, so this is the
+// one place to apply a prefers-reduced-motion reset across every frozen game —
+// collapsing CSS motion only when the user asked for it (JS canvas motion stays
+// a per-game concern). Inline <style> is allowed by the game-page CSP.
 (function () {
   "use strict";
   try {
