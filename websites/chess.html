@@ -276,14 +276,17 @@ canvas:focus-visible {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    color: rgba(255,255,255,0.6);
+    /* Dark ink clears WCAG AA on BOTH square tones (cream ~14:1, blue ~5.2:1).
+       White could not: the blue squares (#628aa3) are too light, capping white
+       at ~3.5:1 -- the original rgba(255,255,255,.6) read 1.18:1 on cream. */
+    color: #0b0e13;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
   }
   .coord-file, .coord-rank {
     position: absolute;
     padding: 4px 6px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 0 0 2px rgba(255,255,255,0.65);
   }
   /* === Game Over Overlay === */
 .overlay {
