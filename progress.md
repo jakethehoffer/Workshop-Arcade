@@ -1,5 +1,24 @@
 Original prompt: Do this for me
 
+## 2026-06-26 Claude WCAG AA contrast audit — deterministic probe + 3 fixes, 4 flagged
+
+Built a deterministic Playwright text-contrast probe (`scripts/audit-contrast.mjs`, `npm run audit:contrast`) and swept index.html + all 100 games at desktop (1280×820) and mobile (390×844), DSF 1. For every visible DOM text element it measures computed text color (resolved through a canvas so named/hsl/oklch/color-mix normalize to sRGB; composited with the color alpha × opacity-chain) vs the *effective* background, then flags ratios below 4.5:1 (normal) / 3:1 (large). Effective bg is the CSS ancestor composite when fully determinable, else a pixel sample from a **text-suppressed full-page screenshot** (decoded by a self-contained PNG decoder — no new deps) so gradients/canvas/overlays are handled. Confidence tags: solid / gradient / overlay / canvas / variant.
+
+**False-positive hardening (each root-caused against source):** excludes (a) effective-opacity-0 elements — e.g. doodle-jump's HUD behind `body.menu-open .hud{opacity:0}` produced 20 phantom 1:1 readings; (b) `.sr-only`/clipped 1×1 text (chess `#boardHelp`/`#liveStatus`); (c) `:disabled`/`aria-disabled` controls — explicitly exempt from WCAG 1.4.3; the dimmed `opacity:.5` "Next X" buttons (prism-relay, crate-circuit, wordweave-grid, clause-courier, shadow-switch, volt-sudoku) and cipher-cadence's pre-start `.choice`/Confirm were all disabled-state artifacts. Added an **occlusion-aware confirmation pass**: each candidate failure is scrolled to viewport center and re-sampled, with `elementFromPoint` rejecting points covered by a `position:fixed` overlay (this killed a cipher-rooms keypad false positive where the pinned cyan "SOUND ON" bar painted over the keypad in the full-page shot), while still trusting `pointer-events:none` overlay text (chess board coordinates). Raw 114 → 38 genuine failures across 7 games after the 3 fixes below.
+
+**Fixed (clear, minimal, intent-preserving — verified by re-probe + live screenshots):**
+- **snake** — Start button rendered washed-out light-on-cyan (~1.35:1). A CSS specificity bug: `button.pill{color:#e6edf3}` (0,1,1) overrode the author's `.primary-start{color:#06242a}` (0,1,0). Bumped the selector to `button.pill.primary-start` so the intended dark ink wins (~11:1). Restores the authored look (the dark color was already in the file).
+- **reflex-spark** — pending round-slot numerals `rgba(230,237,243,0.35)` (2.89:1) → `0.5` (~4.7:1). Same hue, still de-emphasized vs hit/false slots.
+- **letter-foundry** — "Build a word" placeholder `rgba(159,194,206,.55)` (3.7:1) → `.7` (~5.1:1). Same hue, still a muted placeholder.
+
+**Flagged for approval (each would visibly change the design / game-content colors — not auto-applied):**
+- **chess** (32 findings) — board coordinate labels `rgba(255,255,255,.6)` painted on the tiles read 1.18:1 on cream squares / 2.34:1 on blue. Needs an adaptive per-square color (dark label on light squares, light on dark) or to move coords into the board gutter — a logic change.
+- **bulwark-burst** (2) — Start CTA white `#fff7ed` on warm `#fa724c` = 2.61:1. Dark text (~#2a1c12) clears 4.6, or darken the orange fill — a CTA recolor.
+- **chromalock** (2) — the indigo guess swatch's "5" label `#eef0ff` on `#7e84f8` = 2.83:1; the other swatches pass. A dark label on that one swatch clears it, but it touches game-content color.
+- **floodgate** (2) — indigo flood swatch "3 ▲" white on `#6366f1` = 4.27:1 (borderline); deepening the indigo or darkening the glyph fixes it but changes a game-palette color used board-wide.
+
+Verification: `validate-catalog` (100); `npm test` 51/51; full `test:games` (100); full `capture:games:ci` (200 surfaces, max render score 0); scoped contrast re-probe of the 3 fixed games = 0 failures; `git diff --check` clean. No manifest/index/runtime/SHELL_REVISION changes (game-file CSS only).
+
 ## 2026-06-26 Claude security audit (clean) + rule-engine correctness — 3 fixes
 
 Two more audit lenses on fresh budget. **(1) Security** — a waved Workflow over the catalog shell (`index.html`), the storage-bridge runtime, the service worker, and all 100 games hunting HTML-injection sinks, untrusted `postMessage`, URL/deep-link reflection, and unsafe eval/CSP. **0 confirmed vulnerabilities** across all 22 targets: the games are static, sandboxed, no-network, and render via `textContent`/canvas (no dynamic-`innerHTML` injection surface); the bridge validates as before. A clean bill of health (the first run rate-limited 10 targets including the shell+runtime; re-ran those at 2/wave). **(2) Rule-engine + AI-opponent correctness** across the 11 rule-heavy games — 3 raw, **3 confirmed**:
