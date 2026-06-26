@@ -1803,6 +1803,13 @@ function handleSquareActivation(r, c, source = 'pointer'){
       Sound.invalidForcedCapture();
       return;
     }
+    // Cyclic king capture: the chain's landing square equals the piece's own
+    // origin, so re-activating the selected square must EXECUTE the capture
+    // rather than re-select (otherwise the only legal move can never be played).
+    if(selected && selected.r===r && selected.c===c){
+      const cyclic = legalDest.find(m=>{ const [er,ec]=m.steps[m.steps.length-1]; return er===r && ec===c; });
+      if(cyclic){ clearInvalidFeedback(); focusSquare={r,c}; tactilePulse(16); makePlayerMove(cyclic); return; }
+    }
     const key = r+','+c;
     const forcedCapture = forcedSources.size > 0 && !forcedSources.has(key);
     if(forcedCapture){

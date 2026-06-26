@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-06-26 Claude security audit (clean) + rule-engine correctness — 3 fixes
+
+Two more audit lenses on fresh budget. **(1) Security** — a waved Workflow over the catalog shell (`index.html`), the storage-bridge runtime, the service worker, and all 100 games hunting HTML-injection sinks, untrusted `postMessage`, URL/deep-link reflection, and unsafe eval/CSP. **0 confirmed vulnerabilities** across all 22 targets: the games are static, sandboxed, no-network, and render via `textContent`/canvas (no dynamic-`innerHTML` injection surface); the bridge validates as before. A clean bill of health (the first run rate-limited 10 targets including the shell+runtime; re-ran those at 2/wave). **(2) Rule-engine + AI-opponent correctness** across the 11 rule-heavy games — 3 raw, **3 confirmed**:
+
+- **solitare (HIGH)** — double-clicking a *covered* (non-top) tableau card corrupted the deck: `onDblClickCard` ignored `dataset.index` and popped the pile top, so it discarded the covering card and pushed the covered card to a foundation — gaining a duplicate and losing a card (breaks deck integrity, can false-win a foundation slot). Guarded it to act only on the genuine top card of the pile.
+- **checkers (MEDIUM)** — a king's forced capture chain that returns to its *starting* square (a cyclic capture) could never be played: clicking the landing square (= the piece's origin) only re-selected it, soft-locking the turn when that cycle was the only capture. `handleSquareActivation` now executes a cyclic capture when the re-activated square is the selected piece's own square and a legal move lands there (only cyclic captures land on their origin, so normal re-selection is unaffected).
+- **crown-circuit (LOW)** — re-claiming a tile you already own awarded +4 tile-claim points (a no-progress action). Tile-claim points are now credited only when `oldOwner!==side` (rival reclaim 18 / neutral claim 10 / own 0), leaving just the legitimate crown-move bonus.
+
+Verified: `validate-catalog`; scoped + full `test:games` (100); `npm test` 51/51; `capture:games:ci` 200 surfaces max score 0; `git diff --check` clean.
+
 ## 2026-06-25 Claude deep correctness re-audit — 26 verified fixes
 
 A sharp second-pass correctness Workflow (20 auditors, waved) targeting subtle classes the general sweep underweights — numeric overflow/NaN/precision, save/load corruption, double-activation/timer races, boundary/empty/max states — each finding adversarially verified: **28 raw → 26 confirmed** (2 refuted). Fixed all 26 across 24 files, verified with live probes + the full battery.

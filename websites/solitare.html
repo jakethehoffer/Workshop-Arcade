@@ -1286,6 +1286,9 @@ function startAutoComplete(){
     const elc = e.currentTarget;
     const card = {s: elc.dataset.s, r: +elc.dataset.r};
     const from = elc.dataset.from;
+    // Only the genuine top card of a tableau pile is movable; double-clicking a
+    // covered (fanned) card would pop the wrong card and corrupt the deck.
+    if(from && from[0]==='t' && (+elc.dataset.index) !== state.piles.t[+from.slice(1)].up.length-1) return;
 
     const si = SUIT_IDX[card.s];
     if(canPlaceOnFoundation(card, si)){

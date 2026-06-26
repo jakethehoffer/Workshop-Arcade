@@ -177,7 +177,7 @@
     if(canMove){crown.x=target.x;crown.y=target.y}
     if(side==="p"){
       state.ap=Math.max(0,state.ap-1);
-      state.score += (oldOwner==="r"?18:oldOwner==="p"?4:10) + (c.relic?24:0) + (canMove?3:0);
+      state.score += (oldOwner==="r"?18:oldOwner===""?10:0) + (c.relic&&oldOwner!==side?24:0) + (canMove?3:0);
       setFeedback((c.relic?"Crest claimed.":"Circuit tile claimed.")+" AP "+state.ap+".",1200,c.relic?"relic":"claim");
       tone(c.relic?"relic":"claim");
     }
