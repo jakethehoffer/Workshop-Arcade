@@ -1,5 +1,18 @@
 Original prompt: Do this for me
 
+## 2026-06-27 Claude — accept actions/checkout v7 (Dependabot #11) + merge playwright #10
+
+Merged Dependabot **#10** (playwright 1.60.0 → 1.61.1, squash) after its recreated checks went CLEAN — main re-validated green.
+
+Then handled **#11** (actions/checkout 6 → 7), which couldn't merge as-is: `check-security-workflows.mjs` pins `EXPECTED_ACTION_MAJORS` `actions/checkout=6` (the deliberate human-review gate for major action bumps), so #11's "Catalog, docs, and accessibility" job was red while every functional job was green. Reviewed v7.0.0 before accepting:
+- Pin is authentic — `9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0` is exactly the v7.0.0 tag commit; Dependabot also updated the same-line `# v7.0.0` comment consistently across all 8 uses.
+- v7.0.0's only breaking change ("block checking out fork PR for `pull_request_target`/`workflow_run`") does not apply — `grep` confirms the repo uses neither trigger nor any fork-PR-ref checkout.
+
+Landed it as one atomic direct commit (keeps `main` green at every step, vs. merging a red PR): bumped all 8 checkout pins `df4cb1c…#v6.0.3` → `9c091bb…#v7.0.0` across `validate-catalog.yml` (6), `codeql.yml` (1), `security-surfaces.yml` (1), and bumped the expected-major constant 6 → 7 in all four spots of `check-security-workflows.mjs` (the map + three inline lists). Closed #11 as superseded.
+
+Verified: 0 stale SHAs, 8 v7 pins; `npm run test:security-workflows` passed (26 immutable action uses intact); `npm test` 51/51; `git diff --check` clean.
+
+
 ## 2026-06-27 Claude — fix failing Dependabot npm updater (add .npmrc)
 
 Investigated the lone red run on the catalog (a Dependabot "npm_and_yarn … for playwright - Update" job, run 28293954650). It was NOT the playwright bump's tests — PR #10 (playwright 1.60.0→1.61.0) is `MERGEABLE`/`CLEAN` with all CI checks green (Game smoke, Render capture, Performance, CodeQL pass; Build/Deploy/Live-Pages "skipping" is the normal PR behavior). The failure was Dependabot's own refresh job aborting:

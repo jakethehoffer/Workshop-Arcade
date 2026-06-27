@@ -35,7 +35,7 @@ const issues = [];
 let pinnedActionUseCount = 0;
 
 const EXPECTED_ACTION_MAJORS = new Map([
-  ['actions/checkout', 6],
+  ['actions/checkout', 7],
   ['actions/setup-node', 6],
   ['actions/upload-artifact', 7],
   ['actions/configure-pages', 6],
@@ -315,7 +315,7 @@ async function checkPagesDeploy() {
   }
 
   const requiredActions = [
-    ['actions/checkout', 6],
+    ['actions/checkout', 7],
     ['actions/configure-pages', 6],
     ['actions/setup-node', 6],
     ['actions/upload-pages-artifact', 5],
@@ -375,7 +375,7 @@ async function checkPagesDeploy() {
     }
 
     for (const [actionPath, major] of [
-      ['actions/checkout', 6],
+      ['actions/checkout', 7],
       ['actions/setup-node', 6],
       ['actions/upload-artifact', 7],
     ]) {
@@ -545,7 +545,7 @@ async function checkSecuritySurfaces() {
   }
 
   for (const [actionPath, major] of [
-    ['actions/checkout', 6],
+    ['actions/checkout', 7],
     ['actions/setup-node', 6],
   ]) {
     requirePinnedAction(src, path, actionPath, major);
