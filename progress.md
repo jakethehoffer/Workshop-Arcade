@@ -1,5 +1,16 @@
 Original prompt: Do this for me
 
+## 2026-06-26 Claude contrast audit closeout — last 3 fixes, catalog-wide AA clean
+
+Cleared the final 6 contrast findings (the user approved all three flagged design changes), bringing the catalog to **0 text-contrast failures across all 7,266 measured visible text elements** (index.html + 100 games × desktop/mobile, `npm run audit:contrast`).
+
+- **bulwark-burst** — Start CTA was white `#fff7ed` on the orange gradient (2.61:1). The `.btn.primary` ink → `#2a1c12` (dark on orange, ~6:1); applies to both primary buttons.
+- **chromalock** — the indigo guess swatch (`data-color="4"`) was the lone swatch overriding the shared dark label `#06121f` with light `#eef0ff` (2.83:1). Dropped the override back to `#06121f` to match its five siblings (~5.8:1 on the indigo).
+- **floodgate** — the indigo flood swatch "3 ▲" was white on `#6366f1` (4.27:1, just under). Deepened `PALETTE[2]` `#6366f1` → `#5258e6` (subtle, keeps white text at ~5.1:1); the indigo stays clearly distinct from the other five board colors.
+
+Verified: full `npm run audit:contrast` = 0 failures catalog-wide; validate-catalog (100); `npm test` 51/51; scoped render capture of the 3 games max score 0; `git diff --check` clean. CSS/JS-constant changes in 3 game files only; no manifest/index/runtime/SHELL_REVISION impact.
+
+
 ## 2026-06-26 Claude contrast follow-up — chess board coordinates (clear a11y fix)
 
 Resolved the largest cluster from the contrast audit (32 of 38 remaining findings). The chess board's a–h / 1–8 coordinate labels were `rgba(255,255,255,.6)` painted on the tiles, reading 1.18:1 on the cream light squares (`#e6e1ce`) and 2.34:1 on the blue dark squares (`#628aa3`). White text cannot pass on this board — the blue squares are light enough that even pure white caps at ~3.5:1 — but a near-black ink clears AA on **both** tones (cream ~14:1, blue ~5.2:1, the latter near the board's 5.7:1 ceiling). So the fix is dark coordinate ink (the traditional chess look), a CSS-only change in `.coords` (`color:#0b0e13`, weight 700, swapped the dark drop-shadow for a light halo for separation on the blue squares). No per-square JS needed. Verified: scoped contrast re-probe of chess = 0 failures; validate-catalog (100); `npm test` 51/51; scoped chess render capture max score 0; `git diff --check` clean. Remaining 6 contrast findings (bulwark-burst Start CTA, chromalock + floodgate indigo game-palette swatches) are genuine aesthetic tradeoffs still pending a yes/no.
