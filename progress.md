@@ -1,5 +1,16 @@
 Original prompt: Do this for me
 
+## 2026-06-27 Claude — fix failing Dependabot npm updater (add .npmrc)
+
+Investigated the lone red run on the catalog (a Dependabot "npm_and_yarn … for playwright - Update" job, run 28293954650). It was NOT the playwright bump's tests — PR #10 (playwright 1.60.0→1.61.0) is `MERGEABLE`/`CLEAN` with all CI checks green (Game smoke, Render capture, Performance, CodeQL pass; Build/Deploy/Live-Pages "skipping" is the normal PR behavior). The failure was Dependabot's own refresh job aborting:
+
+> Error during file fetching; aborting: Private npm registries require either a .npmrc file in your repository, or explicit `scope`/`replaces-base` configuration in dependabot.yml. Registry: npm.pkg.github.com
+
+Dependabot auto-injects a GitHub Packages npm credential (`automatic-github-packages-auth`), but with no `.npmrc`/scope the npm updater can't place it and aborts — so every npm Dependabot PR refresh was failing. The project uses only public packages.
+
+Fix: added a root **`.npmrc`** pinning the default registry to public npm (`registry=https://registry.npmjs.org/`). This satisfies Dependabot's stated first remedy ("a .npmrc file in your repository"), needs no token (the `registries:`+`replaces-base` alternative would require one), and is a functional no-op for installs (public npm is already the default). Verified: `npm config get registry` → public; `npm ci --dry-run` → up to date; `npm test` 51/51; `check-security-workflows` intact; `git diff --check` clean. Confirmed end-to-end by re-running the Dependabot refresh after the fix landed on main.
+
+
 ## 2026-06-27 Claude — wire the contrast probe as a permanent CI gate
 
 After validating that the remaining explored candidate (playfeel "opaque end states") was a false positive — chrome-convoy/nightwire/diamond-derby paint outcome titles on the canvas (`titles[mode]` = "Convoy Cleared"/"Wrecked"/"Extracted"/"Caught", big/sub text), flux-reversi paints "YOU WIN"/"CPU WINS", the four fact-match games announce via `fact-match-engine.js`'s `aria-live` status line, and chrome-convoy also pushes the result to its `aria-live` `#status` via `setFeedback` — the highest-value remaining move was to lock in the just-shipped contrast/focus work so it can't silently regress.
