@@ -1,5 +1,16 @@
 Original prompt: Do this for me
 
+## 2026-06-26 Claude a11y follow-up — focus-indicator (WCAG 1.4.11) consistency
+
+Closed the documented scope gap from the text-contrast pass (1.4.3 is done; 1.4.11 non-text was out of scope). Censused every `:focus`/`:focus-visible` indicator across all 100 games (both `outline` rules and multi-line `box-shadow` rings). The catalog norm is `3px solid` at ~0.72–0.86 alpha (compliant); found exactly **three** sub-standard outliers and raised them to the norm:
+
+- **brick-breaker** — canvas `#game:focus-visible` was `2px solid rgba(94,234,212,0.45)` → `3px @ 0.72` (offset −3px). Verified: ring now visible at the playfield edge.
+- **gridline-tactics** — `button:hover,button:focus-visible` shared a weak `2px @ .45` ring. Split the selector: hover stays subtle, `button:focus-visible` → `3px @ .72`.
+- **checkers** — `.board:focus-visible` box-shadow ring was `0 0 0 3px rgba(94,234,212,.26)` (faint) → `.72`. Verified: board ring now clearly visible.
+
+The rest of the catalog's focus indicators already meet the norm (12× `3px @ .72`, plus gold/blue/cyan variants all ≥0.7). Edge cases checked and left as-is: brick-breaker's `button:focus-visible` uses full-opacity `var(--accent)` (#5eead4) — fine; `#game:focus{outline:none}` / `.board:focus{outline:none}` are the mouse-focus states paired with the `:focus-visible` rings (standard). Verified: validate-catalog (100); `npm test` 51/51; scoped render capture of the 3 games max score 0; keyboard-focus screenshots of brick-breaker + checkers; `git diff --check` clean. CSS-only in 3 game files.
+
+
 ## 2026-06-26 Claude contrast audit closeout — last 3 fixes, catalog-wide AA clean
 
 Cleared the final 6 contrast findings (the user approved all three flagged design changes), bringing the catalog to **0 text-contrast failures across all 7,266 measured visible text elements** (index.html + 100 games × desktop/mobile, `npm run audit:contrast`).
