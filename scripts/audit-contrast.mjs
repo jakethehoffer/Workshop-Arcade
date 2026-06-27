@@ -53,6 +53,14 @@ const slugFilter = (() => {
   return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
 })();
 const viewportFilter = argValue("--viewport"); // "desktop" | "mobile" | null
+// `--ci` turns the probe into a pass/fail gate: it refuses scoping (so the gate
+// always covers the full catalog at both viewports) and exits non-zero on any
+// finding, mirroring capture:games:ci.
+const STRICT = argv.includes("--ci");
+if (STRICT && (slugFilter || viewportFilter)) {
+  console.error("audit-contrast: --ci refuses --slug/--viewport — the contrast gate must cover the full catalog at both viewports.");
+  process.exit(2);
+}
 
 const manifest = JSON.parse(await readFile(path.join(repoRoot, "websites", "manifest.json"), "utf8"));
 
@@ -693,3 +701,13 @@ if (failures.length === 0) {
 const byConf = {};
 for (const f of failures) byConf[f.confidence] = (byConf[f.confidence] || 0) + 1;
 console.log("\nFailure confidence distribution:", JSON.stringify(byConf));
+
+// CI gate verdict.
+if (STRICT) {
+  if (failures.length > 0) {
+    console.error(`\nCI contrast gate failed: ${failures.length} text element(s) below WCAG AA.`);
+    process.exitCode = 1;
+  } else {
+    console.log("\nCI contrast gate passed: all measured text meets WCAG AA.");
+  }
+}

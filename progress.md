@@ -1,5 +1,17 @@
 Original prompt: Do this for me
 
+## 2026-06-27 Claude — wire the contrast probe as a permanent CI gate
+
+After validating that the remaining explored candidate (playfeel "opaque end states") was a false positive — chrome-convoy/nightwire/diamond-derby paint outcome titles on the canvas (`titles[mode]` = "Convoy Cleared"/"Wrecked"/"Extracted"/"Caught", big/sub text), flux-reversi paints "YOU WIN"/"CPU WINS", the four fact-match games announce via `fact-match-engine.js`'s `aria-live` status line, and chrome-convoy also pushes the result to its `aria-live` `#status` via `setFeedback` — the highest-value remaining move was to lock in the just-shipped contrast/focus work so it can't silently regress.
+
+- **scripts/audit-contrast.mjs** — added a `--ci` gate mode: refuses `--slug`/`--viewport` (full catalog + both viewports always) and sets a non-zero exit on any finding, mirroring `capture:games:ci`. Verified `--ci --slug` exits 2.
+- **package.json** — added `audit:contrast:ci`; folded it into the `test:all` composite for local parity.
+- **.github/workflows/validate-catalog.yml** — added a "Run WCAG AA contrast gate" step to the existing "Game smoke tests" job (after `test:games`). No new job, so the pinned-workflow job-set contract (`check-current-head-workflows`, `check-security-workflows`) is unchanged; a contrast regression now blocks the validation-gated deploy.
+- **CLAUDE.md** — documented the probe + the `:ci` gate in the Verification section.
+
+Verified: `npm test` 51/51 (incl. `check-tools` syntax of the edited probe, `check-docs-drift`, `check-security-workflows` = 26 immutable action uses intact); `audit:contrast --ci --slug` correctly refused (exit 2); full `audit:contrast --ci` = 0 failures, exit 0; `git diff --check` clean.
+
+
 ## 2026-06-26 Claude a11y follow-up — focus-indicator (WCAG 1.4.11) consistency
 
 Closed the documented scope gap from the text-contrast pass (1.4.3 is done; 1.4.11 non-text was out of scope). Censused every `:focus`/`:focus-visible` indicator across all 100 games (both `outline` rules and multi-line `box-shadow` rings). The catalog norm is `3px solid` at ~0.72–0.86 alpha (compliant); found exactly **three** sub-standard outliers and raised them to the norm:

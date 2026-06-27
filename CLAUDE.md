@@ -60,12 +60,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-catalog.p
 npm test
 npm run test:games
 npm run capture:games:ci
+npm run audit:contrast:ci
 npm run test:pwa-runtime
 npm run test:runtime-storage
 npm run audit:perf:local
 git diff --check
 ```
 
+- `npm run audit:contrast` is the deterministic WCAG AA text-contrast probe (computed text color vs effective background for every visible DOM text element across index.html + all 100 games at desktop and mobile; flags ratios below 4.5:1 normal / 3:1 large). `npm run audit:contrast:ci` is the gate form: it refuses `--slug`/`--viewport` and exits non-zero on any finding. It runs in the Validate Catalog "Game smoke tests" job, so a contrast regression blocks the deploy gate. While iterating, scope it with `npm run audit:contrast -- --slug <a,b>`.
 - While iterating on one or two games, scope the slow sweeps to the touched slugs before the full battery: `npm run test:games -- --slug <a,b>` and `npm run capture:games -- --slug <a,b>`. Scoped summaries are `scope`-marked so they never count as full-catalog evidence, unknown slugs are refused, and `capture:games:ci` refuses `--slug` entirely — final verification and CI still run the full sweeps. `npm run test:scoped-verification` guards this contract.
 - Use the develop-web-game Playwright client or custom Playwright probes for touched gameplay. Inspect desktop and mobile screenshots, diagnostics, touch/keyboard controls, and console errors.
 - The full game-smoke and render-capture sweeps use reusable desktop and mobile browser contexts through `scripts/playwright-harness.mjs`. They clear local/session storage before each game document and permit one bounded retry only for `ERR_NO_BUFFER_SPACE` or `ERR_INSUFFICIENT_RESOURCES` after context recreation. Run `npm run test:playwright-harness` when changing this path; smoke and capture summaries must retain `transportRetryCount` and `transportRetries`.
