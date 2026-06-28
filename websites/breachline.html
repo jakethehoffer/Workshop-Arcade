@@ -762,6 +762,12 @@ window.advanceTime = (ms) => {
   return window.render_game_to_text();
 };
 document.addEventListener("keydown", (event) => {
+  // A focused control button receives Space/Enter as a native click; don't also
+  // run a game action on the same press (which would suppress the button's
+  // activation and fire a wrong action). The canvas is not a control, so the
+  // on-canvas play path is unaffected.
+  const tgt = event.target;
+  if (tgt && /^(button|input|select|textarea)$/i.test(tgt.tagName || "")) return;
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Enter"].includes(event.key)) event.preventDefault();
   handleKey(event.key);
 });

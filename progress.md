@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-28 Claude — breachline keyboard guard (WCAG 2.1.1 keyboard)
+
+The per-game correctness sweep found breachline's document-level `keydown` handler unconditionally `preventDefault`s Space/Enter and then runs `handleKey`, with no focused-control guard. So a keyboard user who Tabbed to any toolbar button (Execute, Switch Agent, Queue Wait, Next Mission, Restart, Sound, Fullscreen) and pressed Space/Enter had the button's native activation suppressed and a *game* action fired instead (Space → queue wait, Enter → execute beat) — corrupting the planned turn and failing WCAG 2.1.1.
+
+Mirrored the corrective guard the sibling game bulwark-burst already ships: early-return from the handler when `event.target` is a `button/input/select/textarea`. The canvas is not a control, so on-canvas play is unaffected.
+
+Verified with a custom Playwright probe: with `#soundBtn` focused, Enter then Space toggle sound (the button activates) while `beat` stays 0 (no hijack); with the canvas focused, Enter still drives the game (`beat` 0 → 1). `npm test` 51/51; scoped smoke incl. breachline green; `git diff --check` clean. One-file JS change, no CSS/markup impact.
+
 ## 2026-06-28 Claude — best-on-fail persistence across 9 more games (gate 5 → 14)
 
 Two adversarial fan-out audits (six dimension scouts, then a full per-game correctness sweep of all 100 games) independently surfaced the same net-new class: **9 games displayed a live Best (`Math.max(best, score)`, or simply accrued score) but persisted `BEST_KEY` only on a win**, so a personal best set on the common *losing* run vanished on reload — a broken retention hook and a diagnostic-honesty bug (`render_game_to_text().best` reported a value that did not survive a reload).
