@@ -1,5 +1,18 @@
 Original prompt: Do this for me
 
+## 2026-06-28 Claude — best-on-fail persistence across 9 more games (gate 5 → 14)
+
+Two adversarial fan-out audits (six dimension scouts, then a full per-game correctness sweep of all 100 games) independently surfaced the same net-new class: **9 games displayed a live Best (`Math.max(best, score)`, or simply accrued score) but persisted `BEST_KEY` only on a win**, so a personal best set on the common *losing* run vanished on reload — a broken retention hook and a diagnostic-honesty bug (`render_game_to_text().best` reported a value that did not survive a reload).
+
+Fixed the fail path in all 9 to commit best the same way each game's win branch already does:
+- **bulb-brigade, signal-loom** — added the `write(BEST_KEY, …)` guard at the single `state.mode="failed"` transition.
+- **moonbase-mutex** (`fail()`), **finale-foundry** (`fail()` → existing `commitBest()`), **beacon-bastion** (`fail()`, which uses `set`/`Math.max`) — one-line commit at the centralized fail chokepoint.
+- **aster-vault** (×2), **comet-cartel** (×2), **canopy-courier** (×3) — commit at each inline fail transition.
+
+Extended the CI gate `scripts/check-best-on-fail-persistence.mjs` from 5 → 14 games. Each new driver plays a real run to a *scored* game-over and asserts the failing score persisted and survives reload. Turn-based games drive with discrete key presses; real-time games advance deterministically through the game-contract `window.advanceTime(ms)` hook and steer from each game's own diagnostic oracle (`recommendation`/`nextNote`/`nextEvent`) — CI-stable rather than wall-clock-fragile (real-time entries flagged `realtime:true` for a 3-attempt budget; drift-loom folded into the same flag). The gate runs in `validate-catalog.yml`, so a regression now blocks the deploy.
+
+Verified: extended gate green for all 14 games (run twice, stable; the adversarial verifiers confirmed each pre-fix fail path persisted nothing); `validate-catalog` (100); `npm test` 51/51; full 100-game smoke; scoped smoke of the 10 touched games; `git diff --check` clean. Pure fail-path JS in 9 game files plus the gate script — no manifest/CSP/SHELL/cover/meta impact.
+
 ## 2026-06-27 Claude — accept actions/checkout v7 (Dependabot #11) + merge playwright #10
 
 Merged Dependabot **#10** (playwright 1.60.0 → 1.61.1, squash) after its recreated checks went CLEAN — main re-validated green.

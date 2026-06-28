@@ -174,7 +174,7 @@
   function startRun(){ state.userGesture = true; state.mode = "playing"; state.score = 0; loadStage(0); tone("start"); canvas.focus(); }
   function restart(){ state.lastAction = "restart"; startRun(); }
   function commitBest(){ if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } }
-  function fail(text){ state.mode = "failed"; setFeedback(text, 2300, "failed"); tone("miss"); updateUI(); draw(); }
+  function fail(text){ state.mode = "failed"; commitBest(); setFeedback(text, 2300, "failed"); tone("miss"); updateUI(); draw(); }
   function clearStage(){
     // A stage only locks if EVERY note was struck. strike() called this the
     // moment all notes were resolved (hit or missed), so a player could clear a

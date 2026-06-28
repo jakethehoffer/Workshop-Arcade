@@ -76,6 +76,29 @@ async function tap(page, key, times = 1) {
   for (let i = 0; i < times; i++) await page.keyboard.press(key);
 }
 
+// Advance a real-time game deterministically through its game-contract
+// window.advanceTime(ms) hook instead of a wall-clock wait, so the real-time
+// drivers below are stable in CI rather than timing-fragile.
+const advance = (page, ms) =>
+  page.evaluate((m) => { if (typeof window.advanceTime === 'function') window.advanceTime(m); }, ms);
+
+// Most games fail to mode "failed"; beacon-bastion uses "fail".
+const isFailMode = (mode) => mode === 'failed' || mode === 'fail';
+
+// Steer a single-axis lane/cursor from `from` toward `target` by tapping the
+// decrement/increment keys (bounded so a stale read can't spin forever).
+async function steerLane(page, from, target, decKey, incKey) {
+  let cur = from, guard = 8;
+  while (cur !== target && guard-- > 0) { await tap(page, cur < target ? incKey : decKey); cur += cur < target ? 1 : -1; }
+}
+
+function assertScoredFailure(end) {
+  if (!(end && isFailMode(end.mode) && end.score > 0)) {
+    throw new Error(`driver did not reach a scored failure (got ${JSON.stringify(end && { mode: end.mode, score: end.score })})`);
+  }
+  return end.score;
+}
+
 // ---- per-game drivers: play a real run to a scored game-over ----------------
 //
 // Each returns the failing-run metric (score/cash) it produced, or throws if it
@@ -207,12 +230,145 @@ async function driveDriftLoom(page) {
   return end.score;
 }
 
+// ---- best-on-fail expansion: 9 more games of the same class ----------------
+//
+// Each was found to display its best live as Math.max(best, score) (or, for
+// beacon-bastion, simply accrue score) but persist only on a win; the fail path
+// now commits best too. These drivers play a real scored run to a game-over and
+// the gate asserts the failing-run score persisted. Turn-based games drive with
+// discrete key presses; real-time games advance the simulation through the
+// game-contract window.advanceTime(ms) hook and steer from each game's own
+// diagnostic oracle (recommendation / nextNote / nextEvent), so they are
+// deterministic and CI-stable rather than wall-clock-fragile.
+
+async function driveMoonbaseMutex(page) {
+  // Each tick scores +8 and burns one air; running ticks until air is spent
+  // fails the shift with the banked score intact.
+  await page.click('#startBtn');
+  for (let i = 0; i < 80; i++) { const s = await readState(page); if (!s || isFailMode(s.mode)) break; await tap(page, 'Enter'); }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveSignalLoom(page) {
+  // Rotate one conduit repeatedly to bank score (the other tiles stay misaligned
+  // so the stage never solves), then pulse until charge decays and the run fails.
+  await page.click('#startBtn');
+  await tap(page, ' ', 60);
+  for (let i = 0; i < 40; i++) { const s = await readState(page); if (!s || isFailMode(s.mode)) break; await tap(page, 'Enter'); }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveBulbBrigade(page) {
+  // Cycle the cursor lens repeatedly to bank score, then pulse an incomplete
+  // pattern until the light core goes dark.
+  await page.click('#startBtn');
+  await tap(page, ' ', 120);
+  for (let i = 0; i < 30; i++) { const s = await readState(page); if (!s || isFailMode(s.mode)) break; await tap(page, 'Enter'); }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveCometCartel(page) {
+  // Steer into intel lanes to bank score while pushing distance to the escape
+  // fail (lead runner gets away) or a hull breach.
+  await page.click('#startBtn');
+  for (let i = 0; i < 80; i++) {
+    const s = await readState(page); if (!s || (isFailMode(s.mode) && s.score > 0)) break;
+    const intel = (s.objects || []).find((o) => o.type === 'intel');
+    if (intel && intel.lane !== s.lane) await steerLane(page, s.lane, intel.lane, 'ArrowUp', 'ArrowDown');
+    await tap(page, 'ArrowRight'); await tap(page, ' '); await advance(page, 300);
+  }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveTempoTunnels(page) {
+  // Sync on each upcoming beat's lane; hits bank score while offbeat syncs drain
+  // integrity until the tunnel collapses with the score banked.
+  await page.click('#startBtn');
+  for (let i = 0; i < 120; i++) {
+    const s = await readState(page); if (!s || isFailMode(s.mode)) break;
+    const n = s.nextEvent; if (n && typeof n.lane === 'number') await steerLane(page, s.lane, n.lane, 'ArrowUp', 'ArrowDown');
+    await tap(page, ' '); await advance(page, 120);
+  }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveFinaleFoundry(page) {
+  // Strike the first several authored sparks in-window to bank score, then stop
+  // striking so the remaining notes lapse and the foundry heat collapses.
+  await page.click('#startBtn');
+  for (let h = 0; h < 6; h++) {
+    const s = await readState(page); if (!s || isFailMode(s.mode)) break;
+    const n = s.nextNote; if (!n) break;
+    if (typeof n.lane === 'number') await steerLane(page, s.lane, n.lane, 'ArrowUp', 'ArrowDown');
+    const until = n.msUntilWindow || 0; if (until > 0) await advance(page, until);
+    await tap(page, ' ');
+  }
+  for (let i = 0; i < 80; i++) { const s = await readState(page); if (!s || isFailMode(s.mode)) break; await advance(page, 400); }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveBeaconBastion(page) {
+  // Pulse approaching shades a few times to bank score, then stop defending so
+  // the undefended beacon drains and the expedition fails.
+  await page.click('#startBtn');
+  for (let h = 0; h < 4; h++) { await advance(page, 2600); const s = await readState(page); if (!s || isFailMode(s.mode)) break; await tap(page, 'e'); }
+  for (let i = 0; i < 80; i++) { const s = await readState(page); if (!s || isFailMode(s.mode)) break; await advance(page, 2200); }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveAsterVault(page) {
+  // Thrust toward the first relic (braking to stay under the rift-shear speed so
+  // navigation does not crash), then brake the oxygen away to fail with the
+  // relic score banked.
+  await page.click('#startBtn');
+  for (let i = 0; i < 260; i++) {
+    const s = await readState(page); if (!s || isFailMode(s.mode)) break;
+    if ((s.relics || []).some((r) => r.taken)) break;
+    const sp = (s.ship && s.ship.speed) || 0;
+    if (sp > 120) { await tap(page, ' '); await advance(page, 120); continue; }
+    const r = s.recommended; const dirs = [];
+    if (r) {
+      if (r.thrustX > 0) dirs.push('ArrowRight'); else if (r.thrustX < 0) dirs.push('ArrowLeft');
+      if (r.thrustY > 0) dirs.push('ArrowDown'); else if (r.thrustY < 0) dirs.push('ArrowUp');
+    }
+    for (const d of dirs) await page.keyboard.down(d);
+    await advance(page, 90);
+    for (const d of dirs) await page.keyboard.up(d);
+  }
+  for (let i = 0; i < 240; i++) { const s = await readState(page); if (!s || isFailMode(s.mode)) break; await tap(page, ' '); await advance(page, 120); }
+  return assertScoredFailure(await readState(page));
+}
+
+async function driveCanopyCourier(page) {
+  // Follow the recommended lane to catch a parcel (banking score), then stop
+  // steering so a later beacon/lift miss fails the route with the score banked.
+  await page.click('#startBtn');
+  let collected = false;
+  for (let i = 0; i < 200; i++) {
+    const s = await readState(page); if (!s || isFailMode(s.mode)) break;
+    if ((s.parcels || 0) > 0) collected = true;
+    const r = s.recommended;
+    if (!collected && r && r.command === 'collect' && typeof r.lane === 'number') await steerLane(page, s.lane, r.lane, 'ArrowUp', 'ArrowDown');
+    await advance(page, 90);
+  }
+  return assertScoredFailure(await readState(page));
+}
+
 const GAMES = [
   { url: 'websites/shard-sheriff.html', key: 'shard-sheriff.best.v2', metric: 'score', drive: driveShardSheriff },
   { url: 'websites/rune-roster.html', key: 'rune-roster.best.v2', metric: 'score', drive: driveRuneRoster },
   { url: 'websites/velvet-heist.html', key: 'velvet-heist.best.v2', metric: 'score', drive: driveVelvetHeist },
   { url: 'websites/pocket-orchard.html', key: 'pocket-orchard.best.v2', metric: 'cash', drive: drivePocketOrchard },
-  { url: 'websites/drift-loom.html', key: 'drift-loom.best.v3', metric: 'score', drive: driveDriftLoom },
+  { url: 'websites/drift-loom.html', key: 'drift-loom.best.v3', metric: 'score', drive: driveDriftLoom, realtime: true },
+  { url: 'websites/moonbase-mutex.html', key: 'moonbase-mutex.best.v2', metric: 'score', drive: driveMoonbaseMutex },
+  { url: 'websites/signal-loom.html', key: 'signal-loom.best.v2', metric: 'score', drive: driveSignalLoom },
+  { url: 'websites/bulb-brigade.html', key: 'bulb-brigade.best.v2', metric: 'score', drive: driveBulbBrigade },
+  { url: 'websites/comet-cartel.html', key: 'comet-cartel.best.v3', metric: 'score', drive: driveCometCartel, realtime: true },
+  { url: 'websites/tempo-tunnels.html', key: 'tempo-tunnels.best.v2', metric: 'score', drive: driveTempoTunnels, realtime: true },
+  { url: 'websites/finale-foundry.html', key: 'finale-foundry.best.v2', metric: 'score', drive: driveFinaleFoundry, realtime: true },
+  { url: 'websites/beacon-bastion.html', key: 'beacon-bastion.best.v1', metric: 'score', drive: driveBeaconBastion, realtime: true },
+  { url: 'websites/aster-vault.html', key: 'aster-vault.best.v2', metric: 'score', drive: driveAsterVault, realtime: true },
+  { url: 'websites/canopy-courier.html', key: 'canopy-courier.best.v2', metric: 'score', drive: driveCanopyCourier, realtime: true },
 ];
 
 const issues = [];
@@ -220,7 +376,7 @@ function fail(message) { issues.push(message); }
 
 async function checkGame(browser, baseUrl, game) {
   const context = await browser.newContext();
-  const attempts = game.drive === driveDriftLoom ? 3 : 1; // the real-time driver gets retries
+  const attempts = (game.realtime || game.drive === driveDriftLoom) ? 3 : 1; // real-time drivers get retries
   try {
     const page = await context.newPage();
     page.on('pageerror', (error) => fail(`${game.url}: page error during run: ${error.message}`));

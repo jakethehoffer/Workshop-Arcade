@@ -175,7 +175,7 @@
     }else{e.missed=true;state.combo=0;state.misses++;state.integrity-=12;setFeedback("Beat window missed.",900,"miss");tone("miss")}
   }
   function checkEnd(){
-    if(state.integrity<=0){state.mode="failed";setFeedback("Tunnel integrity broke. Restart the track.",2200,"failed");tone("miss");return}
+    if(state.integrity<=0){state.mode="failed";if(state.score>state.best){state.best=state.score;write(BEST_KEY,state.best)}setFeedback("Tunnel integrity broke. Restart the track.",2200,"failed");tone("miss");return}
     const last=Math.max(...state.events.map(eventTime));
     if(state.events.every(e=>e.handled)&&state.time>last+360){
       state.score+=100+state.integrity+state.combo*8;
