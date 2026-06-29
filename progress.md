@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-28 Claude — input accessible names (WCAG 4.1.2) across fact-match + minesweeper, with a new gate
+
+The dimension a11y scout (and a re-survey of every text input in the catalog) found controls relying on placeholder-only labelling — a placeholder is not an accessible name (WCAG 4.1.2 / 3.3.2 Level A; it disappears on input and is not reliably exposed to assistive tech). Two gaps: the shared fact-match engine's primary guess box and answer-bank filter (4 games — cosmic-, hero-, night-shift-fact-match, arena-legend-guesser) and minesweeper's custom W/H/M number inputs (visible "W:"/"H:"/"M:" text only, no programmatic name).
+
+- Added `aria-label` to both inputs in `websites/fact-match-engine.js` (one edit fixes all 4 games) and to minesweeper's three custom-difficulty inputs.
+- Extended `scripts/check-accessibility.mjs` with **Rule 5**: every text-entry `<input>` must carry an accessible name (`aria-label`/`aria-labelledby`/`title` or a `<label for>` association; non-text inputs are exempt). The shared engine is now scanned directly since it injects its inputs at runtime, so the class is gated catalog-wide. `test:a11y` runs in `validate-catalog.yml`, so a regression blocks the deploy.
+
+Verified: `test:a11y` green (102 files scanned); proved non-vacuous (reverting one label flagged exactly `fact-match-engine.js:198`, exit non-zero); a live-DOM Playwright probe confirmed all 5 inputs expose their names ("Type your guess", "Filter answer bank", "Board width/height", "Mine count"); `npm test` 51/51; `git diff --check` clean.
+
 ## 2026-06-28 Claude — breachline keyboard guard (WCAG 2.1.1 keyboard)
 
 The per-game correctness sweep found breachline's document-level `keydown` handler unconditionally `preventDefault`s Space/Enter and then runs `handleKey`, with no focused-control guard. So a keyboard user who Tabbed to any toolbar button (Execute, Switch Agent, Queue Wait, Next Mission, Restart, Sound, Fullscreen) and pressed Space/Enter had the button's native activation suppressed and a *game* action fired instead (Space → queue wait, Enter → execute beat) — corrupting the planned turn and failing WCAG 2.1.1.

@@ -195,7 +195,7 @@
           </div>
           <div class="clues" id="clues"></div>
           <div class="guess">
-            <input id="guess" autocomplete="off" placeholder="Type or pick from bank" />
+            <input id="guess" autocomplete="off" placeholder="Type or pick from bank" aria-label="Type your guess" />
             <button class="primary" id="guessBtn" type="button">Guess</button>
           </div>
       <div class="actions">
@@ -213,7 +213,7 @@
             <strong>Answer Bank</strong>
             <small id="bankCount"></small>
           </div>
-          <input id="filter" autocomplete="off" placeholder="Filter names" />
+          <input id="filter" autocomplete="off" placeholder="Filter names" aria-label="Filter answer bank" />
           <div class="bank" id="bank"></div>
         </aside>
       </section>

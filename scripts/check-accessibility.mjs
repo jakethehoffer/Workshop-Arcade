@@ -10,6 +10,10 @@
 //   4. Every <button> must declare a type attribute. The HTML default is
 //      "submit", which silently submits any enclosing <form> — a real footgun
 //      for action buttons that happen to live near a form.
+//   5. Every text-entry <input> must carry an accessible name (aria-label,
+//      aria-labelledby, title, or an associated <label for>). A placeholder is
+//      not a name (WCAG 4.1.2). The shared fact-match engine is scanned too,
+//      since it injects its inputs at runtime from a JS template.
 //
 // The script is intentionally regex-based and dependency-free so it can run
 // in CI without an HTML parser dep. <script> and <style> blocks plus HTML
@@ -29,6 +33,10 @@ function listHtmlFiles() {
   for (const entry of readdirSync(websitesDir)) {
     if (entry.endsWith(".html")) files.push(`websites/${entry}`);
   }
+  // The shared fact-match engine injects its markup (inputs, buttons) at runtime
+  // from a JS template, so the four games that load it never carry that markup
+  // statically. Scan the engine source directly so its controls are covered.
+  files.push("websites/fact-match-engine.js");
   return files;
 }
 
@@ -143,6 +151,26 @@ async function checkFile(rel) {
     if (!hasAttr(attrs, "type")) {
       record(rel, lineOf(rawSrc, match.index), "<button> missing type attribute (defaults to submit)");
     }
+  }
+
+  // Rule 5: text-entry <input> must have an accessible name — aria-label,
+  // aria-labelledby, title, or an associated <label for="id"> in the same file.
+  // A placeholder is not an accessible name (it disappears on input and is not
+  // reliably exposed by assistive tech). Non-text inputs (checkbox, button, …)
+  // are exempt because they are named by adjacent content or their own value.
+  const labelFors = new Set(
+    [...src.matchAll(/<label\b[^>]*\bfor\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
+      .map((m) => (m[1] ?? m[2] ?? m[3] ?? "").trim())
+      .filter(Boolean)
+  );
+  for (const match of src.matchAll(/<input\b([^>]*?)\/?>/gi)) {
+    const attrs = match[1] || "";
+    const type = (attrValue(attrs, "type") || "text").trim().toLowerCase();
+    if (/^(hidden|checkbox|radio|button|submit|reset|range|color|image|file)$/.test(type)) continue;
+    if (hasAttr(attrs, "aria-label") || hasAttr(attrs, "aria-labelledby") || hasAttr(attrs, "title")) continue;
+    const id = (attrValue(attrs, "id") || "").trim();
+    if (id && labelFors.has(id)) continue;
+    record(rel, lineOf(rawSrc, match.index), "text-entry <input> missing accessible name (aria-label/aria-labelledby/title or <label for>)");
   }
 }
 
