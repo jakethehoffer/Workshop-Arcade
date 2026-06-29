@@ -575,7 +575,15 @@
     }
 
     const gate = nextCheckpoint();
-    if (Math.hypot(car.x - gate.x, car.y - gate.y) <= gateRadius) {
+    // The finish line (gate 0) sits only ~35px from gate 7 — inside gateRadius —
+    // so without this guard, clearing gate 7 would auto-credit the lap line on the
+    // next frame with no driving, handing the player a free checkpoint each lap.
+    // Require the car to first leave the just-cleared checkpoint's radius; every
+    // other consecutive gate pair is >=129px apart, so this never blocks normal
+    // progression.
+    const prev = prevCheckpoint();
+    const leftPrevGate = Math.hypot(car.x - prev.x, car.y - prev.y) > gateRadius;
+    if (leftPrevGate && Math.hypot(car.x - gate.x, car.y - gate.y) <= gateRadius) {
       advanceCheckpoint();
     }
 

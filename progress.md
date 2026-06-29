@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-29 Claude — neon-drift: stop the lap line auto-crediting after gate 7
+
+The per-game correctness sweep found neon-drift's finish line (gate 0, at 214,420) sits only ~35px from gate 7 (180,410) — well inside the 64px gateRadius. Checkpoint detection credited the next gate purely on proximity, so the instant the car cleared gate 7 (checkpointIndex → 0), the very next frame auto-credited gate 0 and closed the lap with no driving of the final segment — a free checkpoint every lap, undercutting the "hit every gate in order" design.
+
+Added a one-condition guard (reusing the existing `prevCheckpoint()` helper): a checkpoint only credits once the car has left the *just-cleared* checkpoint's radius. Every other consecutive gate pair is ≥129px apart, so when the car is within 64px of the next gate it is always >64px from the previous one — the guard is a no-op for all seven normal gates and only affects the 35px gate-7→lap-line transition.
+
+Verified with a deterministic in-page autopilot (single `page.evaluate`, 1-frame `advanceTime` stepping, so the credit frame is sampled exactly): a full 3-lap race completes with all 8 gates credited (no regression), and on each lap the finish line credits only once the car is 68px from gate 7 — just outside the radius, exactly as designed. Scoped smoke green; `git diff --check` clean. One-file JS change.
+
 ## 2026-06-28 Claude — input accessible names (WCAG 4.1.2) across fact-match + minesweeper, with a new gate
 
 The dimension a11y scout (and a re-survey of every text input in the catalog) found controls relying on placeholder-only labelling — a placeholder is not an accessible name (WCAG 4.1.2 / 3.3.2 Level A; it disappears on input and is not reliably exposed to assistive tech). Two gaps: the shared fact-match engine's primary guess box and answer-bank filter (4 games — cosmic-, hero-, night-shift-fact-match, arena-legend-guesser) and minesweeper's custom W/H/M number inputs (visible "W:"/"H:"/"M:" text only, no programmatic name).
