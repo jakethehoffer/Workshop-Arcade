@@ -579,9 +579,14 @@
     }
     return false;
   }
-  function resolveTurn(kind, soundName){
+  function resolveTurn(kind, soundName, onSurvive){
     markStep(kind);
+    // Pre-advance spotting applies to the arrival cell BEFORE anything else this
+    // turn — including before crediting the exit. onSurvive (e.g. tryComplete)
+    // only runs once the player has survived that check, so reaching the exit
+    // while standing in a guard's current light cone is a capture, not a win.
     if (detectPlayer()) return;
+    if (onSurvive && onSurvive()) return;
     advanceGuards();
     detectPlayer();
     if (state.mode === "playing") sfx(soundName || "move");
@@ -607,8 +612,7 @@
     state.player.x = nx;
     state.player.y = ny;
     collectKeyIfHere();
-    if (tryComplete()) { render(); return; }
-    resolveTurn("move", "move");
+    resolveTurn("move", "move", tryComplete);
   }
   function interactOrWait(){
     if (state.mode === "level-complete") return nextLevel();
