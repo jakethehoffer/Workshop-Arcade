@@ -657,6 +657,13 @@ let locked = false;
 let gameGen = 0; // bumped on every reset; invalidates any in-flight async move (animation/AI) so it cannot stamp onto a fresh board
 let aiTimer = null; // handle for a pending AI move so a new game can cancel it
 let mustContinueFrom = null;
+// Draw detection (parity with chess): a no-progress clock and a threefold-
+// repetition history. Without these a dead position (most often lone king vs
+// lone king) loops forever, because the only other terminal is "no legal move".
+let noProgressPlies = 0;        // plies since the last capture or man (non-king) move
+let positionCounts = new Map(); // board+side signature -> times reached
+let drawType = null;            // 'fifty-move' | 'threefold' | null
+let lastPlyProgress = false;    // did the move just applied reset the no-progress clock?
 let focusSquare = null;
 const keyboardDiagnostics = {
   lastInput: null,
@@ -1490,6 +1497,32 @@ function applyMove(B, move){
   return nb;
 }
 
+// >>> checkers-draw-rules (pure; scripts/check-checkers-draws.mjs extracts this block verbatim) >>>
+// The automatic draws, paralleling chess. boardSignature and drawByCounters are
+// side-effect-free so the static gate can evaluate them in Node.
+const NO_PROGRESS_LIMIT = 80; // 40 moves per side of only king, non-capturing moves
+function boardSignature(B, isRedToMove){
+  return B.map((row) => row.join(',')).join('/') + (isRedToMove ? '|r' : '|b');
+}
+function drawByCounters(noProgress, repetitionCount){
+  if(repetitionCount >= 3) return 'threefold';
+  if(noProgress >= NO_PROGRESS_LIMIT) return 'fifty-move';
+  return null;
+}
+// <<< checkers-draw-rules <<<
+
+// Update the no-progress clock + repetition history for the ply just applied and
+// return true if it produced a draw. `progress` = a capture or a man (non-king)
+// move resets the clock; `redToMoveNext` is whose turn it becomes.
+function registerPlyAndCheckDraw(progress, redToMoveNext){
+  noProgressPlies = progress ? 0 : noProgressPlies + 1;
+  const sig = boardSignature(board, redToMoveNext);
+  const reps = (positionCounts.get(sig) || 0) + 1;
+  positionCounts.set(sig, reps);
+  drawType = drawByCounters(noProgressPlies, reps);
+  return drawType !== null;
+}
+
 /* =================
    Evaluation + AI
    ================= */
@@ -1911,6 +1944,11 @@ function endTurn(){
     render();
     return;
   }
+  if(registerPlyAndCheckDraw(lastPlyProgress, opp===RED)){
+    showGameOver('Draw');
+    render();
+    return;
+  }
   turn = opp; // Switch to opponent's turn
   
   // Auto-flip board in 2-player mode if enabled
@@ -1951,6 +1989,11 @@ async function aiMove(){
   const humanMoves = generateMoves(board, humanSide);
   if(humanMoves.length === 0){
     showGameOver(aiPlays === RED ? 'Red' : 'Black'); // AI wins
+    render();
+    return;
+  }
+  if(registerPlyAndCheckDraw(lastPlyProgress, humanSide===RED)){
+    showGameOver('Draw');
     render();
     return;
   }
@@ -2001,6 +2044,9 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
     Sound.crown?.();
   }
 
+  // A capture or a man (non-king) move makes irreversible progress and resets
+  // the no-progress clock; a non-capturing king move does not.
+  lastPlyProgress = capturedSquares.length > 0 || !isKing(originalPiece);
   recordMoveFeedback(move, originalPiece, capturedSquares, crowned);
   render();
   if(crowned) await sleep(120);
@@ -2009,7 +2055,8 @@ async function animateApplyMove(move, stepMs = MOVE_STEP_MS){
 
 
 function pushHistory(){
-  history.push({board: copyBoard(board), turn, must: mustContinueFrom? {...mustContinueFrom}:null});
+  history.push({board: copyBoard(board), turn, must: mustContinueFrom? {...mustContinueFrom}:null,
+    noProgress: noProgressPlies, posCounts: new Map(positionCounts), drawType});
   elUndo.disabled = history.length === 0;
 }
 function undo(){
@@ -2020,7 +2067,10 @@ function undo(){
   board = state.board;
   turn = state.turn;
   mustContinueFrom = state.must;
-  selected = null; 
+  noProgressPlies = state.noProgress ?? 0;
+  positionCounts = new Map(state.posCounts || []);
+  drawType = state.drawType ?? null;
+  selected = null;
   legalDest = [];
   feedback.lastMove = null;
   feedback.activePopCount = 0;
@@ -2034,6 +2084,9 @@ function undo(){
       board = state.board;
       turn = state.turn;
       mustContinueFrom = state.must;
+      noProgressPlies = state.noProgress ?? 0;
+      positionCounts = new Map(state.posCounts || []);
+      drawType = state.drawType ?? null;
       focusSquare = firstPlayableFocus();
     }
   }
@@ -2158,6 +2211,10 @@ function renderGameToText(){
     historyCount: history.length,
     gameOver: elGameOver.classList.contains('show'),
     winner: elGameOver.classList.contains('show') ? elGoWinner.textContent : null,
+    drawType,
+    noProgressPlies,
+    noProgressLimit: NO_PROGRESS_LIMIT,
+    maxRepetition: positionCounts.size ? Math.max(...positionCounts.values()) : 0,
     ai: { side: aiPlays === RED ? 'red' : 'black', depth: aiDepth, active: mode === 'SP' },
     feedback: {
       lastMoveAge: age(feedback.lastMoveAge),
@@ -2212,6 +2269,13 @@ function newGame(soundCue = 'new-game'){
   keyboardDiagnostics.lastError = null;
   lastForcedAnnouncementKey = '';
   initBoard();
+  // Reset draw trackers and seed the opening position so the threefold count is
+  // accurate from move one.
+  noProgressPlies = 0;
+  positionCounts = new Map();
+  drawType = null;
+  lastPlyProgress = false;
+  positionCounts.set(boardSignature(board, turn === RED), 1);
   focusSquare = firstPlayableFocus();
   render();
   if(soundCue !== null) announceStatus('New game started. Red to move.');
