@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-06-29 Claude — chess: the three automatic draws (insufficient material, fifty-move, threefold)
+
+`chess` ended a game on only **checkmate** and **stalemate** — `postMoveChecks()` had no other terminal cases. That left a genuine correctness hole that no render/smoke gate can see: a King-vs-King endgame (and any other dead position) could **never finish**, because no future move ever ends it, and a shuffling-but-drawn game dragged on forever. The half-move clock was already tracked (`st.halfmove`) but never read, and there was no position-repetition history at all.
+
+- Added a self-contained, side-effect-free `>>> chess-draw-rules` block (reads only the plain state object): `positionSignature()` (board + side-to-move + castling + en-passant target, deliberately excluding the move clocks), `repetitionCount()`, `hasInsufficientMaterial()`, and `fiftyMoveDraw()`. Wired all three into `postMoveChecks()` after the mate/stalemate branch — insufficient material → fifty-move → threefold — via a small `declareDraw()` helper. Insufficient material matches the common engine set (K vs K, K+minor vs K, same-color KB vs KB; opposite-color bishops, two knights, and any pawn/rook/queen are *not* draws — mate stays possible). Threefold derives entirely from `stateHistory`, so it is undo-safe for free. Surfaced `drawType`, `halfmoveClock`, `repetitionCount`, and `insufficientMaterial` in `render_game_to_text()`; `loadFEN`/undo initialize/reset `drawType`.
+- New fast gate `scripts/check-chess-draws.mjs` (`npm run test:chess-draws`) extracts that exact block, evaluates it in Node, and asserts the full insufficient-material truth table, the fifty-move boundary (100 not 99), the signature semantics, and the threefold count — plus that `postMoveChecks` actually calls all three (so the logic can never silently un-wire). Registered in `package.json`, README (command + description + `52 fast validators`), and the `catalog-docs-a11y` workflow job per the docs-drift contract.
+
+TDD: wrote the gate first and watched it fail (`draw detection missing`), then implemented to green. A real-browser integration probe drove a genuine 8-ply knight shuffle through the live `applyMove`/`postMoveChecks` path and confirmed the repetition counter climbs 1,1,1,2,2,2,2,3 and the game ends precisely on the 3rd occurrence with `drawType:"threefold"`; bare-kings and a clock-at-100 FEN fired insufficient-material and fifty-move; zero console errors. Verified: `npm test` 52/52; full `npm run test:games` (100 games), `npm run capture:games:ci` (max score 0), and `npm run audit:contrast:ci` (all WCAG AA) all green; scoped chess smoke/capture/contrast clean; `git diff --check` clean. JS-logic-only change (no visual/DOM/CSS change), chess is not in the PWA shell so no `sw.js` bump.
+
 ## 2026-06-29 Claude — a11y polish: single live region in fact-match, page h1 in the catalog
 
 Two low-severity screen-reader findings from the audits:

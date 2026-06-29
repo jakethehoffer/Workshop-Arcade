@@ -1010,6 +1010,7 @@ function loadFEN(fen) {
     fullmove: parseInt(fullmove || '1', 10),
     gameOver: false,
     result: null,
+    drawType: null,
   };
 }
 
@@ -1748,6 +1749,7 @@ undoBtn.addEventListener('click', () => {
   resetKeyboardFocusForTurn();
   state.gameOver = false;
   state.result = null;
+  state.drawType = null;
   feedback.lastMove = null;
   feedback.activeRingCount = 0;
   feedback.popupCount = 0;
@@ -2137,7 +2139,81 @@ function simulate(st, mv) {
   return sim;
 }
 
-// After a move: check for checkmate/stalemate and update status
+// >>> chess-draw-rules (pure logic; scripts/check-chess-draws.mjs extracts this block verbatim) >>>
+// The automatic draws. These read only the plain state object — no DOM, no
+// globals — so the static gate can evaluate them in Node against the exact
+// shipped source. postMoveChecks() wires them in below.
+function positionSignature(st) {
+  // Board layout + side to move + castling rights + en-passant target. The
+  // half-move/full-move clocks are deliberately excluded so a position that
+  // recurs with a different clock still counts as the same position. The
+  // en-passant target is compared as stored (set after any double pawn push,
+  // not only when a capture is actually available), which makes threefold
+  // detection slightly conservative — it can miss a rare repetition, never
+  // invent one. That matches plain FEN-field equality.
+  let rows = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = st.board[r][c];
+      rows += p ? (p.color === 'w' ? p.type.toUpperCase() : p.type) : '.';
+    }
+  }
+  const cr = (st.castling.K ? 'K' : '') + (st.castling.Q ? 'Q' : '')
+    + (st.castling.k ? 'k' : '') + (st.castling.q ? 'q' : '') || '-';
+  const ep = st.enPassant ? `${st.enPassant.col},${st.enPassant.row}` : '-';
+  return `${rows} ${st.turn} ${cr} ${ep}`;
+}
+
+function repetitionCount(st, history) {
+  // How many times the CURRENT position has appeared: st itself plus every
+  // prior snapshot in `history`. stateHistory stores the position before each
+  // played ply, so {history, st} is exactly the set of positions that have sat
+  // on the board (start + after each move).
+  const sig = positionSignature(st);
+  let count = 1;
+  for (const past of history) {
+    if (positionSignature(past) === sig) count++;
+  }
+  return count;
+}
+
+function hasInsufficientMaterial(st) {
+  // "Cannot possibly checkmate" material draws, matching the common engine set:
+  // K vs K, K + single minor vs K, and K+B vs K+B with both bishops on the same
+  // color square. Two knights, opposite-color bishops, or any pawn/rook/queen
+  // leave mate at least possible, so those are NOT auto-draws.
+  const minors = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = st.board[r][c];
+      if (!p || p.type === 'k') continue;
+      if (p.type === 'p' || p.type === 'r' || p.type === 'q') return false;
+      minors.push({ color: p.color, type: p.type, light: (r + c) % 2 === 0 });
+    }
+  }
+  if (minors.length <= 1) return true; // KK, K+B vs K, K+N vs K
+  if (minors.length === 2) {
+    const [a, b] = minors;
+    return a.type === 'b' && b.type === 'b' && a.color !== b.color && a.light === b.light;
+  }
+  return false;
+}
+
+function fiftyMoveDraw(st) {
+  // 100 half-moves (50 full moves by each side) with no pawn move or capture.
+  return st.halfmove >= 100;
+}
+// <<< chess-draw-rules <<<
+
+function declareDraw(type, title) {
+  state.gameOver = true;
+  state.result = '1/2-1/2';
+  state.drawType = type;
+  setStatus(`${title} (1/2-1/2)`);
+  showOverlay(title);
+}
+
+// After a move: check for checkmate/stalemate/draw and update status
 function postMoveChecks() {
   const side = state.turn;                 // side to move now
   const legal = generateAllLegalMoves(side);
@@ -2166,11 +2242,18 @@ function postMoveChecks() {
     } else {
       // Stalemate - no legal moves and not in check
       state.result = '1/2-1/2';
+      state.drawType = 'stalemate';
       const title = 'Draw — Stalemate';
       const sub   = 'Result: 1/2–1/2';
       setStatus(`${title} (${state.result})`);
       showOverlay(title);
     }
+  } else if (hasInsufficientMaterial(state)) {
+    declareDraw('insufficient', 'Draw — Insufficient material');
+  } else if (fiftyMoveDraw(state)) {
+    declareDraw('fifty-move', 'Draw — Fifty-move rule');
+  } else if (repetitionCount(state, stateHistory) >= 3) {
+    declareDraw('threefold', 'Draw — Threefold repetition');
   } else {
     setStatus(`${side === 'w' ? 'White' : 'Black'} to move.` + (inCheck ? ' (Check!)' : ''));
   }
@@ -2458,6 +2541,10 @@ function renderGameToText(){
     },
     gameOver: !!state.gameOver,
     result: state.result,
+    drawType: state.drawType || null,
+    halfmoveClock: state.halfmove,
+    repetitionCount: repetitionCount(state, stateHistory),
+    insufficientMaterial: hasInsufficientMaterial(state),
     moveCount: moveHistory.length,
     lastMove: moveHistory.length ? moveHistory[moveHistory.length - 1] : null,
     soundEnabled: !!audioState.enabled,
