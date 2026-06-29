@@ -322,8 +322,12 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
       sfx("step");
     }
     collectKeys();
-    checkExit();
+    // Resolve guard movement + the arrival-cell spotting check BEFORE crediting
+    // the exit, so stepping onto the hatch while inside a guard's cone registers
+    // the spot (raising alert, and locking down if it hits 100) instead of a
+    // free clear. checkExit is gated on mode === "playing" so a lockdown wins.
     tickTurn();
+    checkExit();
   }
   function collectKeys() {
     state.keys.forEach((k) => {
@@ -336,6 +340,7 @@ canvas:focus-visible,.btn:focus-visible,.pad button:focus-visible{outline:3px so
     });
   }
   function checkExit() {
+    if (state.mode !== "playing") return; // a lockdown this turn blocks the clear
     const e = level().exit;
     if (state.player.x === e[0] && state.player.y === e[1]) {
       const allKeys = state.keys.every((k) => k.taken);
