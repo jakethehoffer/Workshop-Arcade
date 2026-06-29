@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-06-29 Claude — a11y polish: single live region in fact-match, page h1 in the catalog
+
+Two low-severity screen-reader findings from the audits:
+- The fact-match engine announced every guess result **twice**: both the visible `#result` (which carried `role="status"`) and the sr-only `#statusLine` were polite live regions holding identical text. Made `#result` visible-only and left `#statusLine` as the single announcer (`role="status"` + `aria-live="polite"`), so screen readers hear each result once across all 4 fact-match games.
+- index.html had **no `<h1>`** — the heading outline began at `<h2>`, leaving screen-reader heading navigation without a top-level landmark. Promoted the brand to `<h1 class="name">` (adding `margin:0` so the h1 default margin doesn't shift the logo), giving the catalog exactly one top-level heading and a clean h1 → h2 outline.
+
+Because index.html is the PWA install-shell root, bumped `sw.js` `SHELL_REVISION` + `VERSION` to the recomputed shell hash (`shell-a7f5bce94361`).
+
+Verified in the live preview server: index.html has exactly one `<h1>` ("Workshop Arcade"), outline is h1→h2, the logo box is unchanged (h1 `margin:0`, 28px tall, same x/y), zero console errors; on cosmic-fact-match only `#statusLine` is a live region. `npm test` 51/51 (incl. `test:pwa`); `npm run test:pwa-runtime` green (worker control, cache revision, offline replay intact); `git diff --check` clean.
+
 ## 2026-06-29 Claude — neon-drift: stop the lap line auto-crediting after gate 7
 
 The per-game correctness sweep found neon-drift's finish line (gate 0, at 214,420) sits only ~35px from gate 7 (180,410) — well inside the 64px gateRadius. Checkpoint detection credited the next gate purely on proximity, so the instant the car cleared gate 7 (checkpointIndex → 0), the very next frame auto-credited gate 0 and closed the lap with no driving of the final segment — a free checkpoint every lap, undercutting the "hit every gate in order" design.

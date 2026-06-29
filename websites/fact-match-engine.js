@@ -205,8 +205,8 @@
         <button id="soundBtn" type="button">Sound On</button>
         <button id="fullscreenBtn" type="button" aria-pressed="false" title="Enter fullscreen (F)">Fullscreen</button>
       </div>
-          <div class="result" id="result" role="status" aria-live="polite"></div>
-          <div class="sr-only" id="statusLine" aria-live="polite">Ready.</div>
+          <div class="result" id="result"></div>
+          <div class="sr-only" id="statusLine" role="status" aria-live="polite">Ready.</div>
         </div>
         <aside class="panel bank-panel">
           <div class="bank-head">
