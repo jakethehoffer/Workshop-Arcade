@@ -145,8 +145,12 @@ function cardVal(r){return r===0?11:(r>=9?10:r+1)}
 function handValue(cards){let t=0,a=0;for(const c of cards){t+=cardVal(c.r);if(c.r===0)a++}while(t>21&&a>0){t-=10;a--}return t}
 function isBJ(cards){return cards.length===2&&handValue(cards)===21}
 
-function loadGame(){state.chips=START_CHIPS;state.stake=10;state.streak=0;state.hands=0;state.wins=0;state.shoeSeed=(0x9e3779b9^Math.imul(state.games+1,0x85ebca6b))>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0;booting=true;dealHand();booting=false}
-function newGame(){state.games++;loadGame();say("New game — "+START_CHIPS+" chips. Place your bet and deal.");tone("deal")}
+function loadGame(){state.chips=START_CHIPS;state.stake=10;state.streak=0;state.hands=0;state.wins=0;state.shoeSeed=(0x9e3779b9^Math.imul(state.games+1,0x85ebca6b))>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0;
+  // Start in a pre-deal betting state instead of auto-dealing the first hand, so
+  // the player can choose their opening wager (adjustStake works whenever mode is
+  // not "player"). The hand is dealt only when they press Deal (primary()).
+  state.player=[];state.dealer=[];state.wager=0;state.outcome=null;state.mode="betting";state.flash=0;update();draw()}
+function newGame(){state.games++;loadGame();say("New game — "+START_CHIPS+" chips. Set your bet, then Deal.");tone("deal")}
 
 function dealHand(){if(state.chips<=0){state.mode="result";state.outcome="lose";say("Out of chips — press New Game to rebuy.");update();draw();return}
   if(state.di>state.deck.length-15){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}
@@ -208,7 +212,9 @@ function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.creat
   const pv=handValue(state.player);badge(150,PLAYERY+CARDH/2,String(pv),pv>=21);
   state.player.forEach((c,i)=>drawCard(HANDX+i*STEP,PLAYERY,c,false));
   // outcome banner
-  if(state.mode==="result"){const col=state.outcome==="win"?"#5eead4":(state.outcome==="push"?"#ffd166":"#fca5a5");ctx.textAlign="center";ctx.fillStyle="rgba(3,7,18,.55)";roundRect(canvas.width/2-250,242,500,52,12,true,false);ctx.fillStyle=col;ctx.font="950 26px system-ui";ctx.fillText(state.outcome==="win"?"YOU WIN":(state.outcome==="push"?"PUSH":"DEALER WINS"),canvas.width/2,277);ctx.textAlign="left"}}
+  if(state.mode==="result"){const col=state.outcome==="win"?"#5eead4":(state.outcome==="push"?"#ffd166":"#fca5a5");ctx.textAlign="center";ctx.fillStyle="rgba(3,7,18,.55)";roundRect(canvas.width/2-250,242,500,52,12,true,false);ctx.fillStyle=col;ctx.font="950 26px system-ui";ctx.fillText(state.outcome==="win"?"YOU WIN":(state.outcome==="push"?"PUSH":"DEALER WINS"),canvas.width/2,277);ctx.textAlign="left"}
+  // pre-deal betting prompt (empty table)
+  if(state.mode==="betting"){ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 24px system-ui";ctx.fillText("Set your bet, then Deal",canvas.width/2,250);ctx.fillStyle="#9fb3c8";ctx.font="800 16px system-ui";ctx.fillText("Bet "+state.stake+" chips — use +/- or the bet buttons to change it",canvas.width/2,278);ctx.textAlign="left"}}
 
 function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);draw()}
 window.advanceTime=ms=>{stopLoop();const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);ensureLoop();return window.render_game_to_text()};
