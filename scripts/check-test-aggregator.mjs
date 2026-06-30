@@ -87,7 +87,7 @@ function extractExcludedScripts(runnerSrc) {
 
 async function checkCoverage(pkg, runnerSrc) {
   const excluded = extractExcludedScripts(runnerSrc);
-  const allowedExcluded = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:best-score-guard', 'test:best-on-fail-persistence', 'test:player-storage-bridge', 'test:pwa-runtime', 'test:publish-ready', 'test:realtime-progression', 'test:reduced-motion', 'test:runtime-storage', 'test:scoped-verification', 'test:live-pages', 'test:launch-evidence-current', 'test:launch-evidence-refresh', 'test:current-head-workflows', 'test:all']);
+  const allowedExcluded = new Set(['test:github-security-settings', 'test:games', 'test:live-canvas-evidence', 'test:owned-domain-cutover-preflight', 'test:owned-domain-rehearsal', 'test:best-score-guard', 'test:best-on-fail-persistence', 'test:corrupt-storage', 'test:player-storage-bridge', 'test:pwa-runtime', 'test:publish-ready', 'test:realtime-progression', 'test:reduced-motion', 'test:runtime-storage', 'test:scoped-verification', 'test:live-pages', 'test:launch-evidence-current', 'test:launch-evidence-refresh', 'test:current-head-workflows', 'test:all']);
   for (const required of allowedExcluded) {
     if (!excluded.has(required)) {
       fail(`scripts/run-fast-tests.mjs: EXCLUDED_SCRIPTS must list "${required}" (explicit remote/browser-backed gate or recursive aggregate)`);

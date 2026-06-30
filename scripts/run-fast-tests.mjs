@@ -41,6 +41,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:reduced-motion', 'Browser-backed reduced-motion baseline probe — needs Chromium. Run via `npm run test:reduced-motion`.'],
   ['test:realtime-progression', 'Browser-backed real-time progression probe — needs Chromium. Run via `npm run test:realtime-progression`.'],
   ['test:best-score-guard', 'Browser-backed best-score NaN-guard probe — needs Chromium. Run via `npm run test:best-score-guard`.'],
+  ['test:corrupt-storage', 'Browser-backed corrupt-storage probe — needs Chromium and loads every game many times. Run via `npm run test:corrupt-storage`.'],
   ['test:best-on-fail-persistence', 'Browser-backed best-on-fail persistence probe — drives real failing runs in Chromium and takes minutes. Run via `npm run test:best-on-fail-persistence`.'],
   ['test:scoped-verification', 'Browser-backed scoped smoke/capture contract probe — spawns Playwright child runs and takes minutes. Run via `npm run test:scoped-verification`.'],
   ['test:live-pages', 'Post-deploy smoke test — hits GitHub Pages or WORKSHOP_ARCADE_URL. Run after Pages deploys via `npm run test:live-pages`.'],

@@ -153,7 +153,7 @@ main{display:grid;place-items:center}.board{width:min(100%,760px);display:grid;g
     get(key, fallback) {
       const store = storage();
       if (!store) return fallback;
-      try { const v = store.getItem(key); return v == null ? fallback : JSON.parse(v); } catch (_) { return fallback; }
+      try { const v = store.getItem(key); if (v == null) return fallback; const parsed = JSON.parse(v); return parsed == null ? fallback : parsed; } catch (_) { return fallback; }
     },
     set(key, value) {
       const store = storage();

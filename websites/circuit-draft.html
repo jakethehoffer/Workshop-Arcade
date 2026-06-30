@@ -213,7 +213,11 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
       if (!store) return fallback;
       try {
         const value = store.getItem(key);
-        return value == null ? fallback : JSON.parse(value);
+        if (value == null) return fallback;
+        // JSON.parse("null") succeeds and returns null (not a throw), so callers
+        // that read saved.best/saved.sound would crash on it — coalesce to fallback.
+        const parsed = JSON.parse(value);
+        return parsed == null ? fallback : parsed;
       } catch (_) {
         return fallback;
       }

@@ -206,7 +206,11 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
       if (!store) return fallback;
       try {
         const raw = store.getItem(key);
-        return raw == null || raw === "" ? fallback : JSON.parse(raw);
+        if (raw == null || raw === "") return fallback;
+        // JSON.parse("null") returns null without throwing, which would crash
+        // callers reading saved.best/saved.sound — coalesce it to the fallback.
+        const parsed = JSON.parse(raw);
+        return parsed == null ? fallback : parsed;
       } catch (_) {
         return fallback;
       }
