@@ -719,7 +719,27 @@ function getInteractionRecipe(slug) {
       expectsStart: true,
       run: async (page) => {
         await clickSelectorIfVisible(page, "#startGameBtn");
-        await pressAndAdvance(page, "Space", 900);
+        // Reliably launch the ball before sampling. A single Space press can be
+        // lost to focus/timing under CI load, and advanceTime only steps a ball
+        // that is actually launched (game running, start dialog dismissed) — so a
+        // missed launch parks the ball on the paddle and makes the feedback loop
+        // below a silent no-op, the source of the intermittent "did not reach
+        // brick feedback state" failure. Re-press Space until a ball is moving.
+        const ballMoving = () => page.evaluate(() => {
+          try {
+            const state = JSON.parse(window.render_game_to_text());
+            return Array.isArray(state.balls) && state.balls.some(
+              (ball) => ball && !ball.stuck && (Math.abs(ball.vy) > 0.001 || Math.abs(ball.vx) > 0.001),
+            );
+          } catch {
+            return false;
+          }
+        });
+        let launched = await ballMoving();
+        for (let attempt = 0; attempt < 6 && !launched; attempt += 1) {
+          await pressAndAdvance(page, "Space", 300);
+          launched = await ballMoving();
+        }
         await holdKeyAdvance(page, "ArrowRight", 450);
         const reachedHitFeedback = await page.evaluate(() => {
           if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return false;

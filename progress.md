@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-06-30 Claude — capture harness: stop Brick Breaker's flaky deploy-gate failure
+
+The `Validate Catalog` deploy gate intermittently failed on `Brick Breaker desktop: 115 (interaction failed: did not reach brick feedback state; missing post-action render state)` and only passed on a re-run — a real reliability problem in the render-capture gate (false failures, manual re-runs), not a game bug. Root cause: the capture recipe launched the ball with a single `Space` press, but a keypress can be lost to focus/timing under CI load, and `brick-breaker`'s `advanceTime` only steps the ball once it is actually launched (`G.running && cardStart.hidden && …`, and `update()` skips a ball while `waitingLaunch`/`stuck`). So a missed launch parks the ball on the paddle and makes the recipe's 5000ms `advanceTime` feedback loop a silent no-op → "did not reach brick feedback state". Locally it never reproduced (0/30 faithful runs); a probe confirmed the mechanism deterministically (a parked ball yields `moving=false, reachedHit=false`).
+
+- Fixed the recipe in `scripts/capture-games.mjs` (tooling, not a game): replaced the fire-once `pressAndAdvance("Space", 900)` with condition-based launch — re-press `Space` (up to 6 attempts, advancing between) until `render_game_to_text()` reports a ball actually moving (`!stuck && |vy|>0` or `|vx|>0`), then run the feedback loop. Robust to a lost/late keypress regardless of the CI-specific cause.
+
+Verified: probe shows the parked-ball failure mode reproduces (the flake) and the launch-retry recovers it 20/20; `npm test` 55/55 (incl. `test:capture-recipes`); scoped Brick Breaker capture score 0; full `capture:games:ci` green (all 100 games). `git diff --check` clean. Single-file harness change; no game or manifest change.
+
 ## 2026-06-29 Claude — corrupt-storage robustness: 3 games white-screened on a stored "null"
 
 Sweeping a fresh dimension — crash-resistance under corrupt localStorage — surfaced the highest-severity class of the session: **3 games (`circuit-draft`, `letter-foundry`, `relay-choir`) white-screen on load** when their save key holds the string `"null"`. Their storage helper guards malformed JSON with try/catch and a `value == null ? fallback : JSON.parse(value)` check, but `JSON.parse("null")` *succeeds* and returns JS `null` (no throw), so it slips past both guards; the value is then returned instead of the fallback, and `Number(saved.best)` / `saved.sound !== false` throws `Cannot read properties of null` during init — the game never renders. Reachable via a partial/corrupt write, a colliding sandbox key, or a tampered `#wa-storage=` bridge seed.
