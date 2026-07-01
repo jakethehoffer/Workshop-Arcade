@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-07-01 Claude — Checkers cover: pieces rendered as giant discs (symbol used without width/height)
+
+The Checkers catalog thumbnail (`covers/checkers.svg`) drew its pieces as huge overlapping red/grey discs bleeding off the right edge. Root cause: the piece art was defined as `<symbol id="red-man" viewBox="-18 -18 36 36">` and placed with `<use href="#red-man" x=.. y=..>` carrying **no width/height**. Per SVG, a `<use>` of a `<symbol>` with no width/height defaults to 100% of the viewport, so each 36-unit piece scaled to fill the 640x360 cover — measured **300x300 each** — instead of sitting on its 38px board cell.
+
+- Fix: define the pieces as `<g id="red-man">` / `<g id="black-man">` instead of `<symbol>`. A `<use x y>` of a `<g>` translates the content to (x,y) with no viewBox scaling, and the existing x/y values are exact cell centers, so pieces now render at their natural 30px (r=15 circle) diameter, centered on the correct dark squares.
+- Verified: reloaded the SVG in the harness — all 22 pieces now render 30x30 at cell centers (57,19 / 133,19 / ...), zero oversized (was 300x300). `npm run test:cover-assets` passes (100 covers); `npm test` 55/55. The game `websites/checkers.html` uses `red-man`/`black-man` only as class-name strings, not SVG symbols, so it was unaffected; OG images are generated from manifest text (not the cover art), so no derived-surface regen was needed.
+
 ## 2026-07-01 Claude — Brick Breaker: bricks stretched + shoved down in the embed (resize scaled fixed-height bricks)
 
 Follow-up the full-height player-embed fix exposed. With the iframe now growing from short to full height when the player opens, brick-breaker's `resize()` fired a large vertical rescale and stretched the brick field ~5x tall and pushed it into the lower half (huge bricks, empty top; ball/paddle fine). Root cause: bricks are laid out purely from **width** and fixed constants — `G.brickHeight` (18/22/26) and `y = G.brickTop + r*(brickHeight+padding)`, with `G.brickTop` keyed off `css.w` — so `css.h` never enters brick layout. But `resize()` multiplied `br.y` and `br.h` by the height ratio `sy`, corrupting the fixed geometry whenever height changed. Latent before (the old 150px iframe never grew, so `resize` never fired that jump); the full-height fix made it visible.
