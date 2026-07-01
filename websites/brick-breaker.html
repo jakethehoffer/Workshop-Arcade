@@ -507,6 +507,11 @@ if (elBest) elBest.textContent = highScore;
   document.addEventListener('fullscreenchange', syncFullscreenButton);
   syncFullscreenButton();
 
+  // Hide this in-game fullscreen button when embedded; the arcade bar has one.
+  let inArcadeShell = false;
+  try { inArcadeShell = window.self !== window.top; } catch { inArcadeShell = true; }
+  if (inArcadeShell && btnFullscreen) btnFullscreen.style.display = 'none';
+
 canvas.setAttribute('tabindex', '0');
 canvas.addEventListener('pointerdown', () => canvas.focus());
 
@@ -679,8 +684,6 @@ function drawBullets(){
   if (!G.bullets.length) return;
   ctx.save();
   ctx.fillStyle = '#e5e7eb';
-  ctx.shadowColor = '#93c5fd';
-  ctx.shadowBlur = 8;
   for (const b of G.bullets){
     roundRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h, 1.5);
     ctx.fill();
@@ -1380,7 +1383,11 @@ if (e.key==='h' || e.key==='H') toggleHelp();
     if (G.waitingLaunch){ for (const b of G.balls){ b.x = G.paddle.x; b.y = G.paddle.y - 14; } }
   });
 canvas.addEventListener('pointerdown', ()=>{
-  if (G.waitingLaunch && cardStart.hidden){ launchAllBalls(); }
+  // Click / tap mirrors Space: release a stuck ball, else launch.
+  if (G.balls.some(b=>b.stuck)){
+    for (const b of G.balls){ if (b.stuck){ b.stuck=false; b.vx=0; b.vy=-Math.abs(b.speed); } }
+    SFX.start();
+  } else if (G.waitingLaunch && cardStart.hidden){ launchAllBalls(); }
 });
 
   btnPause.onclick = ()=> togglePause();
@@ -2293,21 +2300,26 @@ return;
   }
 }
 
+  let bgCache = null, bgCacheW = 0, bgCacheH = 0;
   function drawBackdrop(){
-    const grad = ctx.createLinearGradient(0,0,0,css.h);
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(1, '#0b1220');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,css.w,css.h);
-
-    ctx.globalAlpha = 0.06;
-    ctx.strokeStyle = '#93a4b8';
-    ctx.lineWidth = 1;
-    const s=32; ctx.beginPath();
-    for (let x=0;x<css.w;x+=s){ ctx.moveTo(x,0); ctx.lineTo(x,css.h); }
-    for (let y=0;y<css.h;y+=s){ ctx.moveTo(0,y); ctx.lineTo(css.w,y); }
-    ctx.stroke();
-    ctx.globalAlpha = 1;
+    // Bake gradient + grid once per size, then blit each frame.
+    if (!bgCache || bgCacheW !== css.w || bgCacheH !== css.h){
+      bgCacheW = css.w; bgCacheH = css.h;
+      if (!bgCache) bgCache = document.createElement('canvas');
+      bgCache.width = Math.max(1, Math.round(css.w * dpr));
+      bgCache.height = Math.max(1, Math.round(css.h * dpr));
+      const bc = bgCache.getContext('2d');
+      bc.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const grad = bc.createLinearGradient(0,0,0,css.h);
+      grad.addColorStop(0, '#0f172a'); grad.addColorStop(1, '#0b1220');
+      bc.fillStyle = grad; bc.fillRect(0,0,css.w,css.h);
+      bc.globalAlpha = 0.06; bc.strokeStyle = '#93a4b8'; bc.lineWidth = 1;
+      const s=32; bc.beginPath();
+      for (let x=0;x<css.w;x+=s){ bc.moveTo(x,0); bc.lineTo(x,css.h); }
+      for (let y=0;y<css.h;y+=s){ bc.moveTo(0,y); bc.lineTo(css.w,y); }
+      bc.stroke(); bc.globalAlpha = 1;
+    }
+    ctx.drawImage(bgCache, 0, 0, css.w, css.h);
   }
 
 function roundRect(x, y, w, h, r){
@@ -2596,13 +2608,6 @@ function drawPaddle(p){
       ctx.arc(b.x, b.y, b.r + 8 + pulse * 4, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(165, 180, 252, 0.65)';
-      ctx.beginPath();
-      ctx.moveTo(b.x, b.y - b.r - 19);
-      ctx.lineTo(b.x - 5, b.y - b.r - 9);
-      ctx.lineTo(b.x + 5, b.y - b.r - 9);
-      ctx.closePath();
-      ctx.fill();
       ctx.restore();
     }
 
@@ -2727,8 +2732,6 @@ function drawExplosions(){
       const alpha = 1 - p;
       ctx.save();
       ctx.globalAlpha = Math.max(0, alpha*0.9);
-      ctx.shadowColor = 'rgba(251, 191, 36, 0.8)'; // amber glow
-      ctx.shadowBlur = 18;
       ctx.lineWidth = 6 * (1 - p) + 2;
       const grad = ctx.createLinearGradient(ring.x-rr, ring.y-rr, ring.x+rr, ring.y+rr);
       grad.addColorStop(0, 'rgba(251,191,36,1)');  // amber
@@ -2763,8 +2766,6 @@ function drawFeedbackEffects(){
       const p = Math.min(1, ring.age / Math.max(0.001, ring.ttl));
       const radius = ring.radius * (0.65 + easeOutCubic(p) * 0.75);
       ctx.globalAlpha = Math.max(0, 1 - p) * 0.85;
-      ctx.shadowColor = ring.color;
-      ctx.shadowBlur = 14;
       ctx.strokeStyle = ring.color;
       ctx.lineWidth = Math.max(1, ring.lineWidth * (1 - p * 0.45));
       ctx.beginPath();
@@ -2775,8 +2776,6 @@ function drawFeedbackEffects(){
     for (const part of f.particles){
       const p = Math.min(1, part.age / Math.max(0.001, part.ttl));
       ctx.globalAlpha = Math.max(0, 1 - p) * 0.9;
-      ctx.shadowColor = part.color;
-      ctx.shadowBlur = 10;
       ctx.fillStyle = part.color;
       ctx.beginPath();
       ctx.arc(part.x, part.y, Math.max(0.5, part.r * (1 - p * 0.55)), 0, Math.PI * 2);
@@ -2823,8 +2822,6 @@ function drawScreenFeedback(){
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.18 + pulse * 0.2;
-      ctx.shadowColor = '#fb923c';
-      ctx.shadowBlur = 16;
       ctx.strokeStyle = '#fb923c';
       ctx.lineWidth = 2;
       roundRect(x - 3, y - 3, w + 6, h + 6, 6);
