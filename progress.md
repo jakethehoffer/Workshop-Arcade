@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-07-01 Claude — Checkers: add board coordinate labels (a-h / 8-1) matching the move notation
+
+The move log shows algebraic notation (e.g. "Last: b6 to a5") but the board had no file/rank labels, so a player couldn't map the notation to a square. Added coordinate labels matching `squareName(r,c) = 'abcdefgh'[c] + (8 - r)`: files **a-h** left-to-right along the bottom, ranks **8 (top) -> 1 (bottom)** down the left.
+
+- Implementation: external gutters — a `.board-frame` grid wraps the board with a left `.rank-gutter` and bottom `.file-gutter`. The gutters replicate the board's `repeat(8, var(--tile))` + `var(--gap)` + padding + 1px border so the labels line up exactly with the tiles (verified 0px offset on desktop and mobile). Labels are `aria-hidden` (squares already carry coordinate aria-labels); color `#9fb0c8` passes WCAG AA on the dark board.
+- Density constraint: the render-capture gate caps **mobile** at 130 visible DOM elements, and 16 label spans pushed Checkers from 121 -> 139 (score 15 -> fails the CI gate). Since the cap is mobile-only and mobile had no labels before, the gutters are shown on desktop and `display:none` on mobile (drops them from the visible count, back to 121 — no mobile regression). Pseudo-element labels were rejected because `.sq` already uses `::before`/`::after` for focus/capture/jump states, and in-cell child labels would also trip the density cap.
+- Verified: desktop labels aligned 0px ("87654321 / abcdefgh"); mobile 121 visible elements, gutters hidden, 0 horizontal overflow; scoped smoke pass; render-capture desktop + mobile score 0; `audit:contrast` WCAG AA pass; `npm test` 55/55; no console errors. Checkers page-weight has room (91.6 / 100 KB); not in the PWA shell.
+
 ## 2026-07-01 Claude — Checkers cover: pieces rendered as giant discs (symbol used without width/height)
 
 The Checkers catalog thumbnail (`covers/checkers.svg`) drew its pieces as huge overlapping red/grey discs bleeding off the right edge. Root cause: the piece art was defined as `<symbol id="red-man" viewBox="-18 -18 36 36">` and placed with `<use href="#red-man" x=.. y=..>` carrying **no width/height**. Per SVG, a `<use>` of a `<symbol>` with no width/height defaults to 100% of the viewport, so each 36-unit piece scaled to fill the 640x360 cover — measured **300x300 each** — instead of sitting on its 38px board cell.
