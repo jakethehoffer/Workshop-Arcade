@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-07-01 Claude — Checkers: hide the last-move highlight while a piece is selected (clutter + a fake "dim jump")
+
+Follow-up to the move-pop fix. Two more highlight complaints while selecting a move: (1) the last-moved (black) piece stayed highlighted, and (2) a second, dimmer "jump" appeared next to the real one. Confirmed via the live DOM: black's last move `b6 -> a5` gave `a5` the `.last-to` (blue) + `.move-trail` markers and `b6` the `.last-from` (teal) marker. So (1) is the persistent `.last-to` blue marker on the moved piece, and (2) is the `.last-from` teal marker on the empty square the opponent moved *from* — not a jump at all; it just shares the teal/blue palette of the selection/jump highlights and so reads as a faint extra jump target while choosing a move.
+
+- Fix: gate the last-move highlights (`last-from`, `last-to`, `move-trail`, `capture-hit`) on `!selected` in `render()` — the same rule as the move pop. They now show as brief post-move context (when nothing is selected) and disappear the moment a piece is selected, so the board is clean while planning and only the actual green jump/move for the selected piece shows. The "Last: X to Y" header text still names the last move.
+- Verified in the harness: after black's AI move `b6 -> a5`, idle shows last-move highlights on `b6` + `a5`; selecting a red piece clears them to none (`lastMoveHi_whenSelected: []`). Scoped smoke pass; render-capture desktop + mobile score 0; `npm test` 55/55; no console errors. JS-only; checkers is not in the PWA shell.
+
 ## 2026-07-01 Claude — Checkers: stop the last-move "MOVE" pop re-flashing on every piece selection
 
 Selecting a piece to consider a move re-flashed the "MOVE" (or "+N" / "KING") popup on the opponent's last-moved square, as if that piece had just moved again. Root cause: `render()` rebuilds the whole board on every interaction and re-creates the `.move-pop` element — restarting its `popRise` animation — whenever `feedback.activePopCount` is truthy. `activePopCount` is set to 1 on a move and only aged back to 0 by `stepFeedback`, which is driven by `advanceTime` (tests); in normal play there's no real-time loop aging it (consistent with the idle-rAF cleanup), so it stays 1 and the pop re-animates on **every** render, including the selection renders.

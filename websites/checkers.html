@@ -1764,10 +1764,15 @@ function render(){
       sq.dataset.r=r; sq.dataset.c=c;
       if(isDark) sq.addEventListener('click', onSquareClick, {passive:true});
       if(focusSquare && focusSquare.r===r && focusSquare.c===c) sq.classList.add('kbd-focus');
-      if(lastMoveHasSquare(r, c, 'from')) sq.classList.add('last-from');
-      if(lastMoveHasSquare(r, c, 'to')) sq.classList.add('last-to');
-      if(lastMoveHasSquare(r, c, 'path')) sq.classList.add('move-trail');
-      if(lastMoveHasSquare(r, c, 'capture')) sq.classList.add('capture-hit');
+      // Last-move highlights are post-move context only: hide them while a piece
+      // is selected so they don't clutter the board (or read as a faint extra
+      // jump target) while the player is choosing a move.
+      if(!selected){
+        if(lastMoveHasSquare(r, c, 'from')) sq.classList.add('last-from');
+        if(lastMoveHasSquare(r, c, 'to')) sq.classList.add('last-to');
+        if(lastMoveHasSquare(r, c, 'path')) sq.classList.add('move-trail');
+        if(lastMoveHasSquare(r, c, 'capture')) sq.classList.add('capture-hit');
+      }
       if(mustContinueFrom && mustContinueFrom.r === r && mustContinueFrom.c === c) sq.classList.add('multi-chain');
       elBoard.appendChild(sq);
 
