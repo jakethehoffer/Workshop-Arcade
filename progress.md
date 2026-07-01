@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-07-01 Claude — Checkers: stop the last-move "MOVE" pop re-flashing on every piece selection
+
+Selecting a piece to consider a move re-flashed the "MOVE" (or "+N" / "KING") popup on the opponent's last-moved square, as if that piece had just moved again. Root cause: `render()` rebuilds the whole board on every interaction and re-creates the `.move-pop` element — restarting its `popRise` animation — whenever `feedback.activePopCount` is truthy. `activePopCount` is set to 1 on a move and only aged back to 0 by `stepFeedback`, which is driven by `advanceTime` (tests); in normal play there's no real-time loop aging it (consistent with the idle-rAF cleanup), so it stays 1 and the pop re-animates on **every** render, including the selection renders.
+
+- Fix: gate the pop on `!selected` — render it only while no piece is selected. After a move, `selected` is null (`makePlayerMove`/`aiMove` clear it before the post-move `render()` at endTurn), so the pop plays as post-move feedback; the moment the player selects a piece to consider (`selected` set -> `render()`), the pop is hidden. No real-time timer or idle rAF added.
+- Rejected an earlier one-shot approach (a `poppedMove` object-identity flag consumed inside `render()`): a single move triggers **multiple synchronous renders** (`animateApplyMove` + `endTurn`), so the flag was consumed before the pop was ever painted, hiding it entirely (harness showed 0 pops after a move).
+- Verified: the async animated move path confirmed by reading `makePlayerMove`/`aiMove` (`selected=null` before the post-move render; `selected` set on the selection render). The synthetic-click harness couldn't observe the post-move state because `makePlayerMove` is async and locks the board during the animation. Scoped smoke pass; render-capture desktop + mobile score 0; `npm test` 55/55; no console errors. JS-logic only; checkers is not in the PWA shell.
+
 ## 2026-07-01 Claude — Checkers: add board coordinate labels (a-h / 8-1) matching the move notation
 
 The move log shows algebraic notation (e.g. "Last: b6 to a5") but the board had no file/rank labels, so a player couldn't map the notation to a square. Added coordinate labels matching `squareName(r,c) = 'abcdefgh'[c] + (8 - r)`: files **a-h** left-to-right along the bottom, ranks **8 (top) -> 1 (bottom)** down the left.

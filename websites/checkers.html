@@ -1785,7 +1785,10 @@ function render(){
           p.classList.add('selected-piece');
         }
       }
-      if(feedback.lastMove && feedback.lastMove.toRow === r && feedback.lastMove.toCol === c && feedback.activePopCount){
+      // Show the move pop only while nothing is selected, so it plays as
+      // post-move feedback but does not re-flash "MOVE" on the last-moved
+      // square every time the player selects another piece to consider.
+      if(feedback.lastMove && feedback.lastMove.toRow === r && feedback.lastMove.toCol === c && feedback.activePopCount && !selected){
         const pop = document.createElement('div');
         pop.className = 'move-pop';
         pop.textContent = feedback.lastMove.crowned ? 'KING' : (feedback.lastMove.captures.length ? `+${feedback.lastMove.captures.length}` : 'MOVE');
