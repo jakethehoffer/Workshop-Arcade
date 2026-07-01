@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-07-01 Claude — Brick Breaker: bricks stretched + shoved down in the embed (resize scaled fixed-height bricks)
+
+Follow-up the full-height player-embed fix exposed. With the iframe now growing from short to full height when the player opens, brick-breaker's `resize()` fired a large vertical rescale and stretched the brick field ~5x tall and pushed it into the lower half (huge bricks, empty top; ball/paddle fine). Root cause: bricks are laid out purely from **width** and fixed constants — `G.brickHeight` (18/22/26) and `y = G.brickTop + r*(brickHeight+padding)`, with `G.brickTop` keyed off `css.w` — so `css.h` never enters brick layout. But `resize()` multiplied `br.y` and `br.h` by the height ratio `sy`, corrupting the fixed geometry whenever height changed. Latent before (the old 150px iframe never grew, so `resize` never fired that jump); the full-height fix made it visible.
+
+- Fix: in `resize()`, scale bricks by width only (`br.x`, `br.w` by `sx`); leave `br.y`/`br.h` alone. The paddle (re-anchored to `css.h-36`) and waiting balls (re-anchored to the paddle) already handled height correctly, so only the brick loop was wrong.
+- Verified in the harness by forcing a 300 -> 1000px resize through `resize()`: the paddle re-anchored to y=964 (proving the handler ran) while bricks stayed top-anchored at y=79 / 147 (no y-scaling); before the fix they scaled ~3.3x down. Scoped smoke pass; render-capture desktop + mobile score 0; `npm run test:page-weight` holds Brick Breaker at 114.9 KB / 125 KB (10.1 KB headroom). JS-only; brick-breaker is not in the PWA shell, so no `sw.js` bump.
+
 ## 2026-07-01 Claude — Brick Breaker audit: fullscreen dedupe, click launch/release, drop aim arrow, cut render latency
 
 Manual audit pass on Brick Breaker (game #1). Four fixes, all in `websites/brick-breaker.html`:

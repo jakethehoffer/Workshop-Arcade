@@ -414,7 +414,10 @@ kbd{
     }
 
     for (const br of G.bricks){
-      br.x *= sx; br.y *= sy; br.w *= sx; br.h *= sy;
+      // Bricks are fixed-height and top-anchored (buildLevel), so track width
+      // only. Scaling y/h by the height ratio corrupts them when the embedded
+      // iframe grows from short to full height.
+      br.x *= sx; br.w *= sx;
       if (br.moving){ br.originX *= sx; br.range *= sx; }
     }
 
