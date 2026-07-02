@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-07-02 Claude — Neon Snake: cache the per-frame backdrop gradient (perf polish)
+
+Bounded performance polish from the review's Tier-2 perf finding (per-frame gradient rebuilds in hot draw loops). `snake.html` rebuilt its full-canvas backdrop gradient every frame (`createLinearGradient(0,0,w,h)` + two color stops at ~60fps). It depends only on the canvas size, so it's now memoized and rebuilt only when the dimensions change; output is pixel-identical. Left the per-segment gradient (position-dependent per snake cell) and the food-glow radial (position-dependent) alone.
+
+- Implementation gotcha caught in verification: first attempt declared the memo as a module-level `let _bgGrad`, which threw `Cannot access '_bgGrad' before initialization` — an initial setup `draw()` runs before that `let` line executes, so the reference hit the temporal dead zone and killed the whole inline script (render_game_to_text/advanceTime never attached; capture score 240). Fixed by storing the memo on the hoisted `backdropGradient` function itself (`backdropGradient.grad/.w/.h`), which is safe to read before any `let`/`const` in the scope initializes. The scoped smoke gave the exact TDZ message; scoped capture only reported a vague "page/network issue", so running both mattered.
+- Verified: scoped `test:games --slug snake` pass; scoped `capture:games --slug snake` back to score 0 desktop + mobile (pixel-identical, and the two different viewport sizes confirm the size-keyed cache rebuilds on a dimension change); `npm test` 56/56 (incl. `test:page-weight` — net +a few lines, within budget); `git diff --check` clean. JS-only; snake is not in the PWA shell, so no `sw.js` bump.
+- Obvious same-pattern next candidates (not done this turn, each needs its own scoped smoke+capture): `2048.html` and `arena.html` were flagged rebuilding gradients per frame too; same hoisted-memo fix applies.
+
 ## 2026-07-02 Claude — adversarial review follow-through: game-page input-safety gate + Pages artifact trim
 
 Ran an adversarial review of the whole project (security, tooling/process, game-code duplication, git health) and then implemented the two safe, fully-verifiable recommendations. The review's headline: the product (frozen 100-game catalog) is polished and genuinely well-secured; the disproportion is in the engineering-health layer (93.5 MB `.git` for a 6.3 MB tree from 220/441 commits re-committing `progress.md`; ~2,500 lines of speculative owned-domain/launch-evidence machinery with no CNAME configured; 40% of the 75 `test:*` gates are meta; three full 100-game Playwright sweeps on every push/PR of a frozen catalog).

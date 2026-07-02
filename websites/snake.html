@@ -791,13 +791,25 @@
   function ease(t){ return 1 - (1-t)*(1-t); }
   function lerp(a,b,t){ return a + (b-a)*t; }
 
+  // Cache the full-canvas backdrop gradient. It depends only on the canvas
+  // size, so rebuild it when the dimensions change instead of allocating a new
+  // gradient every frame. Output is pixel-identical to the per-frame version.
+  // The memo lives on the (hoisted) function so an early setup draw() can call
+  // it with no temporal-dead-zone risk.
+  function backdropGradient(){
+    const c=backdropGradient;
+    if(c.grad && c.w===canvas.width && c.h===canvas.height) return c.grad;
+    const g=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+    g.addColorStop(0,'#0f1729'); g.addColorStop(1,'#0b1120');
+    c.grad=g; c.w=canvas.width; c.h=canvas.height;
+    return g;
+  }
+
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const cw=canvas.width/COLS, ch=canvas.height/ROWS;
 
-    const bg=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
-    bg.addColorStop(0,'#0f1729'); bg.addColorStop(1,'#0b1120');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle=backdropGradient(); ctx.fillRect(0,0,canvas.width,canvas.height);
 
     ctx.fillStyle='#111827';
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
