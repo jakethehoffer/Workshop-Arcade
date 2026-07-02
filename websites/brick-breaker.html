@@ -803,6 +803,12 @@ hit(){ playSound('brick-hit', () => playBeep({freq:820, type:'triangle', decay:0
   }
   updateAudioButtons();
 
+  // Pause background music while the tab is hidden (SFX are one-shot).
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) MUSIC.stop();
+    else if (musicOn && soundEnabled) MUSIC.start();
+  });
+
   const G = {
     running: true,
     comboCount: 0,
@@ -869,9 +875,7 @@ comboTime: 0
   let resumeOnClose = false;
   let lastTactileAt = 0;
 
-  // Honor prefers-reduced-motion: gate the decorative ball trail, bomb pulse,
-  // screen shake, and burst rings (cosmetic, no gameplay effect) for
-  // motion-sensitive players.
+  // Honor prefers-reduced-motion: gate the decorative trail/pulse/shake/rings.
   let reducedMotion = false;
   try {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -1339,8 +1343,7 @@ function restartGame(){
   addEventListener('keydown', unlockAudioOnce, {once: true, capture: true});
 
   addEventListener('keydown', (e)=>{
-    // While the start/how-to dialog is visible, trap Tab and let Escape close it.
-    // The board is paused behind the modal, so gameplay keys are intentionally ignored here.
+    // Start/how-to dialog visible: trap Tab, let Escape close it; board paused, gameplay keys ignored.
     if (startDialogVisible()){
       if (e.key === 'Escape'){
         e.preventDefault();
@@ -2759,8 +2762,7 @@ function drawExplosions(){
 function drawFeedbackEffects(){
   const f = G.feedback;
 
-  // Decorative burst rings + particles from brick hits — gate under reduced
-  // motion. The floating score pops below stay (informational, not motion).
+  // Decorative burst rings + particles from brick hits — gate under reduced motion.
   if (!reducedMotion) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
