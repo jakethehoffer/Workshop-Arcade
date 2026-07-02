@@ -27,9 +27,12 @@ const PUBLIC_PATHS = [
   'package.json',
   'package-lock.json',
   'covers',
-  'docs',
+  // Ship only the visitor/contributor-facing docs. The internal AI planning
+  // artifacts under docs/superpowers/ and the entire scripts/ build-tooling
+  // tree (1.2 MB of Node) have no user-facing purpose and are not served.
+  'docs/game-contract.md',
+  'docs/performance-baseline.md',
   'schemas',
-  'scripts',
   'websites',
   '.well-known'
 ];
