@@ -1,5 +1,17 @@
 Original prompt: Do this for me
 
+## 2026-07-02 Claude — evaluated and REJECTED the build-time game-templating refactor (data-grounded)
+
+The review's top remaining Tier-2 item was a build-time shared-fragment/templating system for the 100 self-contained game pages (a sub-agent estimated "~1 MB / 35% reduction"). Rather than write a speculative design doc, measured the actual shareability of the candidate blocks first — and the data killed it (turning the review's skepticism on the review's own recommendation):
+
+- **Ambient backdrop:** only 46/100 games have the two-blob radial pattern, and it's 30+ near-unique variants — the most common exact string is shared by just **12** games. No shared block; normalizing would change dozens of games' looks.
+- **`.pill` HUD rule:** long tail of per-game tweaks (top variant 13 games, then 6/5/5/4/4…). Not identical.
+- **`:root` design tokens:** only 37 games have one, and **every palette is unique** (each game's own color identity).
+- **`render_game_to_text()`:** 141 refs but every body returns game-specific state — not extractable.
+- **Already-shared surfaces (correctly extracted):** the per-game meta+JSON-LD block (~2.5 KB/game, ~256 KB catalog-wide) is generated in place by `inject-game-meta.mjs` via `<!-- workshop-meta -->` markers; the storage bridge + `prefers-reduced-motion` reset live once in `workshop-runtime.js` (loaded by all 100).
+
+Conclusion: the "duplication" is overwhelmingly intentional per-game variation, not extractable shared content. A templating system would homogenize the catalog's intentional visual identity (a `capture:games:ci` regression), save little, and add a build+injection subsystem + a drift gate + per-game migration risk for near-zero ROI. The sub-agent's estimate counted superficial similarity as duplication. Recorded the decision durably in `ARCHITECTURE.md` (new "Why game pages stay hand-authored, not templated" section) so it is not re-litigated; `test:architecture-doc` + `test:docs` green. This effectively closes the review's biggest remaining backlog item — with evidence, as a "don't build it."
+
 ## 2026-07-02 Claude — Brick Breaker: pause background music when the tab is hidden
 
 Adversarial follow-up survey after the perf vein: checked two accessibility/polish veins and only one yielded a real, bounded fix.
