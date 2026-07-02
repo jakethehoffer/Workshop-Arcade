@@ -1003,14 +1003,26 @@
       }
     }
 
+    // Cache the full-screen backdrop gradient; it depends only on the viewport
+    // size, so rebuild it on a resize instead of every frame. Output is
+    // pixel-identical. The memo lives on the hoisted function so an early
+    // draw() can call it with no temporal-dead-zone risk.
+    function backgroundGradient() {
+      const c = backgroundGradient;
+      if (c.grad && c.w === state.vw && c.h === state.vh) return c.grad;
+      const cx = state.vw * 0.5, cy = state.vh * 0.5;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(state.vw, state.vh) * 0.75);
+      g.addColorStop(0, '#0f243c');
+      g.addColorStop(0.46, '#07111f');
+      g.addColorStop(1, '#03060c');
+      c.grad = g; c.w = state.vw; c.h = state.vh;
+      return g;
+    }
+
     function drawBackground() {
       const cx = state.vw * 0.5;
       const cy = state.vh * 0.5;
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(state.vw, state.vh) * 0.75);
-      bg.addColorStop(0, '#0f243c');
-      bg.addColorStop(0.46, '#07111f');
-      bg.addColorStop(1, '#03060c');
-      ctx.fillStyle = bg;
+      ctx.fillStyle = backgroundGradient();
       ctx.fillRect(0, 0, state.vw, state.vh);
 
       // Decorative pulsing rings + rotating spokes: cosmetic only, gated for

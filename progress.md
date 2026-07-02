@@ -1,5 +1,12 @@
 Original prompt: Do this for me
 
+## 2026-07-02 Claude — Arena: cache the per-frame backdrop gradient (perf polish, cont'd)
+
+Same per-frame-gradient perf polish as Neon Snake, applied to `arena.html` — the stronger of the two flagged follow-ups because Arena runs a continuous real-time rAF loop (Snake and Arena redraw every frame; 2048 is turn-based and only redraws briefly during tile-pop animations, so its board-glow gradient was left alone as marginal). `drawBackground()` rebuilt a full-screen radial gradient every frame (`createRadialGradient` + 3 stops) though it depends only on `state.vw`/`state.vh`. Now memoized on the hoisted `backgroundGradient()` function (the TDZ-safe pattern established on Snake), rebuilt only when the viewport size changes; output pixel-identical. Kept `cx`/`cy` in `drawBackground()` (the decorative rings still use them) and left the per-player/per-enemy radial gradients (position-dependent) alone.
+
+- Verified: scoped `test:games --slug arena` pass; scoped `capture:games --slug arena` score 0 desktop + mobile (pixel-identical; two viewport sizes confirm the size-keyed cache rebuilds on resize); `npm test` 56/56 (incl. `test:page-weight`); `git diff --check` clean. JS-only; arena is not in the PWA shell, so no `sw.js` bump. No TDZ this time — the hoisted-function memo pattern is now the standard for this fix.
+- Remaining same-pattern candidate is marginal: `2048.html` boardGlow (965) only rebuilds during pop animations (turn-based), so skipped as low-value. The per-frame-gradient vein is now effectively worked for the continuous-loop games (snake, arena; brick-breaker was done earlier).
+
 ## 2026-07-02 Claude — Neon Snake: cache the per-frame backdrop gradient (perf polish)
 
 Bounded performance polish from the review's Tier-2 perf finding (per-frame gradient rebuilds in hot draw loops). `snake.html` rebuilt its full-canvas backdrop gradient every frame (`createLinearGradient(0,0,w,h)` + two color stops at ~60fps). It depends only on the canvas size, so it's now memoized and rebuilt only when the dimensions change; output is pixel-identical. Left the per-segment gradient (position-dependent per snake cell) and the food-glow radial (position-dependent) alone.
