@@ -41,6 +41,14 @@ Out of scope:
 - Reports about hosting infrastructure GitHub Pages controls (forward those to GitHub Bug Bounty).
 - Self-XSS scenarios that require the user to paste attacker-supplied JavaScript into the DevTools console.
 
+## Game page security invariant
+
+The sandbox is the **only** isolation boundary, and it exists **only inside the player iframe**. Every game is also reachable as a real same-origin document — via the player's "Open in new tab" link and by direct navigation to `websites/<slug>.html`. On that path there is no sandbox and no opaque origin: `workshop-runtime.js` returns early because native `localStorage` works, and the game runs with full access to the shared catalog origin (favorites, drafts, every game's saved state, the Cache/Service Worker APIs). All 100 games share that one origin, and each game page ships `script-src 'unsafe-inline'` (required by the self-contained inline-JS design), so the game-page CSP provides **no** defense-in-depth against script injection.
+
+What keeps this safe is a single invariant: **a game page must never ingest untrusted input.** Concretely, no `websites/*.html` game may read `location.hash`, `location.search`, `document.referrer`, or `window.name`, or listen for `message` events. A game that read its own URL/hash (or a `postMessage`) and routed it into a DOM sink would become same-origin XSS across the entire catalog. The only sanctioned reader of `location.hash` is the shared `workshop-runtime.js` storage-bridge shim, which is audited and is not a game page.
+
+`npm run test:game-input-safety` enforces this invariant in CI (scanning executable `<script>` bodies with comments and string literals blanked), so it cannot regress silently. Any future game that legitimately needs URL/window input must route it through the audited shim and update that gate deliberately.
+
 ## Defense in Depth
 
 The catalog ships several preventative measures that bound the blast radius of any single vulnerability:
@@ -51,4 +59,5 @@ The catalog ships several preventative measures that bound the blast radius of a
 - [Dependabot](.github/dependabot.yml) auto-PRs npm + GitHub Actions updates weekly.
 - Every external workflow action is pinned to a full immutable commit SHA with a release comment; `npm run test:security-workflows` rejects movable or inconsistent refs.
 - `npm run test:csp` enforces the CSP contract in CI.
+- `npm run test:game-input-safety` enforces the game page security invariant above so no game page silently starts reading untrusted URL/window input.
 - `npm run test:meta-files` enforces that `LICENSE`, `.well-known/security.txt`, `humans.txt`, and `SECURITY.md` all stay valid.
