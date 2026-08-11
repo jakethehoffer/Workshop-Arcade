@@ -70,21 +70,24 @@ button{font:inherit}
 .brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
 .help{max-width:560px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
 .hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
-.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill,.btn,.stage{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
-canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+canvas:focus-visible,.btn:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
-.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 .btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
 .btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
-.swatches{display:grid;grid-template-columns:repeat(6,minmax(0,72px));justify-content:center;gap:8px}
-.swatch{min-height:46px;border-radius:10px;border:2px solid rgba(255,255,255,.18);cursor:pointer;font-size:14px;font-weight:950;display:flex;align-items:center;justify-content:center;gap:4px;touch-action:manipulation;box-shadow:0 8px 18px rgba(0,0,0,.3)}
+.swatches{display:flex;justify-content:center;gap:8px}
+.swatch{flex:0 1 84px;min-width:0;min-height:54px;border-radius:10px;border:2px solid rgba(255,255,255,.18);cursor:pointer;font-weight:950;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;touch-action:manipulation;box-shadow:0 8px 18px rgba(0,0,0,.3);padding:4px 2px}
+.swatch[hidden]{display:none}
 .swatch:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.sw-key{font-size:14px;line-height:1.1;white-space:nowrap}
+.sw-gain{font-size:11px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
-@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.swatches{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.swatch{min-height:44px}}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.swatches{gap:6px}.swatch{flex:1 1 0}.swatch{min-height:48px}.sw-key{font-size:13px}.sw-gain{font-size:10px}}
 @media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}}
 </style>
 <script src="workshop-runtime.js"></script>
@@ -93,123 +96,345 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Floodgate flood-fill puzzle">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Floodgate</span></div>
-    <div class="help">Pick a color (the swatches below, or keys 1-6) to flood the region from the top-left corner. Make the whole board one color in as few moves as you can. N starts a new game, R resets the level.</div>
+    <div class="help">Tap a swatch (or keys 1-6) to flood from the top-left corner. Unify each basin before the moves run out — swatches preview how many cells each color captures, and big captures build a torrent streak that multiplies your score. N starts a new run, M toggles sound.</div>
   </header>
   <section class="hud" aria-label="Game status">
-    <div class="pill"><span class="label">Level</span><span class="value" id="levelValue">1/3</span></div>
-    <div class="pill"><span class="label">Size</span><span class="value" id="sizeValue">9×9</span></div>
-    <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
-    <div class="pill"><span class="label">Par</span><span class="value" id="parValue">14</span></div>
-    <div class="pill"><span class="label">Filled</span><span class="value" id="filledValue">1%</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Basin</span><span class="value" id="basinValue">1</span></div>
+    <div class="pill"><span class="label">Moves Left</span><span class="value" id="movesValue">12</span></div>
+    <div class="pill"><span class="label">Streak</span><span class="value" id="streakValue">×1</span></div>
+    <div class="pill"><span class="label">Flooded</span><span class="value" id="filledValue">1%</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
   </section>
-  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Floodgate board. Flood the region from the top-left corner until the whole board is one color."></canvas></div>
-  <div class="status" id="statusLine" aria-live="polite">Flood from the top-left corner until the whole board is one color.</div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Floodgate basin board. Flood from the top-left corner until the whole basin is one color before the moves run out."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Flood the basin to a single color before the moves run out.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Floodgate ready.</div>
   <section class="bar" aria-label="Actions">
     <button class="btn primary" id="newBtn" type="button">New Game</button>
-    <button class="btn" id="resetBtn" type="button">Reset Level</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
   </section>
   <section class="swatches" id="swatches" aria-label="Flood colors">
-    <button class="swatch" type="button" data-color="0"></button><button class="swatch" type="button" data-color="1"></button><button class="swatch" type="button" data-color="2"></button><button class="swatch" type="button" data-color="3"></button><button class="swatch" type="button" data-color="4"></button><button class="swatch" type="button" data-color="5"></button>
+    <button class="swatch" type="button" data-color="0"><span class="sw-key"></span><span class="sw-gain"></span></button><button class="swatch" type="button" data-color="1"><span class="sw-key"></span><span class="sw-gain"></span></button><button class="swatch" type="button" data-color="2"><span class="sw-key"></span><span class="sw-gain"></span></button><button class="swatch" type="button" data-color="3"><span class="sw-key"></span><span class="sw-gain"></span></button><button class="swatch" type="button" data-color="4"><span class="sw-key"></span><span class="sw-gain"></span></button><button class="swatch" type="button" data-color="5"><span class="sw-key"></span><span class="sw-gain"></span></button>
   </section>
 </main>
 <script>
 (() => {
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const STATS_KEY="floodgate.stats.v1",SOUND_KEY="floodgate.sound.v1";
+const STATS_KEY="floodgate.stats.v2",SOUND_KEY="floodgate.sound.v1";
 const PALETTE=["#eef2ff","#22d3ee","#5258e6","#fbbf24","#fb7185","#4ade80"];
+const BRIGHT=["#ffffff","#67e8f9","#818cf8","#fcd34d","#fda4af","#86efac"];
 const TEXTCOL=["#0b1220","#053038","#f3fbff","#3a2606","#3c0d16","#06301c"];
+const NAMES=["pearl","cyan","indigo","amber","rose","green"];
 const GLYPHS=["●","◆","▲","■","★","✦"];
-const LEVELS=[{n:9,colors:5,seed:7321,par:14},{n:12,colors:6,seed:48207,par:21},{n:14,colors:6,seed:90534,par:25}];
-const TOTAL=LEVELS.length;
+const BASIN1_SEED=15,MAXSTREAK=5;
+const BX=40,BY=30,BS=480;
+const RM=window.matchMedia?window.matchMedia("(prefers-reduced-motion: reduce)"):{matches:false};
 const $=id=>document.getElementById(id);
-const els={level:$("levelValue"),size:$("sizeValue"),moves:$("movesValue"),par:$("parValue"),filled:$("filledValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),reset:$("resetBtn"),swatches:$("swatches")};
-const saved=readStats();
-const state={idx:0,n:9,colors:5,grid:[],moves:0,mode:"playing",best:saved.best,solved:saved.solved,sound:readSound(),feedback:"Flood from the top-left corner until the whole board is one color.",flash:0,time:0,nextAt:null,clearWait:0};
-let audio=null;
+const els={score:$("scoreValue"),basin:$("basinValue"),moves:$("movesValue"),streak:$("streakValue"),filled:$("filledValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),swatches:$("swatches")};
+const swatchBtns=Array.from(els.swatches.querySelectorAll(".swatch"));
 
+// ---------- storage (guarded: hostile stored values must never break init) ----------
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(v.best&&typeof v.best==="object")?v.best:{},solved:Array.isArray(v.solved)?v.solved.filter(n=>typeof n==="number"):[]}}catch(_){}return{best:{},solved:[]}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best,solved:state.solved}))}catch(_){}}
+function toCount(v){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0}
+function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object"&&!Array.isArray(v))return{score:toCount(v.score),basin:toCount(v.basin)}}catch(_){}return{score:0,basin:0}}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({score:state.best.score,basin:state.best.basin}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+
+// ---------- state ----------
+const state={basin:0,n:8,colors:4,grid:[],budget:12,par:9,movesUsed:0,movesLeft:12,score:0,streak:1,torrentAt:8,carry:0,carryIn:0,mode:"playing",time:0,clearT:0,clearBonus:0,best:readStats(),newBest:false,sound:readSound(),sawTorrentTip:false,runSeed:1,feedback:"Flood the basin to a single color before the moves run out."};
+const fx={flips:[],parts:[],floats:[],banner:null,shake:{t:0,dur:1,mag:0}};
+let previews=[0,0,0,0,0,0],ownedCache=null,ownedCountCache=1;
+
+// ---------- deterministic generation + solver ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeGrid(n,colors,seed){const rnd=mulberry32(seed),g=new Array(n*n);for(let i=0;i<n*n;i++)g[i]=Math.floor(rnd()*colors);return g}
+function neighbors(i,n,out){out.length=0;const r=(i/n)|0,c=i%n;if(r>0)out.push(i-n);if(r<n-1)out.push(i+n);if(c>0)out.push(i-1);if(c<n-1)out.push(i+1);return out}
+function regionInfo(g,n,color){const cur=g[0],owned=new Uint8Array(n*n),stack=[0],nb=[];owned[0]=1;
+  while(stack.length){const i=stack.pop();neighbors(i,n,nb);for(const j of nb)if(!owned[j]&&g[j]===cur){owned[j]=1;stack.push(j)}}
+  let ownedCount=0;for(let i=0;i<n*n;i++)if(owned[i])ownedCount++;
+  if(color===cur||color<0)return{owned,ownedCount,gain:0,captured:[]};
+  const seen=owned.slice(),st2=[],captured=[];for(let i=0;i<n*n;i++)if(owned[i])st2.push(i);
+  let depth=0;
+  while(st2.length){const next=[];for(const i of st2){neighbors(i,n,nb);for(const j of nb)if(!seen[j]&&g[j]===color){seen[j]=1;captured.push({i:j,d:depth});next.push(j)}}st2.length=0;for(const j of next)st2.push(j);depth++}
+  return{owned,ownedCount,gain:captured.length,captured}}
+function greedyPar(grid,n,colors){const g=grid.slice();let moves=0;
+  while(moves<400){const cur=g[0],info=regionInfo(g,n,cur);if(info.ownedCount===n*n)break;
+    let bestC=-1,bestGain=-1;for(let c=0;c<colors;c++){if(c===cur)continue;const{gain}=regionInfo(g,n,c);if(gain>bestGain){bestGain=gain;bestC=c}}
+    const apply=regionInfo(g,n,bestC);for(let i=0;i<n*n;i++)if(apply.owned[i])g[i]=bestC;for(const cell of apply.captured)g[cell.i]=bestC;moves++}
+  return moves}
+function refreshRegion(){const info=regionInfo(state.grid,state.n,state.grid[0]);ownedCache=info.owned;ownedCountCache=info.ownedCount}
+function computePreviews(){for(let c=0;c<6;c++){if(c>=state.colors){previews[c]=0;continue}previews[c]=c===state.grid[0]?-1:regionInfo(state.grid,state.n,c).gain}}
+
+// ---------- audio (lazy WebAudio synth, honors sound toggle, silent when hidden) ----------
+let AC=null,master=null,noiseBuf=null;
+function ensureAudio(){if(!state.sound)return null;const Ctor=window.AudioContext||window.webkitAudioContext;if(!Ctor)return null;
+  try{if(!AC){AC=new Ctor();master=AC.createGain();master.gain.value=.5;master.connect(AC.destination)}
+    if(AC.state==="suspended")AC.resume().catch(()=>{});
+    return master?{ac:AC,out:master}:null}catch(_){return null}}
+function blip(a,freq,at,dur,type,peak,glide){try{const o=a.ac.createOscillator(),g=a.ac.createGain();o.type=type||"sine";o.frequency.setValueAtTime(freq,at);if(glide)o.frequency.exponentialRampToValueAtTime(glide,at+dur);
+  g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(peak,at+.012);g.gain.exponentialRampToValueAtTime(.0001,at+dur);
+  o.connect(g);g.connect(a.out);o.start(at);o.stop(at+dur+.02)}catch(_){}}
+function splash(a,at,dur,peak){try{if(!noiseBuf){const len=a.ac.sampleRate*.5|0;noiseBuf=a.ac.createBuffer(1,len,a.ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1}
+  const s=a.ac.createBufferSource(),f=a.ac.createBiquadFilter(),g=a.ac.createGain();s.buffer=noiseBuf;f.type="bandpass";f.frequency.setValueAtTime(1900,at);f.frequency.exponentialRampToValueAtTime(600,at+dur);f.Q.value=.9;
+  g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(peak,at+.015);g.gain.exponentialRampToValueAtTime(.0001,at+dur);
+  s.connect(f);f.connect(g);g.connect(a.out);s.start(at);s.stop(at+dur+.02)}catch(_){}}
+function sfxFlood(gain,streak){const a=ensureAudio();if(!a)return;const t=a.ac.currentTime;
+  const notes=Math.min(5,1+((gain/6)|0)),base=200+Math.min(24,gain)*14+streak*22;
+  for(let i=0;i<notes;i++)blip(a,base*Math.pow(1.26,i),t+i*.045,.16,"sine",.05);
+  splash(a,t,.13,Math.min(.05,.014+gain*.0022))}
+function sfxTorrent(streak){const a=ensureAudio();if(!a)return;const t=a.ac.currentTime,b=330+streak*40;
+  [1,1.25,1.5,2].forEach((m,i)=>blip(a,b*m,t+i*.06,.2,"triangle",.06));splash(a,t,.24,.05)}
+function sfxDeny(){const a=ensureAudio();if(!a)return;blip(a,120,a.ac.currentTime,.14,"triangle",.05,84)}
+function sfxClear(){const a=ensureAudio();if(!a)return;const t=a.ac.currentTime;
+  [523,659,784,1047].forEach((f,i)=>blip(a,f,t+i*.09,.26,"sine",.06));blip(a,2093,t+.36,.4,"sine",.025);splash(a,t,.3,.04)}
+function sfxOver(){const a=ensureAudio();if(!a)return;const t=a.ac.currentTime;
+  [330,262,196,147].forEach((f,i)=>blip(a,f,t+i*.17,.34,"triangle",.06));splash(a,t+.5,.4,.035)}
+function sfxUi(){const a=ensureAudio();if(!a)return;blip(a,660,a.ac.currentTime,.06,"sine",.035)}
+function vibe(p){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(p)}catch(_){}}
+
+// ---------- messaging ----------
 function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
-function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={flood:300,clear:520,win:660,bad:150}[kind]||260;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.06,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.16);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.18)}catch(_){}}
 
-function level(){return LEVELS[state.idx]}
-function par(){return level().par}
-function makeGrid(n,colors,seed){const g=new Array(n*n);let s=seed>>>0;for(let i=0;i<n*n;i++){s=(s*1103515245+12345)&0x7fffffff;g[i]=s%colors}return g}
-function cornerRegion(color){const n=state.n,seen=new Set();if(state.grid[0]!==color)return seen;seen.add(0);const stack=[0];while(stack.length){const idx=stack.pop(),r=Math.floor(idx/n),c=idx%n,nb=[];if(r>0)nb.push(idx-n);if(r<n-1)nb.push(idx+n);if(c>0)nb.push(idx-1);if(c<n-1)nb.push(idx+1);for(const j of nb)if(!seen.has(j)&&state.grid[j]===color){seen.add(j);stack.push(j)}}return seen}
-function filledCount(){return cornerRegion(state.grid[0]).size}
+// ---------- juice ----------
+function addShake(mag,dur){if(RM.matches)return;fx.shake={t:dur,dur,mag}}
+function addFloat(x,y,text,color,size){fx.floats.push({x,y,t:0,dur:RM.matches?420:950,text,color:color||"#eaf6ff",size:size||26});if(fx.floats.length>6)fx.floats.shift()}
+function addBanner(text,sub,dur){fx.banner={text,sub:sub||"",t:0,dur:RM.matches?700:dur}}
+function addParts(cells,color){if(RM.matches)return;const cellPx=BS/state.n,take=Math.min(cells.length,26);
+  for(let k=0;k<take;k++){const cell=cells[(Math.random()*cells.length)|0],r=(cell.i/state.n)|0,c=cell.i%state.n;
+    const cx=BX+(c+.5)*cellPx,cy=BY+(r+.5)*cellPx;
+    for(let p=0;p<2;p++){const ang=Math.random()*Math.PI*2,sp=30+Math.random()*90;
+      fx.parts.push({x:cx,y:cy,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-46,t:0,dur:520+Math.random()*320,color,rr:1.4+Math.random()*1.8})}}
+  if(fx.parts.length>170)fx.parts.splice(0,fx.parts.length-170)}
+function addFlips(captured,from,to){const per=RM.matches?0:34,dur=RM.matches?70:230;
+  for(const cell of captured)fx.flips.push({i:cell.i,from,to,delay:cell.d*per,t:0,dur,flash:false})}
+function addRecolorFlash(owned){if(RM.matches)return;for(let i=0;i<owned.length;i++)if(owned[i])fx.flips.push({i,from:-2,to:-2,delay:0,t:0,dur:170,flash:true})}
+function easeOutBack(p){const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(p-1,3)+c1*Math.pow(p-1,2)}
 
-function applyColor(ci){if(state.mode!=="playing")return;if(ci<0||ci>=state.colors)return;const cur=state.grid[0];
-  if(ci===cur){say("Pick a different color to flood.");tone("bad");vibe(4);draw();return}
-  const region=cornerRegion(cur);for(const idx of region)state.grid[idx]=ci;state.moves++;state.flash=1;tone("flood");vibe(8);
-  const filled=cornerRegion(ci).size,total=state.n*state.n;
-  if(filled===total){solveLevel();return}
-  say(Math.round(filled/total*100)+"% flooded · "+state.moves+" move"+(state.moves===1?"":"s")+" (par "+par()+").");update();draw()}
+// ---------- run / basin flow ----------
+function basinSpec(i){return{n:Math.min(14,8+i),colors:i===0?4:(i<=2?5:6),slack:i<=1?3:(i<=4?2:1)}}
+function loadBasin(i){const spec=basinSpec(i);state.basin=i;state.n=spec.n;state.colors=spec.colors;
+  const seed=i===0?BASIN1_SEED:((state.runSeed^Math.imul(i+1,0x9E3779B9))>>>0);
+  state.grid=makeGrid(spec.n,spec.colors,seed);
+  state.par=greedyPar(state.grid,spec.n,spec.colors);
+  state.carryIn=state.carry;state.budget=state.par+spec.slack+state.carry;state.carry=0;
+  state.movesUsed=0;state.movesLeft=state.budget;state.torrentAt=Math.max(8,Math.round(spec.n*spec.n*.12));
+  state.mode="playing";state.clearT=0;fx.flips.length=0;fx.parts.length=0;fx.floats.length=0;fx.banner=null;
+  refreshRegion();computePreviews();
+  if(!RM.matches){const cellsIn=[];for(let idx=0;idx<spec.n*spec.n;idx++){const r=(idx/spec.n)|0,c=idx%spec.n;cellsIn.push({i:idx,d:r+c})}
+    const per=14,dur=180;for(const cell of cellsIn)fx.flips.push({i:cell.i,from:-1,to:state.grid[cell.i],delay:cell.d*per,t:0,dur,flash:false})}
+  say("Basin "+(i+1)+" — "+spec.n+"×"+spec.n+", "+state.budget+" moves"+(state.carryIn?" (+"+state.carryIn+" carried)":"")+". Flood it to one color.");
+  updateHUD();invalidate()}
+function newGame(){state.runSeed=(Math.random()*0x7fffffff)|0;state.score=0;state.streak=1;state.carry=0;state.newBest=false;sfxUi();loadBasin(0)}
+function commitBest(){let changed=false;if(state.score>state.best.score){state.best.score=state.score;state.newBest=true;changed=true}
+  if(state.basin+1>state.best.basin){state.best.basin=state.basin+1;changed=true}
+  saveStats();return changed}
+function clearBasin(){const bonus=150+50*(state.basin+1)+120*state.movesLeft;state.clearBonus=bonus;state.score+=bonus;
+  state.carry=Math.min(2,state.movesLeft);commitBest();
+  state.mode="clearing";state.clearT=0;
+  addBanner("BASIN "+(state.basin+1)+" CLEAR","+"+bonus+" pts"+(state.carry?" · +"+state.carry+" moves carried":""),1400);
+  addShake(5,320);sfxClear();vibe([24,30,24]);
+  say("Basin "+(state.basin+1)+" clear! +"+bonus+" points"+(state.carry?", "+state.carry+" spare move"+(state.carry===1?"":"s")+" carried forward":"")+".");
+  updateHUD();invalidate()}
+function gameOver(){state.mode="gameover";commitBest();
+  addShake(7,420);sfxOver();vibe([40,40,60]);
+  say("Out of moves in basin "+(state.basin+1)+" — final score "+state.score+"."+(state.newBest?" New best!":"")+" Press New Game (N).");
+  updateHUD();invalidate()}
 
-function solveLevel(){const key=String(state.idx),prev=state.best[key];if(prev==null||state.moves<prev)state.best[key]=state.moves;if(!state.solved.includes(state.idx))state.solved.push(state.idx);saveStats();
-  const under=state.moves<=par();
-  if(state.idx<TOTAL-1){state.mode="clear";state.nextAt=state.idx+1;state.clearWait=0;tone("clear");vibe([22,22]);say("Flooded in "+state.moves+" moves"+(under?" — under par!":"")+" Loading level "+(state.idx+2)+"…")}
-  else{state.mode="allclear";tone("win");vibe([30,30,40]);say("Whole catalog flooded — Floodgate complete! Press New Game.")}
-  update();draw()}
+// ---------- moves ----------
+function applyMove(ci){if(state.mode==="clearing"){return}
+  if(state.mode==="gameover"){say("Run over — press New Game (N) to flood again.");return}
+  if(ci<0||ci>=state.colors){say("Only "+state.colors+" colors in this basin.");sfxDeny();return}
+  const cur=state.grid[0];
+  if(ci===cur){say("Already "+NAMES[ci]+" — pick a different color.");sfxDeny();vibe(4);invalidate();return}
+  const info=regionInfo(state.grid,state.n,ci),total=state.n*state.n;
+  state.movesUsed++;state.movesLeft--;
+  const willClear=info.ownedCount+info.gain===total;
+  const torrent=info.gain>=state.torrentAt;
+  if(torrent)state.streak=Math.min(MAXSTREAK,state.streak+1);
+  else if(!willClear)state.streak=1;
+  const pts=info.gain*10*state.streak;state.score+=pts;
+  addRecolorFlash(info.owned);addFlips(info.captured,ci,ci);
+  for(let i=0;i<total;i++)if(info.owned[i])state.grid[i]=ci;
+  for(const cell of info.captured)state.grid[cell.i]=ci;
+  refreshRegion();computePreviews();
+  if(info.captured.length){let sx=0,sy=0;const cellPx=BS/state.n;
+    for(const cell of info.captured){sx+=((cell.i%state.n)+.5);sy+=(((cell.i/state.n)|0)+.5)}
+    const fxX=BX+sx/info.captured.length*cellPx,fxY=BY+sy/info.captured.length*cellPx;
+    if(pts>0)addFloat(fxX,fxY,"+"+pts,BRIGHT[ci],torrent?30:24);
+    addParts(info.captured,PALETTE[ci])}
+  if(torrent){addBanner("TORRENT ×"+state.streak,info.gain+" cells in one flood",900);addShake(3.4,260);sfxTorrent(state.streak);vibe([14,18]);
+    if(!state.sawTorrentTip){state.sawTorrentTip=true;say("Torrent! Captures of "+state.torrentAt+"+ cells raise your streak — points are multiplied ×"+state.streak+".")}
+    else say("Torrent ×"+state.streak+" — "+info.gain+" cells, +"+pts+" points.")}
+  else sfxFlood(info.gain,state.streak);
+  if(willClear){clearBasin();return}
+  if(state.movesLeft<=0){gameOver();return}
+  if(!torrent){
+    if(info.gain===0)say("No new cells captured — streak reset. "+state.movesLeft+" move"+(state.movesLeft===1?"":"s")+" left.");
+    else if(state.movesLeft===1)say("+"+pts+" points. LAST MOVE — make it count.");
+    else say(Math.round(ownedCountCache/total*100)+"% flooded · +"+pts+" pts · "+state.movesLeft+" moves left.")}
+  updateHUD();invalidate()}
 
-function loadLevel(i){state.idx=i;state.n=LEVELS[i].n;state.colors=LEVELS[i].colors;state.grid=makeGrid(state.n,state.colors,LEVELS[i].seed);state.moves=0;state.mode="playing";update();draw()}
-function reset(){loadLevel(state.idx);say("Level "+(state.idx+1)+" reset.");tone("flood")}
-function newGame(){loadLevel(0);say("New run — flood each board to a single color.");tone("flood")}
+// ---------- HUD ----------
+function updateHUD(){els.score.textContent=String(state.score);els.basin.textContent=String(state.basin+1);
+  els.moves.textContent=state.movesLeft+"/"+state.budget;els.streak.textContent="×"+state.streak;
+  els.filled.textContent=Math.round(ownedCountCache/(state.n*state.n)*100)+"%";
+  els.best.textContent=state.best.score>0?String(state.best.score):"—";
+  els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
+  swatchBtns.forEach((btn,i)=>{if(i<state.colors){btn.hidden=false;btn.style.background=PALETTE[i];btn.style.color=TEXTCOL[i];
+      const g=previews[i];btn.firstElementChild.textContent=(i+1)+" "+GLYPHS[i];
+      btn.lastElementChild.textContent=g<0?"—":"+"+g;
+      btn.setAttribute("aria-label",g<0?"Color "+(i+1)+" "+NAMES[i]+", current corner color":"Flood with color "+(i+1)+" "+NAMES[i]+", captures "+g+" cells")}
+    else btn.hidden=true})}
 
-function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.size.textContent=state.n+"×"+state.n;els.moves.textContent=String(state.moves);els.par.textContent=String(par());const total=state.n*state.n;els.filled.textContent=Math.round(filledCount()/total*100)+"%";const b=state.best[String(state.idx)];els.best.textContent=b==null?"—":String(b);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
-  const btns=els.swatches.querySelectorAll(".swatch");btns.forEach((btn,i)=>{if(i<state.colors){btn.hidden=false;btn.style.background=PALETTE[i];btn.style.color=TEXTCOL[i];btn.textContent=(i+1)+" "+GLYPHS[i];btn.setAttribute("aria-label","Flood with color "+(i+1))}else btn.hidden=true})}
-
-function gridRect(){const n=state.n,cell=Math.min((canvas.width-250)/n,(canvas.height-104)/n);return{cell,n,x:46,y:Math.round((canvas.height-cell*n)/2)+8}}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  const g=gridRect(),cell=g.cell,n=g.n,gap=Math.max(1,cell*.04),sz=cell-gap*2;
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Floodgate",30,36);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Pick a color to flood the region from the top-left corner. Fill the board to win.",30,54);
-  ctx.save();ctx.translate(g.x,g.y);
-  const region=cornerRegion(state.grid[0]);
-  ctx.font="700 "+Math.round(cell*.42)+"px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
-  for(let i=0;i<n*n;i++){const r=Math.floor(i/n),c=i%n,ci=state.grid[i],lx=c*cell+gap,ly=r*cell+gap;ctx.fillStyle=PALETTE[ci];roundRect(lx,ly,sz,sz,Math.min(7,cell*.14),true,false);
-    ctx.globalAlpha=.4;ctx.fillStyle=TEXTCOL[ci];ctx.fillText(GLYPHS[ci],lx+sz/2,ly+sz/2+1);ctx.globalAlpha=1}
-  ctx.textAlign="left";ctx.textBaseline="alphabetic";
-  // outline the flooded corner region
-  ctx.strokeStyle="rgba(255,255,255,.85)";ctx.lineWidth=Math.max(2,cell*.06);
-  for(const idx of region){const r=Math.floor(idx/n),c=idx%n,x=c*cell+gap,y=r*cell+gap;if(!region.has(idx-1)||c===0){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+sz);ctx.stroke()}if(!region.has(idx+1)||c===n-1){ctx.beginPath();ctx.moveTo(x+sz,y);ctx.lineTo(x+sz,y+sz);ctx.stroke()}if(!region.has(idx-n)||r===0){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+sz,y);ctx.stroke()}if(!region.has(idx+n)||r===n-1){ctx.beginPath();ctx.moveTo(x,y+sz);ctx.lineTo(x+sz,y+sz);ctx.stroke()}}
+// ---------- drawing ----------
+let BGG=null,VIG=null;
+function bgGrad(){if(!BGG){BGG=ctx.createLinearGradient(0,0,0,540);BGG.addColorStop(0,"#081b2e");BGG.addColorStop(.55,"#071223");BGG.addColorStop(1,"#050a16")}return BGG}
+function vigGrad(){if(!VIG){VIG=ctx.createRadialGradient(480,240,140,480,290,560);VIG.addColorStop(0,"rgba(0,0,0,0)");VIG.addColorStop(1,"rgba(0,0,0,.34)")}return VIG}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function draw(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,960,540);
+  ctx.fillStyle=bgGrad();ctx.fillRect(0,0,960,540);ctx.fillStyle=vigGrad();ctx.fillRect(0,0,960,540);
+  let sx=0,sy=0;if(fx.shake.t>0){const p=fx.shake.t/fx.shake.dur,m=fx.shake.mag*p;sx=Math.sin(state.time*.11)*m;sy=Math.cos(state.time*.137)*m}
+  ctx.save();ctx.translate(sx,sy);
+  drawBoard();drawPanel();drawParts();drawFloats();
   ctx.restore();
-  drawSide(g);
-  if(state.mode==="allclear"){ctx.fillStyle="rgba(3,7,18,.80)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 46px system-ui";ctx.fillText("ALL CLEAR",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
-function drawSide(g){const px=g.x+g.cell*g.n+34;let py=g.y+10;ctx.textAlign="left";
-  const block=(label,val,color)=>{ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,px,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 27px system-ui";ctx.fillText(val,px,py+34);py+=62};
-  block("LEVEL",(state.idx+1)+" / "+TOTAL);
-  block("GRID",state.n+"×"+state.n+" · "+state.colors+"c");
-  const total=state.n*state.n,f=filledCount();
-  block("FLOODED",Math.round(f/total*100)+"%",f===total?"#5eead4":"#7ef9ff");
-  block("MOVES · PAR",state.moves+" · "+par(),state.moves<=par()?"#5eead4":"#fbbf24")}
+  drawBanner();
+  if(state.mode==="gameover")drawGameOver()}
+function drawBoard(){const n=state.n,cell=BS/n,gap=Math.max(1,cell*.05),sz=cell-gap*2,rad=Math.min(7,cell*.16);
+  ctx.fillStyle="rgba(8,17,32,.72)";roundRect(BX-12,BY-12,BS+24,BS+24,14);ctx.fill();
+  ctx.strokeStyle="rgba(94,234,212,.20)";ctx.lineWidth=1.5;roundRect(BX-12,BY-12,BS+24,BS+24,14);ctx.stroke();
+  const flipMap=new Map();for(const f of fx.flips)if(!f.flash)flipMap.set(f.i,f);
+  const flashMap=new Map();for(const f of fx.flips)if(f.flash)flashMap.set(f.i,f);
+  for(let i=0;i<n*n;i++){const r=(i/n)|0,c=i%n,x=BX+c*cell+gap,y=BY+r*cell+gap,ci=state.grid[i],f=flipMap.get(i);
+    if(f){const p=Math.min(1,Math.max(0,(f.t-f.delay)/f.dur));
+      if(p<=0){if(f.from>=0){ctx.fillStyle=PALETTE[f.from];roundRect(x,y,sz,sz,rad);ctx.fill()}continue}
+      if(f.from>=0){ctx.fillStyle=PALETTE[f.from];roundRect(x,y,sz,sz,rad);ctx.fill()}
+      const s=Math.min(1.12,easeOutBack(p)),w=sz*s,off=(sz-w)/2;
+      ctx.fillStyle=PALETTE[f.to>=0?f.to:ci];roundRect(x+off,y+off,w,w,rad);ctx.fill();
+      if(p<.6){ctx.globalAlpha=(0.6-p)*.7;ctx.fillStyle="#ffffff";roundRect(x+off,y+off,w,w,rad);ctx.fill();ctx.globalAlpha=1}
+      continue}
+    ctx.fillStyle=PALETTE[ci];roundRect(x,y,sz,sz,rad);ctx.fill();
+    const fl=flashMap.get(i);
+    if(fl){const p=Math.min(1,fl.t/fl.dur);ctx.globalAlpha=(1-p)*.32;ctx.fillStyle="#ffffff";roundRect(x,y,sz,sz,rad);ctx.fill();ctx.globalAlpha=1}
+    else if(ownedCache&&ownedCache[i]){ctx.globalAlpha=.08;ctx.fillStyle="#ffffff";roundRect(x,y,sz,sz,rad);ctx.fill();ctx.globalAlpha=1}}
+  if(ownedCache&&state.mode!=="clearing"){const pulse=RM.matches?.8:.62+.3*Math.sin(state.time/260);
+    ctx.strokeStyle="rgba(255,255,255,"+pulse.toFixed(3)+")";ctx.lineWidth=Math.max(2,cell*.07);ctx.lineCap="round";
+    for(let i=0;i<n*n;i++){if(!ownedCache[i])continue;const r=(i/n)|0,c=i%n,x=BX+c*cell+gap,y=BY+r*cell+gap;
+      if(c===0||!ownedCache[i-1]){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+sz);ctx.stroke()}
+      if(c===n-1||!ownedCache[i+1]){ctx.beginPath();ctx.moveTo(x+sz,y);ctx.lineTo(x+sz,y+sz);ctx.stroke()}
+      if(r===0||!ownedCache[i-n]){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+sz,y);ctx.stroke()}
+      if(r===n-1||!ownedCache[i+n]){ctx.beginPath();ctx.moveTo(x,y+sz);ctx.lineTo(x+sz,y+sz);ctx.stroke()}}}
+  ctx.strokeStyle="rgba(255,255,255,.9)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(BX+cell/2,BY+cell/2,Math.max(4,cell*.17),0,Math.PI*2);ctx.stroke()}
+function meter(x,y,w,h,frac,color){ctx.fillStyle="rgba(255,255,255,.10)";roundRect(x,y,w,h,h/2);ctx.fill();
+  if(frac>0){ctx.fillStyle=color;roundRect(x,y,Math.max(h,w*Math.min(1,frac)),h,h/2);ctx.fill()}}
+function drawPanel(){const px=584,right=896;
+  ctx.fillStyle="rgba(10,20,36,.62)";roundRect(556,30,368,480,14);ctx.fill();
+  ctx.strokeStyle="rgba(94,234,212,.20)";ctx.lineWidth=1.5;roundRect(556,30,368,480,14);ctx.stroke();
+  ctx.textAlign="left";ctx.textBaseline="alphabetic";
+  ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.fillText("SCORE",px,72);
+  ctx.fillStyle="#f8fbff";ctx.font="950 44px system-ui";ctx.fillText(String(state.score),px,116);
+  ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.fillText("BASIN",px,162);
+  ctx.fillStyle="#dbeafe";ctx.font="900 22px system-ui";ctx.fillText((state.basin+1)+"  ·  "+state.n+"×"+state.n+"  ·  "+state.colors+" COLORS",px,190);
+  ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.fillText("MOVES LEFT",px,236);
+  const frac=state.movesLeft/Math.max(1,state.budget),mcol=frac>.42?"#34d9c3":(frac>.2?"#fbbf24":"#fb7185");
+  ctx.fillStyle=mcol;ctx.font="950 26px system-ui";ctx.textAlign="right";ctx.fillText(state.movesLeft+" / "+state.budget,right,238);ctx.textAlign="left";
+  meter(px,248,right-px,16,frac,mcol);
+  ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.fillText("TORRENT STREAK",px,300);
+  for(let i=0;i<MAXSTREAK;i++){const cxp=px+10+i*30;ctx.beginPath();ctx.arc(cxp,320,9,0,Math.PI*2);
+    if(i<state.streak){ctx.fillStyle=i>=3?"#fbbf24":"#34d9c3";ctx.fill()}else{ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=2;ctx.stroke()}}
+  ctx.fillStyle="#f8fbff";ctx.font="950 24px system-ui";ctx.textAlign="right";ctx.fillText("×"+state.streak,right,330);ctx.textAlign="left";
+  const total=state.n*state.n,pct=ownedCountCache/total;
+  ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.fillText("FLOODED",px,376);
+  ctx.fillStyle=pct>=1?"#34d9c3":"#7ef9ff";ctx.font="950 26px system-ui";ctx.textAlign="right";ctx.fillText(Math.round(pct*100)+"%",right,378);ctx.textAlign="left";
+  meter(px,388,right-px,16,pct,"#22d3ee");
+  ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+  ctx.fillText("Torrent: capture "+state.torrentAt+"+ cells in one flood",px,438);
+  ctx.fillText("to raise the streak. Small floods reset it.",px,458);
+  ctx.fillStyle="#7dd3fc";ctx.font="900 13px system-ui";ctx.fillText("BEST "+(state.best.score>0?state.best.score+" · BASIN "+state.best.basin:"—"),px,492)}
+function drawParts(){for(const p of fx.parts){const a=1-p.t/p.dur;if(a<=0)continue;ctx.globalAlpha=a*.9;ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.rr,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1}
+function drawFloats(){ctx.textAlign="center";for(const f of fx.floats){const p=f.t/f.dur,a=p<.75?1:1-(p-.75)/.25;
+    ctx.globalAlpha=Math.max(0,a);ctx.fillStyle=f.color;ctx.font="950 "+f.size+"px system-ui";
+    ctx.fillText(f.text,f.x,f.y-p*34)}ctx.globalAlpha=1;ctx.textAlign="left"}
+function drawBanner(){const b=fx.banner;if(!b)return;const p=b.t/b.dur;if(p>=1)return;
+  const inP=Math.min(1,b.t/150),outA=p>.8?1-(p-.8)/.2:1,s=RM.matches?1:.85+.15*easeOutBack(inP);
+  ctx.save();ctx.globalAlpha=Math.max(0,outA);ctx.translate(480,208);ctx.scale(s,s);
+  ctx.fillStyle="rgba(4,10,22,.86)";roundRect(-250,-52,500,104,16);ctx.fill();
+  ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;roundRect(-250,-52,500,104,16);ctx.stroke();
+  ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 36px system-ui";ctx.fillText(b.text,0,-4);
+  ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(b.sub,0,30);
+  ctx.restore();ctx.textAlign="left"}
+function drawGameOver(){ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,960,540);
+  ctx.textAlign="center";
+  ctx.fillStyle="#fb7185";ctx.font="950 52px system-ui";ctx.fillText("OUT OF MOVES",480,196);
+  ctx.fillStyle="#f8fbff";ctx.font="950 30px system-ui";ctx.fillText("Score "+state.score+"  ·  Basin "+(state.basin+1),480,252);
+  if(state.newBest){ctx.fillStyle="#fbbf24";ctx.font="950 26px system-ui";ctx.fillText("NEW BEST!",480,296)}
+  else{ctx.fillStyle="#9fb3c8";ctx.font="800 20px system-ui";ctx.fillText("Best "+state.best.score+" · basin "+state.best.basin,480,294)}
+  ctx.fillStyle="#7dd3fc";ctx.font="900 18px system-ui";ctx.fillText("Press New Game (N) or tap the board to flood again",480,344);
+  ctx.textAlign="left"}
 
-function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/220);if(state.mode==="clear"&&state.nextAt!=null){state.clearWait+=dt;if(state.clearWait>=620){const ni=state.nextAt;state.nextAt=null;loadLevel(ni);say("Level "+(ni+1)+" — flood the "+LEVELS[ni].n+"×"+LEVELS[ni].n+" board.")}}draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){const total=state.n*state.n;return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,size:state.n,colors:state.colors,moves:state.moves,par:par(),filled:filledCount(),cells:total,cornerColor:state.grid[0],best:state.best[String(state.idx)]??null,solved:state.solved.length,sound:state.sound,feedback:state.feedback,board:state.grid.slice(),coordinateSystem:"grid is row-major length size*size of color indices 0.."+(state.colors-1)+"; flood region starts at index 0 (top-left); win when all one color"})};
+// ---------- simulation clock ----------
+function tick(dt){state.time+=dt;
+  for(const f of fx.flips)f.t+=dt;
+  for(let i=fx.flips.length-1;i>=0;i--){const f=fx.flips[i];if(f.t-f.delay>=f.dur)fx.flips.splice(i,1)}
+  for(const p of fx.parts){p.t+=dt;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=190*dt/1000}
+  for(let i=fx.parts.length-1;i>=0;i--)if(fx.parts[i].t>=fx.parts[i].dur)fx.parts.splice(i,1);
+  for(const f of fx.floats)f.t+=dt;
+  for(let i=fx.floats.length-1;i>=0;i--)if(fx.floats[i].t>=fx.floats[i].dur)fx.floats.splice(i,1);
+  if(fx.banner){fx.banner.t+=dt;if(fx.banner.t>=fx.banner.dur)fx.banner=null}
+  if(fx.shake.t>0)fx.shake.t=Math.max(0,fx.shake.t-dt);
+  if(state.mode==="clearing"){state.clearT+=dt;if(state.clearT>=1150)loadBasin(state.basin+1)}}
+function needsFrame(){return fx.flips.length>0||fx.parts.length>0||fx.floats.length>0||!!fx.banner||fx.shake.t>0||state.mode==="clearing"}
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if([" "].includes(k))e.preventDefault();
-  if(k>="1"&&k<="6")applyColor(Number(k)-1);else if(k==="n")newGame();else if(k==="r")reset()});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=gridRect(),c=Math.floor((px-g.x)/g.cell),r=Math.floor((py-g.y)/g.cell);if(c>=0&&r>=0&&c<g.n&&r<g.n)applyColor(state.grid[r*g.n+c])});
+// ---------- diagnostics ----------
+window.advanceTime=ms=>{const total=Math.max(1,Math.ceil(ms)),steps=Math.max(1,Math.ceil(total/40));
+  for(let i=0;i<steps;i++)tick(total/steps);
+  updateHUD();draw();return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){const total=state.n*state.n;
+  return JSON.stringify({mode:state.mode,basin:state.basin+1,size:state.n,colors:state.colors,score:state.score,streak:state.streak,
+    torrentAt:state.torrentAt,movesUsed:state.movesUsed,movesLeft:state.movesLeft,budget:state.budget,par:state.par,
+    filled:ownedCountCache,cells:total,cornerColor:state.grid[0],previewGains:previews.slice(0,state.colors),
+    best:{score:state.best.score,basin:state.best.basin},newBest:state.newBest,sound:state.sound,reducedMotion:!!RM.matches,
+    feedback:state.feedback,effects:{flipCount:fx.flips.length,particleCount:fx.parts.length,floatCount:fx.floats.length,bannerActive:!!fx.banner,shakeLeft:Math.round(fx.shake.t)},
+    board:state.grid.slice(),
+    coordinateSystem:"board is row-major length size*size of color indices 0..colors-1; the flood region grows from index 0 (top-left); flood by choosing a color index; win the basin when all cells match before movesLeft hits 0"})};
+
+// ---------- frame loop (gated: sleeps when nothing animates) ----------
+let last=0,rafOn=false;
+function frame(now){if(document.hidden){rafOn=false;return}
+  const dt=Math.min(80,now-last);last=now;tick(dt);draw();
+  if(needsFrame())requestAnimationFrame(frame);else rafOn=false}
+function wake(){if(rafOn||!needsFrame()||document.hidden)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+function invalidate(){draw();wake()}
+
+// ---------- input ----------
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+  const k=e.key;if(k===" ")e.preventDefault();
+  if(k>="1"&&k<="6")applyMove(Number(k)-1);
+  else if(k==="n"||k==="N"||k==="r"||k==="R")newGame();
+  else if(k==="Enter"&&state.mode==="gameover")newGame();
+  else if(k==="m"||k==="M"){toggleSound()}});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();
+  if(state.mode==="gameover"){newGame();return}
+  if(state.mode==="clearing"){state.clearT=1150;tick(0);updateHUD();invalidate();return}
+  const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*960,py=(e.clientY-b.top)/b.height*540;
+  const cell=BS/state.n,c=Math.floor((px-BX)/cell),r=Math.floor((py-BY)/cell);
+  if(c>=0&&r>=0&&c<state.n&&r<state.n)applyMove(state.grid[r*state.n+c])});
+function toggleSound(){state.sound=!state.sound;saveSound();
+  try{if(AC){if(state.sound)AC.resume().catch(()=>{});else AC.suspend().catch(()=>{})}}catch(_){}
+  updateHUD();say(state.sound?"Sound enabled.":"Sound muted.");if(state.sound)sfxUi()}
 els.neww.addEventListener("click",newGame);
-els.reset.addEventListener("click",reset);
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("flood")});
-els.swatches.querySelectorAll(".swatch").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();applyColor(Number(btn.dataset.color))}));
-loadLevel(0);
-let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flash>0||(state.mode==="clear"&&state.nextAt!=null)}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
-function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+els.sound.addEventListener("click",toggleSound);
+swatchBtns.forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();applyMove(Number(btn.dataset.color))}));
 addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
-if(needsFrame())wake();
+document.addEventListener("visibilitychange",()=>{try{if(document.hidden){if(AC)AC.suspend().catch(()=>{})}
+  else{if(AC&&state.sound)AC.resume().catch(()=>{});wake()}}catch(_){}});
+if(RM&&typeof RM.addEventListener==="function")RM.addEventListener("change",()=>{updateHUD();invalidate()});
+
+// ---------- boot ----------
+state.runSeed=(Math.random()*0x7fffffff)|0;
+loadBasin(0);
 })();
 </script>
 </body>
