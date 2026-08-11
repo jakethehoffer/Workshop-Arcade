@@ -82,7 +82,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 .touch{display:grid;grid-template-columns:repeat(4,minmax(0,116px));justify-content:center;gap:7px}.touch button{min-height:46px;padding:8px}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:44px}}
-@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(3,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(4,minmax(0,1fr))}.touch button{font-size:10px}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -90,127 +90,424 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Pylon Shift tower-of-Hanoi puzzle">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Pylon Shift</span></div>
-    <div class="help">Tap a pylon to lift its top disc, then tap another to drop it — never onto a smaller disc. Rebuild the whole stack on pylon 3. Keys 1–3 (or arrows + Enter) move discs, R resets, N restarts.</div>
+    <div class="help">Tap a pylon to lift its top disc, then tap another to drop it — never onto a smaller disc. Rebuild the whole stack on pylon 3. Chain optimal moves for combo points. Keys 1–3 (or arrows + Enter) move discs, U undo, H hint, R reset, N new run.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Level</span><span class="value" id="levelValue">1/5</span></div>
-    <div class="pill"><span class="label">Discs</span><span class="value" id="discsValue">3</span></div>
     <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
     <div class="pill"><span class="label">Par</span><span class="value" id="parValue">7</span></div>
+    <div class="pill"><span class="label">Combo</span><span class="value" id="comboValue">—</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
-    <div class="pill"><span class="label">Solved</span><span class="value" id="solvedValue">0/5</span></div>
   </section>
   <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Pylon Shift board with three pylons. Move the stack of discs onto the third pylon without ever placing a larger disc on a smaller one."></canvas></div>
-  <div class="status" id="statusLine" aria-live="polite">Move the glowing stack to pylon 3, one disc at a time. Never set a larger disc on a smaller one.</div>
+  <div class="status" id="statusLine" aria-live="polite">Move the glowing stack to pylon 3. Chain optimal moves to build your combo.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Pylon Shift ready.</div>
   <section class="bar" aria-label="Actions">
-    <button class="btn primary" id="newBtn" type="button">New Game</button>
+    <button class="btn primary" id="newBtn" type="button">New Run</button>
     <button class="btn" id="resetBtn" type="button">Reset Level</button>
+    <button class="btn" id="hintBtn" type="button">Hint −75</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
   </section>
   <section class="touch" aria-label="Touch controls">
     <button type="button" data-peg="0">Pylon 1</button>
     <button type="button" data-peg="1">Pylon 2</button>
     <button type="button" data-peg="2">Pylon 3</button>
-    <button type="button" data-key="r">Reset</button>
+    <button type="button" id="undoBtn">Undo</button>
   </section>
 </main>
 <script>
 (() => {
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const STATS_KEY="pylon-shift.stats.v1",SOUND_KEY="pylon-shift.sound.v1";
-const LEVELS=[3,4,5,6,7];
-const TOTAL=LEVELS.length,TARGET=2;
-// Per-disc neon gradient, indexed by size.
+const STATS_KEY="pylon-shift.stats.v2",SOUND_KEY="pylon-shift.sound.v1";
+const LEVELS=[3,4,5,6,7],TOTAL=LEVELS.length,TARGET=2;
+const PEGX=[200,480,760],BASEY=452,POLETOP=128,DISKH=30,HOVERY=94;
 const DCOL=[["#ff9a9a","#ff5d5d"],["#ffe08a","#ffc233"],["#7defc0","#06d6a0"],["#8af0ff","#22d3ee"],["#9aa2ff","#6366f1"],["#ffa6dd","#f472b6"],["#c4b5fd","#a78bfa"]];
+const RMQ=typeof matchMedia==="function"?matchMedia("(prefers-reduced-motion: reduce)"):null;
+const reduced=()=>!!(RMQ&&RMQ.matches);
+let rngS=0x9e3779b9;const rnd=()=>{rngS=(rngS*1103515245+12345)>>>0;return rngS/4294967296};
 const $=id=>document.getElementById(id);
-const els={level:$("levelValue"),discs:$("discsValue"),moves:$("movesValue"),par:$("parValue"),best:$("bestValue"),solved:$("solvedValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn")};
-const saved=readStats();
-const state={idx:0,discs:3,pegs:[[],[],[]],source:null,cursor:0,moves:0,mode:"playing",best:saved.best,sound:readSound(),feedback:"Move the glowing stack to pylon 3, one disc at a time.",time:0,flash:0,nextAt:null,clearWait:0};
-let audio=null;
+const els={level:$("levelValue"),moves:$("movesValue"),par:$("parValue"),combo:$("comboValue"),score:$("scoreValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn")};
 
+// ---------- storage (all reads guarded; garbage-tolerant) ----------
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object"&&v.best&&typeof v.best==="object")return{best:v.best}}catch(_){}return{best:{}}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best}))}catch(_){}}
+function readStats(){const out={score:0,moves:{},stars:{}};
+  try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));
+    if(v&&typeof v==="object"&&!Array.isArray(v)){
+      const s=Number(v.score);if(Number.isFinite(s)&&s>0)out.score=Math.floor(s);
+      if(v.moves&&typeof v.moves==="object"&&!Array.isArray(v.moves))for(const k of Object.keys(v.moves)){const n=Number(v.moves[k]);if(/^[0-4]$/.test(k)&&Number.isFinite(n)&&n>0)out.moves[k]=Math.floor(n)}
+      if(v.stars&&typeof v.stars==="object"&&!Array.isArray(v.stars))for(const k of Object.keys(v.stars)){const n=Number(v.stars[k]);if(/^[0-4]$/.test(k)&&Number.isFinite(n)&&n>=1)out.stars[k]=Math.min(3,Math.floor(n))}
+    }}catch(_){}
+  return out}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify(state.best))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+
+// ---------- state ----------
+const state={idx:0,discs:3,pegs:[[],[],[]],selected:null,cursor:0,moves:0,mode:"playing",
+  score:0,levelStartScore:0,combo:0,comboAt:-9999,bestComboRun:0,runStars:[],totalMoves:0,
+  hinted:false,hintsUsed:0,undosUsed:0,history:[],hint:null,newBest:false,touched:false,
+  time:0,flight:null,particles:[],confetti:[],shake:0,squash:null,illegalFlash:null,flashRing:null,
+  bobStart:-9999,clearWait:0,nextAt:null,banner:null,bannerT:1,
+  best:readStats(),sound:readSound(),feedback:"Move the glowing stack to pylon 3.",lastMove:""};
+
 function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={pick:320,place:300,clear:520,win:660,bad:140}[kind]||260;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
 
-function par(){return (1<<state.discs)-1}
-function solvedCount(){return Object.keys(state.best).length}
+// ---------- audio (lazy, toggle-aware, suspended when hidden) ----------
+let audio=null,master=null;
+function ac(){if(!state.sound)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+  try{if(!audio){audio=new AC();master=audio.createGain();master.gain.value=.5;master.connect(audio.destination)}
+    if(audio.state==="suspended")audio.resume().catch(()=>{});return audio}catch(_){return null}}
+function beep(a,t0,freq,dur,type,vol,slideTo){const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(freq,t0);
+  if(slideTo)o.frequency.exponentialRampToValueAtTime(Math.max(20,slideTo),t0+dur);
+  g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+.012);g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+  o.connect(g);g.connect(master);o.start(t0);o.stop(t0+dur+.02)}
+const PENTA=[523,587,659,784,880,1046,1175,1318];
+function tone(kind,arg){const a=ac();if(!a)return;try{const now=a.currentTime;
+  if(kind==="pick")beep(a,now,360-(arg||1)*20,.09,"triangle",.08);
+  else if(kind==="place"){beep(a,now,250-(arg||1)*14,.12,"triangle",.1);beep(a,now,1300,.03,"square",.02)}
+  else if(kind==="spark")beep(a,now+.03,PENTA[Math.min((arg||1)-1,7)],.1,"sine",.06);
+  else if(kind==="bad")beep(a,now,120,.16,"sawtooth",.055,70);
+  else if(kind==="undo")beep(a,now,520,.13,"triangle",.06,300);
+  else if(kind==="hint"){beep(a,now,880,.07,"sine",.05);beep(a,now+.08,660,.09,"sine",.05)}
+  else if(kind==="ui")beep(a,now,320,.07,"triangle",.06);
+  else if(kind==="clear"){[523,659,784,1046].forEach((f,i)=>beep(a,now+i*.09,f,.16,"triangle",.07))}
+  else if(kind==="win"){[523,659,784,1046,1318].forEach((f,i)=>beep(a,now+i*.11,f,.2,"triangle",.08));beep(a,now+.62,1568,.34,"sine",.06)}
+}catch(_){}}
+document.addEventListener("visibilitychange",()=>{try{if(document.hidden){if(audio)audio.suspend().catch(()=>{})}else if(state.sound&&audio)audio.resume().catch(()=>{})}catch(_){}});
+
+// ---------- rules & solver ----------
+function par(){return(1<<state.discs)-1}
 function topOf(p){const s=state.pegs[p];return s.length?s[s.length-1]:Infinity}
+function locate(){const loc=[];for(let p=0;p<3;p++)for(const s of state.pegs[p])loc[s]=p;return loc}
+function bestMove(){const loc=locate();
+  function go(n,target){if(n===0)return null;const p=loc[n];if(p===target)return go(n-1,target);
+    const other=3-p-target;return go(n-1,other)||{disc:n,from:p,to:target}}
+  return go(state.discs,TARGET)}
+function movesLeft(){const loc=locate();let left=0,target=TARGET;
+  for(let n=state.discs;n>=1;n--){const p=loc[n];if(p===target)continue;left+=1<<(n-1);target=3-p-target}
+  return left}
 
-function loadLevel(i){state.idx=i;state.discs=LEVELS[i];const start=[];for(let d=state.discs;d>=1;d--)start.push(d);state.pegs=[start,[],[]];state.source=null;state.cursor=0;state.moves=0;state.mode="playing";state.nextAt=null;state.clearWait=0;update();draw()}
-function newGame(){loadLevel(0);say("New run — rebuild each stack on pylon 3.");tone("pick")}
-function reset(){loadLevel(state.idx);say("Level "+(state.idx+1)+" reset.");tone("pick")}
-function moveCursor(d){state.cursor=Math.max(0,Math.min(2,state.cursor+d));draw()}
+// ---------- geometry helpers ----------
+function discW(size){return 64+(size-1)/Math.max(1,state.discs-1)*176}
+function stackY(p,j){return BASEY-DISKH/2-j*DISKH-6}
+function landYFor(p){return stackY(p,state.pegs[p].length-1)}
 
-function tapPeg(p){if(state.mode!=="playing")return;state.cursor=p;
-  if(state.source===null){
-    if(state.pegs[p].length===0){say("Pylon "+(p+1)+" is empty — pick a pylon with discs.");tone("bad");draw();return}
-    state.source=p;state.flash=1;tone("pick");vibe(8);say("Lifted disc "+topOf(p)+" from pylon "+(p+1)+". Choose a destination.");update();draw();return}
-  if(p===state.source){state.source=null;say("Disc set back down.");tone("pick");update();draw();return}
-  const disk=topOf(state.source),dest=topOf(p);
-  if(disk<dest){
-    state.pegs[p].push(state.pegs[state.source].pop());state.source=null;state.moves++;state.flash=1;tone("place");vibe(10);
-    if(p===TARGET&&state.pegs[TARGET].length===state.discs){solveLevel();return}
-    say("Disc "+disk+" to pylon "+(p+1)+". "+state.moves+" move"+(state.moves===1?"":"s")+" (par "+par()+").");update();draw()}
-  else{tone("bad");vibe([12,12]);say("Can't rest disc "+disk+" on the smaller disc "+dest+". Pick another pylon.");update();draw()}}
+// ---------- flights & fx ----------
+function finishFlight(){const f=state.flight;if(!f)return;state.flight=null;
+  if(f.kind==="move"){state.squash={peg:f.to,t:150};
+    if(!reduced()){spawnSparks(f.toX,f.landY,f.size);if(f.size>=5)state.shake=Math.max(state.shake,4)}}}
+function startFlight(kind,from,to,size){if(reduced()){state.flight=null;return}
+  finishFlight();
+  const f={kind,size,t:0,dur:kind==="move"?240:130,from,to,fromX:PEGX[from],toX:PEGX[to],landY:kind==="move"?landYFor(to):0};
+  state.flight=f}
+function spawnSparks(x,y,size){const c=DCOL[(size-1)%DCOL.length];
+  for(let i=0;i<12;i++){const a=rnd()*Math.PI-Math.PI,sp=.6+rnd()*1.7;
+    state.particles.push({x:x+(rnd()-.5)*discW(size)*.7,y:y-8,vx:Math.cos(a)*sp,vy:-Math.abs(Math.sin(a))*sp-.6,life:420+rnd()*220,age:0,r:1.5+rnd()*2,col:i%3===0?"#5eead4":c[i%2]})}
+  if(state.particles.length>140)state.particles.splice(0,state.particles.length-140)}
+function spawnConfetti(){if(reduced())return;
+  for(let i=0;i<90;i++)state.confetti.push({x:PEGX[TARGET]+(rnd()-.5)*260,y:POLETOP-10+(rnd()-.5)*40,vx:(rnd()-.5)*3.4,vy:-1.5-rnd()*2.6,rot:rnd()*Math.PI,vr:(rnd()-.5)*.24,life:1900+rnd()*600,age:0,w:5+rnd()*4,h:3+rnd()*3,col:DCOL[i%DCOL.length][0]})}
 
-function solveLevel(){const key=String(state.idx),prev=state.best[key];if(prev==null||state.moves<prev){state.best[key]=state.moves;saveStats()}
-  if(state.idx<TOTAL-1){state.mode="clear";state.nextAt=state.idx+1;state.clearWait=0;tone("clear");vibe([22,22]);say("Pylon 3 rebuilt in "+state.moves+" move"+(state.moves===1?"":"s")+"! Loading level "+(state.idx+2)+"…");update();draw()}
-  else{state.mode="allclear";tone("win");vibe([30,30,40]);say("Every stack rebuilt — Pylon Shift complete! Press New Game.");update();draw()}}
+// ---------- level flow ----------
+function loadLevel(i){state.idx=i;state.discs=LEVELS[i];const start=[];for(let d=state.discs;d>=1;d--)start.push(d);
+  state.pegs=[start,[],[]];state.selected=null;state.cursor=0;state.moves=0;state.mode="playing";
+  state.history=[];state.hinted=false;state.hint=null;state.flight=null;state.particles=[];state.confetti=[];
+  state.shake=0;state.squash=null;state.illegalFlash=null;state.flashRing=null;state.clearWait=0;state.nextAt=null;state.banner=null;
+  state.levelStartScore=state.score;gradCache.clear();update();draw()}
+function persistRunEnd(){if(state.score>state.best.score){state.best.score=state.score;state.newBest=true}saveStats()}
+function newGame(){persistRunEnd();state.score=0;state.totalMoves=0;state.runStars=[];state.hintsUsed=0;state.undosUsed=0;
+  state.combo=0;state.bestComboRun=0;state.newBest=false;loadLevel(0);
+  say("New run — rebuild each stack on pylon 3. Optimal moves build your combo.");tone("ui")}
+function reset(){state.score=state.levelStartScore;state.combo=0;loadLevel(state.idx);
+  say("Level "+(state.idx+1)+" reset — score rolled back to the level start.");tone("ui")}
+function skipClear(){if(state.nextAt==null)return;const ni=state.nextAt;state.nextAt=null;loadLevel(ni);
+  say("Level "+(ni+1)+" — "+state.discs+" discs. Par "+par()+" moves.")}
+function starsFor(moves,p){let s=moves<=p?3:(moves<=Math.floor(p*1.4)?2:1);if(state.hinted)s=Math.min(s,2);return s}
+function solveLevel(){const p=par(),stars=starsFor(state.moves,p);state.totalMoves+=state.moves;
+  let bonus=100*state.discs,tag="CLEAR";
+  if(state.moves<=p){bonus+=150*state.discs;tag="PERFECT"}
+  else if(state.moves<=Math.floor(p*1.4)){bonus+=50*state.discs;tag="SHARP"}
+  state.score+=bonus;state.runStars[state.idx]=stars;
+  const key=String(state.idx),bm=state.best.moves[key];
+  if(bm==null||state.moves<bm)state.best.moves[key]=state.moves;
+  const bs=state.best.stars[key];if(bs==null||stars>bs)state.best.stars[key]=stars;
+  persistRunEnd();update();
+  if(state.idx<TOTAL-1){state.mode="clear";state.nextAt=state.idx+1;state.clearWait=0;
+    state.banner={stars,moves:state.moves,par:p,bonus,tag};
+    spawnConfetti();tone("clear");vibe([22,22]);
+    say("Level "+(state.idx+1)+" clear in "+state.moves+" moves (par "+p+") — "+"★".repeat(stars)+". +"+bonus+" "+tag+".");draw()}
+  else{state.mode="allclear";state.bannerT=reduced()?1:0;spawnConfetti();tone("win");vibe([30,30,40]);
+    say("Every stack rebuilt! Final score "+state.score+(state.newBest?" — new best!":"")+" Press N or New Run.");draw()}}
 
-function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.discs.textContent=String(state.discs);els.moves.textContent=String(state.moves);els.par.textContent=String(par());const b=state.best[String(state.idx)];els.best.textContent=b==null?"—":String(b);els.solved.textContent=solvedCount()+"/"+TOTAL;els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+// ---------- actions ----------
+function tapPeg(p){state.touched=true;
+  if(state.mode==="clear"){skipClear();return}
+  if(state.mode!=="playing")return;
+  state.cursor=p;finishFlight();
+  if(state.selected===null){
+    if(state.pegs[p].length===0){say("Pylon "+(p+1)+" is empty — pick a pylon with discs.");tone("bad");state.lastMove="empty";draw();return}
+    state.selected=p;state.bobStart=state.time;startFlight("lift",p,p,topOf(p));
+    tone("pick",topOf(p));vibe(8);state.lastMove="lift "+(p+1);
+    say("Lifted disc "+topOf(p)+" from pylon "+(p+1)+". Drop it on a larger disc or an empty pylon.");update();draw();return}
+  if(p===state.selected){const s=topOf(p);state.selected=null;startFlight("setdown",p,p,s);
+    state.lastMove="setdown";say("Disc set back down.");tone("pick",s);update();draw();return}
+  const disc=topOf(state.selected),dest=topOf(p);
+  if(disc<dest)doMove(state.selected,p);
+  else{tone("bad");vibe([12,12]);state.illegalFlash={peg:p,t:240};if(!reduced())state.shake=Math.max(state.shake,3);
+    state.lastMove="blocked";say("Can't rest disc "+disc+" on the smaller disc "+dest+". Pick another pylon.");draw()}}
+function doMove(from,to){const opt=bestMove(),isOpt=!!(opt&&opt.from===from&&opt.to===to);
+  const size=state.pegs[from].pop();state.pegs[to].push(size);
+  state.selected=null;state.moves++;state.hint=null;
+  let gained;
+  if(isOpt){state.combo++;state.comboAt=state.time;if(state.combo>state.bestComboRun)state.bestComboRun=state.combo;
+    gained=25*Math.min(state.combo,8);if(!reduced())state.flashRing={peg:to,t:380}}
+  else{state.combo=0;gained=5}
+  state.score+=gained;state.history.push({from,to,gained});
+  startFlight("move",from,to,size);tone("place",size);if(isOpt)tone("spark",state.combo);vibe(10);
+  state.lastMove=(from+1)+"→"+(to+1)+(isOpt?" optimal":"");
+  if(to===TARGET&&state.pegs[TARGET].length===state.discs){update();solveLevel();return}
+  if(isOpt&&state.combo>=2)say("Optimal! Combo ×"+state.combo+" +"+gained+" — "+movesLeft()+" perfect moves left.");
+  else if(isOpt)say("Optimal move +"+gained+". Keep the chain going.");
+  else say("Legal but off the perfect line (+5) — combo reset. Par "+par()+".");
+  update();draw()}
+function undo(){if(state.mode!=="playing")return;
+  if(!state.history.length){say("Nothing to undo yet.");tone("bad");return}
+  finishFlight();state.selected=null;
+  const h=state.history.pop();state.pegs[h.from].push(state.pegs[h.to].pop());
+  state.moves=Math.max(0,state.moves-1);state.score=Math.max(0,state.score-h.gained-10);
+  state.combo=0;state.undosUsed++;state.hint=null;state.lastMove="undo";
+  tone("undo");say("Undo — move refunded, −"+(h.gained+10)+" pts, combo reset.");update();draw()}
+function hintAct(){if(state.mode!=="playing")return;
+  const opt=bestMove();if(!opt){say("The stack is already home.");return}
+  state.hinted=true;state.hintsUsed++;state.score=Math.max(0,state.score-75);
+  state.hint={from:opt.from,to:opt.to,ttl:2600};state.lastMove="hint";
+  tone("hint");say("Hint: pylon "+(opt.from+1)+" → pylon "+(opt.to+1)+" (−75 pts, level capped at ★★).");update();draw()}
 
-const PEGX=[200,480,760],BASEY=452,POLETOP=128,DISKH=30;
-function diskW(size){return 70+(size-1)/Math.max(1,state.discs-1)*160}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function drawDisc(cx,cy,size,glow){const w=diskW(size),x=cx-w/2,y=cy-DISKH/2,c=DCOL[(size-1)%DCOL.length];const g=ctx.createLinearGradient(x,y,x,y+DISKH);g.addColorStop(0,c[0]);g.addColorStop(1,c[1]);ctx.fillStyle=g;if(glow){ctx.shadowColor="rgba(94,234,212,.7)";ctx.shadowBlur=22}roundRect(x,y,w,DISKH-4,9,true,false);ctx.shadowBlur=0;ctx.strokeStyle="rgba(255,255,255,.32)";ctx.lineWidth=2;roundRect(x+.5,y+.5,w-1,DISKH-5,9,false,true);ctx.fillStyle="rgba(6,18,30,.85)";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText(String(size),cx,y+DISKH/2+1)}
+function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.moves.textContent=String(state.moves);
+  els.par.textContent=String(par());els.combo.textContent=state.combo>0?"×"+state.combo:"—";
+  els.score.textContent=String(state.score);els.best.textContent=state.best.score>0?String(state.best.score):"—";
+  els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
 
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Pylon Shift",30,40);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Lift the top disc of a pylon, then drop it on a larger disc or an empty pylon. Rebuild the stack on pylon 3.",30,58);
-  // base platform
-  ctx.fillStyle="#0c1a2c";roundRect(120,BASEY+6,720,16,7,true,false);ctx.strokeStyle="rgba(94,234,212,.2)";ctx.lineWidth=2;roundRect(120,BASEY+6,720,16,7,false,true);
+// ---------- rendering ----------
+let bgCanvas=null;
+function buildBg(){bgCanvas=document.createElement("canvas");bgCanvas.width=canvas.width;bgCanvas.height=canvas.height;
+  const b=bgCanvas.getContext("2d");
+  const bg=b.createLinearGradient(0,0,0,540);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");b.fillStyle=bg;b.fillRect(0,0,960,540);
+  let g=b.createRadialGradient(150,80,10,150,80,280);g.addColorStop(0,"rgba(45,212,191,.12)");g.addColorStop(1,"rgba(45,212,191,0)");b.fillStyle=g;b.fillRect(0,0,960,360);
+  g=b.createRadialGradient(830,60,10,830,60,280);g.addColorStop(0,"rgba(99,102,241,.12)");g.addColorStop(1,"rgba(99,102,241,0)");b.fillStyle=g;b.fillRect(500,0,460,340);
+  g=b.createRadialGradient(PEGX[TARGET],BASEY,20,PEGX[TARGET],BASEY,190);g.addColorStop(0,"rgba(94,234,212,.14)");g.addColorStop(1,"rgba(94,234,212,0)");b.fillStyle=g;b.fillRect(PEGX[TARGET]-190,BASEY-190,380,200);
+  let s=0x2f6e2b1;const r=()=>{s=(s*1103515245+12345)>>>0;return s/4294967296};
+  for(let i=0;i<56;i++){b.globalAlpha=.08+r()*.2;b.fillStyle=i%2?"#7dd3fc":"#5eead4";const x=r()*960,y=r()*300;b.beginPath();b.arc(x,y,.8+r()*1.1,0,7);b.fill()}
+  b.globalAlpha=1;
+  b.fillStyle="#0c1a2c";rr(b,110,BASEY+6,740,18,8);b.fill();b.strokeStyle="rgba(94,234,212,.25)";b.lineWidth=2;rr(b,110,BASEY+6,740,18,8);b.stroke();
+  b.fillStyle="rgba(94,234,212,.10)";b.fillRect(118,BASEY+8,724,2);
   for(let p=0;p<3;p++){const cx=PEGX[p];
-    // goal highlight on target pylon
-    if(p===TARGET){ctx.fillStyle="rgba(94,234,212,.06)";roundRect(cx-130,POLETOP-20,260,BASEY-POLETOP+30,12,true,false)}
-    // cursor highlight
-    if(p===state.cursor&&state.mode==="playing"){ctx.strokeStyle=state.source===p?"#f8fafc":"rgba(94,234,212,.55)";ctx.lineWidth=3;roundRect(cx-128,POLETOP-18,256,BASEY-POLETOP+28,12,false,true)}
-    // pole
-    ctx.fillStyle="#15314a";roundRect(cx-5,POLETOP,10,BASEY-POLETOP,5,true,false);
-    // discs
-    const stack=state.pegs[p],lifted=(state.source===p);
-    const drawCount=lifted?stack.length-1:stack.length;
-    for(let j=0;j<drawCount;j++){const cy=BASEY-DISKH/2-j*DISKH-6;drawDisc(cx,cy,stack[j],false)}
-    if(lifted&&stack.length){drawDisc(cx,POLETOP-30,stack[stack.length-1],true)}
-    // label
-    ctx.fillStyle=p===TARGET?"#5eead4":"#7f93a9";ctx.font="950 14px system-ui";ctx.textAlign="center";ctx.fillText(p===TARGET?"PYLON 3 · GOAL":("PYLON "+(p+1)),cx,BASEY+40)}
-  if(state.mode==="allclear"){ctx.fillStyle="rgba(3,7,18,.80)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 46px system-ui";ctx.fillText("ALL CLEAR",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
+    const pg=b.createLinearGradient(cx-6,0,cx+6,0);pg.addColorStop(0,"#123049");pg.addColorStop(.5,"#1f4a6e");pg.addColorStop(1,"#0e2437");
+    b.fillStyle=pg;rr(b,cx-6,POLETOP,12,BASEY-POLETOP,6);b.fill();
+    b.fillStyle=p===TARGET?"#5eead4":"#2a5b82";b.beginPath();b.arc(cx,POLETOP,7,0,7);b.fill();
+    b.fillStyle=p===TARGET?"#5eead4":"#7f93a9";b.font="950 15px system-ui";b.textAlign="center";
+    b.fillText(p===TARGET?"PYLON 3 · GOAL":"PYLON "+(p+1),cx,BASEY+42)}
+  b.textAlign="left";b.fillStyle="#5eead4";b.font="900 22px system-ui";b.fillText("PYLON SHIFT",30,42);
+  b.fillStyle="#9fb3c8";b.font="700 13px system-ui";b.fillText("Lift the top disc, drop it on a larger disc or an empty pylon. Rebuild the stack on pylon 3.",30,62);
+  b.fillStyle="#7f93a9";b.font="800 11px system-ui";b.fillText("1 · 2 · 3 SELECT   ·   U UNDO   ·   H HINT",30,528)}
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r)}
+const gradCache=new Map();
+function discGrad(size){let g=gradCache.get(size);if(!g){const c=DCOL[(size-1)%DCOL.length];g=ctx.createLinearGradient(0,-(DISKH-4),0,0);g.addColorStop(0,c[0]);g.addColorStop(1,c[1]);gradCache.set(size,g)}return g}
+function drawDisc(cx,cy,size,glow,sx,sy){const w=discW(size),h=DISKH-4;
+  ctx.save();ctx.translate(cx,cy+h/2);ctx.scale(sx||1,sy||1);
+  if(glow){ctx.shadowColor="rgba(94,234,212,.7)";ctx.shadowBlur=22}
+  ctx.fillStyle=discGrad(size);rr(ctx,-w/2,-h,w,h,9);ctx.fill();ctx.shadowBlur=0;
+  ctx.strokeStyle="rgba(255,255,255,.32)";ctx.lineWidth=2;rr(ctx,-w/2+.5,-h+.5,w-1,h-1,9);ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.28)";rr(ctx,-w/2+6,-h+4,w-12,5,2.5);ctx.fill();
+  ctx.fillStyle="rgba(6,18,30,.85)";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText(String(size),0,-h/2+5);
+  ctx.restore()}
+function easeIO(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+function drawStar(x,y,size,fill){ctx.save();ctx.translate(x,y);ctx.beginPath();
+  for(let i=0;i<10;i++){const r=i%2===0?size:size*.45,a=-Math.PI/2+i*Math.PI/5;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}
+  ctx.closePath();if(fill){ctx.fillStyle="#fbbf24";ctx.shadowColor="rgba(251,191,36,.6)";ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0}
+  else{ctx.strokeStyle="#33526f";ctx.lineWidth=2;ctx.stroke()}ctx.restore()}
 
-function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);if(state.mode==="clear"&&state.nextAt!=null){state.clearWait+=dt;if(state.clearWait>=650){const ni=state.nextAt;state.nextAt=null;state.clearWait=0;loadLevel(ni);say("Level "+(ni+1)+" — "+state.discs+" discs. Rebuild on pylon 3.")}}draw()}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!bgCanvas)buildBg();
+  ctx.save();
+  if(state.shake>0.05&&!reduced())ctx.translate(Math.sin(state.time*.09)*state.shake,Math.cos(state.time*.115)*state.shake*.7);
+  ctx.drawImage(bgCanvas,0,0);
+  // goal zone wash
+  ctx.fillStyle="rgba(94,234,212,.05)";rr(ctx,PEGX[TARGET]-130,POLETOP-20,260,BASEY-POLETOP+30,12);ctx.fill();
+  // cursor + selection outline
+  if(state.mode==="playing"){const cx=PEGX[state.cursor];
+    ctx.strokeStyle=state.selected===state.cursor?"#f8fafc":"rgba(94,234,212,.55)";ctx.lineWidth=3;
+    rr(ctx,cx-128,POLETOP-18,256,BASEY-POLETOP+28,12);ctx.stroke()}
+  // illegal flash
+  if(state.illegalFlash){const f=state.illegalFlash,a=Math.max(0,f.t/240);
+    ctx.strokeStyle="rgba(248,113,113,"+(.75*a).toFixed(3)+")";ctx.lineWidth=4;
+    rr(ctx,PEGX[f.peg]-124,POLETOP-14,248,BASEY-POLETOP+20,12);ctx.stroke()}
+  // optimal-landing ring
+  if(state.flashRing){const f=state.flashRing,k=1-Math.max(0,f.t/380);
+    ctx.strokeStyle="rgba(94,234,212,"+(.7*(1-k)).toFixed(3)+")";ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(PEGX[f.peg],BASEY-40,30+k*70,0,7);ctx.stroke()}
+  // legal-target chevrons while a disc is lifted
+  if(state.selected!==null&&state.mode==="playing"){const held=topOf(state.selected);
+    for(let p=0;p<3;p++){if(p===state.selected)continue;const ok=held<topOf(p);
+      ctx.fillStyle=ok?"rgba(94,234,212,.75)":"rgba(248,113,113,.30)";
+      const cx=PEGX[p],y=POLETOP-14;
+      ctx.beginPath();ctx.moveTo(cx,y-9);ctx.lineTo(cx+8,y+3);ctx.lineTo(cx-8,y+3);ctx.closePath();ctx.fill()}}
+  // stacks
+  for(let p=0;p<3;p++){const stack=state.pegs[p],f=state.flight;
+    let skip=-1;
+    if(state.selected===p)skip=stack.length-1;
+    else if(f&&f.kind==="move"&&f.to===p)skip=stack.length-1;
+    else if(f&&f.kind==="setdown"&&f.to===p)skip=stack.length-1;
+    for(let j=0;j<stack.length;j++){if(j===skip)continue;
+      let sx=1,sy=1;
+      if(state.squash&&state.squash.peg===p&&j===stack.length-1&&!reduced()){const k=state.squash.t/150;sx=1+.16*k;sy=1-.2*k}
+      drawDisc(PEGX[p],stackY(p,j),stack[j],false,sx,sy)}}
+  // animated / hovering disc
+  const f=state.flight;
+  if(f&&f.kind==="move"){const t=easeIO(Math.min(1,f.t)),x=f.fromX+(f.toX-f.fromX)*t,y=HOVERY+(f.landY-HOVERY)*t-Math.sin(Math.PI*t)*26;
+    drawDisc(x,y,f.size,true)}
+  else if(f&&f.kind==="setdown"){const t=easeIO(Math.min(1,f.t)),y=HOVERY+(stackY(f.to,state.pegs[f.to].length-1)-HOVERY)*t;
+    drawDisc(f.toX,y,f.size,false)}
+  else if(state.selected!==null){const s=state.pegs[state.selected],size=s[s.length-1],cx=PEGX[state.selected];
+    let y=HOVERY;
+    if(f&&f.kind==="lift"){const t=easeIO(Math.min(1,f.t));y=stackY(state.selected,s.length-1)+(HOVERY-stackY(state.selected,s.length-1))*t}
+    else if(!reduced()){const el=state.time-state.bobStart,damp=Math.max(0,1-el/3200);y+=Math.sin(el*.006)*4*damp}
+    ctx.strokeStyle="rgba(94,234,212,.35)";ctx.setLineDash([4,5]);ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,y+DISKH/2);ctx.lineTo(cx,POLETOP-2);ctx.stroke();ctx.setLineDash([]);
+    drawDisc(cx,y,size,true)}
+  // hint arc
+  if(state.hint){const h=state.hint,a=Math.min(1,h.ttl/500),x1=PEGX[h.from],x2=PEGX[h.to];
+    ctx.save();ctx.globalAlpha=a;ctx.strokeStyle="#5eead4";ctx.lineWidth=3;ctx.setLineDash([7,6]);
+    ctx.beginPath();ctx.moveTo(x1,POLETOP-42);ctx.quadraticCurveTo((x1+x2)/2,POLETOP-100,x2,POLETOP-42);ctx.stroke();ctx.setLineDash([]);
+    const dir=x2>x1?1:-1;ctx.fillStyle="#5eead4";
+    ctx.beginPath();ctx.moveTo(x2,POLETOP-36);ctx.lineTo(x2-10*dir,POLETOP-52);ctx.lineTo(x2-2*dir,POLETOP-56);ctx.closePath();ctx.fill();
+    ctx.font="950 13px system-ui";ctx.textAlign="center";ctx.fillText("HINT",(x1+x2)/2,POLETOP-108);ctx.restore()}
+  // particles
+  if(state.particles.length){ctx.save();ctx.globalCompositeOperation="lighter";
+    for(const pt of state.particles){const k=1-pt.age/pt.life;ctx.globalAlpha=Math.max(0,k*.9);
+      ctx.fillStyle=pt.col;ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r*k+.4,0,7);ctx.fill()}
+    ctx.restore()}
+  // confetti
+  if(state.confetti.length){ctx.save();
+    for(const c of state.confetti){const k=1-c.age/c.life;ctx.globalAlpha=Math.max(0,Math.min(1,k*1.4));
+      ctx.translate(c.x,c.y);ctx.rotate(c.rot);ctx.fillStyle=c.col;ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h);ctx.rotate(-c.rot);ctx.translate(-c.x,-c.y)}
+    ctx.restore()}
+  // combo chip
+  if(state.combo>=2&&state.mode==="playing"){const pop=reduced()?0:Math.max(0,1-(state.time-state.comboAt)/200),sc=1+.18*pop;
+    ctx.save();ctx.translate(866,44);ctx.scale(sc,sc);
+    ctx.fillStyle="rgba(8,20,34,.92)";rr(ctx,-78,-20,156,40,10);ctx.fill();
+    ctx.strokeStyle=state.combo>=5?"rgba(251,191,36,.7)":"rgba(94,234,212,.5)";ctx.lineWidth=2;rr(ctx,-78,-20,156,40,10);ctx.stroke();
+    ctx.fillStyle=state.combo>=5?"#fbbf24":"#5eead4";ctx.font="950 18px system-ui";ctx.textAlign="center";
+    ctx.fillText("COMBO ×"+state.combo,0,6);ctx.restore()}
+  // onboarding nudge
+  if(state.mode==="playing"&&state.idx===0&&state.moves===0&&state.selected===null&&!state.touched){
+    ctx.fillStyle="rgba(8,20,34,.9)";rr(ctx,262,72,436,32,10);ctx.fill();
+    ctx.strokeStyle="rgba(94,234,212,.4)";ctx.lineWidth=1.5;rr(ctx,262,72,436,32,10);ctx.stroke();
+    ctx.fillStyle="#dbeafe";ctx.font="900 14px system-ui";ctx.textAlign="center";
+    ctx.fillText("TAP A PYLON — OR PRESS 1 — TO LIFT ITS TOP DISC",480,93)}
+  // level-clear banner
+  if(state.mode==="clear"&&state.banner){const bn=state.banner,ap=reduced()?1:Math.min(1,state.clearWait/300);
+    ctx.save();ctx.globalAlpha=ap;
+    ctx.fillStyle="rgba(4,10,20,.93)";rr(ctx,240,138,480,220,14);ctx.fill();
+    ctx.strokeStyle="rgba(94,234,212,.45)";ctx.lineWidth=2;rr(ctx,240,138,480,220,14);ctx.stroke();
+    ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 30px system-ui";
+    ctx.fillText("LEVEL "+(state.idx+1)+" CLEAR",480,182);
+    for(let s=0;s<3;s++){const x=480+(s-1)*52,earnedAt=reduced()?0:350+s*160;
+      if(s<bn.stars&&state.clearWait>=earnedAt)drawStar(x,222,17,true);else drawStar(x,222,17,false)}
+    ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";
+    ctx.fillText("MOVES "+bn.moves+"  ·  PAR "+bn.par+(state.best.moves[String(state.idx)]!=null?"  ·  BEST "+state.best.moves[String(state.idx)]:""),480,266);
+    ctx.fillStyle="#7dd3fc";ctx.font="900 16px system-ui";ctx.fillText("+"+bn.bonus+" "+bn.tag,480,294);
+    ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("TAP OR PRESS ANY PYLON KEY TO CONTINUE",480,330);ctx.restore()}
+  // all-clear summary
+  if(state.mode==="allclear"){const ap=state.bannerT;
+    ctx.fillStyle="rgba(3,7,18,"+(0.86*ap).toFixed(3)+")";ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.save();ctx.globalAlpha=ap;
+    ctx.fillStyle="rgba(6,14,26,.96)";rr(ctx,220,92,520,356,16);ctx.fill();
+    ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;rr(ctx,220,92,520,356,16);ctx.stroke();
+    const starSum=state.runStars.reduce((a,b)=>a+(b||0),0);
+    const grade=starSum>=15?"FLAWLESS":starSum>=12?"TOWER MASTER":starSum>=8?"SHIFT ENGINEER":"APPRENTICE";
+    ctx.textAlign="center";ctx.fillStyle="#9fb3c8";ctx.font="950 13px system-ui";ctx.fillText("ALL FIVE STACKS REBUILT",480,130);
+    ctx.fillStyle="#5eead4";ctx.font="950 42px system-ui";ctx.fillText(grade,480,174);
+    ctx.fillStyle="#f8fbff";ctx.font="950 40px system-ui";ctx.fillText(String(state.score),480,226);
+    ctx.fillStyle="#7dd3fc";ctx.font="900 14px system-ui";ctx.fillText(state.newBest?"NEW BEST SCORE":"BEST "+state.best.score,480,252);
+    for(let s=0;s<5;s++){const x=480+(s-2)*46;drawStar(x,286,15,(state.runStars[s]||0)>=3);
+      if((state.runStars[s]||0)>0&&(state.runStars[s]||0)<3){ctx.fillStyle="#8aa3bd";ctx.font="900 11px system-ui";ctx.fillText(String(state.runStars[s]),x,290)}}
+    ctx.fillStyle="#dbeafe";ctx.font="800 16px system-ui";
+    ctx.fillText("MOVES "+state.totalMoves+"  ·  PAR 243  ·  STARS "+starSum+"/15",480,334);
+    ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+    ctx.fillText("HINTS "+state.hintsUsed+"  ·  UNDOS "+state.undosUsed+"  ·  BEST COMBO ×"+state.bestComboRun,480,362);
+    ctx.fillStyle="#5eead4";ctx.font="950 15px system-ui";ctx.fillText("PRESS N OR NEW RUN TO CHASE THE SCORE",480,414);
+    ctx.restore()}
+  ctx.restore()}
+
+// ---------- clock ----------
+function tick(dt){state.time+=dt;
+  const f=state.flight;
+  if(f){f.t+=dt/f.dur;if(f.t>=1)finishFlight()}
+  if(state.particles.length){for(const p of state.particles){p.age+=dt;p.x+=p.vx*dt*.06;p.y+=p.vy*dt*.06;p.vy+=dt*.004}
+    state.particles=state.particles.filter(p=>p.age<p.life)}
+  if(state.confetti.length){for(const c of state.confetti){c.age+=dt;c.x+=c.vx*dt*.06;c.y+=c.vy*dt*.06;c.vy+=dt*.005;c.rot+=c.vr*dt*.06}
+    state.confetti=state.confetti.filter(c=>c.age<c.life)}
+  if(state.shake>0)state.shake=Math.max(0,state.shake-dt*.014);
+  if(state.squash){state.squash.t-=dt;if(state.squash.t<=0)state.squash=null}
+  if(state.illegalFlash){state.illegalFlash.t-=dt;if(state.illegalFlash.t<=0)state.illegalFlash=null}
+  if(state.flashRing){state.flashRing.t-=dt;if(state.flashRing.t<=0)state.flashRing=null}
+  if(state.hint){state.hint.ttl-=dt;if(state.hint.ttl<=0)state.hint=null}
+  if(state.mode==="clear"){state.clearWait+=dt;if(state.clearWait>=1900&&state.nextAt!=null)skipClear()}
+  if(state.mode==="allclear"&&state.bannerT<1)state.bannerT=Math.min(1,state.bannerT+dt/400);
+  draw()}
 window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,discs:state.discs,target:TARGET+1,pegs:state.pegs.map(s=>s.slice()),source:state.source===null?null:state.source+1,cursor:state.cursor+1,moves:state.moves,par:par(),best:state.best[String(state.idx)]??null,solved:solvedCount(),sound:state.sound,feedback:state.feedback,coordinateSystem:"pegs[0..2] bottom→top, disc sizes 1(small)..N(large); legal move drops a smaller disc onto a larger one or an empty pylon; goal: full ordered stack on pylon 3"})};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({
+  mode:state.mode,level:state.idx+1,total:TOTAL,discs:state.discs,target:TARGET+1,
+  pegs:state.pegs.map(s=>s.slice()),selected:state.selected===null?null:state.selected+1,cursor:state.cursor+1,
+  moves:state.moves,par:par(),minMovesLeft:state.mode==="playing"?movesLeft():0,
+  score:state.score,combo:state.combo,streak:state.combo,stars:state.runStars.slice(),
+  hintsUsed:state.hintsUsed,undosUsed:state.undosUsed,totalMoves:state.totalMoves,
+  won:state.mode==="allclear",lastMove:state.lastMove,
+  hint:state.hint?{from:state.hint.from+1,to:state.hint.to+1}:null,
+  best:{score:state.best.score,moves:state.best.moves,stars:state.best.stars},
+  sound:state.sound,feedback:state.feedback,
+  coordinateSystem:"pegs[0..2] bottom→top, disc sizes 1(small)..N(large); legal move drops a smaller disc onto a larger one or an empty pylon; optimal moves chain a combo multiplier; goal: full ordered stack on pylon 3"})};
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight"," "].includes(k))e.preventDefault();
+// ---------- input ----------
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+  const k=e.key;if(["ArrowLeft","ArrowRight"," "].includes(k))e.preventDefault();
+  if(state.mode==="allclear"){if(k==="n"||k==="N"||k==="Enter"||k===" ")newGame();else if(k==="r"||k==="R")reset();return}
   if(k==="1")tapPeg(0);else if(k==="2")tapPeg(1);else if(k==="3")tapPeg(2);
-  else if(k==="ArrowLeft"||k==="a")moveCursor(-1);else if(k==="ArrowRight"||k==="d")moveCursor(1);
+  else if(k==="ArrowLeft"||k==="a"||k==="A"){state.cursor=Math.max(0,state.cursor-1);draw()}
+  else if(k==="ArrowRight"||k==="d"||k==="D"){state.cursor=Math.min(2,state.cursor+1);draw()}
   else if(k==="Enter"||k===" ")tapPeg(state.cursor);
+  else if(k==="u"||k==="U")undo();else if(k==="h"||k==="H")hintAct();
   else if(k==="r"||k==="R")reset();else if(k==="n"||k==="N")newGame()});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width;let best=0,bd=1e9;for(let p=0;p<3;p++){const d=Math.abs(px-PEGX[p]);if(d<bd){bd=d;best=p}}tapPeg(best)});
+function pegAt(clientX){const b=canvas.getBoundingClientRect(),px=(clientX-b.left)/b.width*canvas.width;
+  let best=0,bd=1e9;for(let p=0;p<3;p++){const d=Math.abs(px-PEGX[p]);if(d<bd){bd=d;best=p}}return best}
+let drag=null;
+canvas.addEventListener("pointerdown",e=>{canvas.focus();
+  if(state.mode==="allclear"){say("Press N or the New Run button to start a fresh climb.");return}
+  const p=pegAt(e.clientX),had=state.selected!==null;
+  tapPeg(p);drag={from:p,had};
+  try{canvas.setPointerCapture(e.pointerId)}catch(_){}});
+canvas.addEventListener("pointerup",e=>{if(!drag)return;const q=pegAt(e.clientX);
+  if(!drag.had&&state.selected!==null&&q!==drag.from&&state.mode==="playing")tapPeg(q);
+  drag=null});
 $("newBtn").addEventListener("click",newGame);
 $("resetBtn").addEventListener("click",reset);
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("pick")});
-document.querySelectorAll("[data-peg]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();tapPeg(Number(btn.dataset.peg))}));
-document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();if(btn.dataset.key==="r")reset()}));
+$("hintBtn").addEventListener("click",()=>{canvas.focus();hintAct()});
+$("undoBtn").addEventListener("click",()=>{canvas.focus();undo()});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+  if(!state.sound&&audio){try{audio.suspend().catch(()=>{})}catch(_){}}
+  say(state.sound?"Sound enabled.":"Sound muted.");tone("ui")});
+document.querySelectorAll("[data-peg]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();
+  if(state.mode==="allclear"){say("Press N or the New Run button to start a fresh climb.");return}
+  tapPeg(Number(btn.dataset.peg))}));
+
+// ---------- boot & frame gating ----------
 loadLevel(0);
 let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flash>0||(state.mode==="clear"&&state.nextAt!=null)}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
+function needsFrame(){return !!(state.flight||state.particles.length||state.confetti.length||state.shake>0.05||state.squash||state.illegalFlash||state.flashRing||state.hint||state.mode==="clear"||(state.mode==="allclear"&&state.bannerT<1)||(state.selected!==null&&!reduced()&&state.time-state.bobStart<3200))}
+function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame())requestAnimationFrame(frame);else rafOn=false}
 function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
 addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
 if(needsFrame())wake();

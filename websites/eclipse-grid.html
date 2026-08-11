@@ -80,10 +80,10 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 .btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 .btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
 .btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
-.touch{display:grid;grid-template-columns:repeat(5,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
+.touch{display:grid;grid-template-columns:repeat(4,minmax(0,96px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
-@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
-@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,1fr))}.touch .wide{grid-column:span 1}}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -91,127 +91,348 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Eclipse Grid lights-out puzzle">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Eclipse Grid</span></div>
-    <div class="help">Arrow keys or WASD move the marker. Enter, or tap a tile, toggles it and its four neighbors. Darken every tile to clear the level. R resets, N restarts.</div>
+    <div class="help">Arrows or WASD move the marker. Enter, or a tap, toggles a tile and its neighbors. H marks a correct press, U undoes, R resets the night, N starts a new run. Darken every tile before the presses run out.</div>
   </header>
   <section class="hud" aria-label="Game status">
-    <div class="pill"><span class="label">Level</span><span class="value" id="levelValue">1/6</span></div>
+    <div class="pill"><span class="label">Night</span><span class="value" id="levelValue">1/12</span></div>
     <div class="pill"><span class="label">Lit</span><span class="value" id="litValue">0</span></div>
-    <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
-    <div class="pill"><span class="label">Par</span><span class="value" id="parValue">1</span></div>
+    <div class="pill"><span class="label">Presses</span><span class="value" id="movesValue">0/6</span></div>
+    <div class="pill"><span class="label">Par</span><span class="value" id="parValue">2</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
-    <div class="pill"><span class="label">Solved</span><span class="value" id="solvedValue">0/6</span></div>
   </section>
-  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Eclipse Grid lights-out board. Toggle tiles to turn every tile dark."></canvas></div>
-  <div class="status" id="statusLine" aria-live="polite">Darken every tile. Toggling a tile flips its four neighbors too.</div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Eclipse Grid lights-out board. Toggle tiles to turn every tile dark before the press budget runs out."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Darken every tile. Toggling a tile flips its neighbors too.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Eclipse Grid ready.</div>
   <section class="bar" aria-label="Actions">
-    <button class="btn primary" id="newBtn" type="button">New Game</button>
-    <button class="btn" id="resetBtn" type="button">Reset Level</button>
+    <button class="btn primary" id="newBtn" type="button">New Run</button>
+    <button class="btn" id="resetBtn" type="button">Reset Night</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
   </section>
   <section class="touch" aria-label="Touch controls">
-    <button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Toggle</button><button type="button" data-key="r">Reset</button>
-    <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="ArrowDown">Down</button><button type="button" data-key="ArrowRight">Right</button>
+    <button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Toggle</button><button type="button" data-key="h">Hint</button>
+    <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="ArrowDown">Down</button><button type="button" data-key="ArrowRight">Right</button><button type="button" data-key="u">Undo</button>
   </section>
 </main>
 <script>
 (() => {
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const STATS_KEY="eclipse-grid.stats.v1",SOUND_KEY="eclipse-grid.sound.v1";
-// Each level is a list of scramble presses applied to an all-off board. Because
-// pressing is its own inverse over GF(2), any board reached this way is provably
-// solvable, and pressing the same set again clears it — so par = scramble length.
+const STATS_KEY="eclipse-grid.stats.v2",SOUND_KEY="eclipse-grid.sound.v1";
+// Twelve authored nights. rows: o=standard tile (flips self+orthogonal
+// neighbors), x=lunar (flips self+diagonals), b=beam (flips whole row+column),
+// .=void (no cell; flips skip it). Every press XORs a fixed mask over GF(2):
+// presses commute and self-cancel, so a board scrambled by a press set is
+// provably solvable by re-pressing that set — par = scramble length.
 const LEVELS=[
-  {size:3,scramble:[[1,1]]},
-  {size:3,scramble:[[0,0],[1,2],[2,1]]},
-  {size:4,scramble:[[0,1],[1,3],[2,0],[3,2]]},
-  {size:5,scramble:[[2,2],[0,2],[2,0],[2,4],[4,2]]},
-  {size:5,scramble:[[0,0],[0,4],[2,2],[4,0],[4,4],[1,3],[3,1]]},
-  {size:5,scramble:[[0,1],[1,1],[1,3],[2,0],[2,2],[2,4],[3,3],[4,1],[4,3]]}
+{name:"First Shadow",rows:["ooo","ooo","ooo"],scramble:[[1,1],[0,0]],budget:6,intro:"Press a tile to flip it and its four neighbors. Darken every tile."},
+{name:"Waxing Crescent",rows:["ooo","ooo","ooo"],scramble:[[2,0],[0,2],[1,1],[2,2]],budget:8,intro:"Presses overlap and cancel — order never matters. Plan the set."},
+{name:"First Quarter",rows:["oooo","oooo","oooo","oooo"],scramble:[[1,0],[3,1],[0,2],[2,3],[1,1]],budget:9,intro:"Bigger sky. Par is the press count the night was scrambled with."},
+{name:"The Diamond",rows:[".oo.","oooo","oooo",".oo."],scramble:[[1,0],[0,1],[3,2],[2,3],[2,1]],budget:9,intro:"The void breaks the grid — flips skip the gaps."},
+{name:"Half Light",rows:["ooooo","ooooo","ooooo","ooooo","ooooo"],scramble:[[2,2],[2,0],[0,2],[4,2],[2,4],[1,1]],budget:11,intro:"Half light, half shadow. H marks a correct press, U undoes."},
+{name:"Lunar Cross",rows:["xooox","ooooo","ooxoo","ooooo","xooox"],scramble:[[0,0],[2,2],[4,4],[3,1],[1,3],[0,2],[2,0]],budget:12,intro:"Lunar tiles (diamond mark) flip diagonally instead."},
+{name:"The Ring",rows:["ooooo","o...o","o...o","o...o","ooooo"],scramble:[[0,0],[3,0],[0,2],[4,2],[1,4],[4,4],[0,1]],budget:12,intro:"Only the rim remains. Corner presses touch just two neighbors."},
+{name:"Beamfall",rows:["ooooo","ooooo","ooboo","ooooo","ooooo"],scramble:[[2,2],[1,0],[4,1],[0,3],[3,4],[2,1],[2,3]],budget:12,intro:"Beam tiles (cross mark) flip their entire row and column."},
+{name:"Waning Gibbous",rows:["oooo..","ooooo.","oooooo","oooooo","ooooo.","oooo.."],scramble:[[0,0],[1,2],[2,4],[3,1],[4,3],[0,5],[0,2],[5,3]],budget:14,intro:"The crescent wanes. Watch the press budget."},
+{name:"Twin Stars",rows:["oooooo","oxooxo","oooooo","oooooo","oxooxo","oooooo"],scramble:[[1,1],[4,4],[3,0],[2,2],[3,3],[2,5],[5,2],[0,3],[0,0]],budget:15,intro:"Two lunar pairs warp the field. Mind the diagonals."},
+{name:"Beam Lattice",rows:["ooooob","oooooo","oo.ooo","ooo.oo","oooooo","booooo"],scramble:[[5,0],[0,5],[1,1],[4,2],[2,4],[5,3],[4,5],[2,0],[0,4]],budget:15,intro:"Twin beams rake the lattice. Spend presses wisely."},
+{name:"Total Eclipse",rows:["xoooox","oooooo","oobooo","oooboo","oooooo","xoooox"],scramble:[[0,0],[5,5],[2,2],[3,3],[3,1],[1,4],[4,0],[2,5],[5,2],[0,3]],budget:16,intro:"Everything at once. Total eclipse or bust."}
 ];
 const TOTAL=LEVELS.length;
 const $=id=>document.getElementById(id);
-const els={level:$("levelValue"),lit:$("litValue"),moves:$("movesValue"),par:$("parValue"),best:$("bestValue"),solved:$("solvedValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),reset:$("resetBtn")};
-const saved=readStats();
-const state={idx:0,board:[],size:3,cursor:{x:0,y:0},moves:0,mode:"playing",lastPress:null,best:saved.best,sound:readSound(),feedback:"Darken every tile. Toggling a tile flips its four neighbors too.",time:0,flash:0};
-let audio=null;
+const els={level:$("levelValue"),lit:$("litValue"),moves:$("movesValue"),par:$("parValue"),score:$("scoreValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),reset:$("resetBtn")};
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object"&&v.best&&typeof v.best==="object")return{best:v.best}}catch(_){}return{best:{}}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best}))}catch(_){}}
+function readStats(){const d={bestScore:0,stars:{},clears:0};try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return d;const v=JSON.parse(raw);if(!v||typeof v!=="object"||Array.isArray(v))return d;
+  const bs=Number(v.bestScore);if(Number.isFinite(bs)&&bs>=0)d.bestScore=Math.floor(bs);
+  const cl=Number(v.clears);if(Number.isFinite(cl)&&cl>=0)d.clears=Math.floor(cl);
+  if(v.stars&&typeof v.stars==="object"&&!Array.isArray(v.stars)){for(const k of Object.keys(v.stars)){const i=Number(k),s=Number(v.stars[k]);if(Number.isInteger(i)&&i>=0&&i<TOTAL&&Number.isFinite(s))d.stars[String(i)]=Math.max(0,Math.min(3,Math.floor(s)))}}
+  return d}catch(_){return d}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
+
+const saved=readStats();
+const state={idx:0,size:3,types:[],board:[],cursor:{x:1,y:1},moves:0,undosLeft:3,hintsUsed:0,mode:"playing",score:0,runStars:0,cleared:0,lastStars:0,lastPts:0,newBest:false,bestScore:saved.bestScore,starsBest:saved.stars,clears:saved.clears,lastPress:null,flash:0,shake:0,bannerT:0,hint:null,sound:readSound(),feedback:""};
+let pending=new Set(),undoStack=[],animMap=new Map(),waves=[],parts=[];
+
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({bestScore:state.bestScore,stars:state.starsBest,clears:state.clears}))}catch(_){}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
 function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={press:300,clear:520,win:660,bad:140}[kind]||260;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
 
+let mq=null;try{mq=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)")}catch(_){mq=null}
+function reduced(){return!!(mq&&mq.matches)}
+
+// --- audio: lazy context + tiny additive synth, gated on the sound toggle ---
+let AC=null,master=null;
+function audioCtx(){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
+  if(!AC){try{AC=new C();master=AC.createGain();master.gain.value=.16;master.connect(AC.destination)}catch(_){AC=null;return null}}
+  if(AC.state==="suspended"){try{const p=AC.resume();if(p&&p.catch)p.catch(()=>{})}catch(_){}}
+  return AC}
+function blip(freq,at,dur,type,peak){const a=audioCtx();if(!a)return;try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak||.09,t+.014);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05)}catch(_){}}
+function sfx(kind,arg){if(!state.sound)return;
+  if(kind==="press"){const n=[262,294,330,392,440][((arg||0)%5+5)%5];blip(n,0,.16,"triangle",.08);blip(n*2,0,.09,"sine",.03)}
+  else if(kind==="cascade"){blip(560,.05,.07,"sine",.028);blip(470,.1,.07,"sine",.024)}
+  else if(kind==="beam"){blip(196,0,.3,"sawtooth",.045);blip(392,.06,.22,"triangle",.05);blip(784,.12,.14,"sine",.03)}
+  else if(kind==="undo"){blip(330,0,.12,"triangle",.06);blip(220,.07,.15,"triangle",.05)}
+  else if(kind==="hint"){blip(1174,0,.18,"sine",.04);blip(1568,.09,.22,"sine",.035)}
+  else if(kind==="denied"){blip(120,0,.13,"square",.035)}
+  else if(kind==="clear"){[392,494,587,784].forEach((f,i)=>blip(f,i*.07,.3,"triangle",.065));blip(196,0,.6,"sine",.05)}
+  else if(kind==="stars"){[784,988,1318].forEach((f,i)=>blip(f,.32+i*.08,.18,"sine",.045))}
+  else if(kind==="fail"){blip(180,0,.5,"sawtooth",.05);blip(90,.1,.7,"sine",.07);blip(60,.18,.8,"sine",.055)}
+  else if(kind==="complete"){[523,659,784,1046,1318].forEach((f,i)=>blip(f,i*.09,.42,"triangle",.055))}}
+
+// --- board model ---
 function level(){return LEVELS[state.idx]}
 function par(){return level().scramble.length}
-function inBounds(x,y){return x>=0&&y>=0&&x<state.size&&y<state.size}
-function toggleCell(b,x,y){if(inBounds(x,y))b[y][x]^=1}
-function applyPress(b,x,y){toggleCell(b,x,y);toggleCell(b,x-1,y);toggleCell(b,x+1,y);toggleCell(b,x,y-1);toggleCell(b,x,y+1)}
+function cellAt(x,y){return x>=0&&y>=0&&x<state.size&&y<state.size&&state.types[y][x]!=="."}
+function cellsFor(x,y){const t=state.types[y][x],out=[],seen=new Set();
+  const add=(cx,cy)=>{if(cellAt(cx,cy)){const k=cx+","+cy;if(!seen.has(k)){seen.add(k);out.push([cx,cy])}}};
+  add(x,y);
+  if(t==="x"){add(x-1,y-1);add(x+1,y-1);add(x-1,y+1);add(x+1,y+1)}
+  else if(t==="b"){for(let i=0;i<state.size;i++){add(i,y);add(x,i)}}
+  else{add(x-1,y);add(x+1,y);add(x,y-1);add(x,y+1)}
+  return out}
+function applyMask(x,y){for(const[cx,cy]of cellsFor(x,y))state.board[cy][cx]^=1}
 function litCount(){let n=0;for(const row of state.board)for(const v of row)n+=v;return n}
-function solvedCount(){return Object.keys(state.best).length}
+function togglePending(x,y){const k=x+","+y;if(pending.has(k))pending.delete(k);else pending.add(k)}
+function firstPending(){for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)if(pending.has(x+","+y))return{x,y};return null}
+function starsTotal(){let n=0;for(const k of Object.keys(state.starsBest))n+=state.starsBest[k]|0;return n}
+function pace(){const cap=state.hintsUsed===0?3:state.hintsUsed===1?2:1;const byMoves=state.moves<=par()?3:state.moves<=par()+2?2:1;return Math.min(cap,byMoves)}
 
-function loadLevel(i){state.idx=i;state.size=level().size;const b=Array.from({length:state.size},()=>new Array(state.size).fill(0));for(const[r,c]of level().scramble)applyPress(b,c,r);state.board=b;state.moves=0;state.lastPress=null;state.mode="playing";state.cursor={x:0,y:0};update();draw()}
+function loadLevel(i){state.idx=i;const lvl=LEVELS[i];state.size=lvl.rows.length;state.types=lvl.rows;
+  state.board=Array.from({length:state.size},()=>new Array(state.size).fill(0));
+  pending=new Set();undoStack=[];animMap.clear();waves=[];parts=[];
+  for(const[x,y]of lvl.scramble){applyMask(x,y);togglePending(x,y)}
+  state.moves=0;state.undosLeft=3;state.hintsUsed=0;state.hint=null;state.lastPress=null;state.flash=0;state.bannerT=0;state.mode="playing";
+  const c=Math.floor(state.size/2);state.cursor=cellAt(c,c)?{x:c,y:c}:(function(){for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)if(cellAt(x,y))return{x,y};return{x:0,y:0}})();
+  update();draw()}
 
-function press(x,y){if(state.mode!=="playing")return;if(!inBounds(x,y))return;applyPress(state.board,x,y);state.moves++;state.lastPress={x,y};state.flash=1;tone("press");vibe(10);
+// --- actions ---
+function press(x,y){if(state.mode!=="playing"||!cellAt(x,y))return;
+  const cells=cellsFor(x,y),beam=state.types[y][x]==="b",dark=[];
+  for(const[cx,cy]of cells){const was=state.board[cy][cx];state.board[cy][cx]^=1;if(was===1)dark.push([cx,cy])}
+  state.moves++;state.lastPress={x,y};state.flash=1;state.hint=null;togglePending(x,y);undoStack.push([x,y]);
+  if(!reduced()){const g=geom();
+    for(const[cx,cy]of cells){const d=Math.max(Math.abs(cx-x),Math.abs(cy-y));animMap.set(cx+","+cy,{age:0,delay:d*42,dur:240,prev:state.board[cy][cx]^1})}
+    waves.push({x:g.x+x*g.cell+g.cell/2,y:g.y+y*g.cell+g.cell/2,cell:g.cell,age:0});
+    for(const[cx,cy]of dark)specks(cx,cy);
+    if(beam)state.shake=Math.max(state.shake,.45)}
+  sfx("press",x+y);if(beam)sfx("beam");else if(cells.length>3)sfx("cascade");vibe(10);
   const lit=litCount();
-  if(lit===0){solveLevel();return}
-  say("Lit "+lit+" · "+state.moves+" move"+(state.moves===1?"":"s")+" (par "+par()+").");update();draw()}
+  if(lit===0){clearLevel();return}
+  if(state.moves>=level().budget){failRun();return}
+  const left=level().budget-state.moves;
+  say(left<=2?"Careful — "+left+" press"+(left===1?"":"es")+" left. Lit "+lit+".":"Lit "+lit+" · press "+state.moves+"/"+level().budget+" (par "+par()+").");
+  update();draw()}
 
-function solveLevel(){const key=String(state.idx),prev=state.best[key];if(prev==null||state.moves<prev){state.best[key]=state.moves;saveStats()}
-  if(state.idx<TOTAL-1){state.mode="clear";tone("clear");vibe([22,22]);say("Level "+(state.idx+1)+" dark in "+state.moves+" move"+(state.moves===1?"":"s")+"! Loading level "+(state.idx+2)+"…");update();draw();state.flash=1;state.nextAt=state.idx+1}
-  else{state.mode="allclear";tone("win");vibe([30,30,40]);say("Every level dark — Eclipse Grid complete! Press New Game.");update();draw()}}
+function undo(){if(state.mode!=="playing")return;
+  if(!undoStack.length){sfx("denied");say("Nothing to undo yet.");return}
+  if(state.undosLeft<=0){sfx("denied");say("No undos left this night.");return}
+  const[x,y]=undoStack.pop();
+  for(const[cx,cy]of cellsFor(x,y))state.board[cy][cx]^=1;
+  state.moves--;state.undosLeft--;togglePending(x,y);state.lastPress={x,y};state.flash=.6;state.hint=null;
+  if(!reduced())for(const[cx,cy]of cellsFor(x,y)){const d=Math.max(Math.abs(cx-x),Math.abs(cy-y));animMap.set(cx+","+cy,{age:0,delay:d*30,dur:200,prev:state.board[cy][cx]^1})}
+  sfx("undo");say("Press undone · "+state.undosLeft+" undo"+(state.undosLeft===1?"":"s")+" left.");update();draw()}
 
-function reset(){loadLevel(state.idx);say("Level "+(state.idx+1)+" reset.");tone("press")}
-function newGame(){loadLevel(0);say("New run — darken every tile to clear each level.");tone("press")}
-function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(state.size-1,state.cursor.x+dx));state.cursor.y=Math.max(0,Math.min(state.size-1,state.cursor.y+dy));draw()}
+function hint(){if(state.mode!=="playing")return;
+  const cell=firstPending();
+  if(!cell){say("No hint needed — the sky is already dark.");return}
+  state.hintsUsed++;state.hint={x:cell.x,y:cell.y,age:reduced()?4000:0};
+  sfx("hint");say("Hint: press the amber tile. Stars capped at "+(state.hintsUsed>=2?1:2)+" this night.");update();draw()}
 
-function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.lit.textContent=String(litCount());els.moves.textContent=String(state.moves);els.par.textContent=String(par());const b=state.best[String(state.idx)];els.best.textContent=b==null?"—":String(b);els.solved.textContent=solvedCount()+"/"+TOTAL;els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+function clearLevel(){const lvl=level(),stars=pace(),pts=stars*150+(lvl.budget-state.moves)*15+state.size*10;
+  state.score+=pts;state.lastStars=stars;state.lastPts=pts;state.runStars+=stars;state.cleared=state.idx+1;
+  const sk=String(state.idx);if((state.starsBest[sk]|0)<stars)state.starsBest[sk]=stars;
+  if(state.score>state.bestScore){state.bestScore=state.score;state.newBest=true}
+  saveStats();
+  state.mode="clear";state.bannerT=0;
+  sfx("clear");if(stars===3)sfx("stars");vibe([22,22]);
+  if(!reduced())burst(480,270,26,"94,234,212");
+  say("Night "+(state.idx+1)+" dark in "+state.moves+" press"+(state.moves===1?"":"es")+" — "+stars+" star"+(stars===1?"":"s")+", +"+pts+" points.");
+  update();draw()}
 
-function gridRect(){const n=state.size,cell=Math.min((canvas.width-250)/n,(canvas.height-104)/n);return{cell,n,x:46,y:Math.round((canvas.height-cell*n)/2)+8}}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  const g=gridRect(),cell=g.cell,n=g.n,pad=Math.max(4,cell*.07);
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Eclipse Grid",30,36);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Toggle a tile to flip it and its 4 neighbors. Turn the whole grid dark.",30,53);
-  ctx.save();ctx.translate(g.x,g.y);
-  for(let y=0;y<n;y++)for(let x=0;x<n;x++){const lx=x*cell+pad,ly=y*cell+pad,sz=cell-pad*2,on=state.board[y][x]===1;
-    if(on){const gr=ctx.createLinearGradient(lx,ly,lx,ly+sz);gr.addColorStop(0,"#7ef9ff");gr.addColorStop(1,"#22b9d6");ctx.fillStyle=gr;ctx.shadowColor="rgba(94,234,212,.7)";ctx.shadowBlur=cell*.22}
-    else{ctx.fillStyle="#0c1a2c";ctx.shadowBlur=0}
-    roundRect(lx,ly,sz,sz,Math.min(14,cell*.16),true,false);ctx.shadowBlur=0;
-    ctx.strokeStyle=on?"rgba(255,255,255,.35)":"rgba(94,234,212,.16)";ctx.lineWidth=2;roundRect(lx+.5,ly+.5,sz-1,sz-1,Math.min(14,cell*.16),false,true);
-    if(!on){ctx.fillStyle="rgba(94,234,212,.10)";ctx.beginPath();ctx.arc(lx+sz/2,ly+sz/2,sz*.12,0,Math.PI*2);ctx.fill()}}
-  if(state.mode==="playing"){const c=state.cursor;ctx.strokeStyle="#f8fafc";ctx.lineWidth=3;roundRect(c.x*cell+pad-3,c.y*cell+pad-3,cell-pad*2+6,cell-pad*2+6,Math.min(16,cell*.18),false,true)}
-  ctx.restore();
-  drawSide(g);
-  if(state.mode==="allclear"){ctx.fillStyle="rgba(3,7,18,.80)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 46px system-ui";ctx.fillText("ALL CLEAR",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
-function drawSide(g){const px=g.x+g.cell*g.n+34;let py=g.y+10;ctx.textAlign="left";
-  const block=(label,val,color)=>{ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,px,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 27px system-ui";ctx.fillText(val,px,py+34);py+=62};
-  block("LEVEL",(state.idx+1)+" / "+TOTAL);
-  block("LIT TILES",String(litCount()),litCount()===0?"#5eead4":"#7ef9ff");
-  block("MOVES · PAR",state.moves+" · "+par());
-  const b=state.best[String(state.idx)];
-  block("BEST · SOLVED",(b==null?"—":b)+" · "+solvedCount()+"/"+TOTAL)}
+function complete(){state.mode="complete";state.clears++;
+  if(state.score>state.bestScore){state.bestScore=state.score;state.newBest=true}
+  saveStats();
+  sfx("complete");vibe([30,30,40]);
+  if(!reduced())burst(480,240,34,"251,191,36");
+  say("Total eclipse — all "+TOTAL+" nights dark! Run score "+state.score+(state.newBest?" — new best!":".")+" Press Enter to run it back.");
+  update();draw()}
 
-function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);if(state.mode==="clear"&&state.nextAt!=null){state.clearWait=(state.clearWait||0)+dt;if(state.clearWait>=600){const ni=state.nextAt;state.nextAt=null;state.clearWait=0;loadLevel(ni);say("Level "+(ni+1)+" — darken every tile.")}}draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,size:state.size,lit:litCount(),moves:state.moves,par:par(),best:state.best[String(state.idx)]??null,solved:solvedCount(),cursor:{x:state.cursor.x,y:state.cursor.y},lastPress:state.lastPress,sound:state.sound,feedback:state.feedback,board:state.board.map(row=>row.join("")),coordinateSystem:"board[row][col], origin top-left; 1=lit, 0=dark; goal all 0"})};
+function failRun(){state.mode="failed";
+  if(state.score>state.bestScore){state.bestScore=state.score;state.newBest=true}
+  saveStats();
+  state.shake=Math.max(state.shake,1);sfx("fail");vibe([40,30,40]);
+  say("Out of presses — the night slips away. Run score "+state.score+". Press Enter for a new run.");
+  update();draw()}
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
-  if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Enter"||k===" ")press(state.cursor.x,state.cursor.y);else if(k==="r")reset();else if(k==="n")newGame()});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=gridRect(),x=Math.floor((px-g.x)/g.cell),y=Math.floor((py-g.y)/g.cell);if(inBounds(x,y)){state.cursor={x,y};press(x,y)}});
-els.neww.addEventListener("click",newGame);
-els.reset.addEventListener("click",reset);
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("press")});
-document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const k=btn.dataset.key;if(k==="ArrowLeft")moveCursor(-1,0);else if(k==="ArrowRight")moveCursor(1,0);else if(k==="ArrowUp")moveCursor(0,-1);else if(k==="ArrowDown")moveCursor(0,1);else if(k==="Enter")press(state.cursor.x,state.cursor.y);else if(k==="r")reset()}));
-loadLevel(0);
+function newGame(){state.score=0;state.runStars=0;state.cleared=0;state.newBest=false;loadLevel(0);say(LEVELS[0].intro);sfx("press",2)}
+function resetLevel(){if(state.mode!=="playing")return;loadLevel(state.idx);say("Night "+(state.idx+1)+" reset — budget and undos restored.");sfx("undo")}
+function moveCursor(dx,dy){if(state.mode!=="playing")return;let{x,y}=state.cursor;
+  for(let i=0;i<state.size;i++){x+=dx;y+=dy;if(x<0||y<0||x>=state.size||y>=state.size)return;if(cellAt(x,y)){state.cursor={x,y};draw();return}}}
+
+function update(){els.level.textContent=(state.idx+1)+"/"+TOTAL;els.lit.textContent=String(litCount());
+  els.moves.textContent=state.moves+"/"+level().budget;els.par.textContent=String(par());
+  els.score.textContent=String(state.score);els.best.textContent=state.bestScore>0?String(state.bestScore):"—";
+  els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+
+// --- fx state ---
+function specks(cx,cy){const g=geom(),bx=g.x+cx*g.cell+g.cell/2,by=g.y+cy*g.cell+g.cell/2;
+  for(let i=0;i<3;i++)parts.push({x:bx+(Math.random()-.5)*g.cell*.5,y:by+(Math.random()-.5)*g.cell*.3,vx:(Math.random()-.5)*40,vy:-30-Math.random()*50,age:0,life:520+Math.random()*280,size:1.4+Math.random()*1.8,col:"165,243,252"})}
+function burst(x,y,n,col){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=60+Math.random()*160;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-40,age:0,life:600+Math.random()*450,size:1.6+Math.random()*2.4,col})}}
+
+// --- rendering ---
+let BG=null;
+function backdrop(){if(BG)return BG;BG=document.createElement("canvas");BG.width=960;BG.height=540;const c=BG.getContext("2d");
+  const lg=c.createLinearGradient(0,0,0,540);lg.addColorStop(0,"#081a2c");lg.addColorStop(1,"#040812");c.fillStyle=lg;c.fillRect(0,0,960,540);
+  let b=c.createRadialGradient(120,-40,0,120,-40,430);b.addColorStop(0,"rgba(45,212,191,.14)");b.addColorStop(1,"rgba(45,212,191,0)");c.fillStyle=b;c.fillRect(0,0,960,540);
+  b=c.createRadialGradient(880,30,0,880,30,390);b.addColorStop(0,"rgba(99,102,241,.13)");b.addColorStop(1,"rgba(99,102,241,0)");c.fillStyle=b;c.fillRect(0,0,960,540);
+  let s=42;const rnd=()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+  for(let i=0;i<110;i++){const x=rnd()*960,y=rnd()*540,r=rnd()*1.4+.3,a=rnd()*.45+.1;c.fillStyle="rgba(190,230,255,"+a.toFixed(2)+")";c.beginPath();c.arc(x,y,r,0,6.29);c.fill()}
+  return BG}
+const GEO={n:0};
+function geom(){if(GEO.n!==state.size){const n=state.size,cell=Math.floor(Math.min(532/n,446/n));GEO.n=n;GEO.cell=cell;GEO.x=40+Math.round((532-cell*n)/2);GEO.y=84+Math.round((446-cell*n)/2)}return GEO}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+const GRAD={key:-1,lit:null};
+function litGrad(s){if(GRAD.key!==s){GRAD.key=s;const g=ctx.createRadialGradient(-s*.1,-s*.18,s*.05,0,0,s*.75);g.addColorStop(0,"#f2ffff");g.addColorStop(.38,"#7df3ff");g.addColorStop(1,"#0c7f9d");GRAD.lit=g}return GRAD.lit}
+function starPath(cx,cy,r){ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr2=i%2?r*.45:r;if(i)ctx.lineTo(cx+Math.cos(a)*rr2,cy+Math.sin(a)*rr2);else ctx.moveTo(cx+Math.cos(a)*rr2,cy+Math.sin(a)*rr2)}ctx.closePath()}
+function easeBack(p){const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(p-1,3)+c1*Math.pow(p-1,2)}
+
+function drawTile(s,r,lit,type,cell){rr(-s/2,-s/2,s,s,r);
+  if(lit){ctx.shadowColor="rgba(103,232,249,.75)";ctx.shadowBlur=cell*.22;ctx.fillStyle=litGrad(s);ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle="rgba(255,255,255,.5)";ctx.lineWidth=1.5;rr(-s/2+.75,-s/2+.75,s-1.5,s-1.5,r);ctx.stroke()}
+  else{ctx.fillStyle="#0a1626";ctx.fill();ctx.strokeStyle="rgba(94,234,212,.18)";ctx.lineWidth=1.5;rr(-s/2+.75,-s/2+.75,s-1.5,s-1.5,r);ctx.stroke();
+    ctx.strokeStyle="rgba(94,234,212,.34)";ctx.lineWidth=Math.max(1.5,s*.04);ctx.beginPath();ctx.arc(0,0,s*.26,-.4*Math.PI,.55*Math.PI);ctx.stroke();
+    ctx.fillStyle="rgba(94,234,212,.10)";ctx.beginPath();ctx.arc(0,0,s*.1,0,6.29);ctx.fill()}
+  if(type==="x"||type==="b"){ctx.strokeStyle=lit?"rgba(8,51,68,.9)":"rgba(165,243,252,.55)";ctx.lineWidth=2;
+    const gx=-s/2+s*.17,gy=-s/2+s*.17,l=s*.08;ctx.beginPath();
+    if(type==="x"){ctx.moveTo(gx-l,gy-l);ctx.lineTo(gx+l,gy+l);ctx.moveTo(gx+l,gy-l);ctx.lineTo(gx-l,gy+l)}
+    else{ctx.moveTo(gx-l*1.3,gy);ctx.lineTo(gx+l*1.3,gy);ctx.moveTo(gx,gy-l*1.3);ctx.lineTo(gx,gy+l*1.3)}
+    ctx.stroke()}}
+
+function drawBoard(){const g=geom(),cell=g.cell,n=g.n,pad=Math.max(4,cell*.08),r=Math.min(14,cell*.16);
+  ctx.fillStyle="rgba(8,20,34,.55)";rr(g.x-14,g.y-14,cell*n+28,cell*n+28,18);ctx.fill();
+  ctx.strokeStyle="rgba(94,234,212,.14)";ctx.lineWidth=1;ctx.stroke();
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){const t=state.types[y][x];if(t===".")continue;
+    const cx=g.x+x*cell+cell/2,cy=g.y+y*cell+cell/2,s=cell-pad*2;
+    let lit=state.board[y][x]===1,sx=1,pop=0;
+    const a=animMap.get(x+","+y);
+    if(a){if(a.age<a.delay){lit=a.prev===1}else{const p=Math.min(1,(a.age-a.delay)/a.dur);if(p<.5)lit=a.prev===1;sx=Math.abs(1-2*p);pop=Math.sin(p*Math.PI)*.09}}
+    ctx.save();ctx.translate(cx,cy);ctx.scale(Math.max(.05,sx)*(1+pop),1+pop);
+    drawTile(s,r,lit,t,cell);ctx.restore()}
+  if(state.hint&&state.mode==="playing"){const hx=g.x+state.hint.x*cell,hy=g.y+state.hint.y*cell;
+    const pulse=state.hint.age<4000&&!reduced()?Math.sin(state.hint.age/180)*2.5:0;
+    ctx.strokeStyle="rgba(251,191,36,.9)";ctx.lineWidth=3;rr(hx+pad-5-pulse,hy+pad-5-pulse,cell-pad*2+10+pulse*2,cell-pad*2+10+pulse*2,r+4);ctx.stroke()}
+  if(state.mode==="playing"||state.mode==="clear"){const c=state.cursor,cx=g.x+c.x*cell,cy=g.y+c.y*cell;
+    ctx.strokeStyle="rgba(94,234,212,.35)";ctx.lineWidth=7;rr(cx+pad-7,cy+pad-7,cell-pad*2+14,cell-pad*2+14,r+5);ctx.stroke();
+    ctx.strokeStyle="rgba(248,252,255,.95)";ctx.lineWidth=3;rr(cx+pad-4,cy+pad-4,cell-pad*2+8,cell-pad*2+8,r+3);ctx.stroke()}
+  for(const w of waves){const p=w.age/380;if(p>=1)continue;
+    ctx.strokeStyle="rgba(125,243,255,"+(.5*(1-p)).toFixed(3)+")";ctx.lineWidth=3*(1-p)+1;
+    ctx.beginPath();ctx.arc(w.x,w.y,w.cell*(.4+p*1.9),0,6.29);ctx.stroke()}
+  for(const p of parts){const a=Math.max(0,1-p.age/p.life);
+    ctx.fillStyle="rgba("+p.col+","+(a*.9).toFixed(3)+")";ctx.beginPath();ctx.arc(p.x,p.y,p.size*a+.4,0,6.29);ctx.fill()}}
+
+function drawPanel(){const px=612;ctx.textAlign="left";
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("NIGHT",px,100);
+  ctx.fillStyle="#f3fbff";ctx.font="950 30px system-ui";ctx.fillText((state.idx+1)+" / "+TOTAL,px,132);
+  ctx.fillStyle="#5eead4";ctx.font="900 14px system-ui";ctx.fillText(level().name.toUpperCase(),px,154);
+  const cap=state.hintsUsed===0?3:state.hintsUsed===1?2:1,p2=state.mode==="clear"?state.lastStars:pace();
+  for(let i=0;i<3;i++){const sx=px+16+i*44;starPath(sx,190,15);
+    if(i<p2){ctx.fillStyle="#fbbf24";ctx.fill()}else{ctx.strokeStyle=i<cap?"rgba(251,191,36,.45)":"rgba(148,163,184,.3)";ctx.lineWidth=2;ctx.stroke()}}
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("PRESSES",px,238);
+  const bw=300,ratio=Math.min(1,state.moves/level().budget);
+  ctx.fillStyle="rgba(255,255,255,.09)";rr(px,246,bw,10,5);ctx.fill();
+  if(ratio>0){ctx.fillStyle=ratio<.6?"#2dd4bf":ratio<.85?"#fbbf24":"#f87171";rr(px,246,Math.max(8,bw*ratio),10,5);ctx.fill()}
+  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";
+  ctx.fillText((level().budget-state.moves)+" left of "+level().budget+" · par "+par()+" · undo ×"+state.undosLeft,px,274);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("RUN SCORE",px,312);
+  ctx.fillStyle="#f3fbff";ctx.font="950 28px system-ui";ctx.fillText(String(state.score),px,342);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("BEST",px,376);
+  ctx.fillStyle="#7df3ff";ctx.font="950 20px system-ui";ctx.fillText(state.bestScore>0?String(state.bestScore):"—",px,398);
+  starPath(px+8,424,8);ctx.fillStyle="#fbbf24";ctx.fill();
+  ctx.fillStyle="#9fb3c8";ctx.font="800 13px system-ui";ctx.fillText(starsTotal()+" / "+TOTAL*3+" stars collected",px+24,429);
+  let ly=462;ctx.font="700 12px system-ui";
+  if(level().rows.some(r2=>r2.includes("x"))){ctx.fillStyle="#a5f3fc";ctx.fillText("✕ lunar tile — flips diagonals",px,ly);ly+=20}
+  if(level().rows.some(r2=>r2.includes("b"))){ctx.fillStyle="#a5f3fc";ctx.fillText("+ beam tile — flips row + column",px,ly);ly+=20}
+  if(level().rows.some(r2=>r2.includes("."))){ctx.fillStyle="#8ea3b8";ctx.fillText("void — flips skip the gaps",px,ly)}}
+
+function drawClearBanner(){ctx.fillStyle="rgba(4,9,18,.8)";ctx.fillRect(0,196,960,150);
+  ctx.fillStyle="rgba(94,234,212,.5)";ctx.fillRect(0,196,960,2);ctx.fillRect(0,344,960,2);
+  ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 32px system-ui";
+  ctx.fillText("NIGHT "+(state.idx+1)+" CLEARED",480,240);
+  const p=Math.min(1,state.bannerT/420),sc=reduced()?1:easeBack(p);
+  for(let i=0;i<3;i++){const sx=480+(i-1)*56;ctx.save();ctx.translate(sx,282);ctx.scale(sc,sc);starPath(0,0,20);
+    if(i<state.lastStars){ctx.fillStyle="#fbbf24";ctx.fill()}else{ctx.strokeStyle="rgba(251,191,36,.35)";ctx.lineWidth=2;ctx.stroke()}ctx.restore()}
+  ctx.fillStyle="#dbeafe";ctx.font="800 16px system-ui";ctx.fillText("+"+state.lastPts+" points",480,328);ctx.textAlign="left"}
+
+function drawSummary(kind){ctx.fillStyle="rgba(3,7,18,.86)";ctx.fillRect(0,0,960,540);ctx.textAlign="center";
+  if(kind==="complete"){ctx.fillStyle="#5eead4";ctx.font="950 48px system-ui";ctx.fillText("TOTAL ECLIPSE",480,168);
+    ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";ctx.fillText("All "+TOTAL+" nights dark.",480,202)}
+  else{ctx.fillStyle="#fda4af";ctx.font="950 40px system-ui";ctx.fillText("THE NIGHT SLIPS AWAY",480,168);
+    ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";ctx.fillText("Out of presses on night "+(state.idx+1)+" — "+state.cleared+" night"+(state.cleared===1?"":"s")+" cleared.",480,202)}
+  ctx.fillStyle="#9fb3c8";ctx.font="800 13px system-ui";ctx.fillText("RUN SCORE",480,248);
+  ctx.fillStyle="#f8fbff";ctx.font="950 44px system-ui";ctx.fillText(String(state.score),480,294);
+  if(state.newBest){ctx.fillStyle="#fbbf24";ctx.font="950 18px system-ui";ctx.fillText("NEW BEST!",480,322)}
+  ctx.fillStyle="#a5f3fc";ctx.font="800 16px system-ui";
+  ctx.fillText("★ "+state.runStars+" stars this run · best "+(state.bestScore>0?state.bestScore:"—")+" · "+starsTotal()+"/"+TOTAL*3+" collected",480,356);
+  ctx.fillStyle="#7dd3fc";ctx.font="900 15px system-ui";ctx.fillText("PRESS ENTER OR TAP NEW RUN",480,412);ctx.textAlign="left"}
+
+function draw(){ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(backdrop(),0,0);
+  let ox=0,oy=0;if(state.shake>.02&&!reduced()){ox=(Math.random()-.5)*state.shake*10;oy=(Math.random()-.5)*state.shake*10}
+  ctx.save();ctx.translate(ox,oy);
+  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("ECLIPSE GRID",40,38);
+  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Flip constellations dark — every press toggles its neighbors too.",40,56);
+  drawBoard();drawPanel();ctx.restore();
+  if(state.mode==="clear")drawClearBanner();
+  else if(state.mode==="failed")drawSummary("failed");
+  else if(state.mode==="complete")drawSummary("complete")}
+
+// --- simulation clock (rAF while animating, synthetic via advanceTime) ---
+function needsFrame(){return animMap.size>0||waves.length>0||parts.length>0||state.shake>.02||state.flash>0||state.mode==="clear"||!!(state.hint&&state.hint.age<4000)}
+function tick(dt){state.flash=Math.max(0,state.flash-dt/900);
+  if(state.shake>0)state.shake=Math.max(0,state.shake-dt/500);
+  if(state.hint&&state.hint.age<4000)state.hint.age+=dt;
+  for(const[k,a]of animMap){a.age+=dt;if(a.age>=a.delay+a.dur)animMap.delete(k)}
+  for(const w of waves)w.age+=dt;waves=waves.filter(w=>w.age<380);
+  for(const p of parts){p.age+=dt;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=70*dt/1000}
+  parts=parts.filter(p=>p.age<p.life);
+  if(state.mode==="clear"){state.bannerT+=dt;if(state.bannerT>=1200){if(state.idx<TOTAL-1){loadLevel(state.idx+1);say(level().intro)}else complete()}}
+  draw()}
+window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40)),step=ms/n;for(let i=0;i<n;i++)tick(step);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,level:state.idx+1,total:TOTAL,name:level().name,size:state.size,lit:litCount(),moves:state.moves,budget:level().budget,par:par(),score:state.score,best:state.bestScore,stars:{run:state.runStars,lastLevel:state.lastStars,collected:starsTotal(),max:TOTAL*3},undosLeft:state.undosLeft,hintsUsed:state.hintsUsed,hint:state.hint?{x:state.hint.x,y:state.hint.y}:null,cursor:{x:state.cursor.x,y:state.cursor.y},lastPress:state.lastPress,flash:Math.round(state.flash*100)/100,sound:state.sound,reducedMotion:reduced(),feedback:state.feedback,board:state.board.map((row,y)=>row.map((v,x)=>state.types[y][x]==="."?".":String(v)).join("")),tiles:state.types.slice(),coordinateSystem:"board[row][col], origin top-left; 1=lit, 0=dark, .=void; goal all dark"})};
+
+// --- input ---
+function act(k){
+  if(state.mode==="failed"||state.mode==="complete"){if(k==="Enter"||k===" "||/^[nr]$/i.test(k))newGame();return}
+  if(k==="ArrowLeft"||k==="a"||k==="A")moveCursor(-1,0);
+  else if(k==="ArrowRight"||k==="d"||k==="D")moveCursor(1,0);
+  else if(k==="ArrowUp"||k==="w"||k==="W")moveCursor(0,-1);
+  else if(k==="ArrowDown"||k==="s"||k==="S")moveCursor(0,1);
+  else if(k==="Enter"||k===" ")press(state.cursor.x,state.cursor.y);
+  else if(k==="r"||k==="R")resetLevel();
+  else if(k==="n"||k==="N")newGame();
+  else if(k==="h"||k==="H")hint();
+  else if(k==="u"||k==="U")undo()}
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+  if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key))e.preventDefault();
+  act(e.key)});
+canvas.addEventListener("pointerdown",e=>{try{canvas.focus()}catch(_){}
+  if(state.mode==="failed"||state.mode==="complete"){newGame();return}
+  if(state.mode!=="playing")return;
+  const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=geom();
+  const x=Math.floor((px-g.x)/g.cell),y=Math.floor((py-g.y)/g.cell);
+  if(cellAt(x,y)){state.cursor={x,y};press(x,y)}});
+els.neww.addEventListener("click",()=>{newGame();try{canvas.focus()}catch(_){}});
+els.reset.addEventListener("click",()=>{if(state.mode==="failed"||state.mode==="complete")newGame();else resetLevel();try{canvas.focus()}catch(_){}});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");sfx("press",2)});
+document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{try{canvas.focus()}catch(_){}act(btn.dataset.key)}));
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(AC){try{AC.suspend()}catch(_){}}}
+  else{if(AC&&state.sound){try{const p=AC.resume();if(p&&p.catch)p.catch(()=>{})}catch(_){}}if(needsFrame())wake()}});
+
+loadLevel(0);say(LEVELS[0].intro);
 let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flash>0||(state.mode==="clear"&&state.nextAt!=null)}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
-function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame())requestAnimationFrame(frame);else rafOn=false}
+function wake(){if(rafOn||document.hidden)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
 addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
 if(needsFrame())wake();
 })();
