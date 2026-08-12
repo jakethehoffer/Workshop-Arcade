@@ -65,25 +65,42 @@
 html,body{margin:0;min-height:100%;color:#eaf6ff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;padding:14px 10px 18px;background:radial-gradient(760px 440px at 8% -8%,rgba(45,212,191,.17),transparent 62%),radial-gradient(680px 420px at 96% 0%,rgba(99,102,241,.16),transparent 64%),linear-gradient(180deg,#071018,#050713 88%)}
 button{font:inherit}
-.app{width:min(980px,100%);display:grid;grid-template-rows:auto auto auto auto auto auto;align-content:start;gap:9px}
+.app{width:min(980px,100%);display:grid;align-content:start;gap:9px}
 .top{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{line-height:1}.eyebrow{display:block;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase}.title{display:block;margin-top:4px;color:#f8fbff;font-size:clamp(24px,4vw,34px);font-weight:950;text-transform:uppercase;text-shadow:0 0 22px rgba(94,234,212,.22)}
-.help{max-width:560px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
+.help{max-width:600px;color:#aebed3;font-size:12px;line-height:1.35;text-align:right}
 .hud{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
-.pill,.btn,.stage,.touch button{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
+.pill,.btn,.stage,.nights button,dialog{border:1px solid rgba(94,234,212,.24);background:linear-gradient(180deg,rgba(18,31,49,.96),rgba(7,14,28,.98));box-shadow:0 12px 28px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.04)}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
-canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
+canvas:focus-visible,.btn:focus-visible,.nights button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
-.btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
+.btn{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 .btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
 .btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
-.touch{display:grid;grid-template-columns:repeat(5,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
+.nights{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:8px}
+.nights button{border-radius:8px;min-width:40px;min-height:40px;padding:4px 2px 3px;color:#eaf6ff;cursor:pointer;line-height:1.05;touch-action:manipulation}
+.nights .num{display:block;font-size:13px;font-weight:950;font-variant-numeric:tabular-nums}
+.nights .stars{display:block;min-height:11px;font-size:9px;letter-spacing:1px;color:#fbbf24}
+.nights button[disabled]{color:#93a9c0;cursor:default;border-color:rgba(148,169,192,.28)}
+.nights button[aria-current="true"]{border-color:#5eead4;box-shadow:0 0 0 1px rgba(94,234,212,.55),0 12px 28px rgba(0,0,0,.27)}
+dialog{border-radius:14px;padding:18px 20px;width:min(440px,92vw);color:#eaf6ff}
+dialog::backdrop{background:rgba(3,8,16,.68)}
+#summaryTitle{margin:0;font-size:22px;font-weight:950;text-transform:uppercase;color:#5eead4}
+dialog.perfect #summaryTitle{color:#facc15}
+dialog.stuck #summaryTitle{color:#fb7185}
+#summaryLine{margin:6px 0 12px;color:#aebed3;font-size:13px;line-height:1.45}
+.sumStats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 12px}
+.sumStats .cellS{border:1px solid rgba(94,234,212,.2);border-radius:8px;padding:6px 4px;text-align:center;background:rgba(10,20,36,.7)}
+.sumBadges{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.badge{border-radius:999px;padding:4px 10px;font-size:10px;font-weight:950;text-transform:uppercase;color:#06272e;background:linear-gradient(180deg,#fde68a,#fbbf24)}
+.badge.teal{background:linear-gradient(180deg,#6ff7ff,#22d3ee)}
+.sumBtns{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
-@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 92px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
-@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,1fr))}.touch .wide{grid-column:span 1}}
+@media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 92px;min-height:38px;padding:8px}.nights{margin-left:0;width:100%;justify-content:center}.nights button{flex:1 1 34px;min-width:34px;min-height:42px}}
+@media(max-width:430px){.hud{grid-template-columns:repeat(3,minmax(0,1fr))}.status{font-size:11px}.sumStats{grid-template-columns:repeat(2,1fr)}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -91,134 +108,413 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Last Light peg-solitaire puzzle">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Last Light</span></div>
-    <div class="help">Arrow keys move the marker. Enter selects a lit peg, then Enter on a highlighted hole jumps it over a neighbor (removing that peg). Tap a peg then a target hole to do the same. Clear down to one last light. U undoes, R restarts.</div>
+    <div class="help">Tap a lit lamp, then a glowing socket: it jumps the neighbor and that lamp goes dark. Leave one last light — on the gold ring for a perfect. Chain jumps with the same lamp for bonus points. Arrows move, Enter jumps, U undo, H hint, R retry, N next night.</div>
   </header>
   <section class="hud" aria-label="Game status">
-    <div class="pill"><span class="label">Pegs</span><span class="value" id="pegsValue">32</span></div>
-    <div class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></div>
+    <div class="pill"><span class="label">Night</span><span class="value" id="nightValue">1/8</span></div>
+    <div class="pill"><span class="label">Lamps</span><span class="value" id="pegsValue">2</span></div>
+    <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
+    <div class="pill"><span class="label">Chain</span><span class="value" id="chainValue">—</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
-    <div class="pill"><span class="label">Result</span><span class="value" id="resultValue">—</span></div>
-    <div class="pill"><span class="label">Solves</span><span class="value" id="solvesValue">0</span></div>
-    <div class="pill"><span class="label">Perfect</span><span class="value" id="perfectValue">0</span></div>
+    <div class="pill"><span class="label">Perfects</span><span class="value" id="perfectValue">0</span></div>
   </section>
-  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Last Light peg-solitaire cross board. Jump pegs over neighbors into empty holes to clear the board to one peg."></canvas></div>
-  <div class="status" id="statusLine" aria-live="polite">Select a lit peg, then jump it over a neighbor into an empty hole.</div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Last Light peg-solitaire board. Jump lamps over neighbors into empty sockets until a single lamp is left lit."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Select a lit lamp, then jump it over a neighbor into an empty socket.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Last Light ready.</div>
-  <section class="bar" aria-label="Actions">
-    <button class="btn primary" id="newBtn" type="button">New Game</button>
+  <section class="bar" aria-label="Actions and night select">
+    <button class="btn primary" id="newBtn" type="button">Restart Night</button>
     <button class="btn" id="undoBtn" type="button">Undo</button>
+    <button class="btn" id="hintBtn" type="button">Hint</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <div class="nights" id="nightPicker" role="group" aria-label="Choose night">
+      <button type="button" data-night="1"><span class="num">1</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="2"><span class="num">2</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="3"><span class="num">3</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="4"><span class="num">4</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="5"><span class="num">5</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="6"><span class="num">6</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="7"><span class="num">7</span><span class="stars" aria-hidden="true"></span></button>
+      <button type="button" data-night="8"><span class="num">8</span><span class="stars" aria-hidden="true"></span></button>
+    </div>
   </section>
-  <section class="touch" aria-label="Touch controls">
-    <button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Select / Jump</button><button type="button" data-key="u">Undo</button>
-    <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="ArrowDown">Down</button><button type="button" data-key="ArrowRight">Right</button>
-  </section>
+  <dialog id="summaryDialog" aria-labelledby="summaryTitle">
+    <h2 id="summaryTitle">Night Lit</h2>
+    <p id="summaryLine">The last light burns.</p>
+    <div class="sumStats">
+      <div class="cellS"><span class="label">Score</span><span class="value" id="sumScore">0</span></div>
+      <div class="cellS"><span class="label">Moves</span><span class="value" id="sumMoves">0</span></div>
+      <div class="cellS"><span class="label">Top Chain</span><span class="value" id="sumChain">0</span></div>
+      <div class="cellS"><span class="label">Best</span><span class="value" id="sumBest">0</span></div>
+    </div>
+    <div class="sumBadges" id="sumBadges"></div>
+    <div class="sumBtns">
+      <button class="btn" id="undoDlgBtn" type="button">Undo Jump</button>
+      <button class="btn" id="retryBtn" type="button">Replay</button>
+      <button class="btn" id="closeBtn" type="button">View Board</button>
+      <button class="btn primary" id="nextBtn" type="button">Next Night</button>
+    </div>
+  </dialog>
 </main>
 <script>
 (() => {
 "use strict";
-const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),N=7,CENTER=3*N+3;
-const STATS_KEY="last-light.stats.v1",SOUND_KEY="last-light.sound.v1";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),N=7;
+const STATS_KEY="last-light.stats.v2",SOUND_KEY="last-light.sound.v1";
 const DIRS=[[-1,0],[1,0],[0,-1],[0,1]];
 const $=id=>document.getElementById(id);
-const els={pegs:$("pegsValue"),moves:$("movesValue"),best:$("bestValue"),result:$("resultValue"),solves:$("solvesValue"),perfect:$("perfectValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),undo:$("undoBtn")};
-const saved=readStats();
-const state={board:[],cursor:{x:3,y:1},sel:-1,moves:0,mode:"playing",result:null,best:saved.best,solves:saved.solves,perfect:saved.perfect,sound:readSound(),feedback:"Select a lit peg, then jump it over a neighbor into an empty hole.",history:[],flash:0,flashIdx:-1,time:0};
-let audio=null;
-// Honor prefers-reduced-motion: gate the decorative post-jump flash glow
-// (cosmetic shimmer on the just-cleared hole, no gameplay effect) for
-// motion-sensitive players. Peg/hole rendering, selection, and legal-move
-// highlights are gameplay and are left intact.
+const els={night:$("nightValue"),pegs:$("pegsValue"),score:$("scoreValue"),chain:$("chainValue"),best:$("bestValue"),perfect:$("perfectValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),undo:$("undoBtn"),hint:$("hintBtn"),picker:$("nightPicker"),dlg:$("summaryDialog"),sumTitle:$("summaryTitle"),sumLine:$("summaryLine"),sumScore:$("sumScore"),sumMoves:$("sumMoves"),sumChain:$("sumChain"),sumBest:$("sumBest"),sumBadges:$("sumBadges"),undoDlg:$("undoDlgBtn"),retry:$("retryBtn"),close:$("closeBtn"),next:$("nextBtn")};
+
+// Every night is generated by REVERSE play: start from a single lamp on the
+// target socket and undo jumps. That makes each board solvable to one lamp by
+// construction, and the reversed build order is a guaranteed solution the hint
+// system can read straight off.
+const MASKS={
+ cross:["..###..","..###..","#######","#######","#######","..###..","..###.."],
+ diamond:["...#...","..###..",".#####.","#######",".#####.","..###..","...#..."],
+ square:[".......",".#####.",".#####.",".#####.",".#####.",".#####.","......."],
+ stair:["#......","##.....","###....","####...","#####..","######.","#######"],
+ wide:[".#####.","#######","#######","#######","#######","#######",".#####."],
+ full:["#######","#######","#######","#######","#######","#######","#######"]};
+const NIGHTS=[
+ {name:"First Watch",mask:"cross",target:24,grow:13,seed:1017},
+ {name:"Quiet Diamond",mask:"diamond",target:24,grow:12,seed:2213},
+ {name:"The Courtyard",mask:"square",target:24,grow:15,seed:3391},
+ {name:"Long Cross",mask:"cross",target:24,grow:19,seed:4457},
+ {name:"Stairfall",mask:"stair",target:37,grow:17,seed:5519},
+ {name:"Wide Vigil",mask:"wide",target:24,grow:22,seed:6673},
+ {name:"Full Dark",mask:"full",target:24,grow:26,seed:7741},
+ {name:"Last Light",mask:"cross",target:24,grow:30,seed:8819}];
+const STAR="★";
+
 let reducedMotion=false;
-try{
-  const motionQuery=window.matchMedia("(prefers-reduced-motion: reduce)");
-  reducedMotion=motionQuery.matches;
-  motionQuery.addEventListener("change",(event)=>{reducedMotion=event.matches});
-}catch(_){}
+try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(typeof v.best==="number"?v.best:null),solves:v.solves|0,perfect:v.perfect|0}}catch(_){}return{best:null,solves:0,perfect:0}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best,solves:state.solves,perfect:state.perfect}))}catch(_){}}
+function intOr(v,d){const n=Number(v);return Number.isFinite(n)?Math.floor(n):d}
+function readMeta(){const base={best:new Array(8).fill(0),stars:new Array(8).fill(0),perfects:0,unlocked:0};
+ try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return base;const v=JSON.parse(raw);if(!v||typeof v!=="object"||Array.isArray(v))return base;
+  if(Array.isArray(v.best))for(let i=0;i<8;i++)base.best[i]=Math.max(0,intOr(v.best[i],0));
+  if(Array.isArray(v.stars))for(let i=0;i<8;i++)base.stars[i]=Math.min(3,Math.max(0,intOr(v.stars[i],0)));
+  base.perfects=Math.max(0,intOr(v.perfects,0));
+  base.unlocked=Math.min(7,Math.max(0,intOr(v.unlocked,0)))}catch(_){}
+ return base}
+function saveMeta(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify(meta))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
-function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+const meta=readMeta();
+
+let audio=null;
+function ac(){if(!state.sound)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;try{audio=audio||new AC();if(audio.state==="suspended")audio.resume();return audio}catch(_){return null}}
+function blip(freq,dur,type,vol,delay){const a=ac();if(!a)return;try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(delay||0);o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.07,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+const SCALE=[392,440,494,523,587,659,740,784,880,988];
+function tone(kind,n){switch(kind){
+ case"select":blip(430,.12,"triangle",.05);break;
+ case"jump":blip(SCALE[Math.min(SCALE.length-1,(n||1)-1)],.18,"triangle",.07);blip(SCALE[Math.min(SCALE.length-1,(n||1)-1)]*2,.09,"sine",.03,.02);break;
+ case"chain":blip(SCALE[Math.min(SCALE.length-1,(n||1))],.22,"sine",.06);blip(SCALE[Math.min(SCALE.length-1,(n||1))]*1.5,.14,"triangle",.04,.05);break;
+ case"undo":blip(240,.16,"triangle",.05);break;
+ case"hint":blip(660,.1,"sine",.05);blip(880,.12,"sine",.04,.07);break;
+ case"win":[523,659,784].forEach((f,i)=>blip(f,.3,"triangle",.07,i*.09));break;
+ case"perfect":[523,659,784,1046].forEach((f,i)=>blip(f,.35,"triangle",.08,i*.08));break;
+ case"stuck":blip(180,.35,"sawtooth",.05);blip(120,.4,"sawtooth",.04,.08);break;
+ case"bad":blip(150,.14,"sawtooth",.045);break}}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={select:420,jump:300,undo:240,win:660,perfect:760,stuck:150,bad:150}[kind]||260;o.type=kind==="stuck"||kind==="bad"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
 
-function isHole(r,c){if(r<0||c<0||r>=N||c>=N)return false;const corner=(r<2&&c<2)||(r<2&&c>4)||(r>4&&c<2)||(r>4&&c>4);return !corner}
-function newBoard(){const b=new Array(N*N).fill(-1);for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(isHole(r,c))b[r*N+c]=1;b[CENTER]=0;return b}
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+function maskOf(name){const m=MASKS[name],holes=new Array(N*N).fill(false);for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(m[r][c]==="#")holes[r*N+c]=true;return holes}
 function pegCount(b){let n=0;for(const v of b)if(v===1)n++;return n}
-function jumpsFrom(b,idx){const out=[];if(b[idx]!==1)return out;const r=(idx/N)|0,c=idx%N;for(const[dr,dc]of DIRS){const or=r+dr,oc=c+dc,lr=r+dr*2,lc=c+dc*2;if(!isHole(lr,lc))continue;const over=or*N+oc,land=lr*N+lc;if(b[over]===1&&b[land]===0)out.push({over,land})}return out}
-function anyJump(b){for(let i=0;i<b.length;i++)if(b[i]===1&&jumpsFrom(b,i).length)return true;return false}
-function centerPeg(b){return b[CENTER]===1&&pegCount(b)===1}
+function movesFrom(b,idx){const out=[];if(b[idx]!==1)return out;const r=(idx/N)|0,c=idx%N;
+ for(const[dr,dc]of DIRS){const orr=r+dr,oc=c+dc,lr=r+dr*2,lc=c+dc*2;if(lr<0||lc<0||lr>=N||lc>=N)continue;const over=orr*N+oc,land=lr*N+lc;if(b[over]===1&&b[land]===0)out.push({from:idx,over,land})}
+ return out}
+function allMoves(b){const out=[];for(let i=0;i<b.length;i++)if(b[i]===1)for(const m of movesFrom(b,i))out.push(m);return out}
+function applyForward(b,m){const nb=b.slice();nb[m.from]=0;nb[m.over]=0;nb[m.land]=1;return nb}
 
-function snapshot(){state.history.push({board:state.board.slice(),moves:state.moves,sel:state.sel});if(state.history.length>400)state.history.shift()}
-function doJump(from,land){const r=(from/N)|0,c=from%N,lr=(land/N)|0,lc=land%N;const over=((r+lr)/2)*N+((c+lc)/2);
-  snapshot();state.board[from]=0;state.board[over]=0;state.board[land]=1;state.moves++;state.sel=-1;if(!reducedMotion){state.flash=1;state.flashIdx=over}tone("jump");vibe(10);
-  state.cursor={x:lc,y:lr};
-  if(!anyJump(state.board))endGame();else{say(pegCount(state.board)+" pegs left. Keep jumping.");update();draw()}}
+function growBoard(cfg,holes,seed,openWithClassic){
+ const b=new Array(N*N).fill(-1);for(let i=0;i<b.length;i++)if(holes[i])b[i]=0;
+ b[cfg.target]=1;const seq=[],lockEmpty=new Set();
+ if(openWithClassic){b[10]=1;b[17]=1;b[24]=0;seq.push({from:10,over:17,land:24});lockEmpty.add(24)}
+ const rand=rng(seed);
+ for(let step=0;step<cfg.grow;step++){
+  const opts=[];
+  for(let idx=0;idx<b.length;idx++){if(b[idx]!==1)continue;const r=(idx/N)|0,c=idx%N;
+   for(const[dr,dc]of DIRS){const orr=r+dr,oc=c+dc,fr=r+dr*2,fc=c+dc*2;if(fr<0||fc<0||fr>=N||fc>=N)continue;
+    const over=orr*N+oc,from=fr*N+fc;
+    if(!holes[over]||!holes[from]||b[over]!==0||b[from]!==0)continue;
+    if(lockEmpty.has(over)||lockEmpty.has(from))continue;
+    opts.push({from,over,land:idx})}}
+  if(!opts.length)break;
+  const m=opts[Math.floor(rand()*opts.length)];b[m.from]=1;b[m.over]=1;b[m.land]=0;seq.push(m)}
+ return{board:b,seq}}
+function buildNight(n){const cfg=NIGHTS[n],holes=maskOf(cfg.mask);
+ // Night 1 always opens with the classic top-to-centre jump: it teaches the rule
+ // in one move, and the render harness drives exactly that opening. Reroll the
+ // seed until the grown board still leaves that jump on the table.
+ let grown=null;
+ for(let attempt=0;attempt<240;attempt++){
+  const g=growBoard(cfg,holes,(cfg.seed+attempt*7919)>>>0,n===0);
+  if(n!==0){grown=g;break}
+  if(g.board[10]===1&&g.board[17]===1&&g.board[24]===0&&pegCount(g.board)>=10){grown=g;break}}
+ if(!grown)grown=growBoard(cfg,holes,cfg.seed,n===0);
+ const b=grown.board,solution=grown.seq.slice().reverse();
+ const path=new Map();let walk=b.slice();
+ for(const m of solution){path.set(walk.join(""),m);walk=applyForward(walk,m)}
+ return{holes,board:b,solution,path,target:cfg.target,name:cfg.name}}
 
-function selectAt(idx){if(state.board[idx]!==1){say("That hole has no peg — select a lit peg.");tone("bad");draw();return}const j=jumpsFrom(state.board,idx);if(!j.length){say("That peg can't jump. Pick one next to a peg with an empty hole beyond.");tone("bad");state.sel=idx;draw();return}state.sel=idx;tone("select");say("Peg selected — choose a highlighted hole to jump into.");draw()}
+// Off-path hint: bounded depth-first search. Budget keeps a hostile board from
+// hanging the tab; when it runs out we say so instead of guessing. Ask for a
+// perfect finish first so a hint never quietly costs the player the gold ring.
+function searchFrom(board,target){const dead=new Set();let nodes=0,out=false;
+ const go=b=>{if(nodes++>60000){out=true;return null}
+  const k=b.join("");if(dead.has(k))return null;
+  if(pegCount(b)===1)return target<0||b[target]===1?[]:null;
+  for(const m of allMoves(b)){const r=go(applyForward(b,m));if(r)return[m].concat(r);if(out)return null}
+  if(!out)dead.add(k);return null};
+ const r=go(board.slice());return r&&r.length?r[0]:null}
+function solveFrom(board,target){return searchFrom(board,target)||searchFrom(board,-1)}
+
+const state={n:0,holes:[],board:[],target:24,path:new Map(),solution:[],name:"",cursor:{x:3,y:1},sel:-1,
+ moves:0,score:0,chain:0,chainMax:0,lastLand:-1,hintsUsed:0,hint:null,mode:"playing",result:null,stars:0,
+ history:[],feedback:"",sound:readSound(),scored:false,time:0,anim:null,parts:[],pops:[],shake:0};
+
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function starText(k){return STAR.repeat(k)}
+function renderPicker(){Array.prototype.forEach.call(els.picker.querySelectorAll("button"),btn=>{
+ const i=intOr(btn.dataset.night,1)-1,locked=i>meta.unlocked;
+ btn.disabled=locked;btn.setAttribute("aria-current",i===state.n?"true":"false");
+ btn.querySelector(".stars").textContent=locked?"":starText(meta.stars[i]);
+ btn.setAttribute("aria-label",locked?"Night "+(i+1)+", locked":"Night "+(i+1)+", "+NIGHTS[i].name+", "+meta.stars[i]+" of 3 stars")})}
+function update(){const left=pegCount(state.board);
+ els.night.textContent=(state.n+1)+"/8";els.pegs.textContent=String(left);
+ els.score.textContent=String(state.score);els.chain.textContent=state.chain>1?"x"+state.chain:"—";
+ els.best.textContent=meta.best[state.n]?String(meta.best[state.n]):"—";
+ els.perfect.textContent=String(meta.perfects);
+ els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
+ els.undo.disabled=!state.history.length;renderPicker()}
+
+function firstCursor(){if(state.n===0)return{x:3,y:1};
+ const ms=allMoves(state.board);if(ms.length){const i=ms[0].from;return{x:i%N,y:(i/N)|0}}
+ for(let i=0;i<state.board.length;i++)if(state.board[i]===1)return{x:i%N,y:(i/N)|0};
+ return{x:3,y:3}}
+function loadNight(n,quiet){const built=buildNight(n);
+ state.n=n;state.holes=built.holes;state.board=built.board.slice();state.solution=built.solution;
+ state.path=built.path;state.target=built.target;state.name=built.name;
+ state.sel=-1;state.moves=0;state.score=0;state.chain=0;state.chainMax=0;state.lastLand=-1;
+ state.hintsUsed=0;state.hint=null;state.mode="playing";state.result=null;state.stars=0;
+ state.history=[];state.scored=false;state.anim=null;state.parts.length=0;state.pops.length=0;state.shake=0;
+ state.cursor=firstCursor();
+ if(!quiet)say("Night "+(n+1)+" — "+built.name+". Leave one lamp lit, on the gold ring for a perfect.");
+ update();draw()}
+
+function snapshot(){state.history.push({board:state.board.slice(),moves:state.moves,score:state.score,chain:state.chain,chainMax:state.chainMax,lastLand:state.lastLand,sel:state.sel});if(state.history.length>500)state.history.shift()}
+function spawnParts(idx){if(reducedMotion)return;const g=gridRect(),p=cellPos(idx,g);
+ for(let i=0;i<10;i++){const a=Math.PI*2*i/10+Math.random()*.5,s=40+Math.random()*70;
+  state.parts.push({x:p.cx,y:p.cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:1})}}
+function pop(idx,text){const g=gridRect(),p=cellPos(idx,g);state.pops.push({x:p.cx,y:p.cy,text,life:1})}
+
+function doJump(m){snapshot();
+ const chained=state.lastLand===m.from;
+ state.chain=chained?state.chain+1:1;
+ if(state.chain>state.chainMax)state.chainMax=state.chain;
+ const gain=10+(state.chain-1)*15;
+ state.board[m.from]=0;state.board[m.over]=0;state.board[m.land]=1;
+ state.moves++;state.score+=gain;state.lastLand=m.land;state.sel=-1;state.hint=null;
+ state.cursor={x:m.land%N,y:(m.land/N)|0};
+ if(!reducedMotion){state.anim={from:m.from,land:m.land,t:0};state.shake=Math.min(1,state.chain*.16)}
+ spawnParts(m.over);pop(m.land,"+"+gain);
+ tone(chained?"chain":"jump",state.chain);vibe(chained?[8,18]:10);
+ const left=pegCount(state.board);
+ if(!allMoves(state.board).length)endNight();
+ else{say(left+" lamps lit"+(state.chain>1?" — chain x"+state.chain+"!":". Keep jumping."));update();wake();draw()}}
+
+function selectAt(idx){if(state.board[idx]!==1){say("No lamp there — pick a lit lamp.");tone("bad");draw();return}
+ if(!movesFrom(state.board,idx).length){state.sel=idx;say("That lamp has no jump. It needs a neighbour lamp with an empty socket beyond.");tone("bad");draw();return}
+ state.sel=idx;tone("select");say("Lamp ready — choose a glowing socket to jump into.");draw()}
 function activate(idx){if(state.mode!=="playing")return;
-  if(state.sel<0){selectAt(idx);return}
-  if(idx===state.sel){state.sel=-1;say("Deselected.");draw();return}
-  const j=jumpsFrom(state.board,state.sel).find(m=>m.land===idx);
-  if(j){doJump(state.sel,idx);return}
-  if(state.board[idx]===1){selectAt(idx);return}
-  say("Not a legal landing — pick a highlighted hole.");tone("bad");draw()}
+ if(state.sel<0){selectAt(idx);return}
+ if(idx===state.sel){state.sel=-1;say("Lamp released.");draw();return}
+ const m=movesFrom(state.board,state.sel).find(x=>x.land===idx);
+ if(m){doJump(m);return}
+ if(state.board[idx]===1){selectAt(idx);return}
+ say("Not a legal landing — pick a glowing socket.");tone("bad");draw()}
 
-function endGame(){state.mode="over";const pegs=pegCount(state.board);if(state.best==null||pegs<state.best)state.best=pegs;
-  if(pegs===1){const credit=!state.scored;state.scored=true;if(centerPeg(state.board)){state.result="perfect";if(credit){state.perfect++;state.solves++}say("Perfect — one last light, dead center! Press New Game.");tone("perfect");vibe([30,30,40])}else{state.result="win";if(credit)state.solves++;say("Solved — down to the last light! Press New Game.");tone("win");vibe([26,26])}}
-  else{state.result="stuck";say("No moves left — "+pegs+" pegs remain. Undo, or press New Game.");tone("stuck");vibe(40)}
-  saveStats();update();draw()}
+function endNight(){const left=pegCount(state.board);state.mode="over";
+ const badges=[];let bonus=25*(state.n+1);
+ if(left===1){const onTarget=state.board[state.target]===1;
+  bonus+=onTarget?500:250;state.stars=onTarget?3:2;state.result=onTarget?"perfect":"win";
+  badges.push(onTarget?"Perfect Ring":"Last Light");
+  if(!state.hintsUsed)badges.push("No Hints");
+  if(state.chainMax>=4)badges.push("Chain x"+state.chainMax);
+  tone(onTarget?"perfect":"win");vibe(onTarget?[30,30,50]:[24,24]);
+  if(!reducedMotion)state.shake=1}
+ else{bonus-=(left-1)*25;state.stars=left<=3?1:0;state.result="stuck";
+  if(state.chainMax>=4)badges.push("Chain x"+state.chainMax);
+  tone("stuck");vibe(40)}
+ state.score=Math.max(0,state.score+bonus);
+ if(!state.scored){state.scored=true;
+  if(state.score>meta.best[state.n])meta.best[state.n]=state.score;
+  if(state.stars>meta.stars[state.n])meta.stars[state.n]=state.stars;
+  if(state.result==="perfect")meta.perfects++;
+  if(state.stars>=1&&state.n+1<8&&meta.unlocked<state.n+1)meta.unlocked=state.n+1;
+  saveMeta()}
+ say(left===1?(state.result==="perfect"?"Perfect — one last light on the gold ring!":"Solved — one last light!"):"No jumps left — "+left+" lamps still lit.");
+ update();showSummary(badges);wake();draw()}
 
-function reset(){state.board=newBoard();state.cursor={x:3,y:1};state.sel=-1;state.moves=0;state.mode="playing";state.result=null;state.scored=false;state.history=[];state.flashIdx=-1;say("New board — clear the cross down to one last light.");update();draw()}
-function undo(){if(!state.history.length){say("Nothing to undo.");tone("bad");return}const h=state.history.pop();state.board=h.board;state.moves=h.moves;state.sel=h.sel;state.mode="playing";state.result=null;state.flashIdx=-1;say("Undid a jump — "+pegCount(state.board)+" pegs.");tone("undo");update();draw()}
-function moveCursor(dx,dy){let x=state.cursor.x,y=state.cursor.y;for(let s=0;s<N;s++){x+=dx;y+=dy;if(!isHole(y,x))break;state.cursor={x,y};return}}
+let returnFocus=null;
+function showSummary(badges){
+ els.dlg.classList.toggle("perfect",state.result==="perfect");
+ els.dlg.classList.toggle("stuck",state.result==="stuck");
+ els.sumTitle.textContent=state.result==="perfect"?"Perfect Night":state.result==="win"?"Night Lit":"Lights Out";
+ els.sumLine.textContent=state.feedback+" "+starText(state.stars||0)+(state.stars?" ":"")+(state.n+1<8&&meta.unlocked>=state.n+1?"Night "+(state.n+2)+" is open.":"");
+ els.sumScore.textContent=String(state.score);els.sumMoves.textContent=String(state.moves);
+ els.sumChain.textContent="x"+Math.max(1,state.chainMax);els.sumBest.textContent=String(meta.best[state.n]);
+ els.sumBadges.innerHTML="";
+ badges.forEach((b,i)=>{const s=document.createElement("span");s.className="badge"+(i%2?" teal":"");s.textContent=b;els.sumBadges.appendChild(s)});
+ els.next.disabled=!(state.n+1<8&&meta.unlocked>=state.n+1);
+ returnFocus=document.activeElement;
+ try{if(!els.dlg.open)els.dlg.showModal()}catch(_){}}
+function closeSummary(){try{if(els.dlg.open)els.dlg.close()}catch(_){}}
+els.dlg.addEventListener("close",()=>{const t=returnFocus&&returnFocus.focus?returnFocus:canvas;try{t.focus()}catch(_){}});
 
-function update(){els.pegs.textContent=String(pegCount(state.board));els.moves.textContent=String(state.moves);els.best.textContent=state.best==null?"—":String(state.best);els.result.textContent=state.result==="perfect"?"Perfect":state.result==="win"?"Win":state.result==="stuck"?"Stuck":"—";els.solves.textContent=String(state.solves);els.perfect.textContent=String(state.perfect);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+function undo(){if(!state.history.length){say("Nothing to undo.");tone("bad");return}
+ const h=state.history.pop();state.board=h.board;state.moves=h.moves;state.score=h.score;state.chain=h.chain;
+ state.chainMax=h.chainMax;state.lastLand=h.lastLand;state.sel=-1;state.mode="playing";state.result=null;
+ state.stars=0;state.anim=null;state.hint=null;closeSummary();
+ say("Jump undone — "+pegCount(state.board)+" lamps lit.");tone("undo");update();draw()}
+function useHint(){if(state.mode!=="playing")return;
+ const m=state.path.get(state.board.join(""))||solveFrom(state.board,state.target);
+ if(!m){say("No guaranteed jump from here — undo a move and try another line.");tone("bad");return}
+ state.hintsUsed++;state.hint=m;state.sel=m.from;state.cursor={x:m.from%N,y:(m.from/N)|0};
+ say("Hint: jump this lamp into the ringed socket.");tone("hint");update();draw()}
+function nextNight(){if(state.n+1<8&&meta.unlocked>=state.n+1){closeSummary();loadNight(state.n+1);canvasFocus()}}
+function canvasFocus(){try{canvas.focus()}catch(_){}}
+function moveCursor(dx,dy){let x=state.cursor.x,y=state.cursor.y;
+ for(let s=0;s<N;s++){x+=dx;y+=dy;if(x<0||y<0||x>=N||y>=N)break;if(state.holes[y*N+x]){state.cursor={x,y};return}}}
 
-function gridRect(){const cell=Math.min((canvas.width-250)/N,(canvas.height-104)/N);return{cell,x:Math.round((canvas.width-260-cell*N)/2)+18,y:Math.round((canvas.height-cell*N)/2)+8}}
-function cell(idx,g){const r=(idx/N)|0,c=idx%N;return{cx:g.x+c*g.cell+g.cell/2,cy:g.y+r*g.cell+g.cell/2}}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  const g=gridRect(),cell0=g.cell,rad=cell0*.34;
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Last Light",30,36);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Jump a peg over a neighbor into the empty hole beyond; the jumped peg goes dark.",30,54);
-  const sel=state.sel,landings=sel>=0?jumpsFrom(state.board,sel).map(m=>m.land):[];
-  for(let i=0;i<N*N;i++){if(state.board[i]===-1)continue;const p=cell(i,g),v=state.board[i];
-    if(v===0){ctx.fillStyle="#0a1626";ctx.beginPath();ctx.arc(p.cx,p.cy,rad*.82,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(94,234,212,.14)";ctx.lineWidth=2;ctx.stroke();
-      if(landings.includes(i)){ctx.fillStyle="rgba(94,234,212,.30)";ctx.beginPath();ctx.arc(p.cx,p.cy,rad*.5,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#5eead4";ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.cx,p.cy,rad*.82,0,Math.PI*2);ctx.stroke()}}
-    else{const isSel=i===sel;const gr=ctx.createRadialGradient(p.cx-rad*.3,p.cy-rad*.3,rad*.2,p.cx,p.cy,rad);gr.addColorStop(0,isSel?"#ffffff":"#7ef9ff");gr.addColorStop(1,isSel?"#22d3ee":"#168fa6");if(isSel||(i===state.flashIdx)){ctx.shadowColor="rgba(126,249,255,.85)";ctx.shadowBlur=cell0*.3}ctx.fillStyle=gr;ctx.beginPath();ctx.arc(p.cx,p.cy,rad,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=2;ctx.strokeStyle=isSel?"#ffffff":"rgba(8,30,38,.6)";ctx.stroke()}}
-  // cursor
-  if(state.mode==="playing"){const p=cell(state.cursor.y*N+state.cursor.x,g);ctx.strokeStyle="#f8fafc";ctx.lineWidth=3;ctx.strokeRect(p.cx-cell0/2+4,p.cy-cell0/2+4,cell0-8,cell0-8)}
-  drawSide(g);
-  if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=state.result==="stuck"?"#fb7185":state.result==="perfect"?"#facc15":"#5eead4";ctx.font="950 44px system-ui";ctx.fillText(state.result==="perfect"?"PERFECT":state.result==="win"?"LAST LIGHT":"NO MOVES",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
-function drawSide(g){const px=g.x+g.cell*N+30;let py=g.y+10;ctx.textAlign="left";
-  const block=(label,val,color)=>{ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,px,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 26px system-ui";ctx.fillText(val,px,py+34);py+=60};
-  block("PEGS LEFT",String(pegCount(state.board)),pegCount(state.board)===1?"#5eead4":"#7ef9ff");
-  block("MOVES",String(state.moves));
-  block("BEST · FEWEST",state.best==null?"—":String(state.best),state.best===1?"#5eead4":"#f3fbff");
-  block("SOLVES · PERFECT",state.solves+" · "+state.perfect)}
+// The canvas has a fixed 960x540 backing store, so a phone shrinks everything by
+// the same factor. Below ~560 CSS pixels the side readouts would render as
+// unreadable specks and only repeat the HTML scoreboard, so drop them and give
+// the whole surface to the board.
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<560;if(next!==compact){compact=next;draw()}}
+function gridRect(){if(compact){const cell=Math.min((canvas.width-36)/N,(canvas.height-64)/N);
+  return{cell,x:Math.round((canvas.width-cell*N)/2),y:Math.round((canvas.height-cell*N)/2)+14}}
+ const cell=Math.min((canvas.width-320)/N,(canvas.height-56)/N);
+ return{cell,x:Math.round((canvas.width-300-cell*N)/2)+8,y:Math.round((canvas.height-cell*N)/2)}}
+function cellPos(idx,g){const r=(idx/N)|0,c=idx%N;return{cx:g.x+c*g.cell+g.cell/2,cy:g.y+r*g.cell+g.cell/2}}
+let bgCache=null;
+function bg(){if(bgCache)return bgCache;const gr=ctx.createLinearGradient(0,0,0,canvas.height);
+ gr.addColorStop(0,"#07182a");gr.addColorStop(1,"#050a16");bgCache=gr;return gr}
+function draw(){const sh=state.shake>0&&!reducedMotion?state.shake*7:0;
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);
+ ctx.fillStyle=bg();ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ const g=gridRect(),rad=g.cell*.34;
+ const sel=state.sel,lands=sel>=0&&state.board[sel]===1?movesFrom(state.board,sel).map(m=>m.land):[];
+ for(let i=0;i<N*N;i++){if(!state.holes[i])continue;const p=cellPos(i,g),v=state.board[i];
+  if(i===state.target){ctx.strokeStyle=v===1&&state.mode==="over"?"#facc15":"rgba(250,204,21,.55)";ctx.lineWidth=3;
+   ctx.beginPath();ctx.arc(p.cx,p.cy,rad*1.16,0,Math.PI*2);ctx.stroke()}
+  if(v===0){ctx.fillStyle="#0a1626";ctx.beginPath();ctx.arc(p.cx,p.cy,rad*.8,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle="rgba(94,234,212,.16)";ctx.lineWidth=2;ctx.stroke();
+   if(lands.includes(i)){const hot=state.hint&&state.hint.land===i;
+    ctx.fillStyle=hot?"rgba(250,204,21,.34)":"rgba(94,234,212,.30)";ctx.beginPath();ctx.arc(p.cx,p.cy,rad*.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=hot?"#facc15":"#5eead4";ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.cx,p.cy,rad*.8,0,Math.PI*2);ctx.stroke()}}
+  else{const isSel=i===sel,moving=state.anim&&state.anim.land===i&&state.anim.t<1;
+   if(moving)continue;
+   drawLamp(p.cx,p.cy,rad,isSel)}}
+ if(state.anim&&state.anim.t<1){const a=state.anim,f=cellPos(a.from,g),l=cellPos(a.land,g),t=a.t;
+  const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  drawLamp(f.cx+(l.cx-f.cx)*e,f.cy+(l.cy-f.cy)*e-Math.sin(Math.PI*t)*g.cell*.42,rad,false)}
+ for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle="#7ef9ff";
+  ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill()}
+ ctx.globalAlpha=1;
+ if(state.mode==="playing"){const p=cellPos(state.cursor.y*N+state.cursor.x,g);ctx.strokeStyle="#f8fafc";ctx.lineWidth=3;
+  ctx.strokeRect(p.cx-g.cell/2+5,p.cy-g.cell/2+5,g.cell-10,g.cell-10)}
+ for(const q of state.pops){ctx.globalAlpha=Math.max(0,q.life);ctx.fillStyle="#5eead4";ctx.font="950 30px system-ui";
+  ctx.textAlign="center";ctx.fillText(q.text,q.x,q.y-(1-q.life)*46);ctx.textAlign="left"}
+ ctx.globalAlpha=1;
+ if(compact){ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 30px system-ui";
+  ctx.fillText("NIGHT "+(state.n+1)+" — "+state.name.toUpperCase(),canvas.width/2,42);ctx.textAlign="left"}
+ else drawSide(g);
+ if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.74)";ctx.fillRect(-20,-20,canvas.width+40,canvas.height+40);
+  ctx.textAlign="center";ctx.fillStyle=state.result==="stuck"?"#fb7185":state.result==="perfect"?"#facc15":"#5eead4";
+  ctx.font="950 60px system-ui";ctx.fillText(state.result==="perfect"?"PERFECT":state.result==="win"?"LAST LIGHT":"LIGHTS OUT",canvas.width/2,canvas.height/2-10);
+  ctx.fillStyle="#e6f2ff";ctx.font="900 34px system-ui";ctx.fillText(state.score+" points "+starText(state.stars),canvas.width/2,canvas.height/2+40);
+  ctx.textAlign="left"}
+ ctx.setTransform(1,0,0,1,0,0)}
+function drawLamp(cx,cy,rad,isSel){const gr=ctx.createRadialGradient(cx-rad*.3,cy-rad*.3,rad*.2,cx,cy,rad);
+ gr.addColorStop(0,isSel?"#ffffff":"#7ef9ff");gr.addColorStop(1,isSel?"#22d3ee":"#168fa6");
+ if(isSel){ctx.shadowColor="rgba(126,249,255,.85)";ctx.shadowBlur=rad}
+ ctx.fillStyle=gr;ctx.beginPath();ctx.arc(cx,cy,rad,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+ ctx.lineWidth=2;ctx.strokeStyle=isSel?"#ffffff":"rgba(8,30,38,.6)";ctx.stroke()}
+function drawSide(g){const px=g.x+g.cell*N+34;let py=g.y+16;ctx.textAlign="left";
+ ctx.fillStyle="#5eead4";ctx.font="950 17px system-ui";ctx.fillText("NIGHT "+(state.n+1)+" OF 8",px,py);
+ ctx.fillStyle="#f3fbff";ctx.font="950 30px system-ui";ctx.fillText(state.name,px,py+34);py+=86;
+ const block=(label,val,color)=>{ctx.fillStyle="#9fb3c8";ctx.font="900 16px system-ui";ctx.fillText(label,px,py);
+  ctx.fillStyle=color||"#f3fbff";ctx.font="950 40px system-ui";ctx.fillText(val,px,py+40);py+=78};
+ const left=pegCount(state.board);
+ block("LAMPS LIT",String(left),left===1?"#5eead4":"#7ef9ff");
+ block("SCORE",String(state.score));
+ block("CHAIN",state.chain>1?"x"+state.chain:"—",state.chain>1?"#facc15":"#9fb3c8")}
 
-function tick(dt){state.time+=dt;if(state.flash>0){state.flash=Math.max(0,state.flash-dt/240);if(state.flash===0)state.flashIdx=-1}draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){let legal=0;for(let i=0;i<state.board.length;i++)if(state.board[i]===1)legal+=jumpsFrom(state.board,i).length;return JSON.stringify({mode:state.mode,result:state.result,pegs:pegCount(state.board),moves:state.moves,legalMoves:legal,selected:state.sel<0?null:state.sel,cursor:{x:state.cursor.x,y:state.cursor.y},best:state.best,solves:state.solves,perfect:state.perfect,sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"7x7 grid, index=row*7+col; -1 wall, 0 empty hole, 1 peg; center index "+CENTER+"; jump a peg over an adjacent peg into an empty hole 2 away"})};
+function tick(dt){state.time+=dt;let live=false;
+ if(state.anim){state.anim.t+=dt/190;if(state.anim.t>=1)state.anim=null;else live=true}
+ if(state.shake>0){state.shake=Math.max(0,state.shake-dt/420);if(state.shake>0)live=true}
+ for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];p.life-=dt/620;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=dt*.32;
+  if(p.life<=0)state.parts.splice(i,1);else live=true}
+ for(let i=state.pops.length-1;i>=0;i--){const q=state.pops[i];q.life-=dt/760;if(q.life<=0)state.pops.splice(i,1);else live=true}
+ draw();return live}
+function needsFrame(){return!!state.anim||state.shake>0||state.parts.length>0||state.pops.length>0}
+let last=0,rafOn=false;
+function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);
+ if(needsFrame()&&!document.hidden)requestAnimationFrame(frame);else rafOn=false}
+function wake(){if(rafOn||document.hidden||!needsFrame())return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+window.advanceTime=ms=>{const total=Math.max(0,Number(ms)||0),steps=Math.max(1,Math.ceil(total/40));
+ for(let i=0;i<steps;i++)tick(total/steps);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){
+ let legal=0;for(let i=0;i<state.board.length;i++)if(state.board[i]===1)legal+=movesFrom(state.board,i).length;
+ return JSON.stringify({mode:state.mode,result:state.result,night:state.n+1,nightName:state.name,nights:8,
+  pegs:pegCount(state.board),lamps:pegCount(state.board),moves:state.moves,score:state.score,chain:state.chain,
+  chainMax:state.chainMax,stars:state.stars,legalMoves:legal,selected:state.sel<0?null:state.sel,
+  cursor:{x:state.cursor.x,y:state.cursor.y},target:state.target,best:meta.best[state.n],perfects:meta.perfects,
+  unlocked:meta.unlocked+1,starsByNight:meta.stars.slice(),hintsUsed:state.hintsUsed,
+  hint:state.hint?{from:state.hint.from,land:state.hint.land}:null,summaryOpen:!!els.dlg.open,
+  sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,board:state.board.slice(),
+  coordinateSystem:"7x7 grid, index=row*7+col; -1 wall, 0 empty socket, 1 lit lamp; jump a lamp over an adjacent lamp into an empty socket 2 away; target socket index "+state.target})};
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
-  if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Enter"||k===" ")activate(state.cursor.y*N+state.cursor.x);else if(k==="u"||k==="z")undo();else if(k==="r")reset();else if(k==="n")reset();
-  if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","a","d","w","s"].includes(k))draw()});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=gridRect(),c=Math.floor((px-g.x)/g.cell),r=Math.floor((py-g.y)/g.cell);if(isHole(r,c)){state.cursor={x:c,y:r};activate(r*N+c)}});
-els.neww.addEventListener("click",()=>{reset();tone("select")});
-els.undo.addEventListener("click",undo);
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("select")});
-document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const k=btn.dataset.key;if(k==="ArrowLeft")moveCursor(-1,0);else if(k==="ArrowRight")moveCursor(1,0);else if(k==="ArrowUp")moveCursor(0,-1);else if(k==="ArrowDown")moveCursor(0,1);else if(k==="Enter")activate(state.cursor.y*N+state.cursor.x);else if(k==="u")undo();draw()}));
-reset();
-let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flash>0}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
-function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
-addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
-if(needsFrame())wake();
+document.addEventListener("keydown",e=>{const t=e.target;
+ if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+ if(els.dlg.open)return;
+ const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+ if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);
+ else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);
+ else if(k==="Enter"||k===" ")activate(state.cursor.y*N+state.cursor.x);
+ else if(k==="u"||k==="z")undo();else if(k==="r")loadNight(state.n);
+ else if(k==="n")state.mode==="over"?nextNight():loadNight(state.n);
+ else if(k==="h")useHint();
+ if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","a","d","w","s"].includes(k))draw()});
+canvas.addEventListener("pointerdown",e=>{canvasFocus();
+ const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height;
+ const g=gridRect(),c=Math.floor((px-g.x)/g.cell),r=Math.floor((py-g.y)/g.cell);
+ if(r<0||c<0||r>=N||c>=N)return;const idx=r*N+c;if(!state.holes[idx])return;
+ state.cursor={x:c,y:r};activate(idx)});
+els.neww.addEventListener("click",()=>{closeSummary();loadNight(state.n);tone("select");canvasFocus()});
+els.undo.addEventListener("click",()=>{undo();canvasFocus()});
+els.hint.addEventListener("click",()=>{useHint();canvasFocus()});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+ say(state.sound?"Sound on.":"Sound muted.");if(state.sound)tone("select");else if(audio&&audio.suspend)try{audio.suspend()}catch(_){}});
+els.picker.addEventListener("click",e=>{const btn=e.target.closest("button[data-night]");if(!btn||btn.disabled)return;
+ closeSummary();loadNight(intOr(btn.dataset.night,1)-1);canvasFocus()});
+els.undoDlg.addEventListener("click",()=>{undo();canvasFocus()});
+els.retry.addEventListener("click",()=>{closeSummary();loadNight(state.n);canvasFocus()});
+els.close.addEventListener("click",()=>{closeSummary();canvasFocus()});
+els.next.addEventListener("click",nextNight);
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(audio&&audio.suspend)try{audio.suspend()}catch(_){}}else wake()});
+
+addEventListener("resize",syncCompact);
+syncCompact();
+loadNight(0,true);
+say("Night 1 — "+state.name+". Jump a lamp over its neighbour into the empty socket beyond.");
+update();draw();
 })();
 </script>
 </body>
