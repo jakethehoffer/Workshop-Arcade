@@ -80,6 +80,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 .btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 .btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
 .btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
+.barlab{align-self:center;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;padding:0 3px}
 .touch{display:grid;grid-template-columns:repeat(5,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
@@ -91,7 +92,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Fourfall connect-four game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Fourfall</span></div>
-    <div class="help">Arrow keys or 1-7 pick a column. Enter, Down, or tap a column drops a dark disc. Line up four to beat the CPU. N starts a new game.</div>
+    <div class="help">Arrow keys or 1-7 aim, Enter or Down drops your teal disc, or tap a column. Connect four before the CPU. H toggles hints, C changes the CPU level, N starts a new game.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Turn</span><span class="value" id="turnValue">You</span></div>
@@ -101,12 +102,17 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     <div class="pill"><span class="label">Streak</span><span class="value" id="streakValue">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
   </section>
-  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Fourfall 7 column by 6 row connect-four board. You drop the dark discs against the CPU's light discs."></canvas></div>
-  <div class="status" id="statusLine" aria-live="polite">Your move — pick a column and drop a dark disc.</div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Fourfall 7 column by 6 row connect-four board. You drop the dark teal discs against the CPU's light discs."></canvas></div>
+  <div class="status" id="statusLine" aria-live="polite">Your move — pick a column and drop a teal disc.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Fourfall ready.</div>
   <section class="bar" aria-label="Actions">
     <button class="btn primary" id="newBtn" type="button">New Game</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="hintBtn" type="button" aria-pressed="false">Hints Off</button>
+    <span class="barlab">CPU</span>
+    <button class="btn" id="diffCasual" type="button" aria-pressed="false">Casual</button>
+    <button class="btn" id="diffStandard" type="button" aria-pressed="true">Standard</button>
+    <button class="btn" id="diffExpert" type="button" aria-pressed="false">Expert</button>
   </section>
   <section class="touch" aria-label="Touch controls">
     <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="Enter" class="wide">Drop</button><button type="button" data-key="ArrowRight">Right</button><button type="button" data-key="n">New</button>
@@ -115,100 +121,329 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <script>
 (() => {
 "use strict";
-const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),COLS=7,ROWS=6,MAXD=5,AI_DELAY=440;
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),COLS=7,ROWS=6,AI_DELAY=420;
 const STATS_KEY="fourfall.stats.v1",SOUND_KEY="fourfall.sound.v1";
 const ORDER=[3,2,4,1,5,0,6];
+const LEVELS={casual:{depth:2,slip:.34,label:"Casual"},standard:{depth:5,slip:0,label:"Standard"},expert:{depth:7,slip:0,label:"Expert"}};
+const LEVEL_IDS=["casual","standard","expert"];
 const $=id=>document.getElementById(id);
-const els={turn:$("turnValue"),result:$("resultValue"),moves:$("movesValue"),wins:$("winsValue"),streak:$("streakValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn")};
-const stats=readStats();
-const state={board:[],turn:1,mode:"playing",result:null,cursor:3,moveCount:0,lastMove:null,winLine:null,cpuThinking:false,aiTimer:0,wins:stats.wins,streak:stats.streak,best:stats.best,sound:readSound(),feedback:"Your move — pick a column and drop a dark disc.",time:0};
-let audio=null;
+const els={turn:$("turnValue"),result:$("resultValue"),moves:$("movesValue"),wins:$("winsValue"),streak:$("streakValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),hint:$("hintBtn"),casual:$("diffCasual"),standard:$("diffStandard"),expert:$("diffExpert")};
+
+let reducedMotion=false;
+try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{wins:v.wins|0,streak:v.streak|0,best:v.best|0}}catch(_){}return{wins:0,streak:0,best:0}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({wins:state.wins,streak:state.streak,best:state.best}))}catch(_){}}
+function intOr(v,d){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):d}
+function readStats(){const base={wins:0,streak:0,best:0,level:"standard",hints:false};
+ try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return base;const v=JSON.parse(raw);
+  if(!v||typeof v!=="object"||Array.isArray(v))return base;
+  base.wins=intOr(v.wins,0);base.streak=intOr(v.streak,0);base.best=intOr(v.best,0);
+  if(typeof v.level==="string"&&LEVELS[v.level])base.level=v.level;
+  base.hints=v.hints===true}catch(_){}
+ return base}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({wins:state.wins,streak:state.streak,best:state.best,level:state.level,hints:state.hints}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
-function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+const saved=readStats();
+
+const state={board:[],turn:1,mode:"playing",result:null,cursor:3,moveCount:0,lastMove:null,winLine:null,
+ cpuThinking:false,aiTimer:0,wins:saved.wins,streak:saved.streak,best:saved.best,level:saved.level,
+ hints:saved.hints,hintCol:null,sound:readSound(),feedback:"Your move — pick a column and drop a teal disc.",
+ time:0,anim:null,parts:[],shake:0,winPulse:0};
+
+let audio=null;
+function ac(){if(!state.sound)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+ try{audio=audio||new AC();if(audio.state==="suspended")audio.resume();return audio}catch(_){return null}}
+function blip(freq,dur,type,vol,delay){const a=ac();if(!a)return;
+ try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(delay||0);
+  o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.06,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+function sweep(from,to,dur,vol){const a=ac();if(!a)return;
+ try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;o.type="triangle";
+  o.frequency.setValueAtTime(from,t);o.frequency.exponentialRampToValueAtTime(to,t+dur);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.05,t+.02);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+function tone(kind,depth){switch(kind){
+ case"drop":sweep(520,300-(depth||0)*12,.16,.05);break;
+ case"land":blip(180+(depth||0)*10,.1,"sine",.05);break;
+ case"cpu":sweep(300,190,.18,.045);break;
+ case"hint":blip(760,.1,"sine",.045);blip(1010,.12,"sine",.035,.07);break;
+ case"level":blip(480,.1,"triangle",.05);blip(640,.12,"triangle",.04,.06);break;
+ case"win":[523,659,784,1046].forEach((f,i)=>blip(f,.4,"triangle",.075,i*.085));break;
+ case"loss":blip(220,.4,"sawtooth",.055);blip(150,.5,"sawtooth",.045,.1);break;
+ case"draw":blip(392,.3,"triangle",.05);blip(330,.34,"triangle",.04,.11);break;
+ case"bad":blip(140,.14,"sawtooth",.045);break}}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={drop:300,cpu:230,win:640,loss:120,draw:200,bad:140}[kind]||260;o.type=kind==="loss"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
 
 function newBoard(){return Array.from({length:ROWS},()=>new Array(COLS).fill(0))}
 function dropRow(b,c){for(let r=ROWS-1;r>=0;r--)if(b[r][c]===0)return r;return -1}
 function validCols(b){const v=[];for(let c=0;c<COLS;c++)if(b[0][c]===0)v.push(c);return v}
-function lineAt(b,r,c,color){const dirs=[[0,1],[1,0],[1,1],[1,-1]];for(const[dr,dc]of dirs){const cells=[[r,c]];for(const s of[1,-1]){let rr=r+dr*s,cc=c+dc*s;while(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&b[rr][cc]===color){cells.push([rr,cc]);rr+=dr*s;cc+=dc*s}}if(cells.length>=4)return cells}return null}
+function lineAt(b,r,c,color){const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+ for(const[dr,dc]of dirs){const cells=[[r,c]];
+  for(const s of[1,-1]){let rr=r+dr*s,cc=c+dc*s;
+   while(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&b[rr][cc]===color){cells.push([rr,cc]);rr+=dr*s;cc+=dc*s}}
+  if(cells.length>=4)return cells}
+ return null}
 function winAt(b,r,c,color){return lineAt(b,r,c,color)!==null}
 
-function lineScore(b,r,c,dr,dc){let cpu=0,you=0;for(let i=0;i<4;i++){const v=b[r+dr*i][c+dc*i];if(v===2)cpu++;else if(v===1)you++}if(cpu&&you)return 0;if(cpu)return cpu===3?50:cpu===2?5:1;if(you)return you===3?-60:you===2?-5:-1;return 0}
-function scoreBoard(b){let s=0;for(let r=0;r<ROWS;r++)if(b[r][3]===2)s+=3;else if(b[r][3]===1)s-=3;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(c+3<COLS)s+=lineScore(b,r,c,0,1);if(r+3<ROWS)s+=lineScore(b,r,c,1,0);if(r+3<ROWS&&c+3<COLS)s+=lineScore(b,r,c,1,1);if(r+3<ROWS&&c-3>=0)s+=lineScore(b,r,c,1,-1)}return s}
+function lineScore(b,r,c,dr,dc){let cpu=0,you=0;
+ for(let i=0;i<4;i++){const v=b[r+dr*i][c+dc*i];if(v===2)cpu++;else if(v===1)you++}
+ if(cpu&&you)return 0;if(cpu)return cpu===3?50:cpu===2?5:1;if(you)return you===3?-60:you===2?-5:-1;return 0}
+function scoreBoard(b){let s=0;
+ for(let r=0;r<ROWS;r++)if(b[r][3]===2)s+=3;else if(b[r][3]===1)s-=3;
+ for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+  if(c+3<COLS)s+=lineScore(b,r,c,0,1);
+  if(r+3<ROWS)s+=lineScore(b,r,c,1,0);
+  if(r+3<ROWS&&c+3<COLS)s+=lineScore(b,r,c,1,1);
+  if(r+3<ROWS&&c-3>=0)s+=lineScore(b,r,c,1,-1)}
+ return s}
+// Positive scores favour the CPU (colour 2). Wins are scored by distance so the
+// search prefers a faster mate and the longest delay when it is losing.
 function minimax(b,depth,alpha,beta,toMove){if(depth===0||validCols(b).length===0)return scoreBoard(b);
-  if(toMove===2){let best=-Infinity;for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=2;const val=winAt(b,r,c,2)?100000-(MAXD-depth):minimax(b,depth-1,alpha,beta,1);b[r][c]=0;if(val>best)best=val;if(best>alpha)alpha=best;if(alpha>=beta)break}return best}
-  let best=Infinity;for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=1;const val=winAt(b,r,c,1)?-100000+(MAXD-depth):minimax(b,depth-1,alpha,beta,2);b[r][c]=0;if(val<best)best=val;if(best<beta)beta=best;if(alpha>=beta)break}return best}
-function bestCpuCol(){const b=state.board;let best=-Infinity,bestC=ORDER.find(c=>b[0][c]===0);for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=2;const val=winAt(b,r,c,2)?100000:minimax(b,MAXD-1,-Infinity,Infinity,1);b[r][c]=0;if(val>best){best=val;bestC=c}}return bestC}
+ if(toMove===2){let best=-Infinity;
+  for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=2;
+   const val=winAt(b,r,c,2)?100000+depth:minimax(b,depth-1,alpha,beta,1);b[r][c]=0;
+   if(val>best)best=val;if(best>alpha)alpha=best;if(alpha>=beta)break}
+  return best}
+ let best=Infinity;
+ for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=1;
+  const val=winAt(b,r,c,1)?-100000-depth:minimax(b,depth-1,alpha,beta,2);b[r][c]=0;
+  if(val<best)best=val;if(best<beta)beta=best;if(alpha>=beta)break}
+ return best}
+function searchCol(color){const b=state.board,cfg=LEVELS[state.level]||LEVELS.standard;
+ const cols=validCols(b);if(!cols.length)return null;
+ for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=color;
+  const won=winAt(b,r,c,color);b[r][c]=0;if(won)return c}
+ const foe=color===1?2:1;
+ for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=foe;
+  const lost=winAt(b,r,c,foe);b[r][c]=0;if(lost)return c}
+ const depth=color===2?cfg.depth:LEVELS.expert.depth;
+ let bestC=cols.includes(3)?3:cols[0],bestV=color===2?-Infinity:Infinity;
+ for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=color;
+  const val=minimax(b,depth-1,-Infinity,Infinity,color===2?1:2);b[r][c]=0;
+  if(color===2?val>bestV:val<bestV){bestV=val;bestC=c}}
+ return bestC}
+function cpuCol(){const cfg=LEVELS[state.level]||LEVELS.standard;const cols=validCols(state.board);
+ if(!cols.length)return null;
+ // Casual still takes a win and still blocks one, but otherwise wanders — that is
+ // what makes it a beginner ladder rather than a weaker version of the same wall.
+ if(cfg.slip>0&&Math.random()<cfg.slip){const b=state.board;
+  for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=2;const w=winAt(b,r,c,2);b[r][c]=0;if(w)return c}
+  for(const c of ORDER){if(b[0][c]!==0)continue;const r=dropRow(b,c);b[r][c]=1;const w=winAt(b,r,c,1);b[r][c]=0;if(w)return c}
+  return cols[Math.floor(Math.random()*cols.length)]}
+ return searchCol(2)}
+function refreshHint(){state.hintCol=state.hints&&state.mode==="playing"&&state.turn===1&&!state.cpuThinking?searchCol(1):null}
 
-function drop(c,color){const r=dropRow(state.board,c);if(r<0)return -1;state.board[r][c]=color;state.lastMove={r,c,by:color};state.moveCount++;const line=lineAt(state.board,r,c,color);if(line)state.winLine=line;state.turn=color===1?2:1;return r}
-function tryDrop(c){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking)return;if(c<0||c>=COLS)return;if(state.board[0][c]!==0){say("Column "+(c+1)+" is full — pick another.");tone("bad");vibe(4);draw();return}
-  drop(c,1);tone("drop");vibe(12);
-  if(state.winLine){endGame("win");return}
-  if(!validCols(state.board).length){endGame("draw");return}
-  say("You dropped in column "+(c+1)+". CPU is thinking…");scheduleCpu()}
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function spawnParts(cx,cy,color,n){if(reducedMotion)return;
+ for(let i=0;i<n;i++){const a=Math.PI*2*i/n+Math.random()*.6,s=50+Math.random()*110;
+  state.parts.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:1,color})}}
+function drop(c,color){const r=dropRow(state.board,c);if(r<0)return -1;
+ state.board[r][c]=color;state.lastMove={r,c,by:color};state.moveCount++;
+ const line=lineAt(state.board,r,c,color);if(line)state.winLine=line;
+ state.turn=color===1?2:1;
+ if(!reducedMotion)state.anim={r,c,color,t:0};
+ return r}
+function tryDrop(c){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking)return;
+ if(c<0||c>=COLS)return;
+ if(state.board[0][c]!==0){say("Column "+(c+1)+" is full — pick another.");tone("bad");vibe(4);draw();return}
+ const r=drop(c,1);tone("drop",r);vibe(12);state.hintCol=null;
+ if(state.winLine){endGame("win");return}
+ if(!validCols(state.board).length){endGame("draw");return}
+ say("You dropped in column "+(c+1)+". CPU is thinking…");scheduleCpu()}
 function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;update();draw();ensureLoop()}
-function doCpu(){if(state.mode!=="playing")return;const c=bestCpuCol();drop(c,2);tone("cpu");vibe(8);
-  if(state.winLine){endGame("loss");return}
-  if(!validCols(state.board).length){endGame("draw");return}
-  state.cursor=Math.max(0,Math.min(COLS-1,state.cursor));say("CPU dropped in column "+(c+1)+". Your move.");update();draw()}
+function doCpu(){if(state.mode!=="playing")return;const c=cpuCol();
+ if(c==null){endGame("draw");return}
+ const r=drop(c,2);tone("cpu");vibe(8);
+ if(state.winLine){endGame("loss");return}
+ if(!validCols(state.board).length){endGame("draw");return}
+ state.cursor=Math.max(0,Math.min(COLS-1,state.cursor));
+ say("CPU dropped in column "+(c+1)+". Your move.");refreshHint();update();draw();ensureLoop()}
 
-function endGame(result){state.mode="over";state.cpuThinking=false;state.result=result;
-  if(result==="win"){state.wins++;state.streak++;if(state.streak>state.best)state.best=state.streak;saveStats();say("Four in a row — you win! Press New Game.");tone("win");vibe([26,26,40])}
-  else if(result==="loss"){state.streak=0;saveStats();say("CPU connected four. Press New Game.");tone("loss");vibe(50)}
-  else{state.streak=0;saveStats();say("Board full — a draw. Press New Game.");tone("draw");vibe(20)}
-  update();draw()}
+function endGame(result){state.mode="over";state.cpuThinking=false;state.result=result;state.hintCol=null;
+ const g=gridRect();
+ if(result==="win"){state.wins++;state.streak++;if(state.streak>state.best)state.best=state.streak;
+  say("Four in a row — you win! Press New Game.");tone("win");vibe([26,26,40]);
+  if(!reducedMotion){state.shake=1;state.winPulse=1;
+   for(const[r,c]of state.winLine||[])spawnParts(g.x+c*g.cell+g.cell/2,g.y+r*g.cell+g.cell/2,1,10)}}
+ else if(result==="loss"){state.streak=0;say("CPU connected four. Press New Game.");tone("loss");vibe(50);
+  if(!reducedMotion){state.shake=.7;state.winPulse=1}}
+ else{state.streak=0;say("Board full — a draw. Press New Game.");tone("draw");vibe(20)}
+ saveStats();update();draw();ensureLoop()}
 
-function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;state.moveCount=0;state.lastMove=null;state.winLine=null;state.cpuThinking=false;state.aiTimer=0;state.cursor=3;say("New game — you are the dark discs. Connect four to beat the CPU.");update();draw()}
+function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;state.moveCount=0;
+ state.lastMove=null;state.winLine=null;state.cpuThinking=false;state.aiTimer=0;state.cursor=3;
+ state.anim=null;state.parts.length=0;state.shake=0;state.winPulse=0;
+ say("New game — you are the teal discs. Connect four to beat the "+(LEVELS[state.level]||LEVELS.standard).label+" CPU.");
+ refreshHint();update();draw()}
 function moveCursor(d){state.cursor=Math.max(0,Math.min(COLS-1,state.cursor+d));draw()}
+function setLevel(id,announce){if(!LEVELS[id])return;state.level=id;saveStats();
+ if(state.mode==="playing"&&state.moveCount===0)say("CPU level: "+LEVELS[id].label+".");
+ else if(announce)say("CPU level: "+LEVELS[id].label+" — takes effect on the next new game.");
+ refreshHint();update();draw();if(announce)tone("level")}
+function toggleHints(){state.hints=!state.hints;saveStats();refreshHint();
+ say(state.hints?"Hints on — the ringed column is the strongest drop.":"Hints off.");
+ if(state.hints)tone("hint");update();draw()}
 
-function update(){els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));els.result.textContent=state.result==="win"?"Win":state.result==="loss"?"Lose":state.result==="draw"?"Draw":"—";els.moves.textContent=String(state.moveCount);els.wins.textContent=String(state.wins);els.streak.textContent=String(state.streak);els.best.textContent=String(state.best);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+function update(){
+ els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));
+ els.result.textContent=state.result==="win"?"Win":state.result==="loss"?"Lose":state.result==="draw"?"Draw":"—";
+ els.moves.textContent=String(state.moveCount);els.wins.textContent=String(state.wins);
+ els.streak.textContent=String(state.streak);els.best.textContent=String(state.best);
+ els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
+ els.hint.textContent=state.hints?"Hints On":"Hints Off";els.hint.setAttribute("aria-pressed",String(state.hints));
+ LEVEL_IDS.forEach(id=>{const b=els[id];if(!b)return;
+  b.setAttribute("aria-pressed",String(state.level===id));
+  b.setAttribute("aria-label","CPU level "+LEVELS[id].label+(state.level===id?", selected":""))})}
 
-function gridRect(){const cell=Math.min((canvas.width-232)/COLS,(canvas.height-92)/ROWS);return{cell,x:38,y:Math.round((canvas.height-cell*ROWS)/2)+10}}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function drawDisc(cx,cy,rad,v){ctx.beginPath();ctx.arc(cx,cy,rad,0,Math.PI*2);const gr=ctx.createRadialGradient(cx-rad*.32,cy-rad*.32,rad*.2,cx,cy,rad);if(v===1){gr.addColorStop(0,"#46597a");gr.addColorStop(1,"#0a1322")}else{gr.addColorStop(0,"#ffffff");gr.addColorStop(1,"#b7c5d6")}ctx.fillStyle=gr;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=v===1?"rgba(94,234,212,.55)":"rgba(15,23,36,.5)";ctx.stroke()}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  const g=gridRect(),cell=g.cell,rad=cell*.40,hole=cell*.43;
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Fourfall",30,36);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Drop a disc; connect four in any direction to win.",30,53);
-  ctx.save();ctx.translate(g.x,g.y);
-  const grd=ctx.createLinearGradient(0,0,0,cell*ROWS);grd.addColorStop(0,"#1b3a86");grd.addColorStop(1,"#122a63");ctx.fillStyle=grd;roundRect(-11,-7,cell*COLS+22,cell*ROWS+14,14,true,false);
-  if(state.mode==="playing"&&state.turn===1&&!state.cpuThinking){ctx.fillStyle="rgba(94,234,212,.10)";ctx.fillRect(state.cursor*cell,-7,cell,cell*ROWS+14)}
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const cx=c*cell+cell/2,cy=r*cell+cell/2,v=state.board[r][c];ctx.fillStyle="#06101d";ctx.beginPath();ctx.arc(cx,cy,hole,0,Math.PI*2);ctx.fill();if(v)drawDisc(cx,cy,rad,v)}
-  if(state.mode==="playing"&&state.turn===1&&!state.cpuThinking){const dr=dropRow(state.board,state.cursor);if(dr>=0){ctx.globalAlpha=.34;drawDisc(state.cursor*cell+cell/2,dr*cell+cell/2,rad,1);ctx.globalAlpha=1}}
-  if(state.winLine){ctx.strokeStyle="#facc15";ctx.lineWidth=6;ctx.lineCap="round";const wl=[...state.winLine].sort((p,q)=>p[0]-q[0]||p[1]-q[1]);const a=wl[0],b=wl[wl.length-1];ctx.beginPath();ctx.moveTo(a[1]*cell+cell/2,a[0]*cell+cell/2);ctx.lineTo(b[1]*cell+cell/2,b[0]*cell+cell/2);ctx.stroke();ctx.lineCap="butt"}
-  else if(state.lastMove){ctx.strokeStyle="#facc15";ctx.lineWidth=3;ctx.beginPath();ctx.arc(state.lastMove.c*cell+cell/2,state.lastMove.r*cell+cell/2,rad+3,0,Math.PI*2);ctx.stroke()}
-  ctx.restore();
-  drawSide(g);
-  if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";ctx.font="950 46px system-ui";ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
-function drawSide(g){const px=g.x+g.cell*COLS+34;let py=g.y+12;ctx.textAlign="left";
-  const block=(label,val,disc,color)=>{if(disc)drawDisc(px+13,py+12,13,disc);ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,px+(disc?34:0),py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 26px system-ui";ctx.fillText(val,px+(disc?34:0),py+34);py+=64};
-  block("YOU · dark",state.result==="win"?"WIN":"—",1,state.result==="win"?"#5eead4":"#f3fbff");
-  block("CPU · light",state.result==="loss"?"WIN":"—",2,state.result==="loss"?"#fb7185":"#f3fbff");
-  block("TURN",state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU")),null,state.mode==="over"?"#facc15":(state.turn===1?"#5eead4":"#fb7185"));
-  block("STREAK · BEST",state.streak+" · "+state.best,null)}
+// The canvas has a fixed 960x540 backing store, so a phone shrinks everything by
+// the same factor. Below ~560 CSS pixels the side readouts render as unreadable
+// specks and only repeat the HTML scoreboard, so drop them and centre the board.
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<560;if(next!==compact){compact=next;if(state.board.length)draw()}}
+function gridRect(){const cell=Math.min((canvas.width-(compact?40:232))/COLS,(canvas.height-96)/ROWS);
+ // Keep the board clear of the heading rather than centring it into the text.
+ const y=Math.max(64,Math.round((canvas.height-cell*ROWS)/2)+18);
+ return{cell,x:compact?Math.round((canvas.width-cell*COLS)/2):38,y}}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+ ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function drawDisc(cx,cy,rad,v,glow){ctx.beginPath();ctx.arc(cx,cy,rad,0,Math.PI*2);
+ const gr=ctx.createRadialGradient(cx-rad*.32,cy-rad*.32,rad*.2,cx,cy,rad);
+ if(v===1){gr.addColorStop(0,"#7ef9ff");gr.addColorStop(1,"#0f7f95")}else{gr.addColorStop(0,"#ffffff");gr.addColorStop(1,"#b7c5d6")}
+ if(glow){ctx.shadowColor=v===1?"rgba(126,249,255,.9)":"rgba(255,255,255,.75)";ctx.shadowBlur=rad*.9}
+ ctx.fillStyle=gr;ctx.fill();ctx.shadowBlur=0;
+ ctx.lineWidth=2;ctx.strokeStyle=v===1?"rgba(6,40,46,.65)":"rgba(15,23,36,.5)";ctx.stroke()}
+function animY(g){const a=state.anim;if(!a)return null;
+ const t=Math.min(1,a.t),ease=1-Math.pow(1-t,2.2);
+ const endY=a.r*g.cell+g.cell/2,startY=-g.cell*.7;
+ let y=startY+(endY-startY)*ease;
+ if(t>.86){const b=(t-.86)/.14;y=endY-Math.sin(b*Math.PI)*g.cell*.11}
+ return y}
+function draw(){const sh=state.shake>0&&!reducedMotion?state.shake*8:0;
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);
+ const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");
+ ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ const g=gridRect(),cell=g.cell,rad=cell*.40,hole=cell*.43;
+ if(compact){ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 30px system-ui";
+  ctx.fillText("FOURFALL · CPU "+(LEVELS[state.level]||LEVELS.standard).label.toUpperCase(),canvas.width/2,40);
+  ctx.textAlign="left"}
+ else{ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 22px system-ui";ctx.fillText("Fourfall",30,32);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+  ctx.fillText("Connect four in any direction. CPU: "+(LEVELS[state.level]||LEVELS.standard).label,30,52)}
+ ctx.save();ctx.translate(g.x,g.y);
+ const grd=ctx.createLinearGradient(0,0,0,cell*ROWS);grd.addColorStop(0,"#1b3a86");grd.addColorStop(1,"#122a63");
+ ctx.fillStyle=grd;roundRect(-11,-7,cell*COLS+22,cell*ROWS+14,14,true,false);
+ const live=state.mode==="playing"&&state.turn===1&&!state.cpuThinking;
+ if(live){ctx.fillStyle="rgba(94,234,212,.10)";ctx.fillRect(state.cursor*cell,-7,cell,cell*ROWS+14)}
+ if(live&&state.hintCol!=null){ctx.strokeStyle="rgba(250,204,21,.85)";ctx.lineWidth=3;
+  roundRect(state.hintCol*cell+3,-7,cell-6,cell*ROWS+14,10,false,true)}
+ const a=state.anim,ay=a?animY(g):null;
+ for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const cx=c*cell+cell/2,cy=r*cell+cell/2,v=state.board[r][c];
+  ctx.fillStyle="#06101d";ctx.beginPath();ctx.arc(cx,cy,hole,0,Math.PI*2);ctx.fill();
+  if(v&&!(a&&a.r===r&&a.c===c&&a.t<1)){
+   const inWin=state.winLine&&state.winLine.some(p=>p[0]===r&&p[1]===c);
+   drawDisc(cx,cy,rad,v,inWin&&state.winPulse>0)}}
+ if(a&&a.t<1)drawDisc(a.c*cell+cell/2,ay,rad,a.color,false);
+ if(live){const dr=dropRow(state.board,state.cursor);
+  if(dr>=0){ctx.globalAlpha=.34;drawDisc(state.cursor*cell+cell/2,dr*cell+cell/2,rad,1);ctx.globalAlpha=1}}
+ if(state.winLine){const pulse=state.winPulse>0?4+Math.sin(state.time/70)*2:0;
+  ctx.strokeStyle="#facc15";ctx.lineWidth=6+pulse;ctx.lineCap="round";
+  const wl=state.winLine.slice().sort((p,q)=>p[0]-q[0]||p[1]-q[1]),p0=wl[0],p1=wl[wl.length-1];
+  ctx.beginPath();ctx.moveTo(p0[1]*cell+cell/2,p0[0]*cell+cell/2);ctx.lineTo(p1[1]*cell+cell/2,p1[0]*cell+cell/2);
+  ctx.stroke();ctx.lineCap="butt";ctx.lineWidth=1}
+ else if(state.lastMove){ctx.strokeStyle="#facc15";ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(state.lastMove.c*cell+cell/2,state.lastMove.r*cell+cell/2,rad+3,0,Math.PI*2);ctx.stroke()}
+ ctx.restore();
+ for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color===1?"#7ef9ff":"#e8eef6";
+  ctx.beginPath();ctx.arc(p.x,p.y,3.4,0,Math.PI*2);ctx.fill()}
+ ctx.globalAlpha=1;
+ if(!compact)drawSide(g);
+ if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.80)";ctx.fillRect(-20,-20,canvas.width+40,canvas.height+40);
+  ctx.textAlign="center";
+  ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";
+  ctx.font="950 56px system-ui";
+  ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",canvas.width/2,canvas.height/2-24);
+  ctx.fillStyle="#e6f2ff";ctx.font="900 26px system-ui";
+  ctx.fillText("Streak "+state.streak+"  ·  Best "+state.best+"  ·  Wins "+state.wins,canvas.width/2,canvas.height/2+16);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 20px system-ui";
+  ctx.fillText("New Game or press N  ·  CPU level "+(LEVELS[state.level]||LEVELS.standard).label,canvas.width/2,canvas.height/2+52);
+  ctx.textAlign="left"}
+ ctx.setTransform(1,0,0,1,0,0)}
+function drawSide(g){const px=g.x+g.cell*COLS+34;let py=g.y+16;ctx.textAlign="left";
+ const block=(label,val,disc,color)=>{if(disc)drawDisc(px+15,py+14,15,disc);
+  ctx.fillStyle="#9fb3c8";ctx.font="900 15px system-ui";ctx.fillText(label,px+(disc?40:0),py+6);
+  ctx.fillStyle=color||"#f3fbff";ctx.font="950 30px system-ui";ctx.fillText(val,px+(disc?40:0),py+36);py+=70};
+ block("YOU",state.result==="win"?"WIN":"—",1,state.result==="win"?"#5eead4":"#f3fbff");
+ block("CPU · "+(LEVELS[state.level]||LEVELS.standard).label,state.result==="loss"?"WIN":"—",2,state.result==="loss"?"#fb7185":"#f3fbff");
+ block("TURN",state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU")),null,
+  state.mode==="over"?"#facc15":(state.turn===1?"#5eead4":"#fb7185"));
+ block("STREAK · BEST",state.streak+" · "+state.best,null)}
 
-function tick(dt){state.time+=dt;if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}draw()}
-window.advanceTime=ms=>{stopLoop();const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);ensureLoop();return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,result:state.result,turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),cpuThinking:state.cpuThinking,moveCount:state.moveCount,cursor:state.cursor,lastMove:state.lastMove,winLine:state.winLine,wins:state.wins,streak:state.streak,best:state.best,sound:state.sound,feedback:state.feedback,board:state.board.map(row=>row.join("")),coordinateSystem:"board[row][col], row 0 top..5 bottom, col 0 left..6 right; 1=dark(you), 2=light(cpu)"})};
+function tick(dt){state.time+=dt;
+ if(state.anim){state.anim.t+=dt/230;
+  if(state.anim.t>=1){const g=gridRect(),a=state.anim;
+   spawnParts(g.x+a.c*g.cell+g.cell/2,g.y+a.r*g.cell+g.cell/2,a.color,6);
+   tone("land",a.r);state.anim=null}}
+ if(state.shake>0)state.shake=Math.max(0,state.shake-dt/430);
+ if(state.winPulse>0&&state.mode!=="over")state.winPulse=0;
+ for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];
+  p.life-=dt/640;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=dt*.42;
+  if(p.life<=0)state.parts.splice(i,1)}
+ if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}
+ draw()}
+window.advanceTime=ms=>{stopLoop();const total=Math.max(0,Number(ms)||0),n=Math.max(1,Math.ceil(total/40));
+ for(let i=0;i<n;i++)tick(total/n);ensureLoop();return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){return JSON.stringify({
+ mode:state.mode,result:state.result,
+ turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),
+ cpuThinking:state.cpuThinking,moveCount:state.moveCount,cursor:state.cursor,lastMove:state.lastMove,
+ winLine:state.winLine,wins:state.wins,streak:state.streak,best:state.best,
+ level:state.level,levelDepth:(LEVELS[state.level]||LEVELS.standard).depth,
+ hints:state.hints,hintCol:state.hintCol,animating:!!state.anim,
+ sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,
+ board:state.board.map(row=>row.join("")),
+ coordinateSystem:"board[row][col], row 0 top..5 bottom, col 0 left..6 right; 1=teal(you), 2=light(cpu)"})};
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
-  if(k==="ArrowLeft"||k==="a")moveCursor(-1);else if(k==="ArrowRight"||k==="d")moveCursor(1);else if(k==="Enter"||k===" "||k==="ArrowDown"||k==="s")tryDrop(state.cursor);else if(k==="n"||k==="r")reset();else if(k>="1"&&k<="7"){state.cursor=Number(k)-1;tryDrop(state.cursor)}});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,g=gridRect(),c=Math.floor((px-g.x)/g.cell);if(c>=0&&c<COLS){state.cursor=c;tryDrop(c)}});
-els.neww.addEventListener("click",()=>{reset();tone("drop")});
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("drop")});
-document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const k=btn.dataset.key;if(k==="ArrowLeft")moveCursor(-1);else if(k==="ArrowRight")moveCursor(1);else if(k==="Enter")tryDrop(state.cursor);else if(k==="n")reset()}));
+document.addEventListener("keydown",e=>{const t=e.target;
+ if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+ const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+ if(k==="ArrowLeft"||k==="a")moveCursor(-1);
+ else if(k==="ArrowRight"||k==="d")moveCursor(1);
+ else if(k==="Enter"||k===" "||k==="ArrowDown"||k==="s")tryDrop(state.cursor);
+ else if(k==="n"||k==="r")reset();
+ else if(k==="h")toggleHints();
+ else if(k==="c"){const i=LEVEL_IDS.indexOf(state.level);setLevel(LEVEL_IDS[(i+1)%LEVEL_IDS.length],true)}
+ else if(k>="1"&&k<="7"){state.cursor=Number(k)-1;tryDrop(state.cursor)}});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();
+ const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,g=gridRect();
+ const c=Math.floor((px-g.x)/g.cell);if(c>=0&&c<COLS){state.cursor=c;tryDrop(c)}});
+els.neww.addEventListener("click",()=>{reset();tone("level")});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+ say(state.sound?"Sound enabled.":"Sound muted.");
+ if(state.sound)tone("level");else if(audio&&audio.suspend)try{audio.suspend()}catch(_){}});
+els.hint.addEventListener("click",toggleHints);
+LEVEL_IDS.forEach(id=>{const b=els[id];if(b)b.addEventListener("click",()=>setLevel(id,true))});
+document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();
+ const k=btn.dataset.key;
+ if(k==="ArrowLeft")moveCursor(-1);else if(k==="ArrowRight")moveCursor(1);
+ else if(k==="Enter")tryDrop(state.cursor);else if(k==="n")reset()}));
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden){stopLoop();if(audio&&audio.suspend)try{audio.suspend()}catch(_){}}else ensureLoop()});
+
+addEventListener("resize",syncCompact);
+syncCompact();
 reset();
 let raf=0,last=0;
-function loopActive(){return state.cpuThinking}
-function ensureLoop(){if(raf||!loopActive())return;last=performance.now();raf=requestAnimationFrame(frame)}
+function loopActive(){return state.cpuThinking||!!state.anim||state.parts.length>0||state.shake>0}
+function ensureLoop(){if(raf||!loopActive()||document.hidden)return;last=performance.now();raf=requestAnimationFrame(frame)}
 function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0}
-function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);if(loopActive())raf=requestAnimationFrame(frame);else last=0}
+function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);
+ if(loopActive()&&!document.hidden)raf=requestAnimationFrame(frame);else last=0}
 ensureLoop();
 })();
 </script>
