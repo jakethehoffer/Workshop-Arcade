@@ -107,6 +107,7 @@
         <div class="meter"><span><b>Integrity</b><em id="meterAValue">100</em></span><div class="bar"><i id="meterA"></i></div></div>
         <div class="meter"><span><b>Track</b><em id="meterBValue">0%</em></span><div class="bar"><i id="meterB"></i></div></div>
         <div class="meter"><span><b>Window</b><em id="meterCValue">-</em></span><div class="bar"><i id="meterC"></i></div></div>
+        <div class="meter"><span><b>Sync now</b><em id="meterDValue">-</em></span><div class="bar"><i id="meterD"></i></div></div>
       </div>
       <div class="pad" aria-label="Tempo Tunnels touch controls">
         <button class="up" type="button" data-key="ArrowUp">Up</button>
@@ -135,36 +136,50 @@
     {name:"Chorus Rail", bpm:138, events:[[1,3,"note"],[1.5,2,"note"],[2,1,"trap"],[2.5,0,"echo"],[3,1,"note"],[3.5,2,"trap"],[4,3,"note"],[4.75,2,"echo"],[5.5,1,"note"],[6.25,0,"note"]]},
     {name:"Final Echo", bpm:136, events:[[1,1,"note"],[2,2,"trap"],[3,3,"note"],[4,0,"echo"],[5,1,"trap"],[6,2,"note"],[7,1,"note"],[8,3,"trap"],[9,0,"note"],[10,2,"echo"],[11,3,"note"],[12,1,"note"]]}
   ];
-  const W=960,H=540,LANES=4,WINDOW=190,BEST_KEY="tempo-tunnels.best.v2",SOUND_KEY="tempo-tunnels.sound.v2";
+  const W=960,H=540,LANES=4,WINDOW=190,GATE_X=180,SCROLL=.31,BEST_KEY="tempo-tunnels.best.v2",SOUND_KEY="tempo-tunnels.sound.v2";
   const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
-  const els={app:$("app"),stage:$("stageValue"),lane:$("laneValue"),integrity:$("integrityValue"),combo:$("comboValue"),hit:$("hitValue"),score:$("scoreValue"),best:$("bestValue"),stageName:$("stageName"),mission:$("missionText"),status:$("statusLine"),live:$("liveStatus"),start:$("startBtn"),sync:$("syncBtn"),restart:$("restartBtn"),sound:$("soundBtn"),full:$("fullBtn"),help:$("helpBtn"),closeHelp:$("closeHelpBtn"),dialog:$("helpDialog"),meterA:$("meterA"),meterB:$("meterB"),meterC:$("meterC"),meterAValue:$("meterAValue"),meterBValue:$("meterBValue"),meterCValue:$("meterCValue"),laneButtons:$("laneButtons")};
+  const els={app:$("app"),stage:$("stageValue"),lane:$("laneValue"),integrity:$("integrityValue"),combo:$("comboValue"),hit:$("hitValue"),score:$("scoreValue"),best:$("bestValue"),stageName:$("stageName"),mission:$("missionText"),status:$("statusLine"),live:$("liveStatus"),start:$("startBtn"),sync:$("syncBtn"),restart:$("restartBtn"),sound:$("soundBtn"),full:$("fullBtn"),help:$("helpBtn"),closeHelp:$("closeHelpBtn"),dialog:$("helpDialog"),meterA:$("meterA"),meterB:$("meterB"),meterC:$("meterC"),meterD:$("meterD"),meterDValue:$("meterDValue"),meterAValue:$("meterAValue"),meterBValue:$("meterBValue"),meterCValue:$("meterCValue"),laneButtons:$("laneButtons")};
   function store(){if(window.workshopStorage)return window.workshopStorage;try{return window.localStorage}catch(_){return null}}
   function read(k,f){const s=store();if(!s)return f;try{const v=s.getItem(k);return v==null?f:v}catch(_){return f}}
   function write(k,v){const s=store();if(!s)return;try{s.setItem(k,String(v))}catch(_){}}
-  const state={mode:"menu",stage:0,time:0,lane:1,integrity:100,combo:0,hits:0,misses:0,score:0,best:Number(read(BEST_KEY,"0"))||0,events:[],feedback:"Press Start.",feedbackMs:1500,lastEvent:"ready",lastAction:"none",soundEnabled:String(read(SOUND_KEY,"1"))!=="0",lastSound:"none",toneCount:0};
+  const state={mode:"menu",stage:0,time:0,lane:1,integrity:100,combo:0,hits:0,misses:0,score:0,best:finiteOr0(read(BEST_KEY,"0")),events:[],feedback:"Press Start.",feedbackMs:1500,lastEvent:"ready",lastAction:"none",soundEnabled:String(read(SOUND_KEY,"1"))!=="0",lastSound:"none",toneCount:0};
   let audio=null;
+  function finiteOr0(v){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0}
   function track(){return TRACKS[state.stage]}
   function beatMs(){return 60000/track().bpm}
   function eventTime(e){return e.beat*beatMs()+520}
   function setFeedback(text,ms,event){state.feedback=text;state.feedbackMs=ms||1400;state.lastEvent=event||"feedback";els.status.textContent=text;els.live.textContent=text}
   function ensureAudio(){if(!state.soundEnabled)return null;try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==="suspended")audio.resume().catch(()=>{});return audio}catch(_){audio=null;return null}}
   function tone(name){state.lastSound=state.soundEnabled?name:"muted-"+name;if(!state.soundEnabled)return;state.toneCount++;const ac=ensureAudio();if(!ac)return;const now=ac.currentTime,osc=ac.createOscillator(),gain=ac.createGain();osc.type=name==="miss"?"sawtooth":"triangle";osc.frequency.value={start:260,hit:640,echo:820,trap:420,miss:140,stage:560,win:940,toggle:360}[name]||440;gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.045,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+.18);osc.connect(gain).connect(ac.destination);osc.start(now);osc.stop(now+.2)}
-  function loadStage(i){state.stage=i;state.time=0;state.lane=Math.min(3,Math.max(0,1+i%2));state.integrity=100;state.combo=0;state.hits=0;state.misses=0;state.events=track().events.map((r,n)=>({id:n,beat:r[0],lane:r[1],type:r[2],handled:false,hit:false,missed:false}));els.stageName.textContent=track().name;els.mission.textContent="Hit note and echo pulses inside the window. Leave trap lanes before they cross.";setFeedback(track().name+" armed. Follow the next beat window.",1500,"stage");updateUI();render()}
-  function start(){state.mode="playing";state.score=0;loadStage(0);setFeedback("Tempo tunnel engaged.",1200,"start");tone("start");canvas.focus()}
+  function loadStage(i){state.stage=i;state.time=0;state.lane=Math.min(3,Math.max(0,1+i%2));state.integrity=100;state.combo=0;state.hits=0;state.misses=0;state.events=track().events.map((r,n)=>({id:n,beat:r[0],lane:r[1],type:r[2],handled:false,hit:false,missed:false}));els.stageName.textContent=track().name;els.mission.textContent="Hit note and echo pulses inside the window. Leave trap lanes before they cross.";setFeedback(track().name+" armed. Follow the next beat window.",1500,"stage");updateUI();render();ensureLoop()}
+  function start(){state.mode="playing";state.score=0;loadStage(0);setFeedback("Tempo tunnel engaged.",1200,"start");tone("start");canvas.focus();ensureLoop()}
   function restart(){start();state.lastAction="restart"}
   function nextEvent(){return state.events.find(e=>!e.handled)||null}
   function recommendedLane(e){if(!e)return state.lane;if(e.type==="trap"){for(let d=1;d<LANES;d++){const up=e.lane-d,down=e.lane+d;if(up>=0)return up;if(down<LANES)return down}return e.lane===0?1:0}return e.lane}
   function laneY(l){return 118+l*82}
   function moveLane(delta){state.lane=Math.max(0,Math.min(LANES-1,state.lane+delta));state.lastAction="lane";updateUI();render()}
   function setLane(l){state.lane=Math.max(0,Math.min(LANES-1,l));state.lastAction="lane";updateUI();render()}
+  // A sync only lands when the nearest note is inside the timing window AND the
+  // runner is in its lane. The window was never drawn, so half the rule was
+  // invisible; this is the single description both the readout and sync() use.
+  function syncOutcome(){
+    let best=null,bd=9999;
+    for(const e of state.events){if(e.handled||e.type==="trap")continue;const d=Math.abs(state.time-eventTime(e));if(d<bd){best=e;bd=d}}
+    if(!best)return{ok:false,target:null,inWindow:false,laneOk:false,delta:0,cost:7,gain:0,label:"NO BEAT",text:"No beat left to sync."};
+    const inWindow=bd<=WINDOW,laneOk=best.lane===state.lane,delta=Math.round(state.time-eventTime(best));
+    if(inWindow&&laneOk){const gain=(best.type==="echo"?80:55)+(state.combo+1)*6;
+      return{ok:true,target:best,inWindow,laneOk,delta,cost:0,gain,label:"READY",text:"Sync now lands the "+best.type+" for +"+gain+"."}}
+    const cost=inWindow?10:7;
+    const label=!inWindow?(delta<0?"TOO EARLY":"TOO LATE"):"WRONG LANE";
+    const text=!inWindow?("Sync now is offbeat - costs "+cost+" integrity."):("Sync now is lane "+(state.lane+1)+", the beat is lane "+(best.lane+1)+" - costs "+cost+" integrity.");
+    return{ok:false,target:best,inWindow,laneOk,delta,cost,gain:0,label,text}}
   function sync(){
     if(state.mode==="menu"){start();return}
     if(state.mode!=="playing")return;
     state.lastAction="sync";
-    let best=null,bd=9999;
-    for(const e of state.events){if(e.handled||e.type==="trap")continue;const d=Math.abs(state.time-eventTime(e));if(d<bd){best=e;bd=d}}
-    if(best&&bd<=WINDOW&&best.lane===state.lane){best.handled=true;best.hit=true;state.combo++;state.hits++;state.score+=(best.type==="echo"?80:55)+state.combo*6;setFeedback((best.type==="echo"?"Echo":"Note")+" synced. Combo "+state.combo+".",900,best.type==="echo"?"echo":"hit");tone(best.type==="echo"?"echo":"hit")}
-    else{state.combo=0;state.integrity-=best&&bd<=WINDOW?10:7;state.misses++;setFeedback(best&&bd<=WINDOW?"Wrong lane for the beat.":"Offbeat sync.",1000,"miss");tone("miss")}
+    const out=syncOutcome(),best=out.target;
+    if(out.ok){best.handled=true;best.hit=true;state.combo++;state.hits++;state.score+=(best.type==="echo"?80:55)+state.combo*6;setFeedback((best.type==="echo"?"Echo":"Note")+" synced. Combo "+state.combo+".",900,best.type==="echo"?"echo":"hit");tone(best.type==="echo"?"echo":"hit")}
+    else{state.combo=0;state.integrity-=out.cost;state.misses++;setFeedback(out.inWindow?"Wrong lane for the beat.":"Offbeat sync.",1000,"miss");tone("miss")}
     checkEnd();updateUI();render();
   }
   function markMiss(e,trapSafe){
@@ -192,15 +207,26 @@
   }
   function updateUI(){
     const total=state.events.filter(e=>e.type!=="trap").length, n=nextEvent(), last=state.events.length?Math.max(...state.events.map(eventTime)):1;
-    els.stage.textContent=(state.stage+1)+"/"+TRACKS.length;els.lane.textContent=state.lane+1;els.integrity.textContent=Math.max(0,Math.round(state.integrity));els.combo.textContent=state.combo;els.hit.textContent=state.hits+"/"+total;els.score.textContent=state.score;els.best.textContent=Math.max(state.best,state.score);els.sound.textContent=state.soundEnabled?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.soundEnabled));els.meterA.style.width=Math.max(0,Math.min(100,state.integrity))+"%";els.meterAValue.textContent=Math.max(0,Math.round(state.integrity));els.meterB.style.width=Math.max(0,Math.min(100,state.time/(last+500)*100))+"%";els.meterBValue.textContent=Math.round(Math.max(0,Math.min(1,state.time/(last+500)))*100)+"%";const until=n?eventTime(n)-state.time:0;els.meterC.style.width=n?Math.max(0,100-Math.min(100,Math.abs(until)/900*100))+"%":"0%";els.meterCValue.textContent=n?Math.round(until)+"ms":"-";els.laneButtons.querySelectorAll("[data-lane]").forEach(b=>b.setAttribute("aria-pressed",String(Number(b.dataset.lane)===state.lane)));
+    els.stage.textContent=(state.stage+1)+"/"+TRACKS.length;els.lane.textContent=state.lane+1;els.integrity.textContent=Math.max(0,Math.round(state.integrity));els.combo.textContent=state.combo;els.hit.textContent=state.hits+"/"+total;els.score.textContent=state.score;els.best.textContent=Math.max(state.best,state.score);els.sound.textContent=state.soundEnabled?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.soundEnabled));els.meterA.style.width=Math.max(0,Math.min(100,state.integrity))+"%";els.meterAValue.textContent=Math.max(0,Math.round(state.integrity));els.meterB.style.width=Math.max(0,Math.min(100,state.time/(last+500)*100))+"%";els.meterBValue.textContent=Math.round(Math.max(0,Math.min(1,state.time/(last+500)))*100)+"%";const until=n?eventTime(n)-state.time:0;els.meterC.style.width=n?Math.max(0,100-Math.min(100,Math.abs(until)/900*100))+"%":"0%";els.meterCValue.textContent=n?Math.round(until)+"ms":"-";const so=state.mode==="playing"?syncOutcome():null;els.meterDValue.textContent=so?so.label:"-";els.meterD.style.width=so?(so.ok?"100%":"34%"):"0%";els.meterD.style.background=so&&!so.ok?"#fb7185":"";els.laneButtons.querySelectorAll("[data-lane]").forEach(b=>b.setAttribute("aria-pressed",String(Number(b.dataset.lane)===state.lane)));
   }
+  // What pressing Sync right now would do, from the same syncOutcome() the scorer
+  // runs, so the chip and the award can never disagree.
+  function drawSync(){if(state.mode!=="playing")return;const o=syncOutcome();
+    const col=o.ok?"#86efac":"#fb7185",w=180,x=W-40-w,y=30;
+    ctx.fillStyle=o.ok?"rgba(134,239,172,.2)":"rgba(251,113,133,.2)";ctx.fillRect(x,y,w,26);
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(x+1,y+1,w-2,24);
+    ctx.fillStyle=col;ctx.font="900 14px system-ui";ctx.textAlign="center";ctx.fillText(o.label,x+w/2,y+18);
+    ctx.fillStyle="#a8b4c9";ctx.font="800 11px system-ui";ctx.fillText(o.ok?"press Sync":(o.inWindow?"move lane "+(o.target?o.target.lane+1:"-"):"wait for the window"),x+w/2,y+40);
+    ctx.textAlign="left";
+    ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.arc(GATE_X,laneY(state.lane),25,0,Math.PI*2);ctx.stroke()}
   function render(){
     ctx.clearRect(0,0,W,H);const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#201332");bg.addColorStop(1,"#060917");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     ctx.fillStyle="#f0abfc";ctx.font="900 30px system-ui";ctx.fillText("Tempo Tunnels",34,42);ctx.fillStyle="#a8b4c9";ctx.font="800 13px system-ui";ctx.fillText(track().name+" - "+track().bpm+" BPM, hit at the bright gate",34,64);
-    const gateX=180;ctx.strokeStyle="rgba(103,232,249,.78)";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(gateX,86);ctx.lineTo(gateX,440);ctx.stroke();
+    const gateX=GATE_X;ctx.strokeStyle="rgba(103,232,249,.78)";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(gateX,86);ctx.lineTo(gateX,440);ctx.stroke();
     for(let l=0;l<LANES;l++){const y=laneY(l);ctx.fillStyle=l===state.lane?"rgba(240,171,252,.22)":"rgba(148,163,184,.08)";ctx.fillRect(70,y-28,820,56);ctx.strokeStyle=l===state.lane?"#f0abfc":"rgba(148,163,184,.25)";ctx.lineWidth=2;ctx.strokeRect(70,y-28,820,56);ctx.fillStyle="#dbeafe";ctx.font="900 14px system-ui";ctx.fillText("LANE "+(l+1),82,y+5)}
+    (function(){const half=WINDOW*SCROLL;ctx.fillStyle="rgba(103,232,249,.13)";ctx.fillRect(GATE_X-half,90,half*2,302);ctx.strokeStyle="rgba(103,232,249,.5)";ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(GATE_X-half,90);ctx.lineTo(GATE_X-half,392);ctx.moveTo(GATE_X+half,90);ctx.lineTo(GATE_X+half,392);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="rgba(103,232,249,.8)";ctx.font="900 11px system-ui";ctx.textAlign="center";ctx.fillText("HIT WINDOW",GATE_X,406);ctx.textAlign="left"})();
     for(const e of state.events){if(e.handled)continue;const t=eventTime(e),x=gateX+(t-state.time)*.31,y=laneY(e.lane);if(x<40||x>900)continue;ctx.fillStyle=e.type==="trap"?"#fb7185":e.type==="echo"?"#86efac":"#67e8f9";ctx.beginPath();if(e.type==="trap"){ctx.moveTo(x,y-22);ctx.lineTo(x+22,y);ctx.lineTo(x,y+22);ctx.lineTo(x-22,y);ctx.closePath()}else{ctx.arc(x,y,e.type==="echo"?19:16,0,Math.PI*2)}ctx.fill();ctx.strokeStyle="#fff8";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#06101d";ctx.font="900 12px system-ui";ctx.textAlign="center";ctx.fillText(e.type==="trap"?"!":e.type==="echo"?"E":"S",x,y+4);ctx.textAlign="left"}
-    ctx.fillStyle="#f8fbff";ctx.beginPath();ctx.arc(gateX,laneY(state.lane),20,0,Math.PI*2);ctx.fill();ctx.fillStyle="#201332";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText("RUN",gateX,laneY(state.lane)+5);ctx.textAlign="left";
+    ctx.fillStyle="#f8fbff";ctx.beginPath();ctx.arc(gateX,laneY(state.lane),20,0,Math.PI*2);ctx.fill();ctx.fillStyle="#201332";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText("RUN",gateX,laneY(state.lane)+5);ctx.textAlign="left";drawSync();
     const n=nextEvent();ctx.fillStyle="#f8fbff";ctx.font="900 18px system-ui";ctx.fillText("Next "+(n?n.type+" lane "+(n.lane+1):"finish"),34,498);ctx.fillStyle="#a8b4c9";ctx.font="800 13px system-ui";ctx.fillText(n?"Window in "+Math.round(eventTime(n)-state.time)+"ms, recommended lane "+(recommendedLane(n)+1):"Track resolving",34,520);
     if(state.mode==="menu"||state.mode==="won"||state.mode==="failed"){ctx.fillStyle="rgba(5,8,18,.8)";ctx.fillRect(280,196,400,136);ctx.strokeStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#f0abfc";ctx.lineWidth=3;ctx.strokeRect(280,196,400,136);ctx.fillStyle=ctx.strokeStyle;ctx.font="900 30px system-ui";ctx.fillText(state.mode==="menu"?"Press Start":state.mode==="won"?"Tunnel Clear":"Track Failed",330,252);ctx.fillStyle="#dbeafe";ctx.font="800 14px system-ui";ctx.fillText(state.feedback,308,284)}
   }
@@ -211,10 +237,24 @@
   function key(e){if(els.dialog.open)return;const k=e.key.toLowerCase();if(["arrowup","w","arrowleft","a"].includes(k)){e.preventDefault();moveLane(-1)}else if(["arrowdown","s","arrowright","d"].includes(k)){e.preventDefault();moveLane(1)}else if(e.key==="Enter"||e.code==="Space"){e.preventDefault();sync()}else if(k==="r"){e.preventDefault();restart()}else if(k==="m"){e.preventDefault();toggleSound()}else if(k==="f"){e.preventDefault();toggleFull()}else if(e.key==="?"||(e.key==="/"&&e.shiftKey)){e.preventDefault();openHelp()}}
   function pointer(e){const r=canvas.getBoundingClientRect();const y=(e.clientY-r.top)/r.height*H;let best=0,bd=999;for(let l=0;l<LANES;l++){const d=Math.abs(y-laneY(l));if(d<bd){bd=d;best=l}}setLane(best);canvas.focus()}
   function nextPayload(){const n=nextEvent();if(!n)return null;const t=eventTime(n);return {id:n.id,type:n.type,lane:n.lane,beat:n.beat,hitTimeMs:+t.toFixed(1),msUntilWindow:+(t-state.time).toFixed(1),windowMs:WINDOW,recommendedLane:recommendedLane(n)}}
-  function renderText(){const total=state.events.filter(e=>e.type!=="trap").length;return JSON.stringify({title:"Tempo Tunnels",mode:state.mode,running:state.mode==="playing",coordinateSystem:"canvas 960x540, four horizontal lanes numbered 1-4 top to bottom",stage:state.stage+1,trackName:track().name,bpm:track().bpm,timeMs:+state.time.toFixed(1),beat:+(state.time/beatMs()).toFixed(3),lane:state.lane,integrity:Math.round(state.integrity),combo:state.combo,hits:state.hits,totalNotes:total,misses:state.misses,score:state.score,best:Math.max(state.best,state.score),nextEvent:nextPayload(),events:state.events.map(e=>({id:e.id,type:e.type,lane:e.lane,beat:e.beat,handled:e.handled,hit:e.hit,missed:e.missed})),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount})}
+  function renderText(){const total=state.events.filter(e=>e.type!=="trap").length;return JSON.stringify({title:"Tempo Tunnels",mode:state.mode,running:state.mode==="playing",coordinateSystem:"canvas 960x540, four horizontal lanes numbered 1-4 top to bottom",stage:state.stage+1,trackName:track().name,bpm:track().bpm,timeMs:+state.time.toFixed(1),beat:+(state.time/beatMs()).toFixed(3),lane:state.lane,integrity:Math.round(state.integrity),combo:state.combo,hits:state.hits,totalNotes:total,misses:state.misses,score:state.score,best:Math.max(state.best,state.score),nextEvent:nextPayload(),syncNow:(()=>{if(state.mode!=="playing")return null;const o=syncOutcome();return{ok:o.ok,label:o.label,inWindow:o.inWindow,laneOk:o.laneOk,deltaMs:o.delta,cost:o.cost,gain:o.gain,targetLane:o.target?o.target.lane:null}})(),events:state.events.map(e=>({id:e.id,type:e.type,lane:e.lane,beat:e.beat,handled:e.handled,hit:e.hit,missed:e.missed})),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount})}
   window.render_game_to_text=renderText;window.advanceTime=ms=>{stopLoop();const steps=Math.max(1,Math.round(ms/(1000/60)));for(let i=0;i<steps;i++)update(1/60);updateUI();render();ensureLoop();return renderText()};
   els.start.addEventListener("click",start);els.sync.addEventListener("click",sync);els.restart.addEventListener("click",restart);els.sound.addEventListener("click",toggleSound);els.full.addEventListener("click",toggleFull);els.help.addEventListener("click",openHelp);els.closeHelp.addEventListener("click",closeHelp);document.addEventListener("keydown",key);canvas.addEventListener("pointerdown",pointer);els.laneButtons.querySelectorAll("[data-lane]").forEach(b=>b.addEventListener("click",()=>setLane(Number(b.dataset.lane))));document.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>{document.dispatchEvent(new KeyboardEvent("keydown",{key:b.dataset.key==="Space"?" ":b.dataset.key,code:b.dataset.key,bubbles:true,cancelable:true}))}));
-  let raf=0;function loop(){update(1/60);updateUI();render();raf=requestAnimationFrame(loop)}function ensureLoop(){if(!raf)raf=requestAnimationFrame(loop)}function stopLoop(){if(raf){cancelAnimationFrame(raf);raf=0}}
+  // The track clock is the game. Stepping a fixed 1/60 per animation frame ran it
+  // at exactly double tempo on a 120Hz display (measured: 4016ms of track after 2s
+  // of wall-clock, against 2016ms at 60Hz), which also halves the real-time hit
+  // window. The loop now consumes real elapsed time in fixed slices and sleeps
+  // outside play, where it used to spin forever. advanceTime keeps its own path.
+  let raf=0,lastFrame=0,carryMs=0;
+  function loopActive(){return state.mode==="playing"||state.feedbackMs>0}
+  function loop(now){raf=0;const ms=lastFrame?Math.min(100,Math.max(0,now-lastFrame)):1000/60;lastFrame=now;
+    carryMs+=ms;let steps=0;
+    while(carryMs>=1000/60&&steps<240){update(1/60);carryMs-=1000/60;steps++}
+    if(steps){updateUI();render()}
+    if(loopActive()&&!document.hidden)raf=requestAnimationFrame(loop);else lastFrame=0}
+  function ensureLoop(){if(raf||!loopActive()||document.hidden)return;lastFrame=0;raf=requestAnimationFrame(loop)}
+  function stopLoop(){if(raf){cancelAnimationFrame(raf);raf=0}lastFrame=0;carryMs=0}
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)ensureLoop()});
   loadStage(0);state.mode="menu";updateUI();render();ensureLoop();
 })();
 </script>
