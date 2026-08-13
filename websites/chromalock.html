@@ -74,6 +74,7 @@ button{font:inherit}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas.compact{aspect-ratio:520/600}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
@@ -113,6 +114,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     <button class="btn primary" id="newBtn" type="button">New Game</button>
     <button class="btn" id="submitBtn" type="button">Submit</button>
     <button class="btn" id="undoBtn" type="button">Undo Peg</button>
+    <button class="btn" id="hintBtn" type="button">Hint</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
   </section>
   <section class="touch" aria-label="Color palette">
@@ -129,7 +131,6 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
 const STATS_KEY="chromalock.stats.v1",SOUND_KEY="chromalock.sound.v1";
-const CODE=4,ROWS=10;
 // Six neon code colors. fill = [highlight, base] radial stops; dot = solid swatch tint.
 const COLORS=[
   {name:"Coral",fill:["#ff9a9a","#ff5d5d"],dot:"#ff6b6b"},
@@ -140,106 +141,346 @@ const COLORS=[
   {name:"Rose",fill:["#ffa6dd","#f472b6"],dot:"#f472b6"}
 ];
 const K=COLORS.length;
+// A run climbs a ladder of locks. Lock 1 stays four pegs over ten guesses so the
+// render harness's two four-peg guesses still read as a normal opening.
+const LOCKS=[
+ {name:"Brass Lock",pegs:4,guesses:10},
+ {name:"Copper Lock",pegs:4,guesses:9},
+ {name:"Silver Lock",pegs:5,guesses:10},
+ {name:"Cobalt Lock",pegs:5,guesses:9},
+ {name:"Onyx Lock",pegs:5,guesses:8}
+];
 const $=id=>document.getElementById(id);
-const els={guess:$("guessValue"),remain:$("remainValue"),exact:$("exactValue"),partial:$("partialValue"),best:$("bestValue"),streak:$("streakValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn")};
-const saved=readStats();
-const state={secret:[],rows:[],draft:[],mode:"playing",games:0,best:saved.best,streak:saved.streak,sound:readSound(),feedback:"Build a four-peg guess, then submit. Clues reveal exact and partial matches.",time:0,flash:0};
-let audio=null;
+const els={guess:$("guessValue"),remain:$("remainValue"),exact:$("exactValue"),partial:$("partialValue"),
+ best:$("bestValue"),streak:$("streakValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),
+ hint:$("hintBtn"),neww:$("newBtn"),submit:$("submitBtn"),undo:$("undoBtn")};
+
+let reducedMotion=false;
+try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{best:(typeof v.best==="number"?v.best:null),streak:(typeof v.streak==="number"?v.streak:0)}}catch(_){}return{best:null,streak:0}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best,streak:state.streak}))}catch(_){}}
+function intOr(v,d){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):d}
+function readStats(){const base={best:null,streak:0,bestScore:0};
+ try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return base;const v=JSON.parse(raw);
+  if(!v||typeof v!=="object"||Array.isArray(v))return base;
+  if(typeof v.best==="number"&&Number.isFinite(v.best)&&v.best>0)base.best=Math.floor(v.best);
+  base.streak=intOr(v.streak,0);base.bestScore=intOr(v.bestScore,0)}catch(_){}
+ return base}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best,streak:state.streak,bestScore:state.bestScore}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+const saved=readStats();
+
+const state={secret:[],rows:[],draft:[],mode:"playing",games:0,lock:0,score:0,lockHints:0,hintsUsed:0,
+ best:saved.best,streak:saved.streak,bestScore:saved.bestScore,candidates:0,hintCode:null,
+ sound:readSound(),feedback:"Build a guess, then submit. Clues reveal exact and partial matches.",
+ time:0,flash:0,pegPops:[],cluePops:[],parts:[],shake:0,lastGain:0};
+let audio=null;
+
+function lock(){return LOCKS[Math.min(state.lock,LOCKS.length-1)]}
+function CODE(){return lock().pegs}
+function ROWS(){return lock().guesses}
+
 function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={place:300,clear:240,submit:400,win:660,lose:150}[kind]||260;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
+function ac(){if(!state.sound)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+ try{audio=audio||new AC();if(audio.state==="suspended")audio.resume();return audio}catch(_){return null}}
+function blip(freq,dur,type,vol,delay){const a=ac();if(!a)return;
+ try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(delay||0);
+  o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.05,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+function noise(dur,vol){const a=ac();if(!a)return;
+ try{const len=Math.max(1,Math.floor(a.sampleRate*dur)),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+  const src=a.createBufferSource(),g=a.createGain();
+  src.buffer=buf;g.gain.setValueAtTime(vol||.05,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+dur);
+  src.connect(g);g.connect(a.destination);src.start()}catch(_){}}
+const PITCH=[392,440,494,587,659,740];
+function tone(kind,n){if(!state.sound)return;
+ switch(kind){
+  case"place": blip(PITCH[Math.min(PITCH.length-1,n||0)],.09,"sine",.045);break;
+  case"clear": blip(240,.1,"triangle",.04);break;
+  case"submit": noise(.09,.04);blip(330,.12,"triangle",.045);break;
+  case"clue": blip(700+Math.min(6,n||0)*70,.07,"sine",.035,(n||0)*.06);break;
+  case"crack": [523,659,784,1046,1319].forEach((f,i)=>blip(f,.34,"triangle",.07,i*.07));break;
+  case"lockOpen": [659,880,1175].forEach((f,i)=>blip(f,.26,"triangle",.06,i*.06));break;
+  case"hint": blip(760,.1,"sine",.045);blip(1010,.12,"sine",.035,.07);break;
+  case"lose": blip(220,.42,"sawtooth",.05);blip(150,.5,"sawtooth",.04,.1);noise(.3,.045);break;
+  case"bad": blip(150,.14,"sawtooth",.045);break;
+  default: blip(300,.1,"triangle",.04)}}
 
 // Deterministic seeded code so the smoke/render harness sees a stable board on load.
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function makeSecret(seed){const rng=mulberry32(seed);const out=[];for(let i=0;i<CODE;i++)out.push(Math.floor(rng()*K));return out}
-function scoreGuess(guess,secret){let exact=0;const sc=new Array(K).fill(0),gc=new Array(K).fill(0);for(let i=0;i<CODE;i++){if(guess[i]===secret[i])exact++;else{sc[secret[i]]++;gc[guess[i]]++}}let partial=0;for(let c=0;c<K;c++)partial+=Math.min(sc[c],gc[c]);return{exact,partial}}
+function makeSecret(seed,pegs){const rng=mulberry32(seed);const out=[];for(let i=0;i<pegs;i++)out.push(Math.floor(rng()*K));return out}
+function scoreGuess(guess,secret){let exact=0;const sc=new Array(K).fill(0),gc=new Array(K).fill(0);
+ for(let i=0;i<guess.length;i++){if(guess[i]===secret[i])exact++;else{sc[secret[i]]++;gc[guess[i]]++}}
+ let partial=0;for(let c=0;c<K;c++)partial+=Math.min(sc[c],gc[c]);
+ return{exact,partial}}
+// How many codes are still consistent with every clue so far. Showing this turns
+// Mastermind from guesswork into visible deduction, and it is cheap: at most
+// 6^5 = 7776 codes to filter.
+function consistentCodes(limit){const pegs=CODE(),out=[];const total=Math.pow(K,pegs);
+ const guess=new Array(pegs);
+ for(let n=0;n<total;n++){let x=n;
+  for(let i=0;i<pegs;i++){guess[i]=x%K;x=(x/K)|0}
+  let ok=true;
+  for(const row of state.rows){const r=scoreGuess(guess,row.pegs);
+   if(r.exact!==row.exact||r.partial!==row.partial){ok=false;break}}
+  if(ok){out.push(guess.slice());if(limit&&out.length>=limit)return out}}
+ return out}
+function refreshCandidates(){state.candidates=consistentCodes(0).length}
 
-function loadGame(){state.secret=makeSecret((0x9e3779b9^Math.imul(state.games+1,0x85ebca6b))>>>0);state.rows=[];state.draft=[];state.mode="playing";state.flash=0;update();draw()}
-function newGame(){state.games++;loadGame();say("New code locked in. Crack it in "+ROWS+" guesses.");tone("clear")}
-function placeColor(ci){if(state.mode!=="playing")return;if(ci<0||ci>=K)return;if(state.draft.length>=CODE){say("Row full — submit or undo a peg.");return}state.draft.push(ci);state.flash=1;tone("place");vibe(8);say("Placed "+COLORS[ci].name+". "+(CODE-state.draft.length)+" peg"+(CODE-state.draft.length===1?"":"s")+" to go.");update();draw()}
-function undoPeg(){if(state.mode!=="playing")return;if(!state.draft.length){say("Nothing to undo.");return}const ci=state.draft.pop();say("Removed "+COLORS[ci].name+".");tone("clear");update();draw()}
-function clearRow(){if(state.mode!=="playing")return;if(!state.draft.length)return;state.draft=[];say("Row cleared.");tone("clear");update();draw()}
-function submitGuess(){if(state.mode!=="playing")return;if(state.draft.length!==CODE){say("Place all four pegs before submitting.");tone("lose");return}
-  const guess=state.draft.slice(),res=scoreGuess(guess,state.secret);
-  state.rows.push({pegs:guess,exact:res.exact,partial:res.partial});state.draft=[];state.flash=1;
-  if(res.exact===CODE){state.mode="won";const tries=state.rows.length;if(state.best==null||tries<state.best)state.best=tries;state.streak++;saveStats();tone("win");vibe([26,26,40]);say("Code cracked in "+tries+" guess"+(tries===1?"":"es")+"! Streak "+state.streak+". Press New Game.")}
-  else if(state.rows.length>=ROWS){state.mode="lost";state.streak=0;saveStats();tone("lose");vibe([60,40]);say("Out of guesses — the code is revealed. Press New Game.")}
-  else{tone("submit");vibe(12);say(res.exact+" exact · "+res.partial+" partial. "+(ROWS-state.rows.length)+" guess"+(ROWS-state.rows.length===1?"":"es")+" left.")}
-  update();draw()}
+function loadLock(quiet){const L=lock();
+ state.secret=makeSecret((0x9e3779b9^Math.imul(state.games*7+state.lock+1,0x85ebca6b))>>>0,L.pegs);
+ state.rows=[];state.draft=[];state.mode="playing";state.flash=0;state.lockHints=0;state.hintCode=null;
+ state.pegPops.length=0;state.cluePops.length=0;
+ refreshCandidates();
+ if(!quiet)say(L.name+" — "+L.pegs+" pegs, "+L.guesses+" guesses. "+state.candidates+" codes possible.");
+ update();draw()}
+function newGame(){state.games++;state.lock=0;state.score=0;state.hintsUsed=0;
+ state.parts.length=0;state.shake=0;
+ loadLock(true);say("New run — crack "+LOCKS.length+" locks in a row. "+lock().name+" first.");tone("clear");update();draw()}
 
-function update(){const done=state.mode!=="playing";els.guess.textContent=Math.min(ROWS,state.rows.length+(done?0:1))+"/"+ROWS;els.remain.textContent=String(Math.max(0,ROWS-state.rows.length));const last=state.rows[state.rows.length-1];els.exact.textContent=last?String(last.exact):"—";els.partial.textContent=last?String(last.partial):"—";els.best.textContent=state.best==null?"—":String(state.best);els.streak.textContent=String(state.streak);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+function placeColor(ci){if(state.mode!=="playing")return;if(ci<0||ci>=K)return;
+ if(state.draft.length>=CODE()){say("Row full — submit or undo a peg.");tone("bad");return}
+ state.draft.push(ci);state.flash=1;
+ if(!reducedMotion)state.pegPops.push({j:state.draft.length-1,t:0});
+ tone("place",ci);vibe(8);
+ const left=CODE()-state.draft.length;
+ say("Placed "+COLORS[ci].name+". "+left+" peg"+(left===1?"":"s")+" to go.");
+ update();draw();wake()}
+function undoPeg(){if(state.mode!=="playing")return;
+ if(!state.draft.length){say("Nothing to undo.");tone("bad");return}
+ const ci=state.draft.pop();state.pegPops.pop();
+ say("Removed "+COLORS[ci].name+".");tone("clear");update();draw()}
+function clearRow(){if(state.mode!=="playing")return;if(!state.draft.length)return;
+ state.draft=[];state.pegPops.length=0;say("Row cleared.");tone("clear");update();draw()}
+function useHint(){if(state.mode!=="playing")return;
+ const pool=consistentCodes(400);
+ if(!pool.length){say("No code fits those clues — check the board.");tone("bad");return}
+ const pick=pool[Math.floor(Math.random()*pool.length)];
+ state.draft=pick.slice();state.pegPops.length=0;
+ if(!reducedMotion)for(let j=0;j<pick.length;j++)state.pegPops.push({j,t:-j*0.12});
+ state.lockHints++;state.hintsUsed++;state.hintCode=pick.slice();
+ say("Hint loaded a code that still fits every clue. No clean-crack bonus this lock.");
+ tone("hint");update();draw();wake()}
 
-const BX=44,BY=82,ROWH=42,PEGR=15,PEGDX=40,RIGHTX=348;
-function rowCenterY(i){return BY+i*ROWH+ROWH/2}
-function pegCenterX(j){return BX+22+j*PEGDX}
-function paletteChip(i){return{x:RIGHTX+i*64,y:300,w:56,h:46}}
-function draftSlot(j){return{x:362+j*46,y:398,r:16}}
+function spawnParts(x,y,color,n){if(reducedMotion)return;
+ for(let i=0;i<n;i++){const a=Math.PI*2*i/n+Math.random()*.6,s=70+Math.random()*140;
+  state.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-50,life:1,color})}}
 
-function discFill(cx,cy,ci,r){const c=COLORS[ci],g=ctx.createRadialGradient(cx-r*.35,cy-r*.35,2,cx,cy,r);g.addColorStop(0,c.fill[0]);g.addColorStop(1,c.fill[1]);ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,255,255,.34)";ctx.lineWidth=2;ctx.stroke()}
-function discEmpty(cx,cy,r){ctx.fillStyle="#0c1a2c";ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(94,234,212,.18)";ctx.lineWidth=2;ctx.stroke()}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function submitGuess(){if(state.mode!=="playing")return;
+ if(state.draft.length!==CODE()){say("Place all "+CODE()+" pegs before submitting.");tone("bad");return}
+ const guess=state.draft.slice(),res=scoreGuess(guess,state.secret);
+ state.rows.push({pegs:guess,exact:res.exact,partial:res.partial});
+ state.draft=[];state.pegPops.length=0;state.flash=1;state.hintCode=null;
+ if(!reducedMotion)for(let i=0;i<res.exact+res.partial;i++)state.cluePops.push({row:state.rows.length-1,i,t:-i*0.1});
+ refreshCandidates();
+ tone("submit");
+ for(let i=0;i<Math.min(res.exact+res.partial,6);i++)tone("clue",i);
+ if(res.exact===CODE()){
+  const tries=state.rows.length,left=ROWS()-tries;
+  const gain=120+30*left+(state.lockHints===0?60:0);
+  state.score+=gain;state.lastGain=gain;
+  if(state.best==null||tries<state.best)state.best=tries;
+  vibe([26,26,40]);
+  if(!reducedMotion){state.shake=.7;spawnParts(canvas.width/2,canvas.height/2,"#5eead4",16)}
+  if(state.lock>=LOCKS.length-1){state.mode="won";state.streak++;
+   if(state.score>state.bestScore)state.bestScore=state.score;
+   saveStats();tone("crack");
+   say("Every lock open! Run score "+state.score+" · streak "+state.streak+". Press New Game.")}
+  else{state.lock++;tone("lockOpen");
+   if(state.score>state.bestScore)state.bestScore=state.score;
+   saveStats();
+   loadLock(true);
+   say("Cracked in "+tries+" (+"+gain+"). "+lock().name+" next — "+lock().pegs+" pegs, "+lock().guesses+" guesses.")}}
+ else if(state.rows.length>=ROWS()){state.mode="lost";state.streak=0;
+  if(state.score>state.bestScore)state.bestScore=state.score;
+  saveStats();tone("lose");vibe([60,40]);
+  if(!reducedMotion)state.shake=.8;
+  say("Out of guesses — the code is revealed. Run score "+state.score+". Press New Game.")}
+ else{vibe(12);
+  say(res.exact+" exact · "+res.partial+" partial. "+state.candidates+" codes still fit. "
+   +(ROWS()-state.rows.length)+" guess"+(ROWS()-state.rows.length===1?"":"es")+" left.")}
+ update();draw();wake()}
 
-function drawFeedback(ox,cy,exact,partial){const fx=ox,positions=[[fx,cy-9],[fx+16,cy-9],[fx,cy+7],[fx+16,cy+7]];for(let i=0;i<CODE;i++){const[px,py]=positions[i];ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);if(i<exact){ctx.fillStyle="#f8fafc";ctx.fill();ctx.strokeStyle="rgba(94,234,212,.55)";ctx.lineWidth=1.5;ctx.stroke()}else if(i<exact+partial){ctx.fillStyle="rgba(8,18,30,.9)";ctx.fill();ctx.strokeStyle="#5eead4";ctx.lineWidth=2.5;ctx.stroke()}else{ctx.fillStyle="rgba(94,234,212,.10)";ctx.fill()}}}
+function update(){const done=state.mode!=="playing";
+ els.guess.textContent=Math.min(ROWS(),state.rows.length+(done?0:1))+"/"+ROWS();
+ els.remain.textContent=String(Math.max(0,ROWS()-state.rows.length));
+ const last=state.rows[state.rows.length-1];
+ els.exact.textContent=last?String(last.exact):"—";
+ els.partial.textContent=last?String(last.partial):"—";
+ els.best.textContent=state.best==null?"—":String(state.best);
+ els.streak.textContent=String(state.streak);
+ els.sound.textContent=state.sound?"Sound On":"Sound Off";
+ els.sound.setAttribute("aria-pressed",String(state.sound));
+ if(els.hint)els.hint.disabled=state.mode!=="playing";
+ if(els.submit)els.submit.disabled=state.mode!=="playing";
+ if(els.undo)els.undo.disabled=state.mode!=="playing"||!state.draft.length}
 
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Chromalock",30,40);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Deduce the hidden four-peg color code from the clues beside each guess.",30,58);
-  const activeRow=state.mode==="playing"?state.rows.length:-1;
-  for(let i=0;i<ROWS;i++){const cy=rowCenterY(i),isActive=i===activeRow;
-    ctx.fillStyle=isActive?"rgba(94,234,212,.10)":"rgba(255,255,255,.02)";roundRect(BX-12,cy-ROWH/2+3,272,ROWH-6,9,true,false);
-    if(isActive){ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;roundRect(BX-12,cy-ROWH/2+3,272,ROWH-6,9,false,true)}
-    ctx.fillStyle="#5f7790";ctx.font="800 11px system-ui";ctx.textAlign="right";ctx.fillText(String(i+1),BX-18,cy+4);ctx.textAlign="left";
-    const row=state.rows[i];
-    for(let j=0;j<CODE;j++){const cx=pegCenterX(j);
-      if(row)discFill(cx,cy,row.pegs[j],PEGR);
-      else if(isActive&&j<state.draft.length)discFill(cx,cy,state.draft[j],PEGR);
-      else discEmpty(cx,cy,PEGR)}
-    if(row)drawFeedback(BX+22+CODE*PEGDX+6,cy,row.exact,row.partial)}
-  // Right column: stats, palette, working guess.
-  const block=(label,val,color,py)=>{ctx.textAlign="left";ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,RIGHTX,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 26px system-ui";ctx.fillText(val,RIGHTX,py+34)};
-  const doneTries=state.mode==="won"?state.rows.length:null;
-  block("GUESS",Math.min(ROWS,state.rows.length+(state.mode==="playing"?1:0))+" / "+ROWS,null,86);
-  block("BEST CRACK",state.best==null?"—":state.best+" tries","#7ef9ff",144);
-  block("STREAK",String(state.streak),null,202);
-  block("CODE",CODE+" pegs · "+K+" colors",null,260);
-  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("PALETTE",RIGHTX,294);
-  for(let i=0;i<K;i++){const c=paletteChip(i);ctx.fillStyle="rgba(0,0,0,.25)";roundRect(c.x,c.y,c.w,c.h,10,true,false);discFill(c.x+19,c.y+23,i,14);ctx.fillStyle="#cfe0f2";ctx.font="900 11px system-ui";ctx.textAlign="left";ctx.fillText(String(i+1),c.x+38,c.y+19);ctx.fillStyle="#8fa6bd";ctx.font="800 9px system-ui";ctx.fillText(COLORS[i].name.slice(0,4).toUpperCase(),c.x+34,c.y+34)}
-  ctx.textAlign="left";ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(state.mode==="playing"?"THIS GUESS":"THE CODE",RIGHTX,372);
-  for(let j=0;j<CODE;j++){const s=draftSlot(j);if(state.mode==="playing"){if(j<state.draft.length)discFill(s.x,s.y,state.draft[j],s.r);else discEmpty(s.x,s.y,s.r)}else discFill(s.x,s.y,state.secret[j],s.r)}
-  if(state.mode!=="playing"){const won=state.mode==="won";ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=won?"#5eead4":"#fca5a5";ctx.font="950 46px system-ui";ctx.fillText(won?"CODE CRACKED":"LOCKED OUT",canvas.width/2,canvas.height/2-44);
-    for(let j=0;j<CODE;j++)discFill(canvas.width/2-3*30+j*60,canvas.height/2+6,state.secret[j],24);
-    ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(won&&doneTries?("Solved in "+doneTries+" · streak "+state.streak):"The hidden code is shown above.",canvas.width/2,canvas.height/2+62);ctx.textAlign="left"}}
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<560;if(next===compact)return;
+ compact=next;canvas.width=compact?520:960;canvas.height=compact?600:540;
+ canvas.classList.toggle("compact",compact);
+ if(state.secret.length)draw()}
+function geom(){if(compact)return{BX:30,BY:96,ROWH:38,PEGR:13,PEGDX:32,RIGHTX:0,draftY:520,draftDX:40,draftR:16};
+ return{BX:44,BY:82,ROWH:42,PEGR:15,PEGDX:40,RIGHTX:348,draftY:420,draftDX:46,draftR:16}}
+function rowCenterY(i){const g=geom();return g.BY+i*g.ROWH+g.ROWH/2}
+function pegCenterX(j){const g=geom();return g.BX+22+j*g.PEGDX}
+function paletteChip(i){return{x:geom().RIGHTX+i*64,y:322,w:56,h:46}}
+function draftSlot(j){const g=geom();
+ return{x:(compact?g.BX+24:362)+j*g.draftDX,y:g.draftY,r:g.draftR}}
 
-function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,codeLength:CODE,palette:K,maxGuesses:ROWS,guessNumber:Math.min(ROWS,state.rows.length+(state.mode==="playing"?1:0)),remaining:Math.max(0,ROWS-state.rows.length),draft:state.draft.slice(),rows:state.rows.map(r=>({pegs:r.pegs.slice(),exact:r.exact,partial:r.partial})),won:state.mode==="won",lost:state.mode==="lost",best:state.best,streak:state.streak,secret:state.mode==="playing"?null:state.secret.slice(),paletteNames:COLORS.map(c=>c.name),feedback:state.feedback,coordinateSystem:"rows oldest→newest top→bottom; pegs left→right; color index 0-5; exact=right color & position, partial=right color wrong position"})};
+function discFill(cx,cy,ci,r){const c=COLORS[ci],g=ctx.createRadialGradient(cx-r*.35,cy-r*.35,2,cx,cy,r);
+ g.addColorStop(0,c.fill[0]);g.addColorStop(1,c.fill[1]);ctx.fillStyle=g;
+ ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="rgba(255,255,255,.34)";ctx.lineWidth=2;ctx.stroke()}
+function discEmpty(cx,cy,r){ctx.fillStyle="#0c1a2c";ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="rgba(94,234,212,.18)";ctx.lineWidth=2;ctx.stroke()}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+ ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function clueScale(rowIdx,i){for(const p of state.cluePops)if(p.row===rowIdx&&p.i===i&&p.t<1)return Math.max(0,p.t);return 1}
+function drawFeedback(ox,cy,exact,partial,rowIdx){const pegs=CODE();
+ // One flat row of clue dots so four- and five-peg locks both fit the row height.
+ for(let i=0;i<pegs;i++){const px=ox+i*12,py=cy;
+  const s=i<exact+partial?clueScale(rowIdx,i):1;
+  const rr=5*(s<=0?0:0.4+0.6*Math.min(1,s));
+  if(rr<=0.2)continue;
+  ctx.beginPath();ctx.arc(px,py,rr,0,Math.PI*2);
+  if(i<exact){ctx.fillStyle="#f8fafc";ctx.fill();ctx.strokeStyle="rgba(94,234,212,.55)";ctx.lineWidth=1.5;ctx.stroke()}
+  else if(i<exact+partial){ctx.fillStyle="rgba(8,18,30,.9)";ctx.fill();ctx.strokeStyle="#5eead4";ctx.lineWidth=2.5;ctx.stroke()}
+  else{ctx.fillStyle="rgba(94,234,212,.10)";ctx.fill()}}}
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;
-  if(k>="1"&&k<="6"){e.preventDefault();placeColor(Number(k)-1)}
-  else if(k==="Backspace"){e.preventDefault();undoPeg()}
-  else if(k==="Enter"){e.preventDefault();submitGuess()}
-  else if(k==="n"||k==="N")newGame();
-  else if(k==="r"||k==="R")clearRow()});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height;
-  for(let i=0;i<K;i++){const c=paletteChip(i);if(px>=c.x&&px<=c.x+c.w&&py>=c.y&&py<=c.y+c.h){placeColor(i);return}}
-  if(state.mode==="playing"&&px>=362-22&&px<=362+CODE*46&&py>=398-22&&py<=398+22){undoPeg();return}});
-$("newBtn").addEventListener("click",newGame);
-$("submitBtn").addEventListener("click",submitGuess);
-$("undoBtn").addEventListener("click",undoPeg);
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("place")});
+function draw(){const W=canvas.width,H=canvas.height,g=geom(),pegs=CODE(),rowsN=ROWS();
+ const sh=state.shake>0&&!reducedMotion?state.shake*7:0;
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
+ const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");
+ ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+ if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ ctx.textAlign="left";ctx.textBaseline="alphabetic";
+ if(compact){ctx.fillStyle="#5eead4";ctx.font="950 28px system-ui";
+  ctx.fillText(lock().name.toUpperCase(),g.BX,42);
+  ctx.fillStyle="#9fb3c8";ctx.font="900 19px system-ui";
+  ctx.fillText(pegs+" PEGS · "+state.candidates+" CODES FIT · SCORE "+state.score,g.BX,72)}
+ else{ctx.fillStyle="#5eead4";ctx.font="900 22px system-ui";ctx.fillText("Chromalock",30,38);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+  ctx.fillText("Deduce the hidden "+pegs+"-peg code. White clue = right color and place; ringed = right color, wrong place.",30,58)}
+ const activeRow=state.mode==="playing"?state.rows.length:-1;
+ const rowW=22+pegs*g.PEGDX+52;
+ for(let i=0;i<rowsN;i++){const cy=rowCenterY(i),isActive=i===activeRow;
+  ctx.fillStyle=isActive?"rgba(94,234,212,.10)":"rgba(255,255,255,.02)";
+  roundRect(g.BX-12,cy-g.ROWH/2+3,rowW,g.ROWH-6,9,true,false);
+  if(isActive){ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;
+   roundRect(g.BX-12,cy-g.ROWH/2+3,rowW,g.ROWH-6,9,false,true)}
+  ctx.fillStyle="#5f7790";ctx.font="800 11px system-ui";ctx.textAlign="right";
+  ctx.fillText(String(i+1),g.BX-18,cy+4);ctx.textAlign="left";
+  const row=state.rows[i];
+  for(let j=0;j<pegs;j++){const cx=pegCenterX(j);
+   if(row)discFill(cx,cy,row.pegs[j],g.PEGR);
+   else if(isActive&&j<state.draft.length){
+    let s=1;for(const p of state.pegPops)if(p.j===j&&p.t<1)s=Math.max(0,p.t)<=0?0:0.5+0.5*Math.min(1,p.t);
+    discFill(cx,cy,state.draft[j],g.PEGR*(s<=0?0.01:s))}
+   else discEmpty(cx,cy,g.PEGR)}
+  if(row)drawFeedback(g.BX+22+pegs*g.PEGDX+6,cy,row.exact,row.partial,i)}
+ if(!compact){const RIGHTX=g.RIGHTX;
+  const block=(label,val,color,py)=>{ctx.textAlign="left";ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";
+   ctx.fillText(label,RIGHTX,py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 26px system-ui";ctx.fillText(val,RIGHTX,py+34)};
+  block("LOCK",(state.lock+1)+" / "+LOCKS.length+" · "+lock().name,"#7ef9ff",86);
+  block("CODES THAT FIT",String(state.candidates),state.candidates<=6?"#facc15":"#f3fbff",144);
+  block("RUN SCORE",String(state.score),null,202);
+  block("BEST RUN · CRACK",state.bestScore+" · "+(state.best==null?"—":state.best+" tries"),null,260);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("PALETTE",RIGHTX,316);
+  for(let i=0;i<K;i++){const c=paletteChip(i);
+   ctx.fillStyle="rgba(0,0,0,.25)";roundRect(c.x,c.y,c.w,c.h,10,true,false);
+   discFill(c.x+19,c.y+23,i,14);
+   ctx.fillStyle="#cfe0f2";ctx.font="900 11px system-ui";ctx.textAlign="left";ctx.fillText(String(i+1),c.x+38,c.y+19);
+   ctx.fillStyle="#8fa6bd";ctx.font="800 9px system-ui";ctx.fillText(COLORS[i].name.slice(0,4).toUpperCase(),c.x+34,c.y+34)}}
+ ctx.textAlign="left";ctx.fillStyle="#9fb3c8";ctx.font="800 "+(compact?15:12)+"px system-ui";
+ ctx.fillText(state.mode==="playing"?"THIS GUESS":"THE CODE",compact?g.BX:g.RIGHTX,g.draftY-28);
+ for(let j=0;j<pegs;j++){const s=draftSlot(j);
+  if(state.mode==="playing"){if(j<state.draft.length)discFill(s.x,s.y,state.draft[j],s.r);else discEmpty(s.x,s.y,s.r)}
+  else discFill(s.x,s.y,state.secret[j],s.r)}
+ for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color||"#5eead4";
+  ctx.beginPath();ctx.arc(p.x,p.y,3.6,0,Math.PI*2);ctx.fill()}
+ ctx.globalAlpha=1;
+ if(state.mode!=="playing"){const won=state.mode==="won";
+  ctx.fillStyle="rgba(3,7,18,.86)";ctx.fillRect(-20,-20,W+40,H+40);
+  ctx.textAlign="center";ctx.fillStyle=won?"#5eead4":"#fca5a5";
+  ctx.font="950 "+(compact?38:46)+"px system-ui";
+  ctx.fillText(won?"VAULT OPEN":"LOCKED OUT",W/2,H/2-56);
+  for(let j=0;j<pegs;j++)discFill(W/2-(pegs-1)*(compact?26:30)/1+j*(compact?52:60),H/2+2,state.secret[j],compact?20:24);
+  ctx.fillStyle="#e6f2ff";ctx.font="900 "+(compact?22:26)+"px system-ui";
+  ctx.fillText("Run score "+state.score,W/2,H/2+56);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 "+(compact?15:17)+"px system-ui";
+  ctx.fillText("Best run "+state.bestScore+"  ·  best crack "+(state.best==null?"—":state.best+" tries")+"  ·  streak "+state.streak,W/2,H/2+86);
+  ctx.fillStyle="#5eead4";ctx.fillText("New Game or press N",W/2,H/2+114);
+  ctx.textAlign="left"}
+ ctx.setTransform(1,0,0,1,0,0)}
+
+function tick(dt){state.time+=dt;
+ if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);
+ if(state.shake>0)state.shake=Math.max(0,state.shake-dt/430);
+ for(let i=state.pegPops.length-1;i>=0;i--){const p=state.pegPops[i];p.t+=dt/190;if(p.t>=1)state.pegPops.splice(i,1)}
+ for(let i=state.cluePops.length-1;i>=0;i--){const p=state.cluePops[i];p.t+=dt/210;if(p.t>=1)state.cluePops.splice(i,1)}
+ for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];
+  p.life-=dt/640;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=dt*.34;
+  if(p.life<=0)state.parts.splice(i,1)}
+ draw()}
+window.advanceTime=ms=>{const total=Math.max(0,Number(ms)||0),n=Math.max(1,Math.ceil(total/40));
+ for(let i=0;i<n;i++)tick(total/n);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){const L=lock();
+ return JSON.stringify({mode:state.mode,codeLength:CODE(),palette:K,maxGuesses:ROWS(),
+  lock:state.lock+1,lockName:L.name,locks:LOCKS.length,score:state.score,bestScore:state.bestScore,
+  guessNumber:Math.min(ROWS(),state.rows.length+(state.mode==="playing"?1:0)),
+  remaining:Math.max(0,ROWS()-state.rows.length),draft:state.draft.slice(),
+  rows:state.rows.map(r=>({pegs:r.pegs.slice(),exact:r.exact,partial:r.partial})),
+  won:state.mode==="won",lost:state.mode==="lost",best:state.best,streak:state.streak,
+  candidates:state.candidates,hintsUsed:state.hintsUsed,lockHints:state.lockHints,
+  lastGain:state.lastGain,reducedMotion:reducedMotion,
+  secret:state.mode==="playing"?null:state.secret.slice(),paletteNames:COLORS.map(c=>c.name),
+  feedback:state.feedback,
+  coordinateSystem:"rows oldest→newest top→bottom; pegs left→right; color index 0-5; exact=right color & position, partial=right color wrong position"})};
+
+document.addEventListener("keydown",e=>{const t=e.target;
+ if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+ const k=e.key;
+ if(k>="1"&&k<="6"){e.preventDefault();placeColor(Number(k)-1)}
+ else if(k==="Backspace"){e.preventDefault();undoPeg()}
+ else if(k==="Enter"){e.preventDefault();submitGuess()}
+ else if(k==="n"||k==="N")newGame();
+ else if(k==="r"||k==="R")clearRow();
+ else if(k==="h"||k==="H"){e.preventDefault();useHint()}});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();
+ const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,
+  py=(e.clientY-b.top)/b.height*canvas.height,g=geom();
+ if(!compact)for(let i=0;i<K;i++){const c=paletteChip(i);
+  if(px>=c.x&&px<=c.x+c.w&&py>=c.y&&py<=c.y+c.h){placeColor(i);return}}
+ if(state.mode==="playing"){const first=draftSlot(0);
+  if(px>=first.x-24&&px<=first.x+CODE()*g.draftDX&&py>=g.draftY-24&&py<=g.draftY+24){undoPeg();return}}});
+els.neww.addEventListener("click",newGame);
+els.submit.addEventListener("click",submitGuess);
+els.undo.addEventListener("click",undoPeg);
+if(els.hint)els.hint.addEventListener("click",()=>{useHint();canvas.focus()});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+ say(state.sound?"Sound enabled.":"Sound muted.");
+ if(state.sound)tone("place",2);else if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}});
 document.querySelectorAll("[data-color]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();placeColor(Number(btn.dataset.color))}));
-loadGame();
-let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flash>0}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
-function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
-addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
+document.addEventListener("visibilitychange",()=>{if(document.hidden){rafOn=false;
+ if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}}else wake()});
+addEventListener("resize",syncCompact);
+
+let last=0,rafOn=false;
+function needsFrame(){return state.flash>0||state.pegPops.length>0||state.cluePops.length>0||state.parts.length>0||state.shake>0}
+function frame(now){const dt=Math.min(80,last?now-last:0);last=now;tick(dt);
+ if(needsFrame()&&!document.hidden){requestAnimationFrame(frame)}else{rafOn=false;last=0}}
+function wake(){if(rafOn||document.hidden||!needsFrame())return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+syncCompact();loadLock(true);
+say("Brass Lock — 4 pegs, 10 guesses. "+state.candidates+" codes possible.");
+update();draw();
 if(needsFrame())wake();
 })();
 </script>
