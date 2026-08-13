@@ -1,5 +1,17 @@
 Original prompt: Do this for me
 
+## 2026-08-13 Claude — overhaul campaign batch 3d: Beacon Bastion shows the pulse range and the shades you cannot see
+
+Fourth landing of batch 3, and like Aster Vault a targeted pass rather than a rewrite — this game is also pinned by two harnesses (its capture recipe drives `#wardBtn` and `#pulseBtn`, and `driveBeaconBastion` in `check-best-on-fail-persistence.mjs` pulses to bank score then stops defending, expecting mode `fail` — note this game uses `fail`, not `failed` — with the score written to `beacon-bastion.best.v1`).
+
+**Checked first, found clean:** unlike Aster Vault, this game's loop was already correct — it steps by real elapsed time clamped at 50ms and already gates itself on `state.mode === "playing"`, so neither the double-speed nor the never-sleeping defect existed here. Worth recording that the audit found nothing rather than implying every real-time game shared the fault.
+
+Two genuine fairness problems did exist, and both are fixed:
+
+- **You could not see the pulse range.** Pulse damages shades within 220 pixels of the beacon, but nothing drew that boundary, so firing a five-second cooldown was a guess about whether anything was even in reach. The radius is now drawn as a dashed ring — gold and labelled "PULSE READY — E" when it is off cooldown, grey and counting down the remaining seconds when it is not.
+- **Shades spawned off the visible board.** Every level's spawn points sit outside the canvas (x of −30 or 990, y of −30 or 570), so threats walked in from places the player physically could not look at. Incoming shades that are off-screen now show a red arrow pinned to the nearest edge, pointing the way they are travelling, so an attack from behind is something you can react to rather than something that simply happens to you.
+- Verified: scoped `test:games`; **the real `check-best-on-fail-persistence` gate run in full (all 14 games pass, so the fail-mode and score-persistence contract is intact)**; `capture:games` (desktop and mobile both 0, screenshot reviewed and the pulse ring confirmed drawing with its cooldown label); `audit:contrast` (50 elements, 0 below threshold); all seven static gates; `npm test` 56/56; `git diff --check` clean. Protected meta/JSON-LD blocks verified byte-identical to HEAD.
+
 ## 2026-08-13 Claude — overhaul campaign batch 3c: Aster Vault gets a flight forecast, and two real bugs fixed
 
 Third landing of batch 3. **Scope note, stated plainly:** unlike the previous eight games this was a targeted deepening pass, not a ground-up rewrite. Aster Vault is a real-time physics game pinned by *two* harnesses at once — `asterVaultRecipe()` in the capture script and `driveAsterVault` in `check-best-on-fail-persistence.mjs`, which both fire real thrust and brake input through the exact physics constants and read `ship.speed`, `relics[].taken` and `recommended.thrustX/thrustY`. Rewriting that physics wholesale mid-session was the wrong risk, so the flight model is untouched and the work went into two genuine defects and the readability of the game.
