@@ -75,6 +75,7 @@ button{font:inherit}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas.compact{aspect-ratio:560/460}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
@@ -84,7 +85,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 .touch button.swing{border-color:transparent;background:linear-gradient(180deg,#fda4af,#fb7185);color:#3b0a17}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:44px}}
-@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.pill{padding:5px 3px}.label{font-size:8px}.value{font-size:14px}.status{font-size:11px}.touch button{font-size:10px}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -92,7 +93,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Diamond Derby home-run timing game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Diamond Derby</span></div>
-    <div class="help">Watch the pitch and the timing bar, then Swing (Space, Enter, or tap) as it hits the lit zone. Set launch angle with Up/Down — the middle angle carries farthest. Clear the fence for a home run. R retries the round, N starts a new derby.</div>
+    <div class="help">Press Swing (Space, Enter, or tap) to face the first pitch, then swing again as the timing bar hits the lit zone. Set launch angle with Up/Down. The carry readout shows whether perfect or solid contact clears this round's fence. R retries the round, N starts a new derby.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">1/5</span></div>
@@ -160,7 +161,8 @@ try{
 
 function cfg(){return ROUNDS[state.round]}
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{longest:Number(v.longest)||0,bestRound:Number(v.bestRound)||0}}catch(_){}return{longest:0,bestRound:0}}
+function num(v){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0}
+function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object"&&!Array.isArray(v))return{longest:num(v.longest),bestRound:Math.min(TOTAL,num(v.bestRound))}}catch(_){}return{longest:0,bestRound:0}}
 function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({longest:state.longest,bestRound:state.bestRound}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
@@ -168,15 +170,21 @@ function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
 function tone(kind){if(!state.sound)return;if(navigator.userActivation&&!navigator.userActivation.hasBeenActive)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={pitch:240,swing:300,homer:660,clear:520,win:740,bad:150}[kind]||260;o.type=kind==="homer"||kind==="win"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.2);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.22)}catch(_){}}
 
+// The derby waits for the batter. Without this the pitch clock ran from page
+// load, so a player who read the instructions first lost the round untouched.
+function readyDerby(){state.round=0;state.pitch=1;state.homers=0;state.angle=ANGLE_DEFAULT;state.phase="ready";state.t=0;state.swingT=null;state.grade=null;state.distance=0;state.isHR=false;state.flight=0;state.settle=0;state.flash=0;update();draw()}
 function newDerby(){state.round=0;state.pitch=1;state.homers=0;state.angle=ANGLE_DEFAULT;startPitch();say("New derby — round 1. Clear "+cfg().quota+" homers to advance.");tone("pitch")}
 function retryRound(){state.pitch=1;state.homers=0;startPitch();say("Round "+(state.round+1)+" reset — need "+cfg().quota+" homers.");tone("pitch")}
-function startPitch(){state.phase="pitch";state.t=0;state.swingT=null;state.grade=null;state.distance=0;state.isHR=false;state.flight=0;state.settle=0;update();draw()}
+function startPitch(){state.phase="pitch";state.t=0;state.swingT=null;state.grade=null;state.distance=0;state.isHR=false;state.flight=0;state.settle=0;update();draw();wake()}
 
 function gradeFor(t){if(t<ZONE_LO)return"early";if(t>=PERF_LO&&t<=PERF_HI)return"perfect";if(t<=ZONE_HI)return"good";return"late"}
 
+// One carry formula, used by the swing that happens and by the preview that
+// promises it, so the "perfect clears / good falls short" readout cannot lie.
+function carry(grade,angleIndex){return Math.round(BASE_DIST*powerMult(grade)*angleMult(angleIndex))}
 function swing(){if(state.phase!=="pitch")return;const g=gradeFor(state.t);state.grade=g;state.swingT=state.t;state.flash=1;
   if(g==="early"||g==="late"){tone("bad")}else{tone("swing")}
-  state.distance=Math.round(BASE_DIST*powerMult(g)*angleMult(state.angle));
+  state.distance=carry(g,state.angle);
   state.isHR=state.distance>=cfg().fence;
   state.phase="flight";state.flight=0;state.settle=0;
   say((g==="perfect"?"Perfect contact!":g==="good"?"Solid contact.":g==="early"?"Early — out in front.":"Late — under it.")+" Tracking the ball…");
@@ -204,13 +212,28 @@ function winDerby(){state.phase="win";state.bestRound=TOTAL;saveStats();state.la
 
 function changeAngle(d){const n=Math.max(0,Math.min(ANGLES.length-1,state.angle+d));if(n===state.angle)return;state.angle=n;update();draw();say("Launch angle "+ANGLES[state.angle]+"°"+(state.angle===ANGLE_DEFAULT?" — best carry.":"."))}
 
-function takeSwingInput(){if(state.phase==="pitch")swing()}
+function takeSwingInput(){
+  if(state.phase==="ready"){startPitch();say("Round 1 — clear "+cfg().quota+" homers. Swing in the lit zone.");tone("pitch");return}
+  if(state.phase==="fail"){retryRound();return}
+  if(state.phase==="win"){newDerby();return}
+  if(state.phase==="pitch")swing()}
 
 function update(){const c=cfg();els.round.textContent=(state.round+1)+"/"+TOTAL;els.pitch.textContent=state.pitch+"/"+c.pitches;els.homers.textContent=state.homers+"/"+c.quota;els.launch.textContent=ANGLES[state.angle]+"°";els.longest.textContent=state.longest?String(state.longest):"—";els.best.textContent=state.bestRound?(state.bestRound+"/"+TOTAL):"—";els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
 
 // ---- Rendering -------------------------------------------------------------
-const W=960,H=540,PX=176,PY=404,GY=250;
-function fenceX(dist){return PX+Math.min(1,dist/470)*706}
+// Canvas width sets the on-screen scale, so the phone gets a narrower store and
+// the ballpark is repositioned into it. Every element keeps its size in store
+// pixels, which is what makes the bat, the ball and the timing bar render about
+// 1.7x larger on a phone than they did in the 960-wide scene.
+let compact=false,W=960,H=540,PX=176,PY=404,GY=250,FIELD=706,BAR={x:110,w:740,y:500,h:18};
+function layout(){W=canvas.width;H=canvas.height;
+  if(compact){PX=95;PY=350;GY=193;FIELD=W-PX-70;BAR={x:28,w:W-56,y:H-58,h:26}}
+  else{PX=176;PY=404;GY=250;FIELD=706;BAR={x:110,w:W-220,y:H-40,h:18}}}
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+  const next=w>0&&w<560;if(next===compact)return;
+  compact=next;canvas.width=compact?560:960;canvas.height=compact?460:540;
+  canvas.classList.toggle("compact",compact);layout();draw()}
+function fenceX(dist){return PX+Math.min(1,dist/470)*FIELD}
 function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
 function ball(x,y,r,glow){if(glow){ctx.shadowColor="rgba(255,244,180,.8)";ctx.shadowBlur=18}ctx.fillStyle="#fdfbe9";ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle="rgba(220,80,80,.7)";ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(x-r*0.3,y,r*0.85,-0.9,0.9);ctx.stroke()}
 
@@ -221,10 +244,10 @@ function draw(){
   // ambient neon glow
   ctx.fillStyle="rgba(94,234,212,.05)";ctx.beginPath();ctx.arc(150,40,150,0,7);ctx.fill();ctx.fillStyle="rgba(99,102,241,.06)";ctx.beginPath();ctx.arc(840,30,160,0,7);ctx.fill();
   // foul lines fanning from the plate
-  ctx.strokeStyle="rgba(180,230,255,.18)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(W-20,300);ctx.moveTo(PX,PY);ctx.lineTo(560,GY);ctx.stroke();
+  ctx.strokeStyle="rgba(180,230,255,.18)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(W-20,H*0.556);ctx.moveTo(PX,PY);ctx.lineTo(W*0.583,GY);ctx.stroke();
   // outfield fence at this round's distance
-  const fx=fenceX(cfg().fence);ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(fx,GY+6);ctx.lineTo(fx,346);ctx.stroke();
-  ctx.fillStyle="rgba(94,234,212,.1)";roundRect(fx-3,GY+6,6,340-GY,3,true,false);
+  const fx=fenceX(cfg().fence);ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(fx,GY+6);ctx.lineTo(fx,GY+96);ctx.stroke();
+  ctx.fillStyle="rgba(94,234,212,.1)";roundRect(fx-3,GY+6,6,90,3,true,false);
   ctx.fillStyle="#5eead4";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText(cfg().fence+" FT",fx,GY-2);
   // home plate + batter silhouette
   ctx.fillStyle="#dfeaf2";ctx.beginPath();ctx.moveTo(PX-13,PY+10);ctx.lineTo(PX+13,PY+10);ctx.lineTo(PX+13,PY+2);ctx.lineTo(PX,PY-6);ctx.lineTo(PX-13,PY+2);ctx.closePath();ctx.fill();
@@ -233,18 +256,18 @@ function draw(){
 
   if(state.phase==="pitch"){
     // pitched ball travelling from the mound toward the plate, tied to meter t
-    const bx=PX+ (1-state.t)*600, by=200+state.t*(PY-78-200);
+    const rel=H*0.370,bx=PX+(1-state.t)*(W*0.625), by=rel+state.t*(PY-78-rel);
     ball(bx,by,9,state.t>=ZONE_LO&&state.t<=ZONE_HI);
   } else if(state.phase==="flight"){
     const p=state.flight,sx=PX+12,sy=PY-78;
-    if(state.isHR){const ex=sx+Math.min(1,state.distance/520)*(W-30-sx),peak=240+Math.min(1,state.distance/520)*150;ball(sx+(ex-sx)*p,sy-peak*p,9,true);}
+    if(state.isHR){const ex=sx+Math.min(1,state.distance/520)*(W-30-sx),peak=H*0.444+Math.min(1,state.distance/520)*(H*0.278);ball(sx+(ex-sx)*p,sy-peak*p,9,true);}
     else{const ex=sx+Math.min(1,state.distance/Math.max(1,cfg().fence))*(fenceX(cfg().fence)-sx),arc=90+state.distance/3;ball(sx+(ex-sx)*p,sy-4*p*(1-p)*arc,9,false);}
   } else if(state.phase==="homeRun"){
-    const ex=PX+12+Math.min(1,state.distance/520)*(W-30-(PX+12));ball(ex,GY-110,10,true);
+    const ex=PX+12+Math.min(1,state.distance/520)*(W-30-(PX+12));ball(ex,GY-H*0.204,10,true);
   }
 
   // timing bar
-  const bw=W-220,bx0=110,by0=H-40,bh=18;
+  const bw=BAR.w,bx0=BAR.x,by0=BAR.y,bh=BAR.h;
   ctx.fillStyle="#06131f";roundRect(bx0,by0,bw,bh,9,true,false);ctx.strokeStyle="rgba(148,176,200,.3)";ctx.lineWidth=1.5;roundRect(bx0+.5,by0+.5,bw-1,bh-1,9,false,true);
   ctx.fillStyle="rgba(45,212,191,.32)";roundRect(bx0+ZONE_LO*bw,by0,(ZONE_HI-ZONE_LO)*bw,bh,0,true,false);
   ctx.fillStyle="rgba(110,247,255,.6)";roundRect(bx0+PERF_LO*bw,by0,(PERF_HI-PERF_LO)*bw,bh,0,true,false);
@@ -252,8 +275,10 @@ function draw(){
   ctx.fillStyle="#9fb3c8";ctx.font="800 11px system-ui";ctx.textAlign="left";ctx.fillText("SWING",bx0,by0-7);ctx.textAlign="right";ctx.fillText("ANGLE "+ANGLES[state.angle]+"°",bx0+bw,by0-7);
 
   // top-left HUD echo
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 18px system-ui";ctx.fillText("Round "+(state.round+1)+"/"+TOTAL,26,38);
-  ctx.fillStyle="#cfe6f5";ctx.font="800 13px system-ui";ctx.fillText("Homers "+state.homers+"/"+cfg().quota+"   ·   Pitch "+state.pitch+"/"+cfg().pitches,26,58);
+  const hx=compact?16:26;
+  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 18px system-ui";ctx.fillText("Round "+(state.round+1)+"/"+TOTAL,hx,compact?26:38);
+  ctx.fillStyle="#cfe6f5";ctx.font="800 13px system-ui";ctx.fillText("Homers "+state.homers+"/"+cfg().quota+"   ·   Pitch "+state.pitch+"/"+cfg().pitches,hx,compact?46:58);
+  carryPanel();carryTicks();
 
   // result / overlay banners
   if(state.phase==="homeRun"){banner("HOME RUN","#5eead4",state.distance+" FEET")}
@@ -261,8 +286,31 @@ function draw(){
   else if(state.phase==="roundClear"){overlay("ROUND "+(state.round+1)+" CLEAR","#5eead4",state.lastResult)}
   else if(state.phase==="win"){overlay("DERBY CHAMPION","#6ff7ff",state.lastResult)}
   else if(state.phase==="fail"){overlay("DERBY OVER","#fca5a5",state.lastResult)}
+  else if(state.phase==="ready"){overlay("PLAY BALL","#6ff7ff","Press Space, Enter, or Swing to face the first pitch.")}
 }
-function banner(big,color,sub){ctx.textAlign="center";ctx.fillStyle=color;ctx.font="950 40px system-ui";ctx.fillText(big,W/2,150);ctx.fillStyle="#dbeafe";ctx.font="800 16px system-ui";ctx.fillText(sub,W/2,178);ctx.textAlign="left"}
+// What each grade of contact carries at the chosen angle, against this round's
+// fence. Rounds past the first need perfect contact and the middle angle, and
+// there was no way to know that before swinging.
+function carryPanel(){const c=cfg(),x=W-(compact?16:28),y0=compact?26:36;
+  ctx.textAlign="right";ctx.fillStyle="#9fb3c8";ctx.font="900 11px system-ui";
+  ctx.fillText("CARRY AT "+ANGLES[state.angle]+"°",x,y0);
+  [["Perfect","perfect"],["Good","good"]].forEach(([label,grade],i)=>{
+    const d=carry(grade,state.angle),clears=d>=c.fence;
+    ctx.fillStyle=clears?"#5eead4":"#fca5a5";ctx.font="900 15px system-ui";
+    ctx.fillText(label+" "+d+" ft — "+(clears?"clears":"short by "+(c.fence-d)),x,y0+24+i*22);
+  });
+  ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText("Fence "+c.fence+" ft",x,y0+90);
+  ctx.textAlign="left"}
+function carryTicks(){const c=cfg();
+  for(const grade of ["good","perfect"]){
+    const d=carry(grade,state.angle),gx=fenceX(d),clears=d>=c.fence,col=clears?"#5eead4":"#fca5a5";
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(gx,GY+102);ctx.lineTo(gx,GY+122);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=col;ctx.font="900 10px system-ui";ctx.textAlign="center";
+    ctx.fillText(grade.toUpperCase(),gx,GY+136);
+  }
+  ctx.textAlign="left"}
+function banner(big,color,sub){ctx.textAlign="center";ctx.fillStyle=color;ctx.font="950 40px system-ui";ctx.fillText(big,W/2,H*0.278);ctx.fillStyle="#dbeafe";ctx.font="800 16px system-ui";ctx.fillText(sub,W/2,H*0.33);ctx.textAlign="left"}
 function overlay(big,color,sub){ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,W,H);ctx.textAlign="center";ctx.fillStyle=color;ctx.font="950 48px system-ui";ctx.fillText(big,W/2,H/2-8);ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";ctx.fillText(sub,W/2,H/2+28);ctx.textAlign="left"}
 
 // ---- Clock -----------------------------------------------------------------
@@ -273,7 +321,7 @@ function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.f
   else if(state.phase==="homeRun"||state.phase==="out"){state.settle+=dt;if(state.settle>=900)nextPitch()}
   draw()}
 window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){const c=cfg();return JSON.stringify({phase:state.phase,round:state.round+1,total:TOTAL,pitch:state.pitch,pitches:c.pitches,homers:state.homers,quota:c.quota,fence:c.fence,angle:ANGLES[state.angle],angleIndex:state.angle,meter:{t:Number(state.t.toFixed(4)),zoneLo:ZONE_LO,zoneHi:ZONE_HI,perfLo:PERF_LO,perfHi:PERF_HI},grade:state.grade,swingT:state.swingT===null?null:Number(state.swingT.toFixed(4)),distance:state.distance,isHomeRun:state.isHR,lastResult:state.lastResult,longest:state.longest,bestRound:state.bestRound,sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,coordinateSystem:"meter.t 0(release)->1(plate); swing while t within [zoneLo,zoneHi], best inside [perfLo,perfHi]; distance ft >= fence clears for a home run; ANGLES middle index carries farthest"})};
+window.render_game_to_text=function render_game_to_text(){const c=cfg();return JSON.stringify({phase:state.phase,round:state.round+1,total:TOTAL,pitch:state.pitch,pitches:c.pitches,homers:state.homers,quota:c.quota,fence:c.fence,angle:ANGLES[state.angle],angleIndex:state.angle,meter:{t:Number(state.t.toFixed(4)),zoneLo:ZONE_LO,zoneHi:ZONE_HI,perfLo:PERF_LO,perfHi:PERF_HI},grade:state.grade,swingT:state.swingT===null?null:Number(state.swingT.toFixed(4)),distance:state.distance,isHomeRun:state.isHR,carry:{perfect:carry("perfect",state.angle),good:carry("good",state.angle),perfectClears:carry("perfect",state.angle)>=c.fence,goodClears:carry("good",state.angle)>=c.fence},lastResult:state.lastResult,longest:state.longest,bestRound:state.bestRound,sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,coordinateSystem:"meter.t 0(release)->1(plate); swing while t within [zoneLo,zoneHi], best inside [perfLo,perfHi]; distance ft >= fence clears for a home run; ANGLES middle index carries farthest"})};
 
 // ---- Input -----------------------------------------------------------------
 document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
@@ -288,8 +336,16 @@ $("retryBtn").addEventListener("click",retryRound);
 els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("swing")});
 document.querySelectorAll("[data-act]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const a=btn.dataset.act;if(a==="swing")takeSwingInput();else if(a==="up")changeAngle(1);else if(a==="down")changeAngle(-1);else if(a==="reset")retryRound()}));
 
-newDerby();say("Swing in the lit zone — Space or tap. Up/Down sets the launch angle.");
-let last=performance.now();function frame(now){const dt=Math.min(80,Math.max(0,now-last));last=now;tick(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+addEventListener("resize",syncCompact);
+syncCompact();layout();readyDerby();say("Press Space, Enter, or Swing to face the first pitch. Up/Down sets the launch angle.");
+// The ballpark is still between pitches, so the loop sleeps outside live play
+// instead of redrawing a finished derby sixty times a second forever.
+let raf=0,last=0;
+function loopActive(){return state.phase==="pitch"||state.phase==="flight"||state.phase==="homeRun"||state.phase==="out"||state.phase==="roundClear"||state.flash>0}
+function frame(now){raf=0;const dt=last?Math.min(80,Math.max(0,now-last)):16.7;last=now;tick(dt);
+  if(loopActive()&&!document.hidden)raf=requestAnimationFrame(frame);else last=0}
+function wake(){if(raf||document.hidden||!loopActive())return;last=0;raf=requestAnimationFrame(frame)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
 })();
 </script>
 </body>
