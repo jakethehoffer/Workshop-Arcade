@@ -105,6 +105,7 @@
   <section class="actions" aria-label="Shard Sheriff controls">
     <button class="btn primary" id="startBtn" type="button">Start</button>
     <button class="btn" id="fireBtn" type="button">Fire</button>
+    <button class="btn" id="scanBtn" type="button">Long Sight</button>
     <button class="btn warn" id="restartBtn" type="button">Restart</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
     <button class="btn" id="fullBtn" type="button">Fullscreen</button>
@@ -112,60 +113,352 @@
 </div>
 <dialog id="helpDialog" aria-labelledby="helpTitle">
   <h2 id="helpTitle">Shard Sheriff</h2>
-  <p><kbd>Left</kbd>/<kbd>Right</kbd> adjusts aim. <kbd>Space</kbd> or <kbd>Enter</kbd> fires. Hit warrants, avoid glass, and conserve ammo. <kbd>R</kbd> restarts, <kbd>M</kbd> toggles sound, <kbd>F</kbd> toggles fullscreen, and <kbd>?</kbd> opens help.</p>
+  <p>Your shot ricochets off the four walls. Land it on every gold badge and never let it reach the blue glass. The dashed sight line shows where the barrel points as far as the first bank, so read the angle rather than guessing. Every wall you bank off before a hit scores more.</p>
+  <p><kbd>Left</kbd>/<kbd>Right</kbd> or <kbd>Up</kbd>/<kbd>Down</kbd> swings the barrel, and you can tap the board to point it there. <kbd>Space</kbd> or <kbd>Enter</kbd> fires. <kbd>S</kbd> spends one shard on a long sight that reveals the whole path. <kbd>R</kbd> restarts, <kbd>M</kbd> toggles sound, <kbd>F</kbd> toggles fullscreen, and <kbd>?</kbd> opens help.</p>
   <button class="btn primary" id="closeHelpBtn" type="button">Close</button>
 </dialog>
 <script>
 
 (() => {
   "use strict";
+  // Board geometry is a hard contract: the shooter sits at (96,280), the play
+  // rectangle is 42..878 x 48..512, glass has radius 24 and targets radius 25.
+  // The capture recipe and the best-on-fail probe both fire real shots through
+  // this simulation, so the physics constants must not drift.
+  const ORIGIN={x:96,y:280}, MINX=42, MAXX=878, MINY=48, MAXY=512, GLASS_R=24, TARGET_R=25;
+  const AIM_MIN=-38, AIM_MAX=38, AIM_STEP=2;
   const STAGES=[
-    {name:"Main Street",ammo:3,targets:[[640,278,0]],glass:[[440,184]],aim:0},
-    {name:"Mirror Alley",ammo:4,targets:[[690,120,-25],[690,420,25]],glass:[[530,278]],aim:-25},
-    {name:"Shard Bank",ammo:4,targets:[[780,162,-24],[730,350,8]],glass:[[560,210],[604,410]],aim:-24},
-    {name:"Last Warrant",ammo:5,targets:[[820,118,-21],[820,278,0],[790,430,12]],glass:[[610,160],[640,310],[600,438]],aim:0}
+    {name:"Main Street",ammo:3,targets:[[640,278]],glass:[[440,184]],aim:0},
+    {name:"Mirror Alley",ammo:4,targets:[[690,120],[690,420]],glass:[[530,278]],aim:-25},
+    {name:"Shard Bank",ammo:4,targets:[[780,162],[730,350]],glass:[[560,210],[604,410]],aim:-24},
+    {name:"Last Warrant",ammo:5,targets:[[820,118],[820,278],[790,430]],glass:[[610,160],[640,310],[600,438]],aim:0},
+    {name:"Gallows Row",ammo:4,targets:[[300,90],[820,470]],glass:[[500,280],[620,180]],aim:0},
+    {name:"Ricochet Run",ammo:5,targets:[[200,470],[860,110],[500,90]],glass:[[420,280],[640,300]],aim:10},
+    {name:"Sheriff's Last Stand",ammo:6,targets:[[860,470],[120,120],[500,470],[860,180]],glass:[[460,200],[560,360],[300,300]],aim:-10}
   ];
   const BEST_KEY="shard-sheriff.best.v2", SOUND_KEY="shard-sheriff.sound.v2";
   const canvas=document.getElementById("game"), ctx=canvas.getContext("2d"), $=(id)=>document.getElementById(id);
-  const els={app:$("app"),stage:$("stageValue"),ammo:$("ammoValue"),target:$("targetValue"),aim:$("aimValue"),score:$("scoreValue"),best:$("bestValue"),stageName:$("stageName"),shots:$("shotList"),status:$("statusLine"),live:$("liveStatus"),start:$("startBtn"),fire:$("fireBtn"),restart:$("restartBtn"),sound:$("soundBtn"),full:$("fullBtn"),help:$("helpBtn"),dialog:$("helpDialog"),closeHelp:$("closeHelpBtn")};
-  const raw=String(read(SOUND_KEY,"1")).toLowerCase();
-  const state={mode:"menu",stage:0,score:0,best:Number(read(BEST_KEY,"0"))||0,ammo:0,aim:0,targets:[],glass:[],trace:[],feedback:"Press Start.",feedbackMs:1500,lastEvent:"ready",lastAction:"none",soundEnabled:!["0","false","off","muted"].includes(raw),lastSound:"none",toneCount:0,userGesture:false,tick:0};
-  let audio=null;
+  const els={app:$("app"),stage:$("stageValue"),ammo:$("ammoValue"),target:$("targetValue"),aim:$("aimValue"),score:$("scoreValue"),best:$("bestValue"),stageName:$("stageName"),shots:$("shotList"),status:$("statusLine"),live:$("liveStatus"),start:$("startBtn"),fire:$("fireBtn"),scan:$("scanBtn"),restart:$("restartBtn"),sound:$("soundBtn"),full:$("fullBtn"),help:$("helpBtn"),dialog:$("helpDialog"),closeHelp:$("closeHelpBtn")};
+
   function store(){ if(window.workshopStorage)return window.workshopStorage; try{return window.localStorage}catch(_){return null} }
   function read(k,fb){ const s=store(); if(!s)return fb; try{const v=s.getItem(k); return v==null?fb:v}catch(_){return fb} }
   function write(k,v){ const s=store(); if(!s)return; try{s.setItem(k,String(v))}catch(_){} }
+  function readBest(){ const n=Number(read(BEST_KEY,"0")); return Number.isFinite(n)&&n>=0?Math.floor(n):0 }
+  const raw=String(read(SOUND_KEY,"1")).toLowerCase();
+
+  let reducedMotion=false;
+  try{ const q=window.matchMedia("(prefers-reduced-motion: reduce)"); reducedMotion=q.matches; q.addEventListener("change",(e)=>{reducedMotion=e.matches}) }catch(_){}
+
+  const state={mode:"menu",stage:0,score:0,best:readBest(),ammo:0,aim:0,targets:[],glass:[],trace:[],
+    feedback:"Press Start.",feedbackMs:1500,lastEvent:"ready",lastAction:"none",
+    soundEnabled:!["0","false","off","muted"].includes(raw),lastSound:"none",toneCount:0,userGesture:false,tick:0,
+    scanned:false,shotsFired:0,hits:0,misses:0,stageMisses:0,cleanStages:0,lastBounces:0,bestBounces:0,rank:null,
+    anim:null,parts:[],shake:0,flash:0};
+  let audio=null;
+
   function feedback(text,ms=1400,event="feedback"){ state.feedback=text; state.feedbackMs=ms; state.lastEvent=event; els.status.textContent=text; els.live.textContent=text; ensureLoop(); }
-  function ensureAudio(){ if(!state.soundEnabled||!state.userGesture)return null; try{ if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==="suspended")audio.resume().catch(()=>{}); return audio; }catch(_){audio=null;return null} }
-  function tone(name){ state.lastSound=state.soundEnabled?name:"muted-"+name; if(!state.soundEnabled)return; state.toneCount++; const ac=ensureAudio(); if(!ac)return; const o=ac.createOscillator(), g=ac.createGain(), now=ac.currentTime; o.type=name==="bad"?"sawtooth":"triangle"; o.frequency.value=({start:300,move:520,hit:700,win:920,bad:150,toggle:380,action:620}[name]||440); g.gain.setValueAtTime(.0001,now); g.gain.exponentialRampToValueAtTime(.045,now+.012); g.gain.exponentialRampToValueAtTime(.0001,now+.18); o.connect(g).connect(ac.destination); o.start(now); o.stop(now+.2); }
-  function toggleSound(){ state.userGesture=true; state.soundEnabled=!state.soundEnabled; write(SOUND_KEY,state.soundEnabled?"1":"0"); feedback(state.soundEnabled?"Sound enabled.":"Sound muted.",1000,"toggle"); tone("toggle"); updateUI(); }
-  function toggleFullscreen(){ if(document.fullscreenElement){document.exitFullscreen?.();return} els.app.requestFullscreen?.().catch(()=>{}); }
-  function openHelp(){ if(typeof els.dialog.showModal==="function"&&!els.dialog.open)els.dialog.showModal(); }
-  function closeHelp(){ if(els.dialog.open)els.dialog.close(); canvas.focus(); }
+  function ensureAudio(){ if(!state.soundEnabled||!state.userGesture)return null;
+    try{ if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==="suspended")audio.resume().catch(()=>{}); return audio }catch(_){audio=null;return null} }
+  function blip(freq,dur,type,vol,delay){ const ac=ensureAudio(); if(!ac)return;
+    try{ const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime+(delay||0);
+      o.type=type||"triangle"; o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol||.05,t+.012);
+      g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+dur+.02) }catch(_){}}
+  function noise(dur,vol){ const ac=ensureAudio(); if(!ac)return;
+    try{ const len=Math.max(1,Math.floor(ac.sampleRate*dur)), buf=ac.createBuffer(1,len,ac.sampleRate), d=buf.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+      const src=ac.createBufferSource(), g=ac.createGain();
+      src.buffer=buf; g.gain.setValueAtTime(vol||.06,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);
+      src.connect(g); g.connect(ac.destination); src.start() }catch(_){}}
+  function tone(name,n){ state.lastSound=state.soundEnabled?name:"muted-"+name; if(!state.soundEnabled)return; state.toneCount++;
+    switch(name){
+      case"start": [294,392,523].forEach((f,i)=>blip(f,.22,"triangle",.055,i*.07)); break;
+      case"move": blip(520,.05,"sine",.03); break;
+      case"fire": blip(180,.14,"sawtooth",.06); noise(.09,.05); break;
+      case"ping": blip(520+Math.min(8,n||0)*90,.09,"sine",.045,(n||0)*.05); break;
+      case"hit": [659,880,1175].forEach((f,i)=>blip(f,.3,"triangle",.065,i*.055)); noise(.12,.05); break;
+      case"stage": [523,659,784,1046].forEach((f,i)=>blip(f,.28,"triangle",.06,i*.07)); break;
+      case"win": [523,659,784,880,1046,1319].forEach((f,i)=>blip(f,.34,"triangle",.07,i*.08)); break;
+      case"glass": noise(.4,.09); blip(190,.34,"sawtooth",.05); blip(130,.4,"sawtooth",.04,.08); break;
+      case"scan": blip(700,.1,"sine",.04); blip(940,.12,"sine",.03,.07); break;
+      case"bad": blip(150,.16,"sawtooth",.045); break;
+      default: blip(420,.12,"triangle",.04);
+    }}
+  function toggleSound(){ state.userGesture=true; state.soundEnabled=!state.soundEnabled; write(SOUND_KEY,state.soundEnabled?"1":"0");
+    feedback(state.soundEnabled?"Sound enabled.":"Sound muted.",1000,"toggle");
+    if(state.soundEnabled)tone("toggle"); else if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}
+    updateUI() }
+  function toggleFullscreen(){ if(document.fullscreenElement){document.exitFullscreen?.();return} els.app.requestFullscreen?.().catch(()=>{}) }
+  function openHelp(){ if(typeof els.dialog.showModal==="function"&&!els.dialog.open)els.dialog.showModal() }
+  function closeHelp(){ if(els.dialog.open)els.dialog.close(); canvas.focus() }
 
-  function stage(){return STAGES[state.stage]} function down(){return state.targets.filter((t)=>t.down).length}
-  function loadStage(){const s=stage(); state.ammo=s.ammo; state.aim=s.aim; state.trace=[]; state.targets=s.targets.map((t,i)=>({id:i,x:t[0],y:t[1],angle:t[2],down:false})); state.glass=s.glass.map((g,i)=>({id:i,x:g[0],y:g[1]})); els.stageName.textContent=s.name; feedback(s.name+": line up the clean shot.",1500,"stage"); updateUI(); render();}
-  function startRun(){state.userGesture=true; state.mode="duel"; state.stage=0; state.score=0; loadStage(); tone("start"); canvas.focus();}
-  function restart(){startRun(); state.lastAction="restart";}
-  function commitBest(){if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best);}}
-  function recommendation(){if(state.mode!=="duel")return null; const t=state.targets.find((x)=>!x.down); return t?{command:"aim",angle:t.angle,targetId:t.id,target:{x:t.x,y:t.y}}:{command:"clear"};}
-  function aim(delta){if(state.mode==="menu"){startRun();return} state.aim=Math.max(-38,Math.min(38,state.aim+delta)); state.lastAction="aim"; updateUI(); render();}
-  function simulate(angle){let x=96,y=280,dx=Math.cos(angle*Math.PI/180),dy=Math.sin(angle*Math.PI/180),path=[{x,y}],hit=null; for(let step=0;step<720;step++){x+=dx*6;y+=dy*6;if(y<48||y>512){dy*=-1;y=Math.max(48,Math.min(512,y));path.push({x,y});} if(x>878||x<42){dx*=-1;x=Math.max(42,Math.min(878,x));path.push({x,y});} for(const g of state.glass){if(Math.hypot(x-g.x,y-g.y)<24){return {kind:"glass",item:g,path};}} for(const t of state.targets){if(!t.down&&Math.hypot(x-t.x,y-t.y)<25){hit={kind:"target",item:t,path}; return hit;}} if(step%18===0)path.push({x,y});} return {kind:"miss",path};}
-  function fire(){if(state.mode==="menu"){startRun();return} if(state.mode!=="duel")return; if(state.ammo<=0){state.mode="failed"; commitBest(); feedback("No shards left in the badge.",2200,"failed"); tone("bad"); return;} state.ammo--; state.lastAction="fire"; const shot=simulate(state.aim); state.trace=shot.path.map((p)=>({x:Math.round(p.x),y:Math.round(p.y)})); if(shot.kind==="glass"){state.mode="failed"; commitBest(); feedback("Fragile glass hit. Warrant void.",2200,"failed"); tone("bad");} else if(shot.kind==="target"){shot.item.down=true; state.score+=45+state.ammo*4; feedback("Clean ricochet warrant.",1000,"hit"); tone("hit"); if(down()===state.targets.length){if(state.stage>=STAGES.length-1){state.mode="won"; commitBest(); feedback("Shard Sheriff closes every warrant. Score "+state.score+".",2400,"win"); tone("win");}else{state.stage++; loadStage(); tone("hit");}}} else {feedback("Shot rang wide.",1000,"miss"); tone("bad"); if(state.ammo<=0){state.mode="failed"; commitBest(); feedback("Ammo spent before the warrant fell.",2200,"failed");}} updateUI(); render();}
-  function update(dt){state.tick+=dt; if(state.feedbackMs>0)state.feedbackMs=Math.max(0,state.feedbackMs-dt*1000);}
-  function updateUI(){els.stage.textContent=(state.stage+1)+"/"+STAGES.length; els.ammo.textContent=state.ammo; els.target.textContent=down()+"/"+state.targets.length; els.aim.textContent=Math.round(state.aim); els.score.textContent=state.score; els.best.textContent=Math.max(state.best,state.score); els.sound.textContent=state.soundEnabled?"Sound On":"Sound Off"; els.sound.setAttribute("aria-pressed",String(state.soundEnabled)); els.shots.innerHTML=state.targets.map((t)=>'<div class="sideBtn"><strong><b>Target '+(t.id+1)+'</b><em>'+(t.down?"served":t.angle+"°")+'</em></strong><span>'+Math.round(t.x)+","+Math.round(t.y)+'</span></div>').join("")+'<div class="sideBtn"><strong><b>Recommended</b><em>'+(recommendation()?.angle??0)+'°</em></strong><span>Use arrows until aim matches, then fire.</span></div>';}
-  function render(){ctx.clearRect(0,0,900,560); const g=ctx.createLinearGradient(0,0,0,560); g.addColorStop(0,"#301322"); g.addColorStop(1,"#071018"); ctx.fillStyle=g; ctx.fillRect(0,0,900,560); ctx.fillStyle="#fb7185"; ctx.font="900 30px system-ui"; ctx.fillText("Shard Sheriff",32,42); ctx.fillStyle="#a7b4c6"; ctx.font="800 13px system-ui"; ctx.fillText(stage().name+" - limited ricochet shots",32,64); ctx.strokeStyle="rgba(103,232,249,.35)"; ctx.lineWidth=3; ctx.strokeRect(42,48,836,464); for(const g of state.glass){ctx.fillStyle="rgba(147,197,253,.3)"; ctx.fillRect(g.x-18,g.y-18,36,36); ctx.strokeStyle="#93c5fd"; ctx.strokeRect(g.x-18,g.y-18,36,36);} for(const t of state.targets){ctx.fillStyle=t.down?"rgba(134,239,172,.35)":"#facc15"; ctx.beginPath(); ctx.arc(t.x,t.y,22,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#111827"; ctx.font="900 12px system-ui"; ctx.textAlign="center"; ctx.fillText(t.down?"OK":"BADGE",t.x,t.y+4); ctx.textAlign="left";} if(state.trace.length>1){ctx.strokeStyle="#67e8f9"; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(state.trace[0].x,state.trace[0].y); for(const p of state.trace.slice(1))ctx.lineTo(p.x,p.y); ctx.stroke();} ctx.save(); ctx.translate(96,280); ctx.rotate(state.aim*Math.PI/180); ctx.fillStyle="#f8fbff"; ctx.fillRect(-18,-12,36,24); ctx.fillStyle="#67e8f9"; ctx.fillRect(14,-4,24,8); ctx.restore(); ctx.strokeStyle="#f8fbff"; ctx.beginPath(); ctx.moveTo(96,280); ctx.lineTo(96+Math.cos(state.aim*Math.PI/180)*70,280+Math.sin(state.aim*Math.PI/180)*70); ctx.stroke(); if(state.mode==="menu"||state.mode==="won"||state.mode==="failed"){ctx.fillStyle="rgba(18,8,16,.78)"; ctx.fillRect(250,210,400,124); ctx.strokeStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#fb7185"; ctx.strokeRect(250,210,400,124); ctx.fillStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#f8fbff"; ctx.font="900 28px system-ui"; ctx.fillText(state.mode==="menu"?"Press Start":state.mode==="won"?"Warrants Closed":"Shot Spoiled",320,260); ctx.fillStyle="#a7b4c6"; ctx.font="800 14px system-ui"; ctx.fillText("Aim "+Math.round(state.aim)+"°  Ammo "+state.ammo,350,290);}}
-  function key(e){const k=e.key; if(k==="ArrowLeft"||k==="ArrowDown"){e.preventDefault(); aim(-2);} else if(k==="ArrowRight"||k==="ArrowUp"){e.preventDefault(); aim(2);} else if(k===" "||k==="Enter"){e.preventDefault(); fire();} else if(k.toLowerCase()==="r"){e.preventDefault(); restart();} else if(k.toLowerCase()==="m"){e.preventDefault(); toggleSound();} else if(k.toLowerCase()==="f"){e.preventDefault(); toggleFullscreen();} else if(k==="?"||(k==="/"&&e.shiftKey)){e.preventDefault(); openHelp();}}
-  function text(){return JSON.stringify({title:"Shard Sheriff",mode:state.mode,running:state.mode==="duel",started:state.mode!=="menu",coordinateSystem:"canvas pixels, origin top-left, x right, y down; shooter at 96,280; aim degrees positive downward",stage:state.stage+1,stageName:stage().name,ammo:state.ammo,aim:state.aim,score:state.score,best:Math.max(state.best,state.score),targets:state.targets.map((t)=>({...t})),glass:state.glass.map((g)=>({...g})),trace:state.trace,recommended:recommendation(),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount});}
-  window.render_game_to_text=text; window.advanceTime=(ms)=>{stopLoop(); const steps=Math.max(1,Math.round(ms/(1000/60))); for(let i=0;i<steps;i++)update(1/60); updateUI(); render(); ensureLoop();};
-  els.start.addEventListener("click",startRun); els.fire.addEventListener("click",fire); els.restart.addEventListener("click",restart); els.sound.addEventListener("click",toggleSound); els.full.addEventListener("click",toggleFullscreen); els.help.addEventListener("click",openHelp); els.closeHelp.addEventListener("click",closeHelp); document.addEventListener("keydown",key); document.querySelectorAll("[data-key]").forEach((b)=>b.addEventListener("click",()=>{const k=b.dataset.key;if(k===" "){fire();}else if(k==="ArrowLeft"||k==="ArrowDown")aim(-2);else aim(2);}));
+  function stage(){return STAGES[state.stage]}
+  function down(){return state.targets.filter((t)=>t.down).length}
+
+  // Trace one shot. Returns what it struck, the polyline it travelled, and how
+  // many walls it bounced off first — bounces are what the score rewards.
+  function simulateWith(angle,targets,glass){
+    let x=ORIGIN.x,y=ORIGIN.y;
+    let dx=Math.cos(angle*Math.PI/180), dy=Math.sin(angle*Math.PI/180);
+    const path=[{x,y}]; let bounces=0;
+    for(let step=0;step<720;step++){
+      x+=dx*6; y+=dy*6;
+      if(y<MINY||y>MAXY){ dy*=-1; y=Math.max(MINY,Math.min(MAXY,y)); path.push({x,y}); bounces++ }
+      if(x>MAXX||x<MINX){ dx*=-1; x=Math.max(MINX,Math.min(MAXX,x)); path.push({x,y}); bounces++ }
+      for(const g of glass){ if(!g.broken&&Math.hypot(x-g.x,y-g.y)<GLASS_R){ path.push({x,y}); return {kind:"glass",item:g,path,bounces} } }
+      for(const t of targets){ if(!t.down&&Math.hypot(x-t.x,y-t.y)<TARGET_R){ path.push({x,y}); return {kind:"target",item:t,path,bounces} } }
+      if(step%18===0)path.push({x,y});
+    }
+    path.push({x,y});
+    return {kind:"miss",path,bounces} }
+  function simulate(angle){ return simulateWith(angle,state.targets,state.glass) }
+
+  // Solve each target at load instead of trusting an authored angle: scan the
+  // whole aim range and keep the angle whose neighbours one degree either side
+  // land the same hit. That guarantees the stage is winnable AND that the
+  // capture recipe, which only aligns to within a degree, still connects.
+  function solveAngle(target,targets,glass){
+    let fallback=null;
+    for(let a=AIM_MIN;a<=AIM_MAX;a+=0.25){
+      const shot=simulateWith(a,targets,glass);
+      if(shot.kind!=="target"||shot.item!==target)continue;
+      if(fallback===null)fallback={angle:a,bounces:shot.bounces};
+      const lo=simulateWith(a-1,targets,glass), hi=simulateWith(a+1,targets,glass);
+      if(lo.kind==="target"&&lo.item===target&&hi.kind==="target"&&hi.item===target)
+        return {angle:Math.round(a*100)/100,bounces:shot.bounces,robust:true};
+    }
+    return fallback?{angle:Math.round(fallback.angle*100)/100,bounces:fallback.bounces,robust:false}:null }
+
+  function loadStage(){ const s=stage();
+    state.ammo=s.ammo; state.aim=s.aim; state.trace=[]; state.scanned=false; state.stageMisses=0; state.anim=null;
+    state.targets=s.targets.map((t,i)=>({id:i,x:t[0],y:t[1],angle:0,bounces:0,solved:false,down:false}));
+    state.glass=s.glass.map((g,i)=>({id:i,x:g[0],y:g[1],broken:false}));
+    for(const t of state.targets){ const sol=solveAngle(t,state.targets,state.glass);
+      if(sol){ t.angle=sol.angle; t.bounces=sol.bounces; t.solved=true } }
+    els.stageName.textContent=s.name;
+    feedback(s.name+": read the sight line, then fire.",1500,"stage");
+    updateUI(); render() }
+  function startRun(){ state.userGesture=true; state.mode="duel"; state.stage=0; state.score=0;
+    state.shotsFired=0; state.hits=0; state.misses=0; state.cleanStages=0; state.bestBounces=0; state.rank=null;
+    state.parts.length=0; state.shake=0; state.flash=0;
+    loadStage(); tone("start"); canvas.focus(); ensureLoop() }
+  function restart(){ startRun(); state.lastAction="restart" }
+  function commitBest(){ if(state.score>state.best){ state.best=state.score; write(BEST_KEY,state.best) } }
+  function recommendation(){ if(state.mode!=="duel")return null;
+    const t=state.targets.find((x)=>!x.down);
+    return t?{command:"aim",angle:t.angle,targetId:t.id,target:{x:t.x,y:t.y},bounces:t.bounces}:{command:"clear"} }
+  function aimBy(delta){ if(state.mode==="menu"){startRun();return} if(state.mode!=="duel")return;
+    const next=Math.max(AIM_MIN,Math.min(AIM_MAX,state.aim+delta));
+    if(next===state.aim)return;
+    state.aim=next; state.lastAction="aim"; tone("move"); updateUI(); render() }
+  function scan(){ if(state.mode!=="duel")return;
+    if(state.scanned){ feedback("Sight already extended for this warrant.",1200,"scan"); return }
+    if(state.ammo<=1){ feedback("Not enough shards to spend on a long sight.",1400,"scan"); tone("bad"); return }
+    state.ammo--; state.scanned=true; state.lastAction="scan";
+    feedback("Long sight extended. One shard spent.",1600,"scan"); tone("scan"); updateUI(); render() }
+
+  function endRun(kind,message){ state.mode=kind; commitBest();
+    if(kind==="won"){ const perfect=state.misses===0;
+      state.rank=perfect&&state.cleanStages===STAGES.length?"S":state.misses<=1?"A":state.misses<=3?"B":"C";
+      feedback(message||("Every warrant closed. Score "+state.score+"."),2400,"win"); tone("win");
+      if(!reducedMotion){ state.shake=1; for(let i=0;i<6;i++)spawnParts(200+Math.random()*500,120+Math.random()*320,"#facc15",8) } }
+    else { state.rank=null; feedback(message||"Warrant void.",2200,"failed"); tone("glass");
+      if(!reducedMotion)state.shake=1 }
+    updateUI(); render(); ensureLoop() }
+
+  function spawnParts(x,y,color,n){ if(reducedMotion)return;
+    for(let i=0;i<n;i++){ const a=Math.PI*2*i/n+Math.random()*.6, s=70+Math.random()*150;
+      state.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:1,color}) } }
+
+  function fire(){ if(state.mode==="menu"){startRun();return} if(state.mode!=="duel")return;
+    if(state.ammo<=0){ endRun("failed","No shards left in the badge."); return }
+    state.ammo--; state.shotsFired++; state.lastAction="fire";
+    const shot=simulate(state.aim);
+    state.trace=shot.path.map((p)=>({x:Math.round(p.x),y:Math.round(p.y)}));
+    state.lastBounces=shot.bounces;
+    if(shot.bounces>state.bestBounces)state.bestBounces=shot.bounces;
+    if(!reducedMotion){ state.anim={t:0,total:Math.max(1,state.trace.length-1)}; state.flash=1 }
+    tone("fire");
+    for(let i=0;i<Math.min(shot.bounces,8);i++)tone("ping",i);
+    if(shot.kind==="glass"){ shot.item.broken=true;
+      spawnParts(shot.item.x,shot.item.y,"#93c5fd",14);
+      endRun("failed","Fragile glass hit. Warrant void."); return }
+    if(shot.kind==="target"){ shot.item.down=true; state.hits++;
+      const gain=40+shot.bounces*25+state.ammo*5; state.score+=gain;
+      spawnParts(shot.item.x,shot.item.y,"#facc15",12);
+      feedback("Badge served"+(shot.bounces?" off "+shot.bounces+" bank"+(shot.bounces>1?"s":""):"")+". +"+gain,1400,"hit");
+      tone("hit");
+      if(down()===state.targets.length){
+        if(state.stageMisses===0){ state.cleanStages++; state.score+=50 }
+        if(state.stage>=STAGES.length-1){ endRun("won"); return }
+        state.score+=30*(state.stage+1); state.stage++; loadStage();
+        feedback("Warrant closed. "+stage().name+" is next.",1700,"stage"); tone("stage") } }
+    else { state.misses++; state.stageMisses++;
+      feedback("Shot rang wide.",1200,"miss"); tone("bad");
+      if(state.ammo<=0){ endRun("failed","Ammo spent before the warrant fell."); return } }
+    updateUI(); render(); ensureLoop() }
+
+  function update(dt){ state.tick+=dt;
+    if(state.feedbackMs>0)state.feedbackMs=Math.max(0,state.feedbackMs-dt*1000);
+    if(state.anim){ state.anim.t+=dt*state.anim.total*2.6; if(state.anim.t>=state.anim.total)state.anim=null }
+    if(state.shake>0)state.shake=Math.max(0,state.shake-dt*2.2);
+    if(state.flash>0)state.flash=Math.max(0,state.flash-dt*5);
+    for(let i=state.parts.length-1;i>=0;i--){ const p=state.parts[i];
+      p.life-=dt*1.5; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=dt*300;
+      if(p.life<=0)state.parts.splice(i,1) } }
+
+  function updateUI(){ els.stage.textContent=(state.stage+1)+"/"+STAGES.length;
+    els.ammo.textContent=state.ammo; els.target.textContent=down()+"/"+state.targets.length;
+    els.aim.textContent=Math.round(state.aim); els.score.textContent=state.score;
+    els.best.textContent=Math.max(state.best,state.score);
+    els.sound.textContent=state.soundEnabled?"Sound On":"Sound Off";
+    els.sound.setAttribute("aria-pressed",String(state.soundEnabled));
+    if(els.scan){ els.scan.disabled=state.mode!=="duel"||state.scanned||state.ammo<=1;
+      els.scan.textContent=state.scanned?"Sight Out":"Long Sight" }
+    els.shots.innerHTML=state.targets.map((t)=>'<div class="sideBtn"><strong><b>Badge '+(t.id+1)+'</b><em>'+(t.down?"served":t.bounces?t.bounces+" bank"+(t.bounces>1?"s":""):"direct")+'</em></strong><span>'+Math.round(t.x)+","+Math.round(t.y)+'</span></div>').join("")
+      +'<div class="sideBtn"><strong><b>Sight</b><em>'+(state.scanned?"long":"short")+'</em></strong><span>'+(state.scanned?"Full path shown. Fire when it lands on a badge.":"Arrows swing the barrel. Long Sight spends a shard to show the whole ricochet.")+'</span></div>' }
+
+  let compact=false;
+  function syncCompact(){ let w=0; try{ w=canvas.getBoundingClientRect().width }catch(_){}
+    const next=w>0&&w<560; if(next===compact)return; compact=next; if(state.targets.length||state.mode==="menu")render() }
+
+  function drawPath(pts,upto){ if(pts.length<2)return;
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    const n=upto==null?pts.length-1:Math.max(1,Math.min(pts.length-1,Math.floor(upto)));
+    for(let i=1;i<=n;i++)ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.stroke() }
+  function render(){ const sh=state.shake>0&&!reducedMotion?state.shake*8:0;
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,900,560);
+    const g=ctx.createLinearGradient(0,0,0,560); g.addColorStop(0,"#301322"); g.addColorStop(1,"#071018");
+    ctx.fillStyle=g; ctx.fillRect(0,0,900,560);
+    if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+    ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    if(compact){ ctx.fillStyle="#fb7185"; ctx.font="900 30px system-ui";
+      ctx.fillText(stage().name.toUpperCase(),32,38);
+      ctx.fillStyle="#a7b4c6"; ctx.font="900 22px system-ui";
+      ctx.fillText("AIM "+Math.round(state.aim)+"°   SHARDS "+state.ammo,32,66) }
+    else { ctx.fillStyle="#fb7185"; ctx.font="900 30px system-ui"; ctx.fillText("Shard Sheriff",32,42);
+      ctx.fillStyle="#a7b4c6"; ctx.font="800 14px system-ui";
+      ctx.fillText(stage().name+" - bank the shot off the walls, never through glass",32,66) }
+    ctx.strokeStyle="rgba(103,232,249,.35)"; ctx.lineWidth=3; ctx.strokeRect(MINX,MINY,MAXX-MINX,MAXY-MINY);
+    for(const gl of state.glass){ if(gl.broken)continue;
+      ctx.fillStyle="rgba(147,197,253,.3)"; ctx.fillRect(gl.x-18,gl.y-18,36,36);
+      ctx.strokeStyle="#93c5fd"; ctx.lineWidth=2; ctx.strokeRect(gl.x-18,gl.y-18,36,36);
+      ctx.beginPath(); ctx.moveTo(gl.x-18,gl.y-18); ctx.lineTo(gl.x+18,gl.y+18);
+      ctx.moveTo(gl.x+18,gl.y-18); ctx.lineTo(gl.x-18,gl.y+18); ctx.stroke() }
+    for(const t of state.targets){
+      ctx.fillStyle=t.down?"rgba(134,239,172,.35)":"#facc15";
+      ctx.beginPath(); ctx.arc(t.x,t.y,22,0,Math.PI*2); ctx.fill();
+      if(!t.down){ ctx.strokeStyle="rgba(250,204,21,.5)"; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(t.x,t.y,TARGET_R+4,0,Math.PI*2); ctx.stroke() }
+      ctx.fillStyle="#111827"; ctx.font="900 12px system-ui"; ctx.textAlign="center";
+      ctx.fillText(t.down?"OK":"BADGE",t.x,t.y+4); ctx.textAlign="left" }
+    // Sight line: short by default (out to the first bank) so aiming is a read,
+    // not a lookup. Long Sight buys the whole path for one shard.
+    if(state.mode==="duel"&&!state.anim){ const preview=simulate(state.aim);
+      const pts=preview.path.map((p)=>({x:p.x,y:p.y}));
+      let limit=pts.length-1;
+      if(!state.scanned){ let seen=0; limit=1;
+        for(let i=1;i<pts.length;i++){ limit=i;
+          const prev=pts[i-1], cur=pts[i];
+          if(cur.x<=MINX+1||cur.x>=MAXX-1||cur.y<=MINY+1||cur.y>=MAXY-1){ seen++; if(seen>=1)break }
+          void prev } }
+      ctx.setLineDash([10,8]); ctx.lineWidth=2.5;
+      ctx.strokeStyle=state.scanned?"rgba(103,232,249,.85)":"rgba(248,251,255,.5)";
+      drawPath(pts,limit); ctx.setLineDash([]) }
+    if(state.trace.length>1){ ctx.strokeStyle="#67e8f9"; ctx.lineWidth=4;
+      drawPath(state.trace,state.anim?state.anim.t:null);
+      if(state.anim){ const i=Math.max(1,Math.min(state.trace.length-1,Math.floor(state.anim.t)));
+        const p=state.trace[i]; ctx.fillStyle="#f8fbff";
+        ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2); ctx.fill() } }
+    for(const p of state.parts){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color||"#facc15";
+      ctx.beginPath(); ctx.arc(p.x,p.y,3.4,0,Math.PI*2); ctx.fill() }
+    ctx.globalAlpha=1;
+    ctx.save(); ctx.translate(ORIGIN.x,ORIGIN.y); ctx.rotate(state.aim*Math.PI/180);
+    ctx.fillStyle="#f8fbff"; ctx.fillRect(-18,-12,36,24);
+    ctx.fillStyle="#67e8f9"; ctx.fillRect(14,-4,24,8);
+    if(state.flash>0&&!reducedMotion){ ctx.globalAlpha=state.flash; ctx.fillStyle="#fde68a";
+      ctx.beginPath(); ctx.arc(40,0,16*state.flash,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1 }
+    ctx.restore();
+    if(state.mode==="menu"||state.mode==="won"||state.mode==="failed"){
+      const w=compact?600:460,h=compact?190:170,x=(900-w)/2,y=190;
+      ctx.fillStyle="rgba(18,8,16,.86)"; ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#67e8f9";
+      ctx.lineWidth=2; ctx.strokeRect(x,y,w,h);
+      ctx.textAlign="center";
+      ctx.fillStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#f8fbff";
+      ctx.font="900 34px system-ui";
+      ctx.fillText(state.mode==="menu"?"Press Start":state.mode==="won"?"Warrants Closed":"Shot Spoiled",900/2,y+52);
+      if(state.mode==="menu"){ ctx.fillStyle="#a7b4c6"; ctx.font="800 17px system-ui";
+        ctx.fillText("Arrows swing the barrel. Space fires.",900/2,y+92);
+        ctx.fillStyle="#93c5fd"; ctx.fillText("Never let a shot reach the blue glass.",900/2,y+120);
+        ctx.fillStyle="#facc15"; ctx.fillText("Banks off the walls score more.",900/2,y+148) }
+      else { ctx.fillStyle="#f8fbff"; ctx.font="900 26px system-ui";
+        ctx.fillText("Score "+state.score+(state.rank?"   Rank "+state.rank:""),900/2,y+92);
+        ctx.fillStyle="#a7b4c6"; ctx.font="800 16px system-ui";
+        ctx.fillText("Best "+Math.max(state.best,state.score)+"   Badges "+state.hits+"   Longest bank "+state.bestBounces,900/2,y+124);
+        ctx.fillText("Press R to ride again.",900/2,y+152) }
+      ctx.textAlign="left" }
+    ctx.setTransform(1,0,0,1,0,0) }
+
+  function renderGameToText(){ const rec=recommendation();
+    return JSON.stringify({title:"Shard Sheriff",mode:state.mode,running:state.mode==="duel",started:state.mode!=="menu",
+      coordinateSystem:"canvas pixels, origin top-left, x right, y down; shooter at 96,280; aim in degrees",
+      stage:state.stage+1,stageName:stage().name,stages:STAGES.length,
+      aim:state.aim,ammo:state.ammo,score:state.score,best:Math.max(state.best,state.score),
+      targets:state.targets.map((t)=>({id:t.id,x:t.x,y:t.y,angle:t.angle,bounces:t.bounces,down:t.down,solved:t.solved})),
+      glass:state.glass.map((g)=>({id:g.id,x:g.x,y:g.y,broken:g.broken})),
+      down:down(),recommended:rec,trace:state.trace,scanned:state.scanned,
+      shotsFired:state.shotsFired,hits:state.hits,misses:state.misses,cleanStages:state.cleanStages,
+      lastBounces:state.lastBounces,bestBounces:state.bestBounces,rank:state.rank,
+      animating:!!state.anim,reducedMotion:reducedMotion,
+      lastAction:state.lastAction,lastEvent:state.lastEvent,
+      feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},
+      soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount}) }
+  window.render_game_to_text=renderGameToText;
+  window.advanceTime=(ms)=>{ stopLoop(); const total=Math.max(0,Number(ms)||0);
+    const steps=Math.max(1,Math.round(total/(1000/60)));
+    for(let i=0;i<steps;i++)update(1/60);
+    updateUI(); render(); ensureLoop(); return renderGameToText() };
+
+  function key(e){ const k=e.key;
+    if(els.dialog.open&&k!=="Escape")return;
+    if(k==="ArrowLeft"||k==="ArrowDown"){ e.preventDefault(); aimBy(-AIM_STEP) }
+    else if(k==="ArrowRight"||k==="ArrowUp"){ e.preventDefault(); aimBy(AIM_STEP) }
+    else if(k===" "||k==="Enter"){ e.preventDefault(); fire() }
+    else if(k.toLowerCase()==="r"){ e.preventDefault(); restart() }
+    else if(k.toLowerCase()==="m"){ e.preventDefault(); toggleSound() }
+    else if(k.toLowerCase()==="f"){ e.preventDefault(); toggleFullscreen() }
+    else if(k.toLowerCase()==="s"){ e.preventDefault(); scan() }
+    else if(k==="Escape"){ if(els.dialog.open){ e.preventDefault(); closeHelp() } }
+    else if(k==="?"||(k==="/"&&e.shiftKey)){ e.preventDefault(); openHelp() } }
+  canvas.addEventListener("pointerdown",(e)=>{ canvas.focus();
+    if(state.mode==="menu"){ startRun(); return }
+    if(state.mode!=="duel")return;
+    const b=canvas.getBoundingClientRect();
+    const px=(e.clientX-b.left)/b.width*900, py=(e.clientY-b.top)/b.height*560;
+    const want=Math.atan2(py-ORIGIN.y,px-ORIGIN.x)*180/Math.PI;
+    const next=Math.max(AIM_MIN,Math.min(AIM_MAX,Math.round(want/AIM_STEP)*AIM_STEP));
+    if(next!==state.aim){ state.aim=next; state.lastAction="aim"; tone("move"); updateUI(); render() } });
+  els.start.addEventListener("click",startRun); els.fire.addEventListener("click",fire);
+  if(els.scan)els.scan.addEventListener("click",()=>{ scan(); canvas.focus() });
+  els.restart.addEventListener("click",restart); els.sound.addEventListener("click",toggleSound);
+  els.full.addEventListener("click",toggleFullscreen); els.help.addEventListener("click",openHelp);
+  els.closeHelp.addEventListener("click",closeHelp);
+  document.addEventListener("keydown",key);
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden){ stopLoop();
+    if(audio&&audio.suspend){try{audio.suspend()}catch(_){}} } else ensureLoop() });
+  addEventListener("resize",syncCompact);
+
   let raf=0;
-  function loopActive(){ return state.feedbackMs>0; }
-  function ensureLoop(){ if(raf||!loopActive())return; raf=requestAnimationFrame(loop); }
-  function stopLoop(){ if(raf)cancelAnimationFrame(raf); raf=0; }
-  function loop(){ raf=0; update(1/60); render(); if(loopActive())raf=requestAnimationFrame(loop); }
-  loadStage(); state.mode="menu"; updateUI(); render(); ensureLoop();
+  function loopActive(){ return state.feedbackMs>0||!!state.anim||state.parts.length>0||state.shake>0||state.flash>0 }
+  function ensureLoop(){ if(raf||!loopActive()||document.hidden)return; raf=requestAnimationFrame(loop) }
+  function stopLoop(){ if(raf)cancelAnimationFrame(raf); raf=0 }
+  function loop(){ raf=0; update(1/60); render(); if(loopActive()&&!document.hidden)raf=requestAnimationFrame(loop) }
+  syncCompact(); loadStage(); state.mode="menu"; updateUI(); render(); ensureLoop();
 })();
-
 </script>
 </body>
 </html>
