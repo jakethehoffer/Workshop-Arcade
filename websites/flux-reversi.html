@@ -74,12 +74,14 @@ button{font:inherit}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas.compact{aspect-ratio:960/900}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
 .btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 .btn.primary{border-color:transparent;background:linear-gradient(180deg,#6ff7ff,#22d3ee);color:#06272e}
 .btn[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,255,255,.17)}
+.barlab{align-self:center;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;padding:0 3px}
 .touch{display:grid;grid-template-columns:repeat(5,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
@@ -91,7 +93,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Flux Reversi board game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Flux Reversi</span></div>
-    <div class="help">Arrow keys or WASD move the marker. Enter, or tap a highlighted square, places a dark disc. N starts a new game.</div>
+    <div class="help">Arrow keys or WASD move the marker; rings show which discs you would flip. Enter, or tap a highlighted square, places a teal disc. H toggles hints, C changes the CPU level, N starts a new game.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Turn</span><span class="value" id="turnValue">You</span></div>
@@ -101,12 +103,17 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     <div class="pill"><span class="label">Margin</span><span class="value" id="scoreValue">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
   </section>
-  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Flux Reversi 8 by 8 board. You play the dark discs against the CPU's light discs."></canvas></div>
+  <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Flux Reversi 8 by 8 board. You play the teal discs against the CPU's light discs."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Your move — place a dark disc on a highlighted square.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Flux Reversi ready.</div>
   <section class="bar" aria-label="Actions">
     <button class="btn primary" id="newBtn" type="button">New Game</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="hintBtn" type="button" aria-pressed="false">Hints Off</button>
+    <span class="barlab">CPU</span>
+    <button class="btn" id="diffCasual" type="button" aria-pressed="false">Casual</button>
+    <button class="btn" id="diffStandard" type="button" aria-pressed="true">Standard</button>
+    <button class="btn" id="diffExpert" type="button" aria-pressed="false">Expert</button>
   </section>
   <section class="touch" aria-label="Touch controls">
     <button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Place</button><button type="button" data-key="n">New</button>
@@ -117,7 +124,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 (() => {
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),N=8;
-const BEST_KEY="flux-reversi.best.v1",SOUND_KEY="flux-reversi.sound.v1",AI_DELAY=420;
+const BEST_KEY="flux-reversi.best.v1",SOUND_KEY="flux-reversi.sound.v1",STATS_KEY="flux-reversi.stats.v1",AI_DELAY=400;
 const WEIGHTS=[
 [120,-22,18,8,8,18,-22,120],
 [-22,-30,-4,-3,-3,-4,-30,-22],
@@ -128,100 +135,373 @@ const WEIGHTS=[
 [-22,-30,-4,-3,-3,-4,-30,-22],
 [120,-22,18,8,8,18,-22,120]];
 const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const CORNERS=[[0,0],[7,0],[0,7],[7,7]];
+const LEVELS={casual:{depth:1,slip:.35,label:"Casual"},standard:{depth:3,slip:0,label:"Standard"},expert:{depth:5,slip:0,label:"Expert"}};
+const LEVEL_IDS=["casual","standard","expert"];
 const $=id=>document.getElementById(id);
-const els={turn:$("turnValue"),you:$("youValue"),cpu:$("cpuValue"),legal:$("legalValue"),score:$("scoreValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn")};
-const state={board:[],turn:1,mode:"playing",result:null,cursor:{x:3,y:2},best:readBest(),sound:readSound(),feedback:"Your move — place a dark disc on a highlighted square.",moveCount:0,lastMove:null,cpuThinking:false,aiTimer:0,time:0,flip:0};
-let audio=null;
+const els={turn:$("turnValue"),you:$("youValue"),cpu:$("cpuValue"),legal:$("legalValue"),score:$("scoreValue"),
+ best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),
+ hint:$("hintBtn"),casual:$("diffCasual"),standard:$("diffStandard"),expert:$("diffExpert")};
+
+let reducedMotion=false;
+try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readBest(){try{const v=parseInt((store()||{}).getItem(BEST_KEY),10);return Number.isFinite(v)?v:0}catch(_){return 0}}
+function intOr(v,d){const n=Number(v);return Number.isFinite(n)?Math.floor(n):d}
+function readBest(){try{const v=Number((store()||{}).getItem(BEST_KEY));return Number.isFinite(v)?Math.floor(v):0}catch(_){return 0}}
 function saveBest(m){if(m>state.best){state.best=m;try{(store()||{}).setItem(BEST_KEY,String(m))}catch(_){}}}
+function readStats(){const base={level:"standard",hints:false,wins:0,games:0};
+ try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return base;const v=JSON.parse(raw);
+  if(!v||typeof v!=="object"||Array.isArray(v))return base;
+  if(typeof v.level==="string"&&LEVELS[v.level])base.level=v.level;
+  base.hints=v.hints===true;base.wins=Math.max(0,intOr(v.wins,0));base.games=Math.max(0,intOr(v.games,0))}catch(_){}
+ return base}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({level:state.level,hints:state.hints,wins:state.wins,games:state.games}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
-function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+const saved=readStats();
+
+const state={board:[],turn:1,mode:"playing",result:null,cursor:{x:3,y:2},best:readBest(),sound:readSound(),
+ level:saved.level,hints:saved.hints,hintMove:null,wins:saved.wins,games:saved.games,
+ feedback:"Your move — place a teal disc on a highlighted square.",moveCount:0,lastMove:null,
+ cpuThinking:false,aiTimer:0,time:0,anims:[],parts:[],shake:0,lastFlips:0};
+
+let audio=null;
+function ac(){if(!state.sound)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+ try{audio=audio||new AC();if(audio.state==="suspended")audio.resume();return audio}catch(_){return null}}
+function blip(freq,dur,type,vol,delay){const a=ac();if(!a)return;
+ try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(delay||0);
+  o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.055,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+const LADDER=[523,587,659,698,784,880,988,1046,1175,1319];
+function tone(kind,n){switch(kind){
+ case"place":blip(330,.14,"triangle",.06);break;
+ case"flip":{const k=Math.min(LADDER.length-1,n||0);blip(LADDER[k],.11,"sine",.035,(n||0)*.045);break}
+ case"cpu":blip(247,.16,"triangle",.05);break;
+ case"corner":[659,880,1319].forEach((f,i)=>blip(f,.26,"triangle",.06,i*.06));break;
+ case"hint":blip(760,.1,"sine",.045);blip(1010,.12,"sine",.035,.07);break;
+ case"level":blip(480,.1,"triangle",.05);blip(640,.12,"triangle",.04,.06);break;
+ case"pass":blip(300,.22,"sine",.05);blip(220,.24,"sine",.04,.09);break;
+ case"win":[523,659,784,1046].forEach((f,i)=>blip(f,.4,"triangle",.075,i*.085));break;
+ case"loss":blip(220,.42,"sawtooth",.055);blip(150,.5,"sawtooth",.045,.1);break;
+ case"draw":blip(392,.3,"triangle",.05);blip(330,.34,"triangle",.04,.11);break;
+ case"bad":blip(140,.14,"sawtooth",.045);break}}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={place:300,flip:420,cpu:230,win:640,loss:120,pass:200,bad:140}[kind]||260;o.type=kind==="loss"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
 
 function newBoard(){const b=Array.from({length:N},()=>new Array(N).fill(0));b[3][3]=2;b[3][4]=1;b[4][3]=1;b[4][4]=2;return b}
 function inBounds(x,y){return x>=0&&y>=0&&x<N&&y<N}
-function flipsFor(b,x,y,color){if(b[y][x]!==0)return[];const opp=color===1?2:1,out=[];for(const[dx,dy]of DIRS){let cx=x+dx,cy=y+dy;const line=[];while(inBounds(cx,cy)&&b[cy][cx]===opp){line.push([cx,cy]);cx+=dx;cy+=dy}if(line.length&&inBounds(cx,cy)&&b[cy][cx]===color)for(const c of line)out.push(c)}return out}
-function legalMoves(b,color){const m=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(b[y][x]===0&&flipsFor(b,x,y,color).length)m.push({x,y});return m}
-function counts(b){let you=0,cpu=0;for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(b[y][x]===1)you++;else if(b[y][x]===2)cpu++}return{you,cpu,empty:N*N-you-cpu}}
-function applyMove(b,x,y,color){const fl=flipsFor(b,x,y,color);if(!fl.length)return null;b[y][x]=color;for(const[fx,fy]of fl)b[fy][fx]=color;return fl}
-function cloneBoard(b){return b.map(r=>r.slice())}
+function flipsFor(b,x,y,color){if(b[y][x]!==0)return[];const opp=color===1?2:1,out=[];
+ for(const[dx,dy]of DIRS){let cx=x+dx,cy=y+dy;const line=[];
+  while(inBounds(cx,cy)&&b[cy][cx]===opp){line.push([cx,cy]);cx+=dx;cy+=dy}
+  if(line.length&&inBounds(cx,cy)&&b[cy][cx]===color)for(const c of line)out.push(c)}
+ return out}
+function legalMoves(b,color){const m=[];
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(b[y][x]===0&&flipsFor(b,x,y,color).length)m.push({x,y});
+ return m}
+function counts(b){let you=0,cpu=0;
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(b[y][x]===1)you++;else if(b[y][x]===2)cpu++}
+ return{you,cpu,empty:N*N-you-cpu}}
+function applyMove(b,x,y,color){const fl=flipsFor(b,x,y,color);if(!fl.length)return null;
+ b[y][x]=color;for(const[fx,fy]of fl)b[fy][fx]=color;return fl}
+function undoMove(b,x,y,fl,opp){b[y][x]=0;for(const[fx,fy]of fl)b[fy][fx]=opp}
 function coord(x,y){return String.fromCharCode(65+x)+(y+1)}
 function snapCursor(moves){if(moves.length&&!moves.some(m=>m.x===state.cursor.x&&m.y===state.cursor.y))state.cursor={x:moves[0].x,y:moves[0].y}}
 
-function place(x,y,color){const fl=applyMove(state.board,x,y,color);if(!fl)return false;state.lastMove={x,y,by:color};state.moveCount++;state.flip=1;state.turn=color===1?2:1;return true}
+// Search evaluates from the CPU's side: corners and edges early, raw discs once
+// the board is nearly full, plus mobility and a frontier penalty so it avoids
+// handing the player easy outflanks.
+function frontier(b,color){let n=0;
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(b[y][x]!==color)continue;
+  for(const[dx,dy]of DIRS){const cx=x+dx,cy=y+dy;if(inBounds(cx,cy)&&b[cy][cx]===0){n++;break}}}
+ return n}
+function evalCpu(b){const c=counts(b);
+ if(c.empty===0)return (c.cpu-c.you)*10000;
+ let pos=0;
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=b[y][x];if(v===2)pos+=WEIGHTS[y][x];else if(v===1)pos-=WEIGHTS[y][x]}
+ let corner=0;
+ for(const[x,y]of CORNERS){const v=b[y][x];if(v===2)corner+=180;else if(v===1)corner-=180}
+ const mob=(legalMoves(b,2).length-legalMoves(b,1).length)*12;
+ const front=(frontier(b,1)-frontier(b,2))*6;
+ const discs=(c.cpu-c.you);
+ // Disc count barely matters until the board is closing out, then it is the game.
+ const late=c.empty<=12?(12-c.empty)/12:0;
+ return pos+corner+mob+front+discs*(2+late*40)+late*discs*20}
+const ORDERED=(()=>{const cells=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)cells.push({x,y});
+ return cells.sort((a,b)=>WEIGHTS[b.y][b.x]-WEIGHTS[a.y][a.x])})();
+function orderedMoves(b,color){const legal=[];
+ for(const c of ORDERED)if(b[c.y][c.x]===0&&flipsFor(b,c.x,c.y,color).length)legal.push(c);
+ return legal}
+function negamax(b,color,depth,alpha,beta){
+ const moves=orderedMoves(b,color);
+ if(!moves.length){const opp=color===1?2:1;
+  if(!orderedMoves(b,opp).length){const c=counts(b);const d=(c.cpu-c.you)*10000;return color===2?d:-d}
+  return -negamax(b,opp,depth,-beta,-alpha)}
+ if(depth<=0){const e=evalCpu(b);return color===2?e:-e}
+ let best=-Infinity;const opp=color===1?2:1;
+ for(const m of moves){const fl=applyMove(b,m.x,m.y,color);
+  const v=-negamax(b,opp,depth-1,-beta,-alpha);
+  undoMove(b,m.x,m.y,fl,opp);
+  if(v>best)best=v;if(best>alpha)alpha=best;if(alpha>=beta)break}
+ return best}
+function searchMove(color){const b=state.board,moves=orderedMoves(b,color);
+ if(!moves.length)return null;
+ const empty=counts(b).empty,cfg=LEVELS[state.level]||LEVELS.standard;
+ const base=color===2?cfg.depth:LEVELS.expert.depth;
+ // Solve the endgame outright once the tree is small enough to be exact.
+ const depth=empty<=9?empty:base;
+ let best=moves[0],bestV=-Infinity,alpha=-Infinity;const opp=color===1?2:1;
+ for(const m of moves){const fl=applyMove(b,m.x,m.y,color);
+  const v=-negamax(b,opp,depth-1,-Infinity,-alpha);
+  undoMove(b,m.x,m.y,fl,opp);
+  if(v>bestV){bestV=v;best=m;if(v>alpha)alpha=v}}
+ return best}
+function cpuMove(){const cfg=LEVELS[state.level]||LEVELS.standard,moves=orderedMoves(state.board,2);
+ if(!moves.length)return null;
+ // Casual grabs a corner when one is free but otherwise plays loose, so a new
+ // player can actually win a game before meeting the real opponent.
+ if(cfg.slip>0&&Math.random()<cfg.slip){
+  const corner=moves.find(m=>CORNERS.some(c=>c[0]===m.x&&c[1]===m.y));
+  return corner||moves[Math.floor(Math.random()*moves.length)]}
+ return searchMove(2)}
+function refreshHint(){state.hintMove=state.hints&&state.mode==="playing"&&state.turn===1&&!state.cpuThinking?searchMove(1):null}
 
-function afterMove(){if(state.mode!=="playing")return;const cur=state.turn,curMoves=legalMoves(state.board,cur);
-  if(curMoves.length){if(cur===2)scheduleCpu();else{snapCursor(curMoves);update();draw()}return}
-  const other=cur===1?2:1,otherMoves=legalMoves(state.board,other);
-  if(!otherMoves.length){endGame();return}
-  if(cur===1){say("No legal move — your turn passes to the CPU.");tone("pass");state.turn=2;scheduleCpu()}
-  else{say("CPU has no legal move — your turn again.");tone("pass");state.turn=1;snapCursor(otherMoves);update();draw()}}
+function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
+function spawnParts(cx,cy,color,n){if(reducedMotion)return;
+ for(let i=0;i<n;i++){const a=Math.PI*2*i/n+Math.random()*.6,s=45+Math.random()*90;
+  state.parts.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:1,color})}}
+function place(x,y,color){const fl=applyMove(state.board,x,y,color);if(!fl)return null;
+ state.lastMove={x,y,by:color};state.moveCount++;state.lastFlips=fl.length;
+ state.turn=color===1?2:1;
+ if(!reducedMotion){const opp=color===1?2:1;
+  state.anims=fl.map(([fx,fy])=>({x:fx,y:fy,from:opp,to:color,t:0,delay:Math.max(Math.abs(fx-x),Math.abs(fy-y))*70}));
+  state.anims.push({x,y,from:0,to:color,t:0,delay:0,pop:true})}
+ const g=gridRect();
+ spawnParts(g.x+x*g.cell+g.cell/2,g.y+y*g.cell+g.cell/2,color,7);
+ const isCorner=CORNERS.some(c=>c[0]===x&&c[1]===y);
+ if(isCorner){tone("corner");if(!reducedMotion)state.shake=.6}
+ else tone(color===1?"place":"cpu");
+ for(let i=0;i<Math.min(fl.length,8);i++)tone("flip",i);
+ return fl}
 
-function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;update();draw()}
-function evalBoard(b){let s=0;for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(b[y][x]===2)s+=WEIGHTS[y][x];else if(b[y][x]===1)s-=WEIGHTS[y][x]}return s+(legalMoves(b,2).length-legalMoves(b,1).length)*4}
-function bestCpuMove(){const moves=legalMoves(state.board,2);if(!moves.length)return null;let best=null,bestScore=-Infinity;for(const m of moves){const b=cloneBoard(state.board);applyMove(b,m.x,m.y,2);const sc=evalBoard(b);if(sc>bestScore||(sc===bestScore&&best&&(m.y*N+m.x)<(best.y*N+best.x))){bestScore=sc;best=m}}return best}
-function doCpu(){if(state.mode!=="playing")return;const m=bestCpuMove();if(!m){afterMove();return}place(m.x,m.y,2);tone("cpu");vibe(8);const c=counts(state.board);say("CPU played "+coord(m.x,m.y)+". You "+c.you+" — CPU "+c.cpu+".");afterMove()}
+function afterMove(){if(state.mode!=="playing")return;
+ const cur=state.turn,curMoves=legalMoves(state.board,cur);
+ if(curMoves.length){if(cur===2)scheduleCpu();else{snapCursor(curMoves);refreshHint();update();draw();ensureLoop()}return}
+ const other=cur===1?2:1,otherMoves=legalMoves(state.board,other);
+ if(!otherMoves.length){endGame();return}
+ if(cur===1){say("No legal move — your turn passes to the CPU.");tone("pass");state.turn=2;scheduleCpu()}
+ else{say("CPU has no legal move — your turn again.");tone("pass");state.turn=1;snapCursor(otherMoves);refreshHint();update();draw();ensureLoop()}}
+function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;state.hintMove=null;update();draw();ensureLoop()}
+function doCpu(){if(state.mode!=="playing")return;const m=cpuMove();
+ if(!m){afterMove();return}
+ place(m.x,m.y,2);vibe(8);
+ const c=counts(state.board);
+ say("CPU played "+coord(m.x,m.y)+". You "+c.you+" — CPU "+c.cpu+".");
+ afterMove()}
+function tryPlace(x,y){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking)return;
+ if(!inBounds(x,y))return;
+ const fl=flipsFor(state.board,x,y,1);
+ if(!fl.length){say("Illegal move — choose a highlighted square.");tone("bad");vibe(4);draw();return}
+ place(x,y,1);vibe(12);state.hintMove=null;
+ const c=counts(state.board);
+ say("You played "+coord(x,y)+", flipped "+fl.length+". You "+c.you+" — CPU "+c.cpu+".");
+ afterMove()}
 
-function tryPlace(x,y){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking)return;const fl=flipsFor(state.board,x,y,1);
-  if(!fl.length){say("Illegal move — choose a highlighted square.");tone("bad");vibe(4);draw();return}
-  place(x,y,1);tone("place");vibe(12);const c=counts(state.board);say("You played "+coord(x,y)+", flipped "+fl.length+". You "+c.you+" — CPU "+c.cpu+".");afterMove()}
+function endGame(){state.mode="over";state.cpuThinking=false;state.hintMove=null;
+ const c=counts(state.board),margin=c.you-c.cpu;
+ state.games++;
+ if(margin>0){state.result="win";state.wins++;say("You win "+c.you+"–"+c.cpu+"! Press New Game.");tone("win");vibe([26,26,40]);
+  if(!reducedMotion){state.shake=1;
+   const g=gridRect();for(let i=0;i<5;i++)spawnParts(g.x+g.cell*N*Math.random(),g.y+g.cell*N*Math.random(),1,8)}}
+ else if(margin<0){state.result="loss";say("CPU wins "+c.cpu+"–"+c.you+". Press New Game.");tone("loss");vibe(50);
+  if(!reducedMotion)state.shake=.7}
+ else{state.result="draw";say("Draw "+c.you+"–"+c.cpu+". Press New Game.");tone("draw");vibe(20)}
+ saveBest(margin);saveStats();update();draw();ensureLoop()}
 
-function endGame(){state.mode="over";state.cpuThinking=false;const c=counts(state.board),margin=c.you-c.cpu;
-  if(margin>0){state.result="win";say("You win "+c.you+"–"+c.cpu+"! Press New Game.");tone("win");vibe([26,26,40])}
-  else if(margin<0){state.result="loss";say("CPU wins "+c.cpu+"–"+c.you+". Press New Game.");tone("loss");vibe(50)}
-  else{state.result="draw";say("Draw "+c.you+"–"+c.cpu+". Press New Game.");tone("pass");vibe(20)}
-  saveBest(margin);update();draw()}
+function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;state.moveCount=0;
+ state.lastMove=null;state.cpuThinking=false;state.aiTimer=0;state.anims.length=0;state.parts.length=0;
+ state.shake=0;state.lastFlips=0;
+ const m=legalMoves(state.board,1);state.cursor={x:m.length?m[0].x:3,y:m.length?m[0].y:2};
+ say("New game — you are the teal discs. Trap a CPU line between two of yours to flip it. CPU: "+(LEVELS[state.level]||LEVELS.standard).label+".");
+ refreshHint();update();draw()}
+function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(N-1,state.cursor.x+dx));
+ state.cursor.y=Math.max(0,Math.min(N-1,state.cursor.y+dy));draw()}
+function setLevel(id,announce){if(!LEVELS[id])return;state.level=id;saveStats();
+ say("CPU level: "+LEVELS[id].label+(state.moveCount>0?" — takes effect on the next new game.":"."));
+ refreshHint();update();draw();if(announce)tone("level")}
+function toggleHints(){state.hints=!state.hints;saveStats();refreshHint();
+ say(state.hints?"Hints on — the ringed square is the strongest placement.":"Hints off.");
+ if(state.hints)tone("hint");update();draw()}
 
-function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;state.moveCount=0;state.lastMove=null;state.cpuThinking=false;state.aiTimer=0;state.flip=0;const m=legalMoves(state.board,1);state.cursor={x:m.length?m[0].x:3,y:m.length?m[0].y:2};say("New game — you are the dark discs. Outflank the CPU to own the board.");update();draw()}
-function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(N-1,state.cursor.x+dx));state.cursor.y=Math.max(0,Math.min(N-1,state.cursor.y+dy));draw()}
+function update(){const c=counts(state.board),margin=c.you-c.cpu;
+ els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));
+ els.you.textContent=String(c.you);els.cpu.textContent=String(c.cpu);
+ els.legal.textContent=String(legalMoves(state.board,state.turn).length);
+ els.score.textContent=(margin>0?"+":"")+margin;
+ els.best.textContent=(state.best>0?"+":"")+state.best;
+ els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
+ els.hint.textContent=state.hints?"Hints On":"Hints Off";els.hint.setAttribute("aria-pressed",String(state.hints));
+ LEVEL_IDS.forEach(id=>{const b=els[id];if(!b)return;
+  b.setAttribute("aria-pressed",String(state.level===id));
+  b.setAttribute("aria-label","CPU level "+LEVELS[id].label+(state.level===id?", selected":""))})}
 
-function update(){const c=counts(state.board),margin=c.you-c.cpu;els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));els.you.textContent=String(c.you);els.cpu.textContent=String(c.cpu);els.legal.textContent=String(legalMoves(state.board,state.turn).length);els.score.textContent=(margin>0?"+":"")+margin;els.best.textContent=(state.best>0?"+":"")+state.best;els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+// A 16:9 canvas squeezes a square 8x8 board into barely half its width, which on
+// a phone leaves tap targets under a fingertip. Below ~560 CSS pixels the canvas
+// switches to a taller backing store so the board can actually fill the screen,
+// and the side readouts (which only repeat the HTML scoreboard) are dropped.
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<560;if(next===compact)return;
+ compact=next;
+ canvas.height=compact?900:540;
+ canvas.classList.toggle("compact",compact);
+ if(state.board.length)draw()}
+function gridRect(){if(compact){const cell=Math.min((canvas.width-40)/N,(canvas.height-96)/N);
+  return{cell,x:Math.round((canvas.width-cell*N)/2),y:66}}
+ const cell=Math.min(canvas.width/(N+3.6),canvas.height/(N+1.7));
+ return{cell,x:56,y:70}}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+ ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function discGrad(cx,cy,rad,v){const gr=ctx.createRadialGradient(cx-rad*.32,cy-rad*.32,rad*.2,cx,cy,rad);
+ if(v===1){gr.addColorStop(0,"#7ef9ff");gr.addColorStop(1,"#0f7f95")}else{gr.addColorStop(0,"#ffffff");gr.addColorStop(1,"#b7c5d6")}
+ return gr}
+function drawDisc(cx,cy,rad,v,squash){const sx=squash==null?1:squash;
+ ctx.save();ctx.translate(cx,cy);ctx.scale(Math.max(.04,Math.abs(sx)),1);
+ ctx.beginPath();ctx.arc(0,0,rad,0,Math.PI*2);ctx.fillStyle=discGrad(0,0,rad,v);ctx.fill();
+ ctx.lineWidth=2;ctx.strokeStyle=v===1?"rgba(6,40,46,.6)":"rgba(15,23,36,.5)";ctx.stroke();ctx.restore()}
+function animFor(x,y){for(const a of state.anims)if(a.x===x&&a.y===y&&a.t<1)return a;return null}
+function draw(){const sh=state.shake>0&&!reducedMotion?state.shake*7:0;
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);
+ const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");
+ ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ const r=gridRect(),cell=r.cell,c=counts(state.board);
+ if(compact){ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 30px system-ui";
+  ctx.fillText("YOU "+c.you+" · CPU "+c.cpu+" · "+(LEVELS[state.level]||LEVELS.standard).label.toUpperCase(),canvas.width/2,38);
+  ctx.textAlign="left"}
+ else{ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 22px system-ui";ctx.fillText("Flux Reversi",30,34);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+  ctx.fillText("Trap a CPU line between two of your discs to flip it. CPU: "+(LEVELS[state.level]||LEVELS.standard).label,30,54)}
+ ctx.save();ctx.translate(r.x,r.y);
+ ctx.fillStyle="#0a2a23";roundRect(-9,-9,cell*N+18,cell*N+18,12,true,false);
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){ctx.fillStyle=(x+y)%2?"#103a30":"#124639";
+  ctx.fillRect(x*cell+1,y*cell+1,cell-2,cell-2);
+  ctx.strokeStyle="rgba(94,234,212,.12)";ctx.strokeRect(x*cell+.5,y*cell+.5,cell-1,cell-1)}
+ const live=state.mode==="playing"&&state.turn===1&&!state.cpuThinking;
+ if(live)for(const m of legalMoves(state.board,1)){ctx.fillStyle="rgba(94,234,212,.32)";
+  ctx.beginPath();ctx.arc(m.x*cell+cell/2,m.y*cell+cell/2,cell*.12,0,Math.PI*2);ctx.fill()}
+ if(live&&state.hintMove){ctx.strokeStyle="rgba(250,204,21,.9)";ctx.lineWidth=3;
+  ctx.strokeRect(state.hintMove.x*cell+3,state.hintMove.y*cell+3,cell-6,cell-6)}
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=state.board[y][x];const a=animFor(x,y);
+  if(a){const p=Math.min(1,Math.max(0,a.t));
+   if(a.pop)drawDisc(x*cell+cell/2,y*cell+cell/2,cell*.38*(0.4+0.6*p),a.to);
+   else drawDisc(x*cell+cell/2,y*cell+cell/2,cell*.38,p<.5?a.from:a.to,Math.cos(Math.PI*p));
+   continue}
+  if(v)drawDisc(x*cell+cell/2,y*cell+cell/2,cell*.38,v)}
+ // Flip preview: ring every disc the cursor square would capture. Reversi is
+ // opaque to newcomers until they can see the consequence before committing.
+ if(live){const prev=flipsFor(state.board,state.cursor.x,state.cursor.y,1);
+  if(prev.length){ctx.strokeStyle="rgba(126,249,255,.85)";ctx.lineWidth=2.5;
+   for(const[fx,fy]of prev){ctx.beginPath();ctx.arc(fx*cell+cell/2,fy*cell+cell/2,cell*.44,0,Math.PI*2);ctx.stroke()}
+   ctx.globalAlpha=.35;drawDisc(state.cursor.x*cell+cell/2,state.cursor.y*cell+cell/2,cell*.38,1);ctx.globalAlpha=1}}
+ if(state.lastMove){ctx.strokeStyle="#facc15";ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(state.lastMove.x*cell+cell/2,state.lastMove.y*cell+cell/2,cell*.46,0,Math.PI*2);ctx.stroke()}
+ if(live){ctx.strokeStyle="#f8fafc";ctx.lineWidth=3;
+  ctx.strokeRect(state.cursor.x*cell+3,state.cursor.y*cell+3,cell-6,cell-6)}
+ ctx.restore();
+ for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color===1?"#7ef9ff":"#e8eef6";
+  ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill()}
+ ctx.globalAlpha=1;
+ if(!compact)drawSide(r);
+ if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.80)";ctx.fillRect(-20,-20,canvas.width+40,canvas.height+40);
+  ctx.textAlign="center";
+  ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";
+  ctx.font="950 56px system-ui";
+  ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",canvas.width/2,canvas.height/2-26);
+  ctx.fillStyle="#e6f2ff";ctx.font="900 30px system-ui";
+  ctx.fillText(c.you+" – "+c.cpu+"   ("+((c.you-c.cpu)>0?"+":"")+(c.you-c.cpu)+")",canvas.width/2,canvas.height/2+16);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 20px system-ui";
+  ctx.fillText("Best margin "+(state.best>0?"+":"")+state.best+"  ·  Wins "+state.wins+" of "+state.games+"  ·  "+(LEVELS[state.level]||LEVELS.standard).label,canvas.width/2,canvas.height/2+52);
+  ctx.fillStyle="#5eead4";ctx.font="800 18px system-ui";
+  ctx.fillText("New Game or press N",canvas.width/2,canvas.height/2+84);
+  ctx.textAlign="left"}
+ ctx.setTransform(1,0,0,1,0,0)}
+function drawSide(r){const c=counts(state.board),px=r.x+r.cell*N+30;let py=r.y+14;ctx.textAlign="left";
+ const block=(label,val,disc,color)=>{if(disc)drawDisc(px+15,py+14,15,disc);
+  ctx.fillStyle="#9fb3c8";ctx.font="900 15px system-ui";ctx.fillText(label,px+(disc?40:0),py+6);
+  ctx.fillStyle=color||"#f3fbff";ctx.font="950 30px system-ui";ctx.fillText(val,px+(disc?40:0),py+36);py+=72};
+ block("YOU",String(c.you),1,"#7ef9ff");
+ block("CPU · "+(LEVELS[state.level]||LEVELS.standard).label,String(c.cpu),2);
+ block("TURN",state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU")),null,
+  state.mode==="over"?"#facc15":(state.turn===1?"#5eead4":"#fb7185"));
+ block("BEST MARGIN",(state.best>0?"+":"")+state.best,null)}
 
-function gridRect(){const cell=Math.min(canvas.width/(N+3.6),canvas.height/(N+1.5));return{cell,x:Math.round((canvas.width-cell*N)/2)-86,y:62}}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function drawDisc(cx,cy,rad,v){ctx.beginPath();ctx.arc(cx,cy,rad,0,Math.PI*2);const gr=ctx.createRadialGradient(cx-rad*.32,cy-rad*.32,rad*.2,cx,cy,rad);if(v===1){gr.addColorStop(0,"#46597a");gr.addColorStop(1,"#0a1322")}else{gr.addColorStop(0,"#ffffff");gr.addColorStop(1,"#b7c5d6")}ctx.fillStyle=gr;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=v===1?"rgba(94,234,212,.55)":"rgba(15,23,36,.5)";ctx.stroke()}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  const r=gridRect(),cell=r.cell;
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Flux Reversi",30,36);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Flank a CPU line between two of your discs to flip it.",30,53);
-  ctx.save();ctx.translate(r.x,r.y);
-  ctx.fillStyle="#0a2a23";roundRect(-9,-9,cell*N+18,cell*N+18,12,true,false);
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++){ctx.fillStyle=(x+y)%2?"#103a30":"#124639";ctx.fillRect(x*cell+1,y*cell+1,cell-2,cell-2);ctx.strokeStyle="rgba(94,234,212,.12)";ctx.strokeRect(x*cell+.5,y*cell+.5,cell-1,cell-1)}
-  if(state.mode==="playing"&&state.turn===1&&!state.cpuThinking)for(const m of legalMoves(state.board,1)){ctx.fillStyle="rgba(94,234,212,.32)";ctx.beginPath();ctx.arc(m.x*cell+cell/2,m.y*cell+cell/2,cell*.12,0,Math.PI*2);ctx.fill()}
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=state.board[y][x];if(v)drawDisc(x*cell+cell/2,y*cell+cell/2,cell*.38,v)}
-  if(state.lastMove){ctx.strokeStyle="#facc15";ctx.lineWidth=3;ctx.beginPath();ctx.arc(state.lastMove.x*cell+cell/2,state.lastMove.y*cell+cell/2,cell*.46,0,Math.PI*2);ctx.stroke()}
-  if(state.mode==="playing"&&state.turn===1&&!state.cpuThinking){ctx.strokeStyle="#f8fafc";ctx.lineWidth=3;ctx.strokeRect(state.cursor.x*cell+3,state.cursor.y*cell+3,cell-6,cell-6)}
-  ctx.restore();
-  drawSide(r);
-  if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";ctx.font="950 46px system-ui";ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
-function drawSide(r){const c=counts(state.board),px=r.x+r.cell*N+30;let py=r.y+10;ctx.textAlign="left";
-  const block=(label,val,disc,color)=>{if(disc)drawDisc(px+13,py+12,13,disc);ctx.fillStyle="#9fb3c8";ctx.font="800 12px system-ui";ctx.fillText(label,px+(disc?34:0),py+6);ctx.fillStyle=color||"#f3fbff";ctx.font="950 27px system-ui";ctx.fillText(val,px+(disc?34:0),py+34);py+=66};
-  block("YOU · dark",String(c.you),1);
-  block("CPU · light",String(c.cpu),2);
-  block("TURN",state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU")),null,state.mode==="over"?"#facc15":(state.turn===1?"#5eead4":"#fb7185"));
-  block("BEST MARGIN",(state.best>0?"+":"")+state.best,null)}
+function tick(dt){state.time+=dt;
+ for(let i=state.anims.length-1;i>=0;i--){const a=state.anims[i];
+  if(a.delay>0){a.delay-=dt;continue}
+  a.t+=dt/210;if(a.t>=1)state.anims.splice(i,1)}
+ if(state.shake>0)state.shake=Math.max(0,state.shake-dt/430);
+ for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];
+  p.life-=dt/620;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=dt*.34;
+  if(p.life<=0)state.parts.splice(i,1)}
+ if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}
+ draw()}
+window.advanceTime=ms=>{stopLoop();const total=Math.max(0,Number(ms)||0),n=Math.max(1,Math.ceil(total/40));
+ for(let i=0;i<n;i++)tick(total/n);ensureLoop();return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){const c=counts(state.board);
+ return JSON.stringify({mode:state.mode,result:state.result,
+  turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),
+  cpuThinking:state.cpuThinking,you:c.you,cpu:c.cpu,empty:c.empty,score:c.you-c.cpu,
+  legal:legalMoves(state.board,state.turn).length,moveCount:state.moveCount,
+  cursor:{x:state.cursor.x,y:state.cursor.y},lastMove:state.lastMove,lastFlips:state.lastFlips,
+  best:state.best,wins:state.wins,games:state.games,level:state.level,
+  levelDepth:(LEVELS[state.level]||LEVELS.standard).depth,hints:state.hints,
+  hintMove:state.hintMove?{x:state.hintMove.x,y:state.hintMove.y}:null,
+  animating:state.anims.length>0,sound:state.sound,reducedMotion:reducedMotion,feedback:state.feedback,
+  board:state.board.map(row=>row.join("")),
+  coordinateSystem:"grid origin top-left; x=column A-H, y=row 1-8; 1=teal(you), 2=light(cpu)"})};
 
-function tick(dt){state.time+=dt;if(state.flip>0)state.flip=Math.max(0,state.flip-dt/240);if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){const c=counts(state.board);return JSON.stringify({mode:state.mode,result:state.result,turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),cpuThinking:state.cpuThinking,you:c.you,cpu:c.cpu,empty:c.empty,score:c.you-c.cpu,legal:legalMoves(state.board,state.turn).length,moveCount:state.moveCount,cursor:{x:state.cursor.x,y:state.cursor.y},lastMove:state.lastMove,best:state.best,sound:state.sound,feedback:state.feedback,board:state.board.map(row=>row.join("")),coordinateSystem:"grid origin top-left; x=column A-H, y=row 1-8; 1=dark(you), 2=light(cpu)"})};
+document.addEventListener("keydown",e=>{const t=e.target;
+ if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+ const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+ if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);
+ else if(k==="ArrowRight"||k==="d")moveCursor(1,0);
+ else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);
+ else if(k==="ArrowDown"||k==="s")moveCursor(0,1);
+ else if(k==="Enter"||k===" ")tryPlace(state.cursor.x,state.cursor.y);
+ else if(k==="n"||k==="r")reset();
+ else if(k==="h")toggleHints();
+ else if(k==="c"){const i=LEVEL_IDS.indexOf(state.level);setLevel(LEVEL_IDS[(i+1)%LEVEL_IDS.length],true)}});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();
+ const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,
+  py=(e.clientY-b.top)/b.height*canvas.height,r=gridRect(),
+  x=Math.floor((px-r.x)/r.cell),y=Math.floor((py-r.y)/r.cell);
+ if(inBounds(x,y)){state.cursor={x,y};tryPlace(x,y)}});
+els.neww.addEventListener("click",()=>{reset();tone("level")});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+ say(state.sound?"Sound enabled.":"Sound muted.");
+ if(state.sound)tone("level");else if(audio&&audio.suspend)try{audio.suspend()}catch(_){}});
+els.hint.addEventListener("click",toggleHints);
+LEVEL_IDS.forEach(id=>{const b=els[id];if(b)b.addEventListener("click",()=>setLevel(id,true))});
+document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();
+ const k=btn.dataset.key;
+ if(k==="ArrowLeft")moveCursor(-1,0);else if(k==="ArrowRight")moveCursor(1,0);
+ else if(k==="ArrowUp")moveCursor(0,-1);else if(k==="ArrowDown")moveCursor(0,1);
+ else if(k==="Enter")tryPlace(state.cursor.x,state.cursor.y);else if(k==="n")reset()}));
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden){stopLoop();if(audio&&audio.suspend)try{audio.suspend()}catch(_){}}else ensureLoop()});
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
-  if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Enter"||k===" ")tryPlace(state.cursor.x,state.cursor.y);else if(k==="n"||k==="r")reset()});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,r=gridRect(),x=Math.floor((px-r.x)/r.cell),y=Math.floor((py-r.y)/r.cell);if(inBounds(x,y)){state.cursor={x,y};tryPlace(x,y)}});
-els.neww.addEventListener("click",()=>{reset();tone("place")});
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("place")});
-document.querySelectorAll("[data-key]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();const k=btn.dataset.key;if(k==="ArrowLeft")moveCursor(-1,0);else if(k==="ArrowRight")moveCursor(1,0);else if(k==="ArrowUp")moveCursor(0,-1);else if(k==="ArrowDown")moveCursor(0,1);else if(k==="Enter")tryPlace(state.cursor.x,state.cursor.y);else if(k==="n")reset()}));
+addEventListener("resize",syncCompact);
+syncCompact();
 reset();
-let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flip>0||state.cpuThinking}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
-function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
-addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
-if(needsFrame())wake();
+let raf=0,last=0;
+function loopActive(){return state.cpuThinking||state.anims.length>0||state.parts.length>0||state.shake>0}
+function ensureLoop(){if(raf||!loopActive()||document.hidden)return;last=performance.now();raf=requestAnimationFrame(frame)}
+function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0}
+function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);
+ if(loopActive()&&!document.hidden)raf=requestAnimationFrame(frame);else last=0}
+ensureLoop();
 })();
 </script>
 </body>
