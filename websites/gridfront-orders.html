@@ -77,6 +77,7 @@ button{font:inherit}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas.compact{aspect-ratio:520/520}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
@@ -86,7 +87,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 .touch{display:grid;grid-template-columns:repeat(5,minmax(0,86px));justify-content:center;gap:7px}.touch button{min-height:44px;padding:8px}.touch .wide{grid-column:span 2}
 .sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:780px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:left;font-size:10px}.hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:15px}.btn{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.touch button{font-size:11px;min-height:43px}}
-@media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,1fr))}.touch .wide{grid-column:span 1}}
+@media(max-width:430px){.pill{padding:5px 3px}.label{font-size:8px}.value{font-size:14px}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,1fr))}.touch .wide{grid-column:span 1}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -94,7 +95,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Gridfront Orders tactics game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Gridfront Orders</span></div>
-    <div class="help">Arrows or WASD move cursor. Enter orders the selected unit to move or attack. Tab switches unit. E ends turn. R restarts. M toggles sound.</div>
+    <div class="help">Arrows or WASD move the cursor. Enter issues the order named above the board. Q or Tab switches unit. E ends turn. R restarts. M toggles sound.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Mode</span><span class="value" id="modeValue">Play</span></div>
@@ -126,6 +127,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),W=8,H=6;
 const BEST_KEY="gridfront-orders.best.v1",SOUND_KEY="gridfront-orders.sound.v1";
+const MOVE=3,RANGE=2;
 const $=id=>document.getElementById(id);
 const els={mode:$("modeValue"),mission:$("missionValue"),turn:$("turnValue"),orders:$("ordersValue"),unit:$("unitValue"),enemy:$("enemyValue"),score:$("scoreValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),action:$("actionBtn"),unitBtn:$("unitBtn"),end:$("endBtn"),restart:$("restartBtn")};
 const missions=[
@@ -134,7 +136,7 @@ const missions=[
 {name:"Signal Split",goal:[3,0],cover:[[1,1],[3,2],[5,1],[2,4],[6,4]],units:[[0,5],[7,5]],enemies:[[1,0,4],[5,0,4],[4,3,5]]},
 {name:"Final Door",goal:[7,3],cover:[[1,2],[2,2],[4,1],[5,3],[3,4]],units:[[0,1],[0,4]],enemies:[[7,0,5],[6,2,4],[7,5,5],[3,1,4]]}
 ];
-const state={mode:"play",mission:0,turn:"player",turns:1,orders:2,selected:0,cursor:{x:0,y:0},units:[],enemies:[],cover:[],goal:{x:0,y:0},score:0,best:readBest(),sound:readSound(),feedback:"Mission ready.",lastInput:"none",marks:[],time:0};
+const state={mode:"play",mission:0,turn:"player",turns:1,orders:2,selected:0,cursor:{x:0,y:0},units:[],enemies:[],cover:[],goal:{x:0,y:0},score:0,best:readBest(),sound:readSound(),feedback:"Mission ready.",lastInput:"none",marks:[],threat:[],time:0};
 let audio=null;
 let lastPointerCell={x:-1,y:-1,time:0};
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
@@ -149,35 +151,222 @@ function startMission(i,keepScore){const m=missions[i];lastPointerCell={x:-1,y:-
 function aliveUnits(){return state.units.filter(u=>u.hp>0)}
 function aliveEnemies(){return state.enemies.filter(e=>e.hp>0)}
 function unit(){return state.units[state.selected]&&state.units[state.selected].hp>0?state.units[state.selected]:aliveUnits()[0]}
-function at(list,x,y){return list.find(o=>o.hp!==0&&o.x===x&&o.y===y)}
 function coverAt(x,y){return state.cover.find(c=>c.x===x&&c.y===y)}
 function enemyAt(x,y){return aliveEnemies().find(e=>e.x===x&&e.y===y)}
 function unitAt(x,y){return aliveUnits().find(u=>u.x===x&&u.y===y)}
 function blocked(x,y){return x<0||y<0||x>=W||y>=H||coverAt(x,y)||enemyAt(x,y)||unitAt(x,y)}
 function dist(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)}
 function coverLine(a,b){return state.cover.some(c=>(c.x===a.x&&c.x===b.x&&c.y>Math.min(a.y,b.y)&&c.y<Math.max(a.y,b.y))||(c.y===a.y&&c.y===b.y&&c.x>Math.min(a.x,b.x)&&c.x<Math.max(a.x,b.x)))}
-function mark(text,x,y,color){state.marks.push({text,x,y,color,life:44})}
+function mark(text,x,y,color){state.marks.push({text,x,y,color,life:44});wake()}
 function switchUnit(){const live=aliveUnits();if(!live.length)return;let i=state.selected;for(let n=0;n<state.units.length;n++){i=(i+1)%state.units.length;if(state.units[i].hp>0)break}state.selected=i;const u=unit();state.cursor={x:u.x,y:u.y};state.lastInput="switch";tone("select");vibe(8);say("Selected unit "+u.id+".");update();draw()}
 function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(W-1,state.cursor.x+dx));state.cursor.y=Math.max(0,Math.min(H-1,state.cursor.y+dy));state.lastInput="cursor";draw()}
-function order(){if(state.mode==="victory"||state.mode==="loss"){restart();return}if(state.mode==="mission"){nextMission();return}if(state.turn!=="player")return;const u=unit();if(!u)return lose("No units remain.");if(state.orders<=0){say("No orders remain. End turn.");tone("block");return}const t={x:state.cursor.x,y:state.cursor.y},e=enemyAt(t.x,t.y);if(e&&dist(u,e)<=2){const dmg=coverLine(u,e)?2:3;e.hp-=dmg;state.orders--;u.done=true;state.score+=e.hp<=0?100:25;mark("-"+dmg,e.x,e.y,"#fb7185");tone("attack");vibe(18);say(u.id+" attacks "+e.id+" for "+dmg+".");if(e.hp<=0)mark("down",e.x,e.y,"#facc15");afterOrder();return}if(!e&&!blocked(t.x,t.y)&&dist(u,t)>0&&dist(u,t)<=3){u.x=t.x;u.y=t.y;state.orders--;u.done=true;state.score+=6;mark("move",u.x,u.y,"#5eead4");tone("move");vibe(12);say(u.id+" moves to "+(u.x+1)+","+(u.y+1)+".");afterOrder();return}say(e?"Target out of range.":"Move blocked or too far.");tone("block");vibe(6);draw()}
-function afterOrder(){if(checkMission())return;if(state.orders<=0)endTurn();else{const live=aliveUnits();const next=state.units.findIndex(u=>u.hp>0&&!u.done);if(next>=0){state.selected=next;state.cursor={x:state.units[next].x,y:state.units[next].y}}update();draw()}}
+
+// The hostile turn is one pure routine so the board preview and the real turn
+// can never drift apart: the "-N" a square shows is what this exact routine
+// deals when the turn ends with the selected unit standing there.
+function enemyPlan(units,enemies){
+ const U=units.map(u=>({id:u.id,x:u.x,y:u.y,hp:u.hp}));
+ const E=enemies.map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp}));
+ const acts=[];
+ const shut=(x,y)=>x<0||y<0||x>=W||y>=H||coverAt(x,y)||E.some(o=>o.hp>0&&o.x===x&&o.y===y)||U.some(o=>o.hp>0&&o.x===x&&o.y===y);
+ for(const e of E){
+  if(e.hp<=0)continue;
+  const live=U.filter(u=>u.hp>0);if(!live.length)break;
+  const target=live.slice().sort((a,b)=>dist(e,a)-dist(e,b))[0];
+  if(dist(e,target)<=RANGE){const dmg=coverLine(e,target)?1:2;target.hp-=dmg;
+   acts.push({type:"hit",target:target.id,dmg,x:target.x,y:target.y})}
+  else{const opts=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(p=>!shut(p.x,p.y));
+   opts.sort((a,b)=>dist(a,target)-dist(b,target)||a.y-b.y||a.x-b.x);
+   if(opts[0]){e.x=opts[0].x;e.y=opts[0].y;acts.push({type:"move",enemy:e.id,x:e.x,y:e.y})}}}
+ return{acts,units:U}}
+function squadHp(list){return list.reduce((s,u)=>s+Math.max(0,u.hp),0)}
+function threatFor(u,x,y){const units=state.units.map(o=>o===u?{id:o.id,x,y,hp:o.hp}:{id:o.id,x:o.x,y:o.y,hp:o.hp});
+ return Math.max(0,squadHp(units)-squadHp(enemyPlan(units,state.enemies).units))}
+// -1 means the selected unit cannot stand there; 0 or more is the damage the
+// squad takes if the turn ends with it there.
+function refreshThreat(){const u=unit(),m=new Array(W*H).fill(-1);
+ if(u&&state.mode==="play"&&state.turn==="player")
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+   const d=dist(u,{x,y});
+   if(d>MOVE||(d>0&&blocked(x,y)))continue;
+   m[y*W+x]=threatFor(u,x,y)}
+ state.threat=m}
+function threatAt(x,y){const v=state.threat[y*W+x];return v>0?v:0}
+function reaches(x,y){return state.threat[y*W+x]>=0}
+function reachCount(){let n=0;for(let i=0;i<state.threat.length;i++)if(state.threat[i]>=0)n++;return Math.max(0,n-(unit()?1:0))}
+function inFire(x,y){return aliveEnemies().some(e=>Math.abs(e.x-x)+Math.abs(e.y-y)<=RANGE)}
+
+// Every order is described here first and carried out from the same
+// description, so the line above the board is always what Order will do.
+function previewOrder(){const u=unit();
+ if(state.mode!=="play"||state.turn!=="player"||!u)return{kind:"none",text:""};
+ if(state.orders<=0)return{kind:"blocked",text:"No orders left. End the turn."};
+ const t={x:state.cursor.x,y:state.cursor.y},e=enemyAt(t.x,t.y);
+ if(e){const d=dist(u,e);
+  if(d>RANGE)return{kind:"blocked",text:e.id+" is "+d+" squares away. Attack range is "+RANGE+"."};
+  const covered=coverLine(u,e),dmg=covered?2:3,lethal=e.hp<=dmg;
+  const tail=lethal?" and destroys it.":", leaving "+(e.hp-dmg)+" health.";
+  return{kind:"attack",target:e,dmg,lethal,covered,
+   text:u.id+" hits "+e.id+" for "+dmg+(covered?" through cover":"")+tail}}
+ const d=dist(u,t);
+ if(d===0)return{kind:"blocked",text:"Pick a square for "+u.id+" to move to, or a hostile within "+RANGE+"."};
+ if(coverAt(t.x,t.y))return{kind:"blocked",text:"Cover fills that square."};
+ if(unitAt(t.x,t.y))return{kind:"blocked",text:"Your other unit is standing there."};
+ if(d>MOVE)return{kind:"blocked",text:"That is "+d+" squares away. "+u.id+" moves up to "+MOVE+"."};
+ const risk=threatAt(t.x,t.y);
+ return{kind:"move",steps:d,risk,
+  text:u.id+" moves "+d+(d===1?" square":" squares")+(risk>0?", then takes "+risk+" damage when the turn ends.":", safe when the turn ends.")}}
+function order(){if(state.mode==="victory"||state.mode==="loss"){restart();return}if(state.mode==="mission"){nextMission();return}if(state.turn!=="player")return;
+ const u=unit();if(!u)return lose("No units remain.");
+ const p=previewOrder();
+ if(p.kind==="attack"){const e=p.target;e.hp-=p.dmg;state.orders--;u.done=true;state.score+=e.hp<=0?100:25;
+  mark("-"+p.dmg,e.x,e.y,"#fb7185");tone("attack");vibe(18);say(p.text);
+  if(e.hp<=0)mark("down",e.x,e.y,"#facc15");afterOrder();return}
+ if(p.kind==="move"){u.x=state.cursor.x;u.y=state.cursor.y;state.orders--;u.done=true;state.score+=6;
+  mark("move",u.x,u.y,"#5eead4");tone("move");vibe(12);say(p.text);afterOrder();return}
+ say(p.text||"That order is not available.");tone("block");vibe(6);draw()}
+function afterOrder(){if(checkMission())return;if(state.orders<=0)endTurn();else{const next=state.units.findIndex(u=>u.hp>0&&!u.done);if(next>=0){state.selected=next;state.cursor={x:state.units[next].x,y:state.units[next].y}}update();draw()}}
 function checkMission(){if(!aliveEnemies().length||aliveUnits().some(u=>u.x===state.goal.x&&u.y===state.goal.y)){state.score+=180+Math.max(0,60-state.turns*8)+aliveUnits().reduce((s,u)=>s+u.hp,0)*4;saveBest();if(state.mission>=missions.length-1){state.mode="victory";say("Victory. Gridfront secured. Press Order or Restart.");tone("win");vibe([30,30,30])}else{state.mode="mission";say("Mission complete. Press Order for the next front.");tone("win");vibe([24,24,24])}update();draw();return true}return false}
 function nextMission(){state.mission++;startMission(state.mission,true)}
 function endTurn(){if(state.mode!=="play")return;state.turn="enemy";state.orders=0;state.lastInput="end-turn";say("Enemy turn.");tone("turn");enemyTurn();if(state.mode==="play"){state.turn="player";state.turns++;state.orders=2;state.units.forEach(u=>u.done=false);const i=state.units.findIndex(u=>u.hp>0);state.selected=Math.max(0,i);const u=unit();if(u)state.cursor={x:u.x,y:u.y};say("Turn "+state.turns+". Issue two orders.");}update();draw()}
-function enemyTurn(){const units=aliveUnits();for(const e of aliveEnemies()){const live=aliveUnits();if(!live.length)break;let target=live.slice().sort((a,b)=>dist(e,a)-dist(e,b))[0];if(dist(e,target)<=2){const dmg=coverLine(e,target)?1:2;target.hp-=dmg;mark("-"+dmg,target.x,target.y,"#fb7185");state.score=Math.max(0,state.score-8);if(target.hp<=0)mark("down",target.x,target.y,"#facc15")}else{const opts=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(p=>!blocked(p.x,p.y));opts.sort((a,b)=>dist(a,target)-dist(b,target)||a.y-b.y||a.x-b.x);if(opts[0]){e.x=opts[0].x;e.y=opts[0].y}}}if(!aliveUnits().length)lose("Squad down. Press Order or Restart.")}
+function enemyTurn(){const plan=enemyPlan(state.units,state.enemies);
+ for(const a of plan.acts){
+  if(a.type==="hit"){const t=state.units.find(u=>u.id===a.target);if(!t)continue;
+   t.hp-=a.dmg;mark("-"+a.dmg,a.x,a.y,"#fb7185");state.score=Math.max(0,state.score-8);
+   if(t.hp<=0)mark("down",a.x,a.y,"#facc15")}
+  else{const e=state.enemies.find(o=>o.id===a.enemy);if(e){e.x=a.x;e.y=a.y}}}
+ if(!aliveUnits().length)lose("Squad down. Press Order or Restart.")}
 function lose(msg){state.mode="loss";saveBest();say(msg);tone("loss");vibe(45);update();draw()}
 function restart(){state.mission=0;startMission(0,false);tone("select");vibe(16)}
-function handleKey(k,source){state.lastInput=source+":"+k;if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Tab")switchUnit();else if(k==="Enter"||k===" ")order();else if(k==="e")endTurn();else if(k==="r")restart();else if(k==="m"){state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("select")}}
+function handleKey(k,source){state.lastInput=source+":"+k;if(k==="ArrowLeft"||k==="a")moveCursor(-1,0);else if(k==="ArrowRight"||k==="d")moveCursor(1,0);else if(k==="ArrowUp"||k==="w")moveCursor(0,-1);else if(k==="ArrowDown"||k==="s")moveCursor(0,1);else if(k==="Tab"||k==="q")switchUnit();else if(k==="Enter"||k===" ")order();else if(k==="e")endTurn();else if(k==="r")restart();else if(k==="m"){state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("select")}}
 function pointer(ev){const r=canvas.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*canvas.width,y=(ev.clientY-r.top)/r.height*canvas.height;const g=gridRect(),c=Math.floor((x-g.x)/g.cell),row=Math.floor((y-g.y)/g.cell);if(c>=0&&row>=0&&c<W&&row<H){const now=performance.now();const quickRepeat=ev.detail>1||(lastPointerCell.x===c&&lastPointerCell.y===row&&now-lastPointerCell.time<430);state.cursor={x:c,y:row};state.lastInput=quickRepeat?"pointer:quick-order":"pointer:grid";draw();lastPointerCell={x:c,y:row,time:now};if(quickRepeat){lastPointerCell={x:-1,y:-1,time:0};order()}}}
-function gridRect(){const cell=Math.min(canvas.width/(W+1.8),canvas.height/(H+1.15));return{x:(canvas.width-cell*W)/2,y:76,cell}}
-function update(){els.mode.textContent=state.mode;els.mission.textContent=(state.mission+1)+"/"+missions.length;els.turn.textContent=state.turn==="player"?"P"+state.turns:"Enemy";els.orders.textContent=String(state.orders);els.unit.textContent=(unit()||{id:"-"}).id;els.enemy.textContent=String(aliveEnemies().length);els.score.textContent=String(state.score);els.best.textContent=String(state.best);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const g=gridRect(),cell=g.cell;const grd=ctx.createLinearGradient(0,0,0,canvas.height);grd.addColorStop(0,"#081827");grd.addColorStop(1,"#050814");ctx.fillStyle=grd;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#5eead4";ctx.font="900 19px system-ui";ctx.fillText(missions[state.mission].name,34,38);ctx.fillStyle="#9fb3c8";ctx.font="700 13px system-ui";ctx.fillText("Cover halves straight-line fire. Move up to 3. Attack range 2. Reach beacon or clear enemies.",34,61);ctx.save();ctx.translate(g.x,g.y);for(let y=0;y<H;y++)for(let x=0;x<W;x++){ctx.fillStyle=(x+y)%2?"#0b1b2a":"#0d2233";ctx.fillRect(x*cell,y*cell,cell-3,cell-3);ctx.strokeStyle="rgba(94,234,212,.16)";ctx.strokeRect(x*cell+.5,y*cell+.5,cell-4,cell-4)}ctx.fillStyle="rgba(250,204,21,.2)";ctx.strokeStyle="#facc15";ctx.lineWidth=3;roundRect(state.goal.x*cell+8,state.goal.y*cell+8,cell-19,cell-19,8,true,true);for(const c of state.cover){ctx.fillStyle="#334155";ctx.strokeStyle="#94a3b8";roundRect(c.x*cell+12,c.y*cell+12,cell-27,cell-27,6,true,true);ctx.fillStyle="#cbd5e1";ctx.font="900 12px system-ui";ctx.fillText("C",c.x*cell+cell/2-4,c.y*cell+cell/2+4)}for(const e of aliveEnemies())drawToken(e,"#fb7185","#7f1d1d");for(const u of aliveUnits())drawToken(u,u.id==="A"?"#5eead4":"#60a5fa","#073642");ctx.strokeStyle="#f8fafc";ctx.lineWidth=4;ctx.strokeRect(state.cursor.x*cell+5,state.cursor.y*cell+5,cell-13,cell-13);for(const m of state.marks){ctx.globalAlpha=Math.max(0,m.life/44);ctx.fillStyle=m.color;ctx.font="900 15px system-ui";ctx.fillText(m.text,m.x*cell+cell*.24,m.y*cell+16)}ctx.globalAlpha=1;ctx.restore();if(state.mode==="mission"||state.mode==="victory"||state.mode==="loss"){ctx.fillStyle="rgba(2,6,23,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=state.mode==="loss"?"#fb7185":"#5eead4";ctx.font="950 42px system-ui";ctx.textAlign="center";ctx.fillText(state.mode==="loss"?"MISSION LOST":state.mode==="victory"?"VICTORY":"MISSION CLEAR",canvas.width/2,canvas.height/2-10);ctx.fillStyle="#dbeafe";ctx.font="800 17px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+28);ctx.textAlign="left"}}
-function drawToken(o,fill,stroke){const g=gridRect(),cell=g.cell,x=o.x*cell+cell/2,y=o.y*cell+cell/2;ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y,cell*.24,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle="#041018";ctx.font="950 15px system-ui";ctx.textAlign="center";ctx.fillText(o.id,x,y+5);ctx.textAlign="left";ctx.fillStyle="#e5f6ff";ctx.font="900 11px system-ui";ctx.fillText(o.hp+"/"+o.max,o.x*cell+8,o.y*cell+cell-10)}
+
+// Canvas width sets the on-screen scale, so the phone layout uses a narrower
+// backing store: the same board draws about twice as large as it would at 960.
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<720;if(next===compact)return;
+ compact=next;canvas.width=compact?520:960;canvas.height=compact?520:540;
+ canvas.classList.toggle("compact",compact);if(state.units.length)draw()}
+function gridRect(){const cell=compact?Math.min((canvas.width-16)/W,(canvas.height-166)/H):Math.min((canvas.width-320)/W,(canvas.height-100)/H);
+ return{x:Math.round((canvas.width-cell*W)/2),y:compact?82:86,cell}}
+function update(){refreshThreat();els.mode.textContent=state.mode;els.mission.textContent=(state.mission+1)+"/"+missions.length;els.turn.textContent=state.turn==="player"?"P"+state.turns:"Enemy";els.orders.textContent=String(state.orders);els.unit.textContent=(unit()||{id:"-"}).id;els.enemy.textContent=String(aliveEnemies().length);els.score.textContent=String(state.score);els.best.textContent=String(state.best);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
 function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function fitText(text,px,max){let f=px;ctx.font="900 "+f+"px system-ui";while(f>9&&ctx.measureText(text).width>max){f--;ctx.font="900 "+f+"px system-ui"}}
+function wrapText(text,x,y,max,lh){const words=text.split(" ");let line="";
+ for(const w of words){const t=line?line+" "+w:w;
+  if(ctx.measureText(t).width>max&&line){ctx.fillText(line,x,y);y+=lh;line=w}else line=t}
+ if(line){ctx.fillText(line,x,y);y+=lh}
+ return y}
+function drawOrderPill(p){if(!p.text)return;
+ const g=gridRect(),bw=g.cell*W,bx=g.x,by=compact?50:54;
+ const col=p.kind==="attack"?["rgba(251,113,133,.16)","#fb7185","#fecdd3"]:p.kind==="move"?["rgba(94,234,212,.14)","#5eead4","#ccfbf1"]:["rgba(148,163,184,.13)","#94a3b8","#cbd5e1"];
+ ctx.fillStyle=col[0];ctx.strokeStyle=col[1];ctx.lineWidth=1.5;roundRect(bx,by,bw,24,7,true,true);
+ fitText(p.text,15,bw-22);ctx.fillStyle=col[2];ctx.textAlign="center";ctx.fillText(p.text,bx+bw/2,by+17);ctx.textAlign="left"}
+const LEGEND=[["move","Squares you can move to"],["fire","Inside hostile fire"],["cost","Damage if you stop there"]];
+function drawSwatch(kind,x,y,s){
+ if(kind==="move"){ctx.strokeStyle="#5eead4";ctx.lineWidth=2;ctx.setLineDash([4,3]);roundRect(x,y,s,s,4,false,true);ctx.setLineDash([])}
+ else if(kind==="fire"){ctx.fillStyle="rgba(248,113,113,.3)";ctx.fillRect(x,y,s,s);ctx.strokeStyle="rgba(248,113,113,.65)";ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,s-1,s-1)}
+ else{ctx.fillStyle="#fca5a5";ctx.font="900 "+Math.round(s*.9)+"px system-ui";ctx.textAlign="center";ctx.fillText("-2",x+s/2,y+s);ctx.textAlign="left"}}
+function drawLegend(){const g=gridRect();
+ if(compact){let y=g.y+g.cell*H+26;
+  for(const [kind,label] of LEGEND){drawSwatch(kind,14,y-13,15);
+   ctx.fillStyle="#9fb3c8";ctx.font="700 14px system-ui";ctx.fillText(label,38,y);y+=25}
+  return}
+ ctx.fillStyle="#5eead4";ctx.font="900 11px system-ui";ctx.fillText("BOARD KEY",14,g.y+8);
+ let y=g.y+34;
+ for(const [kind,label] of LEGEND){drawSwatch(kind,14,y-12,15);
+  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";y=wrapText(label,36,y,g.x-52,15)+14}}
+function drawRoster(){const g=gridRect(),x=g.x+g.cell*W+18,w=canvas.width-x-14,u=unit();
+ ctx.fillStyle="#5eead4";ctx.font="900 11px system-ui";ctx.fillText("HOSTILES",x,g.y+8);
+ let y=g.y+32;
+ for(const e of aliveEnemies()){
+  ctx.fillStyle="#fecdd3";ctx.font="900 13px system-ui";ctx.fillText(e.id,x,y);
+  ctx.fillStyle="#94a3b8";ctx.font="700 11px system-ui";ctx.textAlign="right";
+  ctx.fillText(u?(dist(u,e)<=RANGE?"in range":dist(u,e)+" away"):e.hp+"/"+e.max,x+w,y);ctx.textAlign="left";
+  ctx.fillStyle="rgba(148,163,184,.24)";ctx.fillRect(x,y+6,w,6);
+  ctx.fillStyle="#fb7185";ctx.fillRect(x,y+6,w*Math.max(0,e.hp)/e.max,6);y+=32}
+ y+=10;ctx.fillStyle="#5eead4";ctx.font="900 11px system-ui";ctx.fillText("SQUAD",x,y);y+=24;
+ for(const s of state.units){
+  ctx.fillStyle=s.hp<=0?"#64748b":s===u?"#f8fafc":s.id==="A"?"#5eead4":"#93c5fd";
+  ctx.font="900 13px system-ui";ctx.fillText(s===u?s.id+" (picked)":s.id,x,y);
+  ctx.fillStyle="#94a3b8";ctx.font="700 11px system-ui";ctx.textAlign="right";
+  ctx.fillText(s.hp<=0?"down":s.hp+"/"+s.max,x+w,y);ctx.textAlign="left";
+  ctx.fillStyle="rgba(148,163,184,.24)";ctx.fillRect(x,y+6,w,6);
+  ctx.fillStyle=s.id==="A"?"#5eead4":"#60a5fa";ctx.fillRect(x,y+6,w*Math.max(0,s.hp)/s.max,6);y+=32}}
+function drawTargets(cell,u){
+ for(const e of aliveEnemies()){
+  if(dist(u,e)>RANGE)continue;
+  const dmg=coverLine(u,e)?2:3,kill=e.hp<=dmg,cx=e.x*cell+cell/2,cy=e.y*cell+cell/2;
+  ctx.strokeStyle=kill?"#facc15":"#fecdd3";ctx.lineWidth=2;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.arc(cx,cy,cell*.38,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=kill?"#facc15":"#fecdd3";ctx.font="900 "+Math.round(cell*.17)+"px system-ui";ctx.textAlign="center";
+  ctx.fillText(kill?"-"+dmg+" KO":"-"+dmg,cx,e.y*cell+Math.round(cell*.22));ctx.textAlign="left"}}
+function draw(){const g=gridRect(),cell=g.cell,u=unit(),p=previewOrder();
+ const showPlan=!!u&&state.mode==="play"&&state.turn==="player"&&state.orders>0;
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ const grd=ctx.createLinearGradient(0,0,0,canvas.height);grd.addColorStop(0,"#081827");grd.addColorStop(1,"#050814");
+ ctx.fillStyle=grd;ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.textAlign=compact?"center":"left";const hx=compact?canvas.width/2:g.x;
+ ctx.fillStyle="#5eead4";ctx.font="900 "+(compact?19:21)+"px system-ui";ctx.fillText(missions[state.mission].name,hx,compact?24:28);
+ ctx.fillStyle="#9fb3c8";ctx.font="700 13px system-ui";ctx.fillText("Reach the beacon or clear every hostile.",hx,compact?42:46);
+ ctx.textAlign="left";
+ drawOrderPill(p);
+ ctx.save();ctx.translate(g.x,g.y);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  ctx.fillStyle=(x+y)%2?"#0b1b2a":"#0d2233";ctx.fillRect(x*cell,y*cell,cell-3,cell-3);
+  if(inFire(x,y)){ctx.fillStyle="rgba(248,113,113,.14)";ctx.fillRect(x*cell,y*cell,cell-3,cell-3)}
+  ctx.strokeStyle="rgba(94,234,212,.16)";ctx.lineWidth=1;ctx.strokeRect(x*cell+.5,y*cell+.5,cell-4,cell-4)}
+ ctx.fillStyle="rgba(250,204,21,.2)";ctx.strokeStyle="#facc15";ctx.lineWidth=3;
+ roundRect(state.goal.x*cell+8,state.goal.y*cell+8,cell-19,cell-19,8,true,true);
+ for(const c of state.cover){ctx.fillStyle="#334155";ctx.strokeStyle="#94a3b8";ctx.lineWidth=3;
+  roundRect(c.x*cell+12,c.y*cell+12,cell-27,cell-27,6,true,true);
+  ctx.fillStyle="#cbd5e1";ctx.font="900 12px system-ui";ctx.fillText("C",c.x*cell+cell/2-4,c.y*cell+cell/2+4)}
+ if(showPlan)for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  if(!reaches(x,y)||(x===u.x&&y===u.y))continue;
+  ctx.strokeStyle="rgba(94,234,212,.7)";ctx.lineWidth=2;ctx.setLineDash([5,4]);
+  roundRect(x*cell+7,y*cell+7,cell-17,cell-17,7,false,true);ctx.setLineDash([]);
+  const risk=threatAt(x,y);
+  if(risk>0){ctx.fillStyle="#fca5a5";ctx.font="900 "+Math.round(cell*.2)+"px system-ui";ctx.textAlign="right";
+   ctx.fillText("-"+risk,x*cell+cell-11,y*cell+cell-12);ctx.textAlign="left"}}
+ for(const e of aliveEnemies())drawToken(e,"#fb7185","#7f1d1d",cell);
+ if(showPlan)drawTargets(cell,u);
+ for(const s of aliveUnits()){drawToken(s,s.id==="A"?"#5eead4":"#60a5fa","#073642",cell);
+  if(s===u){ctx.strokeStyle="rgba(248,250,252,.85)";ctx.lineWidth=2;
+   ctx.beginPath();ctx.arc(s.x*cell+cell/2,s.y*cell+cell/2,cell*.34,0,Math.PI*2);ctx.stroke()}}
+ ctx.strokeStyle=p.kind==="attack"?"#fb7185":p.kind==="move"?"#5eead4":p.kind==="blocked"?"#94a3b8":"#f8fafc";
+ ctx.lineWidth=4;ctx.strokeRect(state.cursor.x*cell+5,state.cursor.y*cell+5,cell-13,cell-13);
+ for(const m of state.marks){ctx.globalAlpha=Math.max(0,m.life/44);ctx.fillStyle=m.color;
+  ctx.font="900 15px system-ui";ctx.fillText(m.text,m.x*cell+cell*.24,m.y*cell+16)}
+ ctx.globalAlpha=1;ctx.restore();
+ drawLegend();if(!compact)drawRoster();
+ if(state.mode==="mission"||state.mode==="victory"||state.mode==="loss"){
+  ctx.fillStyle="rgba(2,6,23,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=state.mode==="loss"?"#fb7185":"#5eead4";ctx.font="950 "+(compact?32:42)+"px system-ui";ctx.textAlign="center";
+  ctx.fillText(state.mode==="loss"?"MISSION LOST":state.mode==="victory"?"VICTORY":"MISSION CLEAR",canvas.width/2,canvas.height/2-10);
+  ctx.fillStyle="#dbeafe";fitText(state.feedback,17,canvas.width-70);
+  ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+28);ctx.textAlign="left"}}
+function drawToken(o,fill,stroke,cell){const x=o.x*cell+cell/2,y=o.y*cell+cell/2;
+ ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y,cell*.24,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.fillStyle="#041018";ctx.font="950 15px system-ui";ctx.textAlign="center";ctx.fillText(o.id,x,y+5);ctx.textAlign="left";
+ ctx.fillStyle="#e5f6ff";ctx.font="900 11px system-ui";ctx.fillText(o.hp+"/"+o.max,o.x*cell+8,o.y*cell+cell-10)}
 function tick(ms){state.time+=ms;for(const m of state.marks)m.life-=ms/16.7;state.marks=state.marks.filter(m=>m.life>0);draw()}
+// The board is still between orders, so the loop only runs while a floating
+// label is fading, and it steps by real elapsed time: a fixed step per frame
+// would fade twice as fast on a 120Hz display.
+let raf=0,lastFrame=0;
+function loopActive(){return state.marks.length>0}
+function frame(now){raf=0;const dt=lastFrame?Math.min(100,now-lastFrame):16.7;lastFrame=now;tick(dt);
+ if(loopActive()&&!document.hidden)raf=requestAnimationFrame(frame);else lastFrame=0}
+function wake(){if(raf||document.hidden||!loopActive())return;lastFrame=0;raf=requestAnimationFrame(frame)}
 window.advanceTime=ms=>{const steps=Math.max(1,Math.ceil(ms/50));for(let i=0;i<steps;i++)tick(ms/steps);return render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,mission:{index:state.mission+1,total:missions.length,name:missions[state.mission].name},turn:state.turn,units:state.units.map(u=>({id:u.id,x:u.x,y:u.y,hp:u.hp,done:u.done})),enemies:state.enemies.filter(e=>e.hp>0).map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp})),cursor:state.cursor,selected:(unit()||{}).id||null,orders:state.orders,score:state.score,best:state.best,sound:state.sound,feedback:state.feedback,coordinateSystem:"grid origin top-left, x right, y down"})};
-document.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Tab"].includes(e.key))e.preventDefault();handleKey(e.key,e.repeat?"key-repeat":"key")});
+window.render_game_to_text=function render_game_to_text(){const p=previewOrder();return JSON.stringify({mode:state.mode,mission:{index:state.mission+1,total:missions.length,name:missions[state.mission].name},turn:state.turn,units:state.units.map(u=>({id:u.id,x:u.x,y:u.y,hp:u.hp,done:u.done})),enemies:state.enemies.filter(e=>e.hp>0).map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp})),cursor:state.cursor,selected:(unit()||{}).id||null,orders:state.orders,score:state.score,best:state.best,sound:state.sound,feedback:state.feedback,preview:{kind:p.kind,text:p.text,damage:p.dmg||0,lethal:!!p.lethal,steps:p.steps||0,riskAtCursor:threatAt(state.cursor.x,state.cursor.y)},reachable:reachCount(),coordinateSystem:"grid origin top-left, x right, y down"})};
+document.addEventListener("keydown",e=>{
+ // Tab belongs to the browser. Only take it while the grid itself holds focus,
+ // so a keyboard player can still reach the buttons underneath the board.
+ if(e.key==="Tab"){if(e.shiftKey||document.activeElement!==canvas)return;e.preventDefault();switchUnit();return}
+ if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key))e.preventDefault();
+ handleKey(e.key,e.repeat?"key-repeat":"key")});
 canvas.addEventListener("pointerdown",e=>{canvas.focus();pointer(e)});
 els.action.addEventListener("click",()=>{state.lastInput="button:order";order()});
 els.unitBtn.addEventListener("click",()=>{state.lastInput="button:unit";switchUnit()});
@@ -185,6 +374,9 @@ els.end.addEventListener("click",()=>{state.lastInput="button:end";endTurn()});
 els.restart.addEventListener("click",()=>{state.lastInput="button:restart";restart()});
 els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("select")});
 document.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>{canvas.focus();handleKey(b.dataset.key,"touch")}));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake()});
+addEventListener("resize",syncCompact);
+syncCompact();
 startMission(0,false);
 })();
 </script>
