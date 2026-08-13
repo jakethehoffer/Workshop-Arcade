@@ -74,6 +74,7 @@ button{font:inherit}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas.compact{aspect-ratio:600/520}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
@@ -90,7 +91,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Blackjack card game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Blackjack</span></div>
-    <div class="help">Hit to draw, Stand to hold, Double to draw one then stand. Beat the dealer's total without passing 21 — the dealer draws to 17. Keys: H hit, S stand, D double, ↑/↓ bet, Enter deal, N new game.</div>
+    <div class="help">Play chips only. Hit to draw, Stand to hold, Double to draw one then stand, Split a matched pair into up to four hands. Beat the dealer without passing 21. The dealer stands on all 17s, blackjack pays 3 to 2, and split hands that reach 21 pay even money. Keys: H hit, S stand, D double, P split, ↑/↓ bet, Enter deal, N new game.</div>
   </header>
   <section class="hud" aria-label="Game status">
     <div class="pill"><span class="label">Chips</span><span class="value" id="chipsValue">100</span></div>
@@ -107,6 +108,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     <button class="btn primary" id="primaryBtn" type="button">Hit</button>
     <button class="btn" id="standBtn" type="button">Stand</button>
     <button class="btn" id="doubleBtn" type="button">Double</button>
+    <button class="btn" id="splitBtn" type="button">Split</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
   </section>
   <section class="touch" aria-label="Bet and game controls">
@@ -122,121 +124,454 @@ const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
 const STATS_KEY="blackjack.stats.v1",SOUND_KEY="blackjack.sound.v1";
 const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 const SUITS=["♠","♥","♦","♣"];
-const START_CHIPS=100,BET_STEP=5;
+const START_CHIPS=100,BET_STEP=5,MAX_HANDS=4;
 const $=id=>document.getElementById(id);
-const els={chips:$("chipsValue"),bet:$("betValue"),streak:$("streakValue"),wins:$("winsValue"),hands:$("handsValue"),peak:$("peakValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),primary:$("primaryBtn")};
-const saved=readStats();
-const state={games:0,deck:[],di:0,shoeSeed:0,chips:START_CHIPS,stake:10,wager:0,player:[],dealer:[],mode:"player",outcome:null,streak:0,hands:0,wins:0,best:saved.best,sound:readSound(),feedback:"Your move. Hit, stand, or double to beat the dealer.",time:0,flash:0};
-let audio=null,booting=false;
+const els={chips:$("chipsValue"),bet:$("betValue"),streak:$("streakValue"),wins:$("winsValue"),hands:$("handsValue"),
+ peak:$("peakValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),primary:$("primaryBtn"),
+ stand:$("standBtn"),double:$("doubleBtn"),split:$("splitBtn"),betDown:$("betDownBtn"),betUp:$("betUpBtn"),neww:$("newBtn")};
+
+let reducedMotion=false;
+try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object"&&v.best&&typeof v.best==="object")return{best:{chips:Number(v.best.chips)||START_CHIPS,streak:Number(v.best.streak)||0}}}catch(_){}return{best:{chips:START_CHIPS,streak:0}}}
+function intOr(v,d){const n=Number(v);return Number.isFinite(n)?Math.floor(n):d}
+function readStats(){const base={best:{chips:START_CHIPS,streak:0}};
+ try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return base;const v=JSON.parse(raw);
+  if(!v||typeof v!=="object"||Array.isArray(v))return base;
+  if(v.best&&typeof v.best==="object"&&!Array.isArray(v.best)){
+   base.best.chips=Math.max(0,intOr(v.best.chips,START_CHIPS));
+   base.best.streak=Math.max(0,intOr(v.best.streak,0))}}catch(_){}
+ return base}
 function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({best:state.best}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+const saved=readStats();
+
+const state={games:0,deck:[],di:0,shoeSeed:0,chips:START_CHIPS,stake:10,
+ hands:[],active:0,dealer:[],holeDown:true,mode:"betting",outcome:null,
+ streak:0,handsPlayed:0,wins:0,pushes:0,losses:0,blackjacks:0,best:saved.best,
+ sound:readSound(),feedback:"Set your bet, then Deal.",time:0,flash:0,
+ anims:[],parts:[],chipFly:[],shake:0,holeFlip:0,lastPayout:0,sessionOver:false};
+let audio=null,booting=false;
+
 function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound||booting)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={deal:300,hit:340,stand:260,win:660,push:420,bad:150}[kind]||280;o.type="triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
+function ac(){if(!state.sound||booting)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+ try{audio=audio||new AC();if(audio.state==="suspended")audio.resume();return audio}catch(_){return null}}
+function blip(freq,dur,type,vol,delay){const a=ac();if(!a)return;
+ try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(delay||0);
+  o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.055,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+function noise(dur,vol,delay){const a=ac();if(!a)return;
+ try{const len=Math.max(1,Math.floor(a.sampleRate*dur)),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+  const src=a.createBufferSource(),g=a.createGain(),t=a.currentTime+(delay||0);
+  src.buffer=buf;g.gain.setValueAtTime(vol||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  src.connect(g);g.connect(a.destination);src.start(t)}catch(_){}}
+function tone(kind){if(!state.sound||booting)return;
+ switch(kind){
+  case"deal": noise(.07,.045);blip(420,.07,"triangle",.03);break;
+  case"hit": noise(.06,.04);blip(500,.06,"triangle",.03);break;
+  case"chip": blip(880,.05,"sine",.04);blip(1180,.06,"sine",.028,.03);break;
+  case"stand": blip(300,.12,"triangle",.045);break;
+  case"flip": noise(.05,.035);blip(620,.08,"sine",.03);break;
+  case"win": [523,659,784].forEach((f,i)=>blip(f,.28,"triangle",.06,i*.06));break;
+  case"blackjack": [523,659,784,1046,1319].forEach((f,i)=>blip(f,.34,"triangle",.07,i*.07));break;
+  case"push": blip(392,.22,"sine",.05);blip(330,.24,"sine",.04,.08);break;
+  case"bust": noise(.2,.05);blip(180,.3,"sawtooth",.05);blip(120,.34,"sawtooth",.04,.07);break;
+  case"over": [330,262,196,147].forEach((f,i)=>blip(f,.38,"sawtooth",.05,i*.1));break;
+  case"bad": blip(150,.14,"sawtooth",.045);break;
+  default: blip(320,.1,"triangle",.04)}}
 
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function buildDeck(seed){const rng=mulberry32(seed);const d=[];for(let s=0;s<4;s++)for(let r=0;r<13;r++)d.push({r,s});for(let i=d.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const t=d[i];d[i]=d[j];d[j]=t}return d}
-function nextCard(){if(state.di>=state.deck.length){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}return state.deck[state.di++]}
+function buildDeck(seed){const rng=mulberry32(seed);const d=[];
+ for(let s=0;s<4;s++)for(let r=0;r<13;r++)d.push({r,s});
+ for(let i=d.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const t=d[i];d[i]=d[j];d[j]=t}
+ return d}
+function nextCard(){if(state.di>=state.deck.length){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}
+ return state.deck[state.di++]}
 function cardVal(r){return r===0?11:(r>=9?10:r+1)}
 function handValue(cards){let t=0,a=0;for(const c of cards){t+=cardVal(c.r);if(c.r===0)a++}while(t>21&&a>0){t-=10;a--}return t}
-function isBJ(cards){return cards.length===2&&handValue(cards)===21}
+function isSoft(cards){let t=0,a=0;for(const c of cards){t+=cardVal(c.r);if(c.r===0)a++}
+ while(t>21&&a>0){t-=10;a--}return a>0&&t<=21}
+// A natural is 21 on the first two cards of a hand that was NOT split. Split
+// hands that reach 21 pay even money, which is the standard rule.
+function isNatural(hand){return !hand.split&&hand.cards.length===2&&handValue(hand.cards)===21}
+function dealerNatural(){return state.dealer.length===2&&handValue(state.dealer)===21}
+function activeHand(){return state.hands[state.active]||null}
+function newHand(wager,split){return{cards:[],wager,done:false,doubled:false,split:!!split,outcome:null,payout:0}}
 
-function loadGame(){state.chips=START_CHIPS;state.stake=10;state.streak=0;state.hands=0;state.wins=0;state.shoeSeed=(0x9e3779b9^Math.imul(state.games+1,0x85ebca6b))>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0;
-  // Start in a pre-deal betting state instead of auto-dealing the first hand, so
-  // the player can choose their opening wager (adjustStake works whenever mode is
-  // not "player"). The hand is dealt only when they press Deal (primary()).
-  state.player=[];state.dealer=[];state.wager=0;state.outcome=null;state.mode="betting";state.flash=0;update();draw()}
-function newGame(){state.games++;loadGame();say("New game — "+START_CHIPS+" chips. Set your bet, then Deal.");tone("deal")}
+function pushAnim(kind,meta){if(reducedMotion)return;state.anims.push(Object.assign({kind,t:0},meta||{}));ensureLoop()}
+function spawnParts(x,y,color,n){if(reducedMotion)return;
+ for(let i=0;i<n;i++){const a=Math.PI*2*i/n+Math.random()*.6,s=60+Math.random()*130;
+  state.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-50,life:1,color})}
+ ensureLoop()}
+function flyChips(from,to,n,color){if(reducedMotion)return;
+ for(let i=0;i<n;i++)state.chipFly.push({x:from.x,y:from.y,tx:to.x,ty:to.y,t:0,delay:i*0.06,color});
+ ensureLoop()}
 
-function dealHand(){if(state.chips<=0){state.mode="result";state.outcome="lose";say("Out of chips — press New Game to rebuy.");update();draw();return}
-  if(state.di>state.deck.length-15){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}
-  state.stake=Math.max(BET_STEP,Math.min(state.stake,state.chips));state.wager=Math.min(state.stake,state.chips);state.chips-=state.wager;
-  state.player=[];state.dealer=[];state.player.push(nextCard());state.dealer.push(nextCard());state.player.push(nextCard());state.dealer.push(nextCard());
-  state.mode="player";state.outcome=null;state.flash=1;ensureLoop();tone("deal");vibe(8);
-  if(isBJ(state.player)||isBJ(state.dealer)){resolve()}else{say("Your move — "+handValue(state.player)+". Hit, stand, or double.");update();draw()}}
+function drawTo(hand,animate){const c=nextCard();hand.cards.push(c);
+ if(animate)pushAnim("card",{hand,index:hand.cards.length-1});
+ return c}
 
-function hit(){if(state.mode!=="player")return;state.player.push(nextCard());state.flash=1;ensureLoop();tone("hit");vibe(6);
-  if(handValue(state.player)>21){resolve()}else{say("Hit — you have "+handValue(state.player)+".");update();draw()}}
-function stand(){if(state.mode!=="player")return;tone("stand");dealerPlay();resolve()}
-function double(){if(state.mode!=="player"||state.player.length!==2)return;if(state.chips<state.wager){say("Not enough chips to double.");tone("bad");return}
-  state.chips-=state.wager;state.wager*=2;state.player.push(nextCard());state.flash=1;ensureLoop();tone("hit");vibe(10);
-  if(handValue(state.player)>21){resolve()}else{dealerPlay();resolve()}}
-function dealerPlay(){while(handValue(state.dealer)<17)state.dealer.push(nextCard())}
+function loadGame(){state.chips=START_CHIPS;state.stake=10;state.streak=0;state.handsPlayed=0;state.wins=0;
+ state.pushes=0;state.losses=0;state.blackjacks=0;state.sessionOver=false;
+ state.shoeSeed=(0x9e3779b9^Math.imul(state.games+1,0x85ebca6b))>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0;
+ state.hands=[];state.active=0;state.dealer=[];state.holeDown=true;state.outcome=null;state.mode="betting";
+ state.flash=0;state.anims.length=0;state.parts.length=0;state.chipFly.length=0;state.shake=0;state.holeFlip=0;
+ update();draw()}
+function newGame(){state.games++;loadGame();say("New game — "+START_CHIPS+" chips. Set your bet, then Deal.");tone("chip")}
 
-function resolve(){const pv=handValue(state.player),dv=handValue(state.dealer),pbj=isBJ(state.player),dbj=isBJ(state.dealer);let payout=0,result,msg;
-  if(pv>21){result="lose";msg="Bust at "+pv+". Dealer takes the hand."}
-  else if(pbj&&!dbj){payout=Math.round(state.wager*2.5);result="win";msg="Blackjack! Pays 3:2."}
-  else if(dbj&&!pbj){result="lose";msg="Dealer blackjack. You lose."}
-  else if(pbj&&dbj){payout=state.wager;result="push";msg="Both blackjack — push."}
-  else if(dv>21){payout=state.wager*2;result="win";msg="Dealer busts at "+dv+". You win!"}
-  else if(pv>dv){payout=state.wager*2;result="win";msg="You "+pv+", dealer "+dv+". You win!"}
-  else if(pv<dv){result="lose";msg="Dealer "+dv+", you "+pv+". You lose."}
-  else{payout=state.wager;result="push";msg="Push at "+pv+"."}
-  state.chips+=payout;state.hands++;if(result==="win"){state.wins++;state.streak++}else if(result==="lose"){state.streak=0}
-  if(state.chips>state.best.chips)state.best.chips=state.chips;if(state.streak>state.best.streak)state.best.streak=state.streak;
-  state.outcome=result;state.mode="result";state.flash=1;ensureLoop();saveStats();
-  tone(result==="lose"?"bad":(result==="push"?"push":"win"));vibe(result==="win"?[24,24]:10);
-  say(msg+" Chips "+state.chips+(state.chips<=0?" — New Game to rebuy.":". Deal for the next hand."));update();draw()}
+function dealHand(){if(state.sessionOver)return;
+ if(state.chips<BET_STEP){endSession();return}
+ if(state.di>state.deck.length-20){state.shoeSeed=(Math.imul(state.shoeSeed,1664525)+1013904223)>>>0;state.deck=buildDeck(state.shoeSeed);state.di=0}
+ state.stake=Math.max(BET_STEP,Math.min(state.stake,state.chips));
+ const wager=state.stake;state.chips-=wager;
+ const hand=newHand(wager,false);
+ state.hands=[hand];state.active=0;state.dealer=[];state.holeDown=true;state.outcome=null;state.mode="player";
+ state.lastPayout=0;
+ drawTo(hand,true);state.dealer.push(nextCard());pushAnim("card",{dealer:true,index:0});
+ drawTo(hand,true);state.dealer.push(nextCard());pushAnim("card",{dealer:true,index:1});
+ flyChips(chipSourcePos(),potPos(),Math.min(6,Math.max(2,Math.round(wager/10))),"#5eead4");
+ tone("deal");vibe(8);
+ // Dealer peeks on a ten or ace so nobody doubles or splits into a natural.
+ const up=state.dealer[0];
+ if((cardVal(up.r)===10||up.r===0)&&dealerNatural()){revealHole();finishRound("Dealer has blackjack.");return}
+ if(isNatural(hand)){revealHole();finishRound("Blackjack!");return}
+ say("Your move — "+handValue(hand.cards)+". Hit, stand"+(canDouble()?", double":"")+(canSplit()?", or split":"")+".");
+ update();draw();ensureLoop()}
 
-function adjustStake(d){if(state.mode==="player")return;state.stake=Math.max(BET_STEP,Math.min(state.stake+d,Math.max(BET_STEP,state.chips)));say("Bet set to "+state.stake+" chips.");tone("deal");update();draw()}
-function primary(){if(state.mode==="player")hit();else dealHand()}
+function canDouble(){const h=activeHand();
+ return state.mode==="player"&&!!h&&!h.done&&h.cards.length===2&&!h.doubled&&state.chips>=h.wager&&!(h.split&&h.cards[0].r===0)}
+function canSplit(){const h=activeHand();
+ return state.mode==="player"&&!!h&&!h.done&&h.cards.length===2&&state.hands.length<MAX_HANDS
+  &&cardVal(h.cards[0].r)===cardVal(h.cards[1].r)&&state.chips>=h.wager}
 
-function update(){els.chips.textContent=String(state.chips);els.bet.textContent=String(state.mode==="player"?state.wager:state.stake);els.streak.textContent=String(state.streak);els.wins.textContent=String(state.wins);els.hands.textContent=String(state.hands);els.peak.textContent=String(state.best.chips);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));els.primary.textContent=state.mode==="player"?"Hit":"Deal"}
+function advanceHand(){
+ for(let i=state.active+1;i<state.hands.length;i++){ if(!state.hands[i].done){ state.active=i;
+   const h=state.hands[i];
+   if(h.cards.length<2)drawTo(h,true);
+   // Split aces take exactly one card and stand.
+   if(h.split&&h.cards[0].r===0){h.done=true;continue}
+   if(handValue(h.cards)===21){h.done=true;continue}
+   say("Hand "+(i+1)+" — "+handValue(h.cards)+". Hit, stand"+(canDouble()?", double":"")+(canSplit()?", or split":"")+".");
+   update();draw();return } }
+ dealerTurn()}
 
-const CARDW=88,CARDH=124,STEP=58,DEALERY=104,PLAYERY=300,HANDX=300;
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function drawCard(x,y,card,down){
-  if(down){const g=ctx.createLinearGradient(x,y,x,y+CARDH);g.addColorStop(0,"#0e3a4a");g.addColorStop(1,"#0a2230");ctx.fillStyle=g;roundRect(x,y,CARDW,CARDH,11,true,false);ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;roundRect(x+.5,y+.5,CARDW-1,CARDH-1,11,false,true);ctx.strokeStyle="rgba(94,234,212,.32)";ctx.lineWidth=2;for(let i=1;i<5;i++)roundRect(x+5+i*4,y+5+i*4,CARDW-10-i*8,CARDH-10-i*8,7,false,true);return}
-  const g=ctx.createLinearGradient(x,y,x,y+CARDH);g.addColorStop(0,"#f6faff");g.addColorStop(1,"#dde7f3");ctx.fillStyle=g;roundRect(x,y,CARDW,CARDH,11,true,false);
-  ctx.strokeStyle="rgba(10,20,30,.22)";ctx.lineWidth=2;roundRect(x+.5,y+.5,CARDW-1,CARDH-1,11,false,true);
-  const red=card.s===1||card.s===2;ctx.fillStyle=red?"#d8324a":"#15273c";
-  ctx.textAlign="left";ctx.font="950 22px system-ui";ctx.fillText(RANKS[card.r],x+9,y+27);ctx.font="900 16px system-ui";ctx.fillText(SUITS[card.s],x+9,y+45);
-  ctx.textAlign="center";ctx.font="900 46px system-ui";ctx.fillText(SUITS[card.s],x+CARDW/2,y+CARDH/2+17);
-  ctx.textAlign="right";ctx.font="950 22px system-ui";ctx.fillText(RANKS[card.r],x+CARDW-9,y+CARDH-11);ctx.textAlign="left"}
-function badge(x,y,txt,hot){ctx.fillStyle="rgba(7,18,30,.92)";ctx.strokeStyle=hot?"#5eead4":"rgba(94,234,212,.3)";ctx.lineWidth=2;roundRect(x-32,y-19,64,38,10,true,true);ctx.fillStyle=hot?"#5eead4":"#eaf6ff";ctx.font="950 21px system-ui";ctx.textAlign="center";ctx.fillText(txt,x,y+7);ctx.textAlign="left"}
+function hit(){const h=activeHand();if(state.mode!=="player"||!h||h.done)return;
+ drawTo(h,true);tone("hit");vibe(6);
+ const v=handValue(h.cards);
+ if(v>21){h.done=true;if(!reducedMotion)state.shake=.6;tone("bust");say("Hand busts at "+v+".");update();draw();advanceHand();return}
+ if(v===21){h.done=true;say("Twenty-one.");update();draw();advanceHand();return}
+ say("Hit — you have "+v+".");update();draw();ensureLoop()}
+function stand(){const h=activeHand();if(state.mode!=="player"||!h||h.done)return;
+ h.done=true;tone("stand");say("Standing on "+handValue(h.cards)+".");update();draw();advanceHand()}
+function double(){const h=activeHand();if(!canDouble()){if(state.mode==="player")tone("bad");return}
+ state.chips-=h.wager;h.wager*=2;h.doubled=true;
+ flyChips(chipSourcePos(),potPos(),3,"#facc15");
+ drawTo(h,true);tone("chip");vibe(10);
+ h.done=true;
+ const v=handValue(h.cards);
+ if(v>21){if(!reducedMotion)state.shake=.6;tone("bust");say("Doubled and busted at "+v+".")}
+ else say("Doubled to "+h.wager+" chips on "+v+".");
+ update();draw();advanceHand()}
+function split(){const h=activeHand();if(!canSplit()){if(state.mode==="player")tone("bad");return}
+ state.chips-=h.wager;
+ const moved=h.cards.pop();
+ const extra=newHand(h.wager,true);extra.cards.push(moved);
+ h.split=true;
+ state.hands.splice(state.active+1,0,extra);
+ drawTo(h,true);
+ flyChips(chipSourcePos(),potPos(),3,"#5eead4");
+ tone("chip");vibe(8);
+ if(h.split&&h.cards[0].r===0){h.done=true;say("Split aces — one card each.");update();draw();advanceHand();return}
+ if(handValue(h.cards)===21){h.done=true;update();draw();advanceHand();return}
+ say("Split. Hand "+(state.active+1)+" — "+handValue(h.cards)+".");update();draw();ensureLoop()}
 
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Blackjack",30,38);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Beat the dealer's hand without going over 21. Dealer draws to 17; blackjack pays 3 to 2.",30,56);
-  const pm=state.mode==="player";
-  // dealer
-  ctx.fillStyle="#7f93a9";ctx.font="950 14px system-ui";ctx.fillText("DEALER",44,DEALERY+34);
-  badge(150,DEALERY+CARDH/2,pm?"?":String(handValue(state.dealer)),!pm&&handValue(state.dealer)>21);
-  state.dealer.forEach((c,i)=>drawCard(HANDX+i*STEP,DEALERY,c,pm&&i===1));
-  // player
-  ctx.fillStyle="#7f93a9";ctx.font="950 14px system-ui";ctx.fillText("YOU",44,PLAYERY+34);
-  const pv=handValue(state.player);badge(150,PLAYERY+CARDH/2,String(pv),pv>=21);
-  state.player.forEach((c,i)=>drawCard(HANDX+i*STEP,PLAYERY,c,false));
-  // outcome banner
-  if(state.mode==="result"){const col=state.outcome==="win"?"#5eead4":(state.outcome==="push"?"#ffd166":"#fca5a5");ctx.textAlign="center";ctx.fillStyle="rgba(3,7,18,.55)";roundRect(canvas.width/2-250,242,500,52,12,true,false);ctx.fillStyle=col;ctx.font="950 26px system-ui";ctx.fillText(state.outcome==="win"?"YOU WIN":(state.outcome==="push"?"PUSH":"DEALER WINS"),canvas.width/2,277);ctx.textAlign="left"}
-  // pre-deal betting prompt (empty table)
-  if(state.mode==="betting"){ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 24px system-ui";ctx.fillText("Set your bet, then Deal",canvas.width/2,250);ctx.fillStyle="#9fb3c8";ctx.font="800 16px system-ui";ctx.fillText("Bet "+state.stake+" chips — use +/- or the bet buttons to change it",canvas.width/2,278);ctx.textAlign="left"}}
+function revealHole(){if(!state.holeDown)return;state.holeDown=false;
+ if(!reducedMotion)state.holeFlip=1;tone("flip");ensureLoop()}
+function dealerTurn(){state.mode="dealer";revealHole();
+ const live=state.hands.some(h=>handValue(h.cards)<=21);
+ if(live){ // Dealer stands on all 17s, soft or hard.
+  while(handValue(state.dealer)<17){state.dealer.push(nextCard());pushAnim("card",{dealer:true,index:state.dealer.length-1})} }
+ finishRound(null)}
 
-function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);draw()}
-window.advanceTime=ms=>{stopLoop();const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);ensureLoop();return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){const pm=state.mode==="player";return JSON.stringify({mode:state.mode,chips:state.chips,stake:state.stake,wager:state.wager,streak:state.streak,hands:state.hands,wins:state.wins,bestChips:state.best.chips,bestStreak:state.best.streak,player:{cards:state.player.map(c=>({rank:RANKS[c.r],suit:SUITS[c.s]})),total:handValue(state.player),blackjack:isBJ(state.player),bust:handValue(state.player)>21},dealer:{cards:state.dealer.map((c,i)=>(pm&&i===1)?{hidden:true}:{rank:RANKS[c.r],suit:SUITS[c.s]}),total:pm?cardVal(state.dealer[0].r):handValue(state.dealer),hiddenHole:pm},outcome:state.outcome,feedback:state.feedback,coordinateSystem:"hit draws a card, stand holds, double draws one then stands; dealer draws below 17; aces count 1 or 11; beat the dealer total without exceeding 21"})};
+function finishRound(preMessage){
+ const dv=handValue(state.dealer),dbj=dealerNatural();
+ let totalPayout=0,wins=0,losses=0,pushes=0,naturals=0;
+ for(const h of state.hands){ h.done=true;
+  const pv=handValue(h.cards),pbj=isNatural(h);
+  if(pv>21){h.outcome="lose";h.payout=0}
+  else if(pbj&&!dbj){h.outcome="blackjack";h.payout=Math.round(h.wager*2.5);naturals++}
+  else if(dbj&&!pbj){h.outcome="lose";h.payout=0}
+  else if(pbj&&dbj){h.outcome="push";h.payout=h.wager}
+  else if(dv>21){h.outcome="win";h.payout=h.wager*2}
+  else if(pv>dv){h.outcome="win";h.payout=h.wager*2}
+  else if(pv<dv){h.outcome="lose";h.payout=0}
+  else{h.outcome="push";h.payout=h.wager}
+  totalPayout+=h.payout;
+  if(h.outcome==="lose")losses++;else if(h.outcome==="push")pushes++;else wins++;
+  state.handsPlayed++ }
+ state.chips+=totalPayout;state.lastPayout=totalPayout;
+ state.wins+=wins;state.losses+=losses;state.pushes+=pushes;state.blackjacks+=naturals;
+ if(wins>0&&losses===0)state.streak++;else if(losses>0)state.streak=0;
+ if(state.chips>state.best.chips)state.best.chips=state.chips;
+ if(state.streak>state.best.streak)state.best.streak=state.streak;
+ saveStats();
+ state.outcome=losses>0&&wins===0?(pushes>0?"push":"lose"):(wins>0?"win":"push");
+ state.mode="result";
+ if(totalPayout>0)flyChips(potPos(),chipSourcePos(),Math.min(8,Math.max(2,Math.round(totalPayout/12))),naturals?"#facc15":"#5eead4");
+ if(naturals){tone("blackjack");spawnParts(canvas.width/2,tableMid(),"#facc15",16)}
+ else if(wins>0&&losses===0){tone("win");spawnParts(canvas.width/2,tableMid(),"#5eead4",12)}
+ else if(losses>0&&wins===0){tone(state.hands.some(h=>handValue(h.cards)>21)?"bust":"bad");if(!reducedMotion)state.shake=.5}
+ else tone("push");
+ const parts=[];
+ if(preMessage)parts.push(preMessage);
+ parts.push(summaryLine(dv,dbj));
+ parts.push("Chips "+state.chips+".");
+ if(state.chips<BET_STEP)parts.push("Out of chips.");
+ else parts.push("Deal for the next hand.");
+ say(parts.join(" "));
+ if(!reducedMotion)state.flash=1;
+ update();draw();ensureLoop();
+ if(state.chips<BET_STEP)endSession()}
+function summaryLine(dv,dbj){
+ if(state.hands.length===1){const h=state.hands[0],pv=handValue(h.cards);
+  if(h.outcome==="blackjack")return "Blackjack pays 3 to 2 (+"+(h.payout-h.wager)+").";
+  if(pv>21)return "Bust at "+pv+".";
+  if(dbj)return "Dealer blackjack.";
+  if(dv>21)return "Dealer busts at "+dv+".";
+  if(h.outcome==="win")return "You "+pv+", dealer "+dv+".";
+  if(h.outcome==="push")return "Push at "+pv+".";
+  return "Dealer "+dv+", you "+pv+"."}
+ const w=state.hands.filter(h=>h.outcome==="win"||h.outcome==="blackjack").length;
+ const l=state.hands.filter(h=>h.outcome==="lose").length;
+ return state.hands.length+" hands: "+w+" won, "+l+" lost, dealer "+(dv>21?"bust":dv)+"."}
+function endSession(){if(state.sessionOver)return;
+ state.sessionOver=true;state.mode="over";saveStats();tone("over");
+ say("Session over — "+state.handsPlayed+" hands, peak "+state.best.chips+" chips. Press New Game to rebuy.");
+ update();draw();ensureLoop()}
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
-  if(k==="Enter"||k===" ")primary();else if(k==="h"||k==="H")hit();else if(k==="s"||k==="S")stand();else if(k==="d"||k==="D")double();else if(k==="n"||k==="N")newGame();
-  else if(k==="ArrowUp"||k==="ArrowRight"||k==="+"||k==="=")adjustStake(BET_STEP);else if(k==="ArrowDown"||k==="ArrowLeft"||k==="-"||k==="_")adjustStake(-BET_STEP)});
+function adjustStake(d){if(state.mode==="player"||state.mode==="dealer")return;
+ if(state.sessionOver)return;
+ const max=Math.max(BET_STEP,state.chips);
+ const next=Math.max(BET_STEP,Math.min(state.stake+d,max));
+ if(next===state.stake)return;
+ state.stake=next;say("Bet set to "+state.stake+" chips.");tone("chip");update();draw()}
+function primary(){if(state.sessionOver){newGame();return}
+ if(state.mode==="player")hit();else dealHand()}
+
+function update(){
+ els.chips.textContent=String(state.chips);
+ const shown=state.mode==="player"||state.mode==="dealer"||state.mode==="result"
+  ?state.hands.reduce((n,h)=>n+h.wager,0):state.stake;
+ els.bet.textContent=String(shown||state.stake);
+ els.streak.textContent=String(state.streak);els.wins.textContent=String(state.wins);
+ els.hands.textContent=String(state.handsPlayed);els.peak.textContent=String(state.best.chips);
+ els.sound.textContent=state.sound?"Sound On":"Sound Off";
+ els.sound.setAttribute("aria-pressed",String(state.sound));
+ els.primary.textContent=state.sessionOver?"New Game":(state.mode==="player"?"Hit":"Deal");
+ if(els.stand)els.stand.disabled=state.mode!=="player";
+ if(els.double)els.double.disabled=!canDouble();
+ if(els.split)els.split.disabled=!canSplit();
+ if(els.betUp)els.betUp.disabled=state.mode==="player"||state.mode==="dealer"||state.sessionOver;
+ if(els.betDown)els.betDown.disabled=state.mode==="player"||state.mode==="dealer"||state.sessionOver}
+
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<560;if(next===compact)return;
+ compact=next;canvas.width=compact?600:960;canvas.height=compact?520:540;canvas.classList.toggle("compact",compact);
+ draw()}
+function tableMid(){return compact?canvas.height*0.52:300}
+function chipSourcePos(){return{x:compact?canvas.width/2:150,y:canvas.height-46}}
+function potPos(){return{x:canvas.width/2,y:compact?canvas.height*0.44:250}}
+function cardSize(){const n=Math.max(1,state.hands.length);
+ const w=compact?(n>2?58:88):(n>2?70:88);
+ return{w,h:Math.round(w*124/88)}}
+
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+ ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function drawCard(x,y,card,down,cw,ch,squash){
+ const sx=squash==null?1:Math.max(.02,Math.abs(squash));
+ ctx.save();ctx.translate(x+cw/2,y+ch/2);ctx.scale(sx,1);ctx.translate(-cw/2,-ch/2);
+ if(down){const g=ctx.createLinearGradient(0,0,0,ch);g.addColorStop(0,"#0e3a4a");g.addColorStop(1,"#0a2230");
+  ctx.fillStyle=g;roundRect(0,0,cw,ch,11,true,false);
+  ctx.strokeStyle="rgba(94,234,212,.5)";ctx.lineWidth=2;roundRect(.5,.5,cw-1,ch-1,11,false,true);
+  ctx.strokeStyle="rgba(94,234,212,.32)";ctx.lineWidth=2;
+  for(let i=1;i<5;i++)roundRect(5+i*4,5+i*4,cw-10-i*8,ch-10-i*8,7,false,true);
+  ctx.restore();return}
+ const g=ctx.createLinearGradient(0,0,0,ch);g.addColorStop(0,"#f6faff");g.addColorStop(1,"#dde7f3");
+ ctx.fillStyle=g;roundRect(0,0,cw,ch,11,true,false);
+ ctx.strokeStyle="rgba(10,20,30,.22)";ctx.lineWidth=2;roundRect(.5,.5,cw-1,ch-1,11,false,true);
+ const red=card.s===1||card.s===2;ctx.fillStyle=red?"#c02138":"#15273c";
+ const rs=Math.round(cw*0.25),ss=Math.round(cw*0.18);
+ ctx.textAlign="left";ctx.font="950 "+rs+"px system-ui";ctx.fillText(RANKS[card.r],9,rs+6);
+ ctx.font="900 "+ss+"px system-ui";ctx.fillText(SUITS[card.s],9,rs+ss+8);
+ ctx.textAlign="center";ctx.font="900 "+Math.round(cw*0.52)+"px system-ui";
+ ctx.fillText(SUITS[card.s],cw/2,ch/2+Math.round(cw*0.19));
+ ctx.textAlign="right";ctx.font="950 "+rs+"px system-ui";ctx.fillText(RANKS[card.r],cw-9,ch-11);
+ ctx.textAlign="left";ctx.restore()}
+function badge(x,y,txt,hot){ctx.fillStyle="rgba(7,18,30,.92)";ctx.strokeStyle=hot?"#5eead4":"rgba(94,234,212,.3)";
+ ctx.lineWidth=2;roundRect(x-32,y-19,64,38,10,true,true);
+ ctx.fillStyle=hot?"#5eead4":"#eaf6ff";ctx.font="950 21px system-ui";ctx.textAlign="center";
+ ctx.fillText(txt,x,y+7);ctx.textAlign="left"}
+function animFor(hand,index,dealer){
+ for(const a of state.anims){ if(a.kind!=="card")continue;
+  if(dealer&&a.dealer&&a.index===index)return a;
+  if(!dealer&&a.hand===hand&&a.index===index)return a }
+ return null}
+
+function draw(){const W=canvas.width,H=canvas.height;
+ const sh=state.shake>0&&!reducedMotion?state.shake*8:0;
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
+ const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");
+ ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+ if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ ctx.textAlign="left";ctx.textBaseline="alphabetic";
+ if(compact){ctx.fillStyle="#5eead4";ctx.font="950 30px system-ui";ctx.fillText("BLACKJACK",26,40);
+  ctx.fillStyle="#9fb3c8";ctx.font="900 20px system-ui";
+  ctx.fillText("Chips "+state.chips+"  ·  Bet "+(state.hands.length?state.hands.reduce((n,h)=>n+h.wager,0):state.stake),26,70)}
+ else{ctx.fillStyle="#5eead4";ctx.font="900 22px system-ui";ctx.fillText("Blackjack",30,38);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+  ctx.fillText("Dealer stands on all 17s. Blackjack pays 3 to 2. Split up to four hands.",30,58)}
+ const cs=cardSize(),STEP=Math.round(cs.w*0.62);
+ const dealerY=compact?104:96,playerY=compact?296:318;
+ // dealer
+ ctx.fillStyle="#7f93a9";ctx.font="950 14px system-ui";ctx.fillText("DEALER",30,dealerY+cs.h/2);
+ const hideHole=state.holeDown&&state.dealer.length>1;
+ badge(compact?128:150,dealerY+cs.h/2,hideHole?"?":String(handValue(state.dealer)),!hideHole&&handValue(state.dealer)>21);
+ const dx0=compact?176:300;
+ state.dealer.forEach((c,i)=>{const a=animFor(null,i,true);
+  let x=dx0+i*STEP,y=dealerY,squash=null;
+  if(a&&a.t<1){const e=1-Math.pow(1-a.t,2.2);x=W-60+(x-(W-60))*e;y=10+(y-10)*e}
+  if(i===1&&state.holeFlip>0&&!reducedMotion)squash=Math.cos(Math.PI*(1-state.holeFlip));
+  drawCard(x,y,c,i===1&&hideHole,cs.w,cs.h,squash)});
+ // player hands
+ const n=Math.max(1,state.hands.length);
+ const slotW=Math.floor((W-(compact?36:220))/n);
+ const baseX=compact?16:200;
+ ctx.fillStyle="#7f93a9";ctx.font="950 14px system-ui";ctx.fillText("YOU",30,playerY+cs.h/2);
+ state.hands.forEach((h,hi)=>{const ox=baseX+hi*slotW+(n>1?8:compact?120:100);
+  const pv=handValue(h.cards);
+  const isActive=state.mode==="player"&&hi===state.active&&!h.done;
+  if(isActive){ctx.strokeStyle="rgba(94,234,212,.8)";ctx.lineWidth=3;
+   roundRect(ox-12,playerY-12,Math.min(slotW-6,cs.w+(h.cards.length-1)*STEP+24),cs.h+24,12,false,true)}
+  h.cards.forEach((c,i)=>{const a=animFor(h,i,false);
+   let x=ox+i*STEP,y=playerY;
+   if(a&&a.t<1){const e=1-Math.pow(1-a.t,2.2);x=W-60+(x-(W-60))*e;y=10+(y-10)*e}
+   drawCard(x,y,c,false,cs.w,cs.h)});
+  const label=(h.outcome==="blackjack"?"BJ ":"")+String(pv)+(isSoft(h.cards)&&pv<21?"s":"");
+  ctx.fillStyle=pv>21?"#fca5a5":(h.outcome==="win"||h.outcome==="blackjack"?"#5eead4":"#eaf6ff");
+  ctx.font="950 20px system-ui";ctx.textAlign="left";
+  ctx.fillText(label+(h.doubled?"  x2":""),ox,playerY+cs.h+26);
+  ctx.fillStyle="#9fb3c8";ctx.font="900 13px system-ui";
+  ctx.fillText(h.wager+" chips"+(h.outcome?"  ·  "+h.outcome.toUpperCase():""),ox,playerY+cs.h+46)});
+ // chips in flight
+ for(const c of state.chipFly){if(c.t<=0)continue;
+  const e=Math.min(1,c.t);const x=c.x+(c.tx-c.x)*e,y=c.y+(c.ty-c.y)*e-Math.sin(Math.PI*e)*40;
+  ctx.fillStyle=c.color||"#5eead4";ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(4,20,26,.6)";ctx.lineWidth=2;ctx.stroke()}
+ for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color||"#5eead4";
+  ctx.beginPath();ctx.arc(p.x,p.y,3.6,0,Math.PI*2);ctx.fill()}
+ ctx.globalAlpha=1;
+ if(state.mode==="result"){const col=state.outcome==="win"?"#5eead4":(state.outcome==="push"?"#ffd166":"#fca5a5");
+  const bw=compact?W-40:520,by=compact?236:236;
+  ctx.textAlign="center";ctx.fillStyle="rgba(3,7,18,.62)";roundRect(W/2-bw/2,by,bw,compact?48:54,12,true,false);
+  ctx.fillStyle=col;ctx.font="950 27px system-ui";
+  const any=state.hands.some(h=>h.outcome==="blackjack");
+  ctx.fillText(any?"BLACKJACK":(state.outcome==="win"?"YOU WIN":(state.outcome==="push"?"PUSH":"DEALER WINS")),W/2,by+(compact?33:36));
+  ctx.textAlign="left"}
+ if(state.mode==="betting"){ctx.textAlign="center";ctx.fillStyle="#5eead4";ctx.font="950 26px system-ui";
+  ctx.fillText("Set your bet, then Deal",W/2,tableMid()-16);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 17px system-ui";
+  ctx.fillText("Bet "+state.stake+" chips — arrows or the bet buttons change it",W/2,tableMid()+14);
+  ctx.fillStyle="#7f93a9";ctx.font="800 15px system-ui";
+  ctx.fillText("H hits, S stands, D doubles, P splits, Enter deals.",W/2,tableMid()+42);
+  ctx.textAlign="left"}
+ if(state.mode==="over"){const bw=compact?W-50:560,bh=compact?210:190,bx=W/2-bw/2,by=tableMid()-bh/2;
+  ctx.fillStyle="rgba(3,7,18,.88)";ctx.fillRect(bx,by,bw,bh);
+  ctx.strokeStyle="#fca5a5";ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+  ctx.textAlign="center";ctx.fillStyle="#fca5a5";ctx.font="950 34px system-ui";
+  ctx.fillText("Out of Chips",W/2,by+52);
+  ctx.fillStyle="#eaf6ff";ctx.font="900 22px system-ui";
+  ctx.fillText(state.handsPlayed+" hands  ·  "+state.wins+" won  ·  "+state.pushes+" pushed",W/2,by+92);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 17px system-ui";
+  ctx.fillText("Peak "+state.best.chips+" chips  ·  best streak "+state.best.streak+"  ·  "+state.blackjacks+" blackjacks",W/2,by+124);
+  ctx.fillStyle="#5eead4";ctx.font="800 17px system-ui";
+  ctx.fillText("Press New Game to rebuy.",W/2,by+158);ctx.textAlign="left"}
+ ctx.setTransform(1,0,0,1,0,0)}
+
+function tick(dt){state.time+=dt;
+ if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);
+ if(state.shake>0)state.shake=Math.max(0,state.shake-dt/420);
+ if(state.holeFlip>0)state.holeFlip=Math.max(0,state.holeFlip-dt/260);
+ for(let i=state.anims.length-1;i>=0;i--){const a=state.anims[i];a.t+=dt/260;if(a.t>=1)state.anims.splice(i,1)}
+ for(let i=state.chipFly.length-1;i>=0;i--){const c=state.chipFly[i];
+  if(c.delay>0){c.delay-=dt/1000;continue}
+  c.t+=dt/520;if(c.t>=1)state.chipFly.splice(i,1)}
+ for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];
+  p.life-=dt/640;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=dt*.36;
+  if(p.life<=0)state.parts.splice(i,1)}
+ draw()}
+window.advanceTime=ms=>{stopLoop();const total=Math.max(0,Number(ms)||0),n=Math.max(1,Math.ceil(total/40));
+ for(let i=0;i<n;i++)tick(total/n);ensureLoop();return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){
+ const hideHole=state.holeDown&&state.dealer.length>1;
+ const h=activeHand();
+ const handJson=(x)=>({cards:x.cards.map(c=>({rank:RANKS[c.r],suit:SUITS[c.s]})),total:handValue(x.cards),
+  soft:isSoft(x.cards),wager:x.wager,doubled:x.doubled,split:x.split,done:x.done,
+  blackjack:isNatural(x),bust:handValue(x.cards)>21,outcome:x.outcome,payout:x.payout});
+ return JSON.stringify({mode:state.mode,chips:state.chips,stake:state.stake,
+  wager:state.hands.reduce((n,x)=>n+x.wager,0),
+  streak:state.streak,hands:state.handsPlayed,wins:state.wins,pushes:state.pushes,losses:state.losses,
+  blackjacks:state.blackjacks,bestChips:state.best.chips,bestStreak:state.best.streak,
+  sessionOver:state.sessionOver,handCount:state.hands.length,activeHand:state.active,
+  canDouble:canDouble(),canSplit:canSplit(),
+  player:h?handJson(h):{cards:[],total:0,soft:false,wager:0,doubled:false,split:false,done:true,blackjack:false,bust:false,outcome:null,payout:0},
+  playerHands:state.hands.map(handJson),
+  dealer:{cards:state.dealer.map((c,i)=>(hideHole&&i===1)?{hidden:true}:{rank:RANKS[c.r],suit:SUITS[c.s]}),
+   total:hideHole?cardVal(state.dealer[0].r):handValue(state.dealer),hiddenHole:hideHole,
+   blackjack:!hideHole&&dealerNatural(),bust:!hideHole&&handValue(state.dealer)>21},
+  outcome:state.outcome,lastPayout:state.lastPayout,reducedMotion:reducedMotion,animating:state.anims.length>0,
+  sound:state.sound,feedback:state.feedback,
+  coordinateSystem:"hit draws a card, stand holds, double draws one then stands, split separates a matched pair; dealer stands on all 17s; aces count 1 or 11; blackjack pays 3 to 2"})};
+
+document.addEventListener("keydown",e=>{const t=e.target;
+ if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+ const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+ if(k==="Enter"||k===" ")primary();
+ else if(k==="h"||k==="H")hit();
+ else if(k==="s"||k==="S")stand();
+ else if(k==="d"||k==="D")double();
+ else if(k==="p"||k==="P")split();
+ else if(k==="n"||k==="N")newGame();
+ else if(k==="ArrowUp"||k==="ArrowRight"||k==="+"||k==="=")adjustStake(BET_STEP);
+ else if(k==="ArrowDown"||k==="ArrowLeft"||k==="-"||k==="_")adjustStake(-BET_STEP)});
 canvas.addEventListener("pointerdown",()=>{canvas.focus();primary()});
 els.primary.addEventListener("click",primary);
-$("standBtn").addEventListener("click",stand);
-$("doubleBtn").addEventListener("click",double);
-$("betDownBtn").addEventListener("click",()=>adjustStake(-BET_STEP));
-$("betUpBtn").addEventListener("click",()=>adjustStake(BET_STEP));
-$("newBtn").addEventListener("click",newGame);
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("deal")});
+els.stand.addEventListener("click",stand);
+els.double.addEventListener("click",double);
+if(els.split)els.split.addEventListener("click",split);
+els.betDown.addEventListener("click",()=>adjustStake(-BET_STEP));
+els.betUp.addEventListener("click",()=>adjustStake(BET_STEP));
+els.neww.addEventListener("click",newGame);
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+ say(state.sound?"Sound enabled.":"Sound muted.");
+ if(state.sound)tone("chip");else if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){stopLoop();
+ if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}}else ensureLoop()});
+addEventListener("resize",syncCompact);
+
 let raf=0,last=0;
-function loopActive(){return state.flash>0}
-function ensureLoop(){if(raf||!loopActive())return;last=performance.now();raf=requestAnimationFrame(frame)}
+function loopActive(){return state.flash>0||state.shake>0||state.holeFlip>0||state.anims.length>0||state.parts.length>0||state.chipFly.length>0}
+function ensureLoop(){if(raf||!loopActive()||document.hidden)return;last=performance.now();raf=requestAnimationFrame(frame)}
 function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0}
-function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);if(loopActive())raf=requestAnimationFrame(frame);else last=0}
-loadGame();
+function frame(now){raf=0;const dt=Math.min(80,last?now-last:0);last=now;tick(dt);
+ if(loopActive()&&!document.hidden)raf=requestAnimationFrame(frame);else last=0}
+booting=true;syncCompact();loadGame();booting=false;
+say("Set your bet, then Deal. H hits, S stands, D doubles, P splits.");
 ensureLoop();
 })();
 </script>
