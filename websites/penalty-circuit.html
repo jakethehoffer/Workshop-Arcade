@@ -89,7 +89,7 @@
   button:hover{border-color:rgba(94,234,212,.6)}
   button[aria-pressed="false"]{color:rgba(230,237,243,.72);border-color:rgba(255,255,255,.18)}
   @media (max-width:720px){body{padding:10px 8px 18px}.shell{gap:8px}.title{font-size:20px}.hint{text-align:left;font-size:11px}.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pill{padding:7px}.value{font-size:16px}canvas{aspect-ratio:45/31}.controls button{flex:1 1 112px;min-height:38px}}
-  @media (max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:430px){.hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.pill{padding:5px 3px}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -106,6 +106,7 @@
     <div class="pill" id="aimPill"><span class="label">Aim</span><span class="value" id="aimValue">0</span></div>
     <div class="pill" id="powerPill"><span class="label">Power</span><span class="value" id="powerValue">62%</span></div>
     <div class="pill" id="curvePill"><span class="label">Curve</span><span class="value" id="curveValue">0</span></div>
+    <div class="pill" id="readPill"><span class="label">Read</span><span class="value" id="readValue">38%</span></div>
   </div>
   <div class="stage-wrap"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Penalty Circuit canvas. Drag or tap to aim and set power, then release or press Space to shoot."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Place the first shot.</div>
@@ -141,6 +142,8 @@
     aim: document.getElementById("aimValue"),
     power: document.getElementById("powerValue"),
     curve: document.getElementById("curveValue"),
+    read: document.getElementById("readValue"),
+    readPill: document.getElementById("readPill"),
     aimPill: document.getElementById("aimPill"),
     powerPill: document.getElementById("powerPill"),
     curvePill: document.getElementById("curvePill"),
@@ -162,13 +165,58 @@
   function writeStore(key, value) {
     try { window.localStorage.setItem(key, String(value)); } catch (_) {}
   }
+  function finiteOr0(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+  }
+
+  // One launch, spin and keeper-read formula, shared by the shot that happens
+  // and the preview that promises it, so the drawn path cannot drift from the
+  // flown one.
+  function launchOf(aim, power) {
+    const targetX = GOAL.x + GOAL.w / 2 + aim * (GOAL.w * 0.47);
+    const speed = 540 + power * 520;
+    const dx = targetX - BALL_START.x;
+    const dy = GOAL.y + 62 - BALL_START.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { targetX, vx: dx / len * speed, vy: dy / len * speed };
+  }
+  function spinOf(curve, power) { return curve * (120 + power * 170); }
+  function readOf(aim, power, curve) {
+    return clamp(0.24 + Math.abs(aim) * 0.16 + power * 0.22 - Math.abs(curve) * 0.32, 0.12, 0.66);
+  }
+  function stepBall(b, spin, dt) {
+    b.vx += spin * dt;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    b.vx *= 0.997;
+    b.vy *= 0.997;
+  }
+  function flightOver(b, timer) {
+    return b.y <= GOAL.y + GOAL.h - 10 || b.x < 30 || b.x > W - 30 || b.y < 20 || timer > 1.35;
+  }
+  // The flight the current aim, power and curve would actually produce.
+  function previewPath() {
+    const shot = launchOf(state.aim, state.power);
+    const spin = spinOf(state.curve, state.power);
+    const b = { x: BALL_START.x, y: BALL_START.y, vx: shot.vx, vy: shot.vy };
+    const pts = [{ x: b.x, y: b.y }];
+    let timer = 0;
+    for (let i = 0; i < 200; i++) {
+      timer += 1 / 60;
+      stepBall(b, spin, 1 / 60);
+      pts.push({ x: b.x, y: b.y });
+      if (flightOver(b, timer)) break;
+    }
+    return pts;
+  }
 
   const state = {
     mode: "ready",
     shot: 1,
     round: 1,
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
+    best: finiteOr0(readStore(BEST_KEY, "0")),
     aim: 0,
     power: 0.62,
     curve: 0,
@@ -269,15 +317,11 @@
     if (state.mode === "game-over") return restart();
     if (state.mode !== "ready" && state.mode !== "aiming" && state.mode !== "result") return;
     if (state.mode === "result") return nextShot();
-    const targetX = GOAL.x + GOAL.w / 2 + state.aim * (GOAL.w * 0.47);
-    const shotSpeed = 540 + state.power * 520;
-    const dx = targetX - state.ball.x;
-    const dy = GOAL.y + 62 - state.ball.y;
-    const len = Math.hypot(dx, dy) || 1;
-    state.ball.vx = dx / len * shotSpeed;
-    state.ball.vy = dy / len * shotSpeed;
-    state.ball.spin = state.curve * (120 + state.power * 170);
-    state.keeper.read = clamp(0.24 + Math.abs(state.aim) * 0.16 + state.power * 0.22 - Math.abs(state.curve) * 0.32, 0.12, 0.66);
+    const launched = launchOf(state.aim, state.power);
+    state.ball.vx = launched.vx;
+    state.ball.vy = launched.vy;
+    state.ball.spin = spinOf(state.curve, state.power);
+    state.keeper.read = readOf(state.aim, state.power, state.curve);
     state.keeper.targetX = clamp(450 + (state.aim + state.curve * 0.14) * GOAL.w * 0.48 * state.keeper.read, GOAL.x + 48, GOAL.x + GOAL.w - 48);
     state.mode = "flying";
     state.result = "in-flight";
@@ -316,14 +360,10 @@
       state.timer += dt;
       const ball = state.ball;
       state.keeper.x = lerp(state.keeper.x, state.keeper.targetX, clamp(dt * 4.8, 0, 1));
-      ball.vx += ball.spin * dt;
-      ball.x += ball.vx * dt;
-      ball.y += ball.vy * dt;
-      ball.vx *= 0.997;
-      ball.vy *= 0.997;
+      stepBall(ball, ball.spin, dt);
       state.trail.push({ x: ball.x, y: ball.y });
       if (state.trail.length > 18) state.trail.shift();
-      if (ball.y <= GOAL.y + GOAL.h - 10 || ball.x < 30 || ball.x > W - 30 || ball.y < 20 || state.timer > 1.35) resolveShot();
+      if (flightOver(ball, state.timer)) resolveShot();
     } else if (state.mode === "result") {
       state.timer += dt;
       if (state.timer > 1.35 && !state.gameOver) nextShot();
@@ -427,6 +467,8 @@
     els.aim.textContent = String(Math.round(state.aim * 100));
     els.power.textContent = `${Math.round(state.power * 100)}%`;
     els.curve.textContent = String(Math.round(state.curve * 100));
+    const read = readOf(state.aim, state.power, state.curve);
+    els.read.textContent = `${Math.round(read * 100)}%`;
     els.status.textContent = state.feedback;
     els.shoot.textContent = state.mode === "game-over" ? "Restart" : state.mode === "result" ? "Next" : "Shoot";
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
@@ -436,6 +478,7 @@
     els.powerPill.dataset.hot = String(state.power > .78);
     els.curvePill.dataset.hot = String(Math.abs(state.curve) > .5);
     els.powerPill.dataset.warn = String(state.power < .32);
+    els.readPill.dataset.warn = String(read > .45);
   }
 
   function drawField() {
@@ -483,20 +526,46 @@
   }
   function drawAim() {
     if (state.mode === "flying" || state.mode === "game-over") return;
-    const targetX = GOAL.x + GOAL.w / 2 + state.aim * GOAL.w * .47;
+    const pts = previewPath();
+    const end = pts[pts.length - 1];
     ctx.save();
     ctx.strokeStyle = "rgba(94,234,212,.72)";
     ctx.lineWidth = 3;
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
-    ctx.moveTo(BALL_START.x, BALL_START.y);
-    ctx.quadraticCurveTo(lerp(BALL_START.x, targetX, .55) + state.curve * 90, 310, targetX, GOAL.y + 70);
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(94,234,212,.22)";
     ctx.beginPath();
-    ctx.arc(targetX, GOAL.y + 70, 18 + state.power * 10, 0, Math.PI * 2);
+    ctx.arc(end.x, end.y, 18 + state.power * 10, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  }
+  // How hard the keeper is reading this shot. He is not drawn diving here on
+  // purpose: the strength is the hidden rule worth teaching, the direction is
+  // the part of the game still worth guessing.
+  function drawReadGauge() {
+    if (state.mode === "flying" || state.mode === "game-over") return;
+    const read = readOf(state.aim, state.power, state.curve);
+    const x = 40, y = 512, w = 300, h = 14;
+    const t = clamp((read - 0.12) / (0.66 - 0.12), 0, 1);
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(230,237,243,.72)";
+    ctx.font = "800 12px system-ui, sans-serif";
+    ctx.fillText("KEEPER READ " + Math.round(read * 100) + "%", x, y - 7);
+    ctx.fillStyle = "rgba(255,255,255,.09)";
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = read > 0.45 ? "#fb7185" : read > 0.3 ? "#fbbf24" : "#5eead4";
+    ctx.fillRect(x, y, w * t, h);
+    ctx.strokeStyle = "rgba(230,237,243,.32)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.fillStyle = "rgba(230,237,243,.55)";
+    ctx.font = "700 11px system-ui, sans-serif";
+    ctx.fillText("power raises it, curve lowers it - a low read means he commits early", x, y + h + 14);
     ctx.restore();
   }
   function drawKeeper() {
@@ -563,19 +632,33 @@
   function draw() {
     drawField();
     drawAim();
+    drawReadGauge();
     drawKeeper();
     drawBall();
     drawOverlayText();
   }
-  let raf = 0;
+  // The live loop consumes real elapsed time in fixed 1/60 slices. Stepping one
+  // slice per animation frame instead flew the ball at double speed on a 120Hz
+  // display and halved the flight timeout. advanceTime keeps its own fixed-step
+  // path so the harnesses stay deterministic.
+  let raf = 0, lastFrame = 0, carryMs = 0;
   function loopActive(){ return state.mode === "flying" || state.mode === "result"; }
-  function ensureLoop(){ if (raf || !loopActive()) return; raf = requestAnimationFrame(loop); }
-  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
-  function loop() {
-    raf = 0;
-    stepMs(1000 / 60);
-    if (loopActive()) raf = requestAnimationFrame(loop);
+  function ensureLoop(){ if (raf || !loopActive() || document.hidden) return; lastFrame = 0; raf = requestAnimationFrame(loop); }
+  function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; lastFrame = 0; carryMs = 0; }
+  function stepRealtime(ms) {
+    carryMs += ms;
+    let steps = 0;
+    while (carryMs >= 1000 / 60 && steps < 240) { update(1 / 60); carryMs -= 1000 / 60; steps += 1; }
+    if (steps) { syncUi(); draw(); }
   }
+  function loop(now) {
+    raf = 0;
+    const ms = lastFrame ? Math.min(50, Math.max(0, now - lastFrame)) : 1000 / 60;
+    lastFrame = now;
+    stepRealtime(ms);
+    if (loopActive() && !document.hidden) raf = requestAnimationFrame(loop); else lastFrame = 0;
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ensureLoop(); });
 
   window.render_game_to_text = () => JSON.stringify({
     mode: state.mode,
@@ -590,6 +673,8 @@
     aim: norm(state.aim),
     power: norm(state.power),
     curve: norm(state.curve),
+    readPreview: norm(readOf(state.aim, state.power, state.curve)),
+    preview: (() => { const p = previewPath(); const e = p[p.length - 1]; return { x: norm(e.x), y: norm(e.y), steps: p.length - 1 }; })(),
     result: state.result,
     feedback: state.feedback,
     feedbackActive: state.mode === "flying" || state.mode === "result" || Boolean(state.result),
