@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-08-13 Claude — overhaul campaign batch 4a: Canopy Courier ran at double speed on a fast monitor
+
+First landing of batch 4. A precise fix, not a rewrite — stated plainly because that is what the audit turned up.
+
+- **The defect.** The frame loop called `update(1/60)` once per animation frame regardless of how much time had actually elapsed, so on a 120Hz display the whole route — the scroll, the parcels, the beacons, the fail timing — ran at exactly double the intended speed. This is the second game in the campaign found with this fault (Aster Vault was the first) and it is invisible to every existing gate, because the gates drive the game through `advanceTime`, which uses its own fixed-step path.
+- **The fix.** The live loop now steps by real elapsed time, clamped at 50ms so a backgrounded tab cannot teleport the courier on return. The fixed-step `advanceTime` path is deliberately untouched, so both the capture recipe and `driveCanopyCourier` in `check-best-on-fail-persistence.mjs` stay exact — the probe confirms two fresh loads advance to a byte-identical distance, lane and score after the same simulated 1.5 seconds. The loop was already correctly gated on flying-or-animating, so it still sleeps when idle.
+- Verified: an 8-assertion Playwright probe — the idle menu sleeps rather than spinning frames; `advanceTime` is deterministic across two fresh loads; the route genuinely advances under real wall-clock time (measured at about 155 units per second); the `recommended`, `lane` and `parcels` fields the failing-run driver depends on are all still present; 16 corrupt-storage seeds survive with zero page errors. Plus **the full `check-best-on-fail-persistence` gate (all 14 games pass)**, the full `check-realtime-progression` gate, scoped `test:games`, `capture:games` (desktop and mobile both 0), `audit:contrast` (88 elements, 0 below threshold), all seven static gates, `npm test` 56/56, and `git diff --check` clean. Protected meta/JSON-LD blocks verified byte-identical to HEAD.
+
 ## 2026-08-13 Claude — overhaul campaign batch 3f: Tempo Forge stops burning frames on an idle grid
 
 Sixth and final landing of batch 3, and a small, precisely-scoped fix rather than a rewrite — stated plainly because that is what it is.
