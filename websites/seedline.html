@@ -74,6 +74,8 @@ button{font:inherit}
 .pill{min-width:0;border-radius:8px;padding:7px 5px;text-align:center}.label{display:block;color:#5eead4;font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:2px;color:#f8fbff;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage{border-radius:10px;overflow:hidden;background:#06101d}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
+canvas.compact{aspect-ratio:620/470}
+.barlab{align-self:center;color:#5eead4;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;padding:0 3px}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(94,234,212,.72);outline-offset:2px}
 .status{min-height:21px;color:#7dd3fc;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
@@ -107,6 +109,11 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   <section class="bar" aria-label="Actions">
     <button class="btn primary" id="newBtn" type="button">New Game</button>
     <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound On</button>
+    <button class="btn" id="hintBtn" type="button" aria-pressed="false">Hints Off</button>
+    <span class="barlab">CPU</span>
+    <button class="btn" id="diffCasual" type="button" aria-pressed="false">Casual</button>
+    <button class="btn" id="diffStandard" type="button" aria-pressed="true">Standard</button>
+    <button class="btn" id="diffExpert" type="button" aria-pressed="false">Expert</button>
   </section>
   <section class="touch" aria-label="Touch controls — your pits 1 to 6">
     <button type="button" data-pit="0">1</button><button type="button" data-pit="1">2</button><button type="button" data-pit="2">3</button><button type="button" data-pit="3">4</button><button type="button" data-pit="4">5</button><button type="button" data-pit="5">6</button>
@@ -116,117 +123,389 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 (() => {
 "use strict";
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const STATS_KEY="seedline.stats.v1",SOUND_KEY="seedline.sound.v1",AI_DELAY=520,DEPTH=7;
+const STATS_KEY="seedline.stats.v1",SOUND_KEY="seedline.sound.v1",AI_DELAY=500;
 const P_STORE=6,C_STORE=13,P_PITS=[0,1,2,3,4,5],C_PITS=[7,8,9,10,11,12];
+const LEVELS={casual:{depth:1,slip:.35,label:"Casual"},standard:{depth:4,slip:0,label:"Standard"},expert:{depth:8,slip:0,label:"Expert"}};
+const LEVEL_IDS=["casual","standard","expert"];
 const $=id=>document.getElementById(id);
-const els={turn:$("turnValue"),you:$("youValue"),cpu:$("cpuValue"),wins:$("winsValue"),streak:$("streakValue"),best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn")};
-const stats=readStats();
-const state={board:[],turn:1,mode:"playing",result:null,cursor:2,lastMove:null,lastCapture:0,cpuThinking:false,aiTimer:0,wins:stats.wins,streak:stats.streak,best:stats.best,sound:readSound(),feedback:"Your move — pick a pit and sow its seeds.",flash:0,time:0};
-let audio=null;
+const els={turn:$("turnValue"),you:$("youValue"),cpu:$("cpuValue"),wins:$("winsValue"),streak:$("streakValue"),
+ best:$("bestValue"),status:$("statusLine"),live:$("liveStatus"),sound:$("soundBtn"),neww:$("newBtn"),
+ hint:$("hintBtn"),casual:$("diffCasual"),standard:$("diffStandard"),expert:$("diffExpert")};
+
+let reducedMotion=false;
+try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",e=>{reducedMotion=e.matches})}catch(_){}
 
 function store(){try{return window.localStorage||window.workshopStorage}catch(_){return window.workshopStorage||null}}
-function readStats(){try{const v=JSON.parse((store()||{}).getItem(STATS_KEY));if(v&&typeof v==="object")return{wins:v.wins|0,streak:v.streak|0,best:v.best|0}}catch(_){}return{wins:0,streak:0,best:0}}
-function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({wins:state.wins,streak:state.streak,best:state.best}))}catch(_){}}
+function intOr(v,d){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):d}
+function readStats(){const base={wins:0,streak:0,best:0,level:"standard",hints:false};
+ try{const raw=(store()||{}).getItem(STATS_KEY);if(!raw)return base;const v=JSON.parse(raw);
+  if(!v||typeof v!=="object"||Array.isArray(v))return base;
+  base.wins=intOr(v.wins,0);base.streak=intOr(v.streak,0);base.best=intOr(v.best,0);
+  if(typeof v.level==="string"&&LEVELS[v.level])base.level=v.level;
+  base.hints=v.hints===true}catch(_){}
+ return base}
+function saveStats(){try{(store()||{}).setItem(STATS_KEY,JSON.stringify({wins:state.wins,streak:state.streak,best:state.best,level:state.level,hints:state.hints}))}catch(_){}}
 function readSound(){try{const v=(store()||{}).getItem(SOUND_KEY);return v==null?true:v==="true"}catch(_){return true}}
 function saveSound(){try{(store()||{}).setItem(SOUND_KEY,String(state.sound))}catch(_){}}
+const stats=readStats();
+
+const state={board:[],turn:1,mode:"playing",result:null,cursor:2,lastMove:null,lastCapture:0,
+ cpuThinking:false,aiTimer:0,wins:stats.wins,streak:stats.streak,best:stats.best,
+ level:stats.level,hints:stats.hints,hintPit:null,
+ sound:readSound(),feedback:"Your move — pick a pit and sow its seeds.",flash:0,time:0,
+ seeds:[],parts:[],shake:0,storePulse:0,capturedAt:0,extraTurns:0,captures:0};
+let audio=null;
+
 function say(t){state.feedback=t;els.status.textContent=t;els.live.textContent=t}
 function vibe(n){try{if(navigator.vibrate&&(!navigator.userActivation||navigator.userActivation.hasBeenActive))navigator.vibrate(n)}catch(_){}}
-function tone(kind){if(!state.sound)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{audio=audio||new AC();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;const f={sow:300,store:430,capture:560,again:500,cpu:230,win:660,loss:120,draw:200,bad:150}[kind]||260;o.type=kind==="loss"?"sawtooth":"triangle";o.frequency.setValueAtTime(f,now);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+.2)}catch(_){}}
+function ac(){if(!state.sound)return null;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+ try{audio=audio||new AC();if(audio.state==="suspended")audio.resume();return audio}catch(_){return null}}
+function blip(freq,dur,type,vol,delay){const a=ac();if(!a)return;
+ try{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(delay||0);
+  o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.05,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+const LADDER=[349,392,440,494,523,587,659,740,784,880,988,1046,1175];
+function tone(kind,n){if(!state.sound)return;
+ switch(kind){
+  case"seed": blip(LADDER[Math.min(LADDER.length-1,n||0)],.07,"sine",.035);break;
+  case"store": blip(660,.12,"triangle",.05);blip(990,.1,"sine",.03,.04);break;
+  case"capture": [523,659,880,1046].forEach((f,i)=>blip(f,.3,"triangle",.06,i*.055));break;
+  case"again": [659,880].forEach((f,i)=>blip(f,.22,"sine",.05,i*.07));break;
+  case"cpu": blip(262,.12,"triangle",.04);break;
+  case"hint": blip(760,.1,"sine",.045);blip(1010,.12,"sine",.035,.07);break;
+  case"level": blip(480,.1,"triangle",.05);blip(640,.12,"triangle",.04,.06);break;
+  case"win": [523,659,784,1046].forEach((f,i)=>blip(f,.36,"triangle",.07,i*.08));break;
+  case"loss": blip(220,.4,"sawtooth",.05);blip(150,.46,"sawtooth",.04,.1);break;
+  case"draw": blip(392,.3,"sine",.05);blip(330,.32,"sine",.04,.1);break;
+  case"bad": blip(150,.14,"sawtooth",.045);break;
+  default: blip(320,.1,"triangle",.04)}}
 
 function newBoard(){const b=new Array(14).fill(0);for(const p of P_PITS)b[p]=4;for(const p of C_PITS)b[p]=4;return b}
 function sideEmpty(b,player){const pits=player===1?P_PITS:C_PITS;return pits.every(p=>b[p]===0)}
-function applyEnd(b){b=b.slice();if(sideEmpty(b,1)){for(const p of C_PITS){b[C_STORE]+=b[p];b[p]=0}}else if(sideEmpty(b,2)){for(const p of P_PITS){b[P_STORE]+=b[p];b[p]=0}}return b}
-function sow(b,pit,player){b=b.slice();let seeds=b[pit];b[pit]=0;let idx=pit;const own=player===1?P_STORE:C_STORE,opp=player===1?C_STORE:P_STORE;
-  while(seeds>0){idx=(idx+1)%14;if(idx===opp)continue;b[idx]++;seeds--}
-  let again=false,captured=0;const ownPits=player===1?P_PITS:C_PITS;
-  if(idx===own)again=true;
-  else if(ownPits.includes(idx)&&b[idx]===1){const across=12-idx;if(b[across]>0){captured=b[across]+1;b[own]+=captured;b[across]=0;b[idx]=0}}
-  return{board:b,again,captured,last:idx,ended:sideEmpty(b,1)||sideEmpty(b,2)}}
-function evalAI(b){return (b[C_STORE]-b[P_STORE])*2+(C_PITS.reduce((s,p)=>s+b[p],0)-P_PITS.reduce((s,p)=>s+b[p],0))*0.08}
-function minimax(b,depth,player,alpha,beta){if(sideEmpty(b,1)||sideEmpty(b,2))return evalAI(applyEnd(b));if(depth<=0)return evalAI(b);
-  const pits=(player===2?C_PITS:P_PITS).filter(p=>b[p]>0);if(!pits.length)return evalAI(applyEnd(b));
-  if(player===2){let best=-Infinity;for(const p of pits){const r=sow(b,p,2);const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,depth-1,2,alpha,beta):minimax(r.board,depth-1,1,alpha,beta));if(v>best)best=v;if(best>alpha)alpha=best;if(alpha>=beta)break}return best}
-  let best=Infinity;for(const p of pits){const r=sow(b,p,1);const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,depth-1,1,alpha,beta):minimax(r.board,depth-1,2,alpha,beta));if(v<best)best=v;if(best<beta)beta=best;if(alpha>=beta)break}return best}
-function bestCpuPit(){const pits=C_PITS.filter(p=>state.board[p]>0);let best=pits[0],bv=-Infinity;for(const p of pits){const r=sow(state.board,p,2);const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,DEPTH-1,2,-Infinity,Infinity):minimax(r.board,DEPTH-1,1,-Infinity,Infinity));if(v>bv){bv=v;best=p}}return best}
+function applyEnd(b){b=b.slice();
+ if(sideEmpty(b,1)){for(const p of C_PITS){b[C_STORE]+=b[p];b[p]=0}}
+ else if(sideEmpty(b,2)){for(const p of P_PITS){b[P_STORE]+=b[p];b[p]=0}}
+ return b}
+// Sow returns the landing path too, so the animation and the preview can both
+// read exactly where each seed goes without re-deriving the rules.
+function sow(b,pit,player){b=b.slice();let seeds=b[pit];b[pit]=0;let idx=pit;
+ const own=player===1?P_STORE:C_STORE,opp=player===1?C_STORE:P_STORE;
+ const path=[];
+ while(seeds>0){idx=(idx+1)%14;if(idx===opp)continue;b[idx]++;seeds--;path.push(idx)}
+ let again=false,captured=0,captureAt=-1;const ownPits=player===1?P_PITS:C_PITS;
+ if(idx===own)again=true;
+ else if(ownPits.includes(idx)&&b[idx]===1){const across=12-idx;
+  if(b[across]>0){captured=b[across]+1;b[own]+=captured;b[across]=0;b[idx]=0;captureAt=idx}}
+ return{board:b,again,captured,captureAt,last:idx,path,ended:sideEmpty(b,1)||sideEmpty(b,2)}}
+function evalAI(b){
+ const storeDiff=(b[C_STORE]-b[P_STORE])*3;
+ const sideDiff=(C_PITS.reduce((s,p)=>s+b[p],0)-P_PITS.reduce((s,p)=>s+b[p],0))*0.15;
+ let position=0;
+ for(let i=0;i<6;i++)position-=b[i]*(i*0.03);
+ for(let i=7;i<13;i++)position+=b[i]*((i-7)*0.03);
+ return storeDiff+sideDiff+position}
+function minimax(b,depth,player,alpha,beta){
+ if(sideEmpty(b,1)||sideEmpty(b,2))return evalAI(applyEnd(b));
+ if(depth<=0)return evalAI(b);
+ const pits=(player===2?C_PITS:P_PITS).filter(p=>b[p]>0);
+ if(!pits.length)return evalAI(applyEnd(b));
+ if(player===2){let best=-Infinity;
+  for(const p of pits){const r=sow(b,p,2);
+   const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,depth-1,2,alpha,beta):minimax(r.board,depth-1,1,alpha,beta));
+   if(v>best)best=v;if(best>alpha)alpha=best;if(alpha>=beta)break}
+  return best}
+ let best=Infinity;
+ for(const p of pits){const r=sow(b,p,1);
+  const v=r.ended?evalAI(applyEnd(r.board)):(r.again?minimax(r.board,depth-1,1,alpha,beta):minimax(r.board,depth-1,2,alpha,beta));
+  if(v<best)best=v;if(best<beta)beta=best;if(alpha>=beta)break}
+ return best}
+function searchPit(player){const pits=(player===2?C_PITS:P_PITS).filter(p=>state.board[p]>0);
+ if(!pits.length)return null;
+ const cfg=LEVELS[state.level]||LEVELS.standard;
+ // The tree collapses as the board empties, so buy extra plies there for free:
+ // the endgame is where a mancala is actually won or lost.
+ const onBoard=state.board.reduce((n,v,i)=>i===P_STORE||i===C_STORE?n:n+v,0);
+ const bonus=onBoard<=12?5:onBoard<=20?3:0;
+ const depth=(player===2?cfg.depth:LEVELS.expert.depth)+(cfg.slip>0&&player===2?0:bonus);
+ let best=pits[0],bv=player===2?-Infinity:Infinity;
+ for(const p of pits){const r=sow(state.board,p,player);
+  const v=r.ended?evalAI(applyEnd(r.board))
+   :(r.again?minimax(r.board,depth-1,player,-Infinity,Infinity):minimax(r.board,depth-1,player===2?1:2,-Infinity,Infinity));
+  if(player===2?v>bv:v<bv){bv=v;best=p}}
+ return best}
+function cpuPit(){const cfg=LEVELS[state.level]||LEVELS.standard;
+ const pits=C_PITS.filter(p=>state.board[p]>0);if(!pits.length)return null;
+ // Casual still takes a free extra turn or a capture when one is sitting there,
+ // but otherwise plays loose so a new player can win.
+ if(cfg.slip>0&&Math.random()<cfg.slip){
+  for(const p of pits){const r=sow(state.board,p,2);if(r.again||r.captured>0)return p}
+  return pits[Math.floor(Math.random()*pits.length)]}
+ return searchPit(2)}
+function refreshHint(){state.hintPit=state.hints&&state.mode==="playing"&&state.turn===1&&!state.cpuThinking?searchPit(1):null}
+
+function spawnParts(x,y,color,n){if(reducedMotion)return;
+ for(let i=0;i<n;i++){const a=Math.PI*2*i/n+Math.random()*.6,s=60+Math.random()*130;
+  state.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:1,color})}}
+function flySeeds(fromPit,path,player){if(reducedMotion)return;
+ const from=pitCenter(fromPit);
+ path.forEach((idx,i)=>{const to=pitCenter(idx);
+  state.seeds.push({x:from.x,y:from.y,tx:to.x,ty:to.y,t:0,delay:i*0.055,
+   color:player===1?"#7ef9ff":"#fbbf66",step:i})})}
 
 function pitLabel(i){return i<=5?"pit "+(i+1):"a CPU pit"}
-function applyResult(){state.board=applyEnd(state.board);state.mode="over";const you=state.board[P_STORE],cpu=state.board[C_STORE];
-  if(you>cpu){state.result="win";state.wins++;state.streak++;if(state.streak>state.best)state.best=state.streak;say("You win "+you+"–"+cpu+"! Press New Game.");tone("win");vibe([26,26,40])}
-  else if(you<cpu){state.result="loss";state.streak=0;say("CPU wins "+cpu+"–"+you+". Press New Game.");tone("loss");vibe(50)}
-  else{state.result="draw";state.streak=0;say("Draw "+you+"–"+cpu+". Press New Game.");tone("draw");vibe(20)}
-  saveStats();update();draw()}
+function applyResult(){state.board=applyEnd(state.board);state.mode="over";
+ const you=state.board[P_STORE],cpu=state.board[C_STORE];
+ state.hintPit=null;
+ if(you>cpu){state.result="win";state.wins++;state.streak++;
+  if(state.streak>state.best)state.best=state.streak;
+  say("You win "+you+"–"+cpu+"! Press New Game.");tone("win");vibe([26,26,40]);
+  if(!reducedMotion){state.shake=.8;const c=pitCenter(P_STORE);spawnParts(c.x,c.y,"#7ef9ff",16)}}
+ else if(you<cpu){state.result="loss";state.streak=0;
+  say("CPU wins "+cpu+"–"+you+". Press New Game.");tone("loss");vibe(50);
+  if(!reducedMotion)state.shake=.6}
+ else{state.result="draw";state.streak=0;say("Draw "+you+"–"+cpu+". Press New Game.");tone("draw");vibe(20)}
+ saveStats();update();draw();wake()}
+
+function resolveSow(pit,player){const r=sow(state.board,pit,player);
+ state.board=r.board;state.lastMove={pit,by:player};state.lastCapture=r.captured;state.flash=1;
+ flySeeds(pit,r.path,player);
+ for(let i=0;i<Math.min(r.path.length,12);i++)tone("seed",i);
+ if(r.captured>0){state.captures+=player===1?1:0;state.capturedAt=r.captureAt;
+  tone("capture");vibe(16);
+  if(!reducedMotion){state.shake=.5;const c=pitCenter(r.captureAt>=0?r.captureAt:pit);
+   spawnParts(c.x,c.y,player===1?"#7ef9ff":"#fbbf66",12)}}
+ else if(r.again){if(player===1)state.extraTurns++;tone("again");vibe([10,10])}
+ else if(r.path.includes(player===1?P_STORE:C_STORE)){tone("store")}
+ if(!reducedMotion)state.storePulse=1;
+ return r}
 
 function playerSow(pit){if(state.mode!=="playing"||state.turn!==1||state.cpuThinking)return;
-  if(!P_PITS.includes(pit)||state.board[pit]===0){say("Pick one of your non-empty pits (bottom row).");tone("bad");vibe(4);draw();return}
-  state.cursor=pit;const r=sow(state.board,pit,1);state.board=r.board;state.lastMove={pit,by:1};state.lastCapture=r.captured;state.flash=1;
-  if(r.captured>0){tone("capture");vibe(16);say("Captured "+r.captured+"! You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".")}
-  else if(r.again){tone("again");vibe([10,10]);say("Last seed in your store — extra turn!")}
-  else{tone("sow");vibe(8);say("Sowed "+pitLabel(pit)+".")}
-  if(r.ended){applyResult();return}
-  if(r.again){update();draw();return}
-  state.turn=2;scheduleCpu()}
+ if(!P_PITS.includes(pit)||state.board[pit]===0){say("Pick one of your non-empty pits (bottom row).");tone("bad");vibe(4);draw();return}
+ state.cursor=pit;state.hintPit=null;
+ const r=resolveSow(pit,1);
+ if(r.captured>0)say("Captured "+r.captured+"! You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".");
+ else if(r.again)say("Last seed in your store — sow again!");
+ else say("Sowed "+pitLabel(pit)+". You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".");
+ if(r.ended){applyResult();return}
+ if(r.again){refreshHint();update();draw();wake();return}
+ state.turn=2;scheduleCpu()}
+function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;state.hintPit=null;update();draw();wake()}
+function doCpu(){if(state.mode!=="playing")return;
+ const pit=cpuPit();
+ if(pit==null){applyResult();return}
+ const r=resolveSow(pit,2);
+ if(r.captured>0)say("CPU captured "+r.captured+". You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".");
+ else say("CPU sowed. You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".");
+ tone("cpu");vibe(8);
+ if(r.ended){applyResult();return}
+ if(r.again){scheduleCpu();return}
+ state.turn=1;refreshHint();update();draw();wake()}
 
-function scheduleCpu(){state.cpuThinking=true;state.aiTimer=AI_DELAY;update();draw()}
-function doCpu(){if(state.mode!=="playing")return;const pit=bestCpuPit();const r=sow(state.board,pit,2);state.board=r.board;state.lastMove={pit,by:2};state.lastCapture=r.captured;state.flash=1;
-  if(r.captured>0){tone("capture");say("CPU captured "+r.captured+". You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".")}
-  else{tone("cpu");say("CPU sowed. You "+state.board[P_STORE]+" — CPU "+state.board[C_STORE]+".")}
-  vibe(8);
-  if(r.ended){applyResult();return}
-  if(r.again){scheduleCpu();return}
-  state.turn=1;update();draw()}
+function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;
+ state.lastMove=null;state.lastCapture=0;state.cpuThinking=false;state.aiTimer=0;state.cursor=2;
+ state.seeds.length=0;state.parts.length=0;state.shake=0;state.storePulse=0;state.capturedAt=-1;
+ state.extraTurns=0;state.captures=0;
+ say("New game — sow counterclockwise and bank the most seeds. CPU: "+(LEVELS[state.level]||LEVELS.standard).label+".");
+ refreshHint();update();draw()}
+function moveCursor(d){let c=state.cursor;
+ for(let i=0;i<6;i++){c=Math.max(0,Math.min(5,c+d));if(state.board[c]>0)break;if(c===0||c===5)break}
+ state.cursor=Math.max(0,Math.min(5,c));draw()}
+function setLevel(id,announce){if(!LEVELS[id])return;state.level=id;saveStats();
+ say("CPU level: "+LEVELS[id].label+".");refreshHint();update();draw();if(announce)tone("level")}
+function toggleHints(){state.hints=!state.hints;saveStats();refreshHint();
+ say(state.hints?"Hints on — the ringed pit is the strongest sow.":"Hints off.");
+ if(state.hints)tone("hint");update();draw()}
 
-function reset(){state.board=newBoard();state.turn=1;state.mode="playing";state.result=null;state.lastMove=null;state.lastCapture=0;state.cpuThinking=false;state.aiTimer=0;state.cursor=2;say("New game — sow seeds counterclockwise and bank the most in your store.");update();draw()}
-function moveCursor(d){let c=state.cursor;for(let i=0;i<6;i++){c=Math.max(0,Math.min(5,c+d));if(state.board[c]>0)break;if(c===0||c===5)break}state.cursor=Math.max(0,Math.min(5,c));draw()}
+function update(){
+ els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));
+ els.you.textContent=String(state.board[P_STORE]||0);els.cpu.textContent=String(state.board[C_STORE]||0);
+ els.wins.textContent=String(state.wins);els.streak.textContent=String(state.streak);els.best.textContent=String(state.best);
+ els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound));
+ if(els.hint){els.hint.textContent=state.hints?"Hints On":"Hints Off";els.hint.setAttribute("aria-pressed",String(state.hints))}
+ LEVEL_IDS.forEach(id=>{const b=els[id];if(!b)return;
+  b.setAttribute("aria-pressed",String(state.level===id));
+  b.setAttribute("aria-label","CPU level "+LEVELS[id].label+(state.level===id?", selected":""))})}
 
-function update(){els.turn.textContent=state.mode==="over"?"Over":(state.cpuThinking?"CPU…":(state.turn===1?"You":"CPU"));els.you.textContent=String(state.board[P_STORE]||0);els.cpu.textContent=String(state.board[C_STORE]||0);els.wins.textContent=String(state.wins);els.streak.textContent=String(state.streak);els.best.textContent=String(state.best);els.sound.textContent=state.sound?"Sound On":"Sound Off";els.sound.setAttribute("aria-pressed",String(state.sound))}
+let compact=false;
+function syncCompact(){let w=0;try{w=canvas.getBoundingClientRect().width}catch(_){}
+ const next=w>0&&w<560;if(next===compact)return;
+ compact=next;canvas.width=compact?620:960;canvas.height=compact?470:540;
+ canvas.classList.toggle("compact",compact);
+ if(state.board.length)draw()}
+function pitGeom(){if(compact)return{r:30,by:322,ty:196,storeW:56,storeH:196,lx:44,rx:576,sy:150,x0:112,dx:78};
+ return{r:46,by:348,ty:176,storeW:74,storeH:262,lx:78,rx:882,sy:196,x0:196,dx:114}}
+function pitX(c){const g=pitGeom();return g.x0+c*g.dx}
+function pitCenter(i){const g=pitGeom();
+ if(i>=0&&i<=5)return{x:pitX(i),y:g.by};
+ if(i>=7&&i<=12)return{x:pitX(12-i),y:g.ty};
+ if(i===P_STORE)return{x:g.rx,y:g.sy+g.storeH/2-30};
+ if(i===C_STORE)return{x:g.lx,y:g.sy+g.storeH/2-30};
+ return{x:0,y:0}}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+ ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
+function drawPit(x,y,r,count,opts){opts=opts||{};
+ ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+ const gr=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.2,x,y,r);
+ gr.addColorStop(0,opts.fill0||"#13314e");gr.addColorStop(1,opts.fill1||"#0a1726");
+ ctx.fillStyle=gr;ctx.fill();
+ ctx.lineWidth=opts.sel?4:2;
+ ctx.strokeStyle=opts.hint?"#facc15":(opts.sel?"#f8fafc":(opts.mine?"rgba(94,234,212,.45)":"rgba(148,163,184,.34)"));
+ ctx.stroke();
+ const dots=Math.min(count,12);
+ for(let i=0;i<dots;i++){const a=i/Math.max(1,dots)*Math.PI*2,rr=r*.5;
+  ctx.fillStyle=opts.seed||"#7ef9ff";ctx.beginPath();ctx.arc(x+Math.cos(a)*rr,y+Math.sin(a)*rr,r*.085,0,Math.PI*2);ctx.fill()}
+ ctx.fillStyle="#f3fbff";ctx.font="950 "+Math.round(r*.62)+"px system-ui";
+ ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(count),x,y+1);
+ ctx.textAlign="left";ctx.textBaseline="alphabetic"}
+function roundStore(x,y,w,h,count,label,hi,mine){const gr=ctx.createLinearGradient(x,y,x,y+h);
+ gr.addColorStop(0,mine?"#15384f":"#2a2438");gr.addColorStop(1,mine?"#0a1a2c":"#161224");
+ ctx.fillStyle=gr;roundRect(x,y,w,h,18,true,false);
+ ctx.lineWidth=hi?4:2;ctx.strokeStyle=hi?"#5eead4":(mine?"rgba(94,234,212,.4)":"rgba(148,163,184,.34)");
+ roundRect(x+.5,y+.5,w-1,h-1,18,false,true);
+ ctx.fillStyle=mine?"#5eead4":"#cbd5e1";ctx.font="900 12px system-ui";ctx.textAlign="center";
+ ctx.fillText(label,x+w/2,y+24);
+ const dots=Math.min(count,16);
+ for(let i=0;i<dots;i++){const col=i%3,row=Math.floor(i/3);
+  ctx.fillStyle=mine?"#7ef9ff":"#fbbf66";ctx.beginPath();ctx.arc(x+w/2+(col-1)*16,y+58+row*16,5,0,Math.PI*2);ctx.fill()}
+ const pulse=state.storePulse>0&&!reducedMotion?1+state.storePulse*0.12:1;
+ ctx.save();ctx.translate(x+w/2,y+h-20);ctx.scale(pulse,pulse);
+ ctx.fillStyle="#f3fbff";ctx.font="950 30px system-ui";ctx.textAlign="center";ctx.fillText(String(count),0,0);ctx.restore();
+ ctx.textAlign="left";ctx.textBaseline="alphabetic"}
 
-// Layout: left store = CPU(13), right store = You(6). Bottom row pits 0..5 left->right,
-// top row pits 12..7 left->right (so the loop reads counterclockwise).
-function pitX(c){return 196+c*114}
-function pitGeom(){return{r:46,by:352,ty:172,storeW:74,storeH:300,lx:78,rx:882,sy:240}}
-function pitCenter(i){const g=pitGeom();if(i>=0&&i<=5)return{x:pitX(i),y:g.by};if(i>=7&&i<=12)return{x:pitX(12-i),y:g.ty};if(i===P_STORE)return{x:g.rx,y:g.sy+g.storeH/2-30};if(i===C_STORE)return{x:g.lx,y:g.sy+g.storeH/2-30};return{x:0,y:0}}
-function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke()}
-function drawPit(x,y,r,count,opts){opts=opts||{};ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);const gr=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.2,x,y,r);gr.addColorStop(0,opts.fill0||"#13314e");gr.addColorStop(1,opts.fill1||"#0a1726");ctx.fillStyle=gr;ctx.fill();ctx.lineWidth=opts.sel?4:2;ctx.strokeStyle=opts.sel?"#f8fafc":(opts.mine?"rgba(94,234,212,.45)":"rgba(148,163,184,.34)");ctx.stroke();
-  // seed dots
-  const dots=Math.min(count,12);for(let i=0;i<dots;i++){const a=i/Math.max(1,dots)*Math.PI*2,rr=r*.5;ctx.fillStyle=opts.seed||"#7ef9ff";ctx.beginPath();ctx.arc(x+Math.cos(a)*rr,y+Math.sin(a)*rr,r*.085,0,Math.PI*2);ctx.fill()}
-  ctx.fillStyle="#f3fbff";ctx.font="950 "+Math.round(r*.62)+"px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(count),x,y+1);ctx.textAlign="left";ctx.textBaseline="alphabetic"}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
-  const g=pitGeom();
-  ctx.textAlign="left";ctx.fillStyle="#5eead4";ctx.font="900 20px system-ui";ctx.fillText("Seedline",30,36);
-  ctx.fillStyle="#9fb3c8";ctx.font="700 12px system-ui";ctx.fillText("Your pits are the bottom row; your store is on the right. Sow counterclockwise.",30,54);
-  // board slab
-  ctx.fillStyle="#0c2233";roundRect(40,90,880,360,26,true,false);
-  // stores
-  const youTurnHi=state.mode==="playing"&&state.turn===1&&!state.cpuThinking;
-  roundStore(g.rx-g.storeW/2,g.sy,g.storeW,g.storeH,state.board[P_STORE],"YOU",youTurnHi,true);
-  roundStore(g.lx-g.storeW/2,g.sy,g.storeW,g.storeH,state.board[C_STORE],"CPU",!youTurnHi&&state.mode==="playing",false);
-  // pits
-  for(let i=0;i<=5;i++){const c=pitCenter(i),sel=youTurnHi&&state.cursor===i;drawPit(c.x,c.y,g.r,state.board[i],{mine:true,sel,seed:"#7ef9ff",fill0:"#15384f",fill1:"#0a1a2c"})}
-  for(let i=7;i<=12;i++){const c=pitCenter(i);drawPit(c.x,c.y,g.r,state.board[i],{mine:false,seed:"#fbbf66",fill0:"#2a2438",fill1:"#161224"})}
-  // last move marker
-  if(state.lastMove){const c=pitCenter(state.lastMove.pit);ctx.strokeStyle="#facc15";ctx.lineWidth=3;ctx.beginPath();ctx.arc(c.x,c.y,g.r+5,0,Math.PI*2);ctx.stroke()}
-  if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.78)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign="center";ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";ctx.font="950 46px system-ui";ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#dbeafe";ctx.font="800 18px system-ui";ctx.fillText(state.feedback,canvas.width/2,canvas.height/2+30);ctx.textAlign="left"}}
-function roundStore(x,y,w,h,count,label,hi,mine){const gr=ctx.createLinearGradient(x,y,x,y+h);gr.addColorStop(0,mine?"#15384f":"#2a2438");gr.addColorStop(1,mine?"#0a1a2c":"#161224");ctx.fillStyle=gr;roundRect(x,y,w,h,18,true,false);ctx.lineWidth=hi?4:2;ctx.strokeStyle=hi?"#5eead4":(mine?"rgba(94,234,212,.4)":"rgba(148,163,184,.34)");roundRect(x+.5,y+.5,w-1,h-1,18,false,true);
-  ctx.fillStyle=mine?"#5eead4":"#cbd5e1";ctx.font="900 12px system-ui";ctx.textAlign="center";ctx.fillText(label,x+w/2,y+24);
-  const dots=Math.min(count,16);for(let i=0;i<dots;i++){const col=i%3,row=Math.floor(i/3);ctx.fillStyle=mine?"#7ef9ff":"#fbbf66";ctx.beginPath();ctx.arc(x+w/2+(col-1)*16,y+58+row*16,5,0,Math.PI*2);ctx.fill()}
-  ctx.fillStyle="#f3fbff";ctx.font="950 30px system-ui";ctx.fillText(String(count),x+w/2,y+h-20);ctx.textAlign="left";ctx.textBaseline="alphabetic"}
+function draw(){const W=canvas.width,H=canvas.height;
+ const sh=state.shake>0&&!reducedMotion?state.shake*7:0;
+ ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
+ const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#07182a");bg.addColorStop(1,"#050a16");
+ ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+ if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ const g=pitGeom();
+ ctx.textAlign="left";ctx.textBaseline="alphabetic";
+ if(compact){ctx.fillStyle="#5eead4";ctx.font="950 28px system-ui";
+  ctx.fillText("YOU "+(state.board[P_STORE]||0)+" · CPU "+(state.board[C_STORE]||0),22,38);
+  ctx.fillStyle="#9fb3c8";ctx.font="900 18px system-ui";
+  ctx.fillText((LEVELS[state.level]||LEVELS.standard).label.toUpperCase()+" · YOUR PITS ARE THE BOTTOM ROW",22,66)}
+ else{ctx.fillStyle="#5eead4";ctx.font="900 22px system-ui";ctx.fillText("Seedline",30,36);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 14px system-ui";
+  ctx.fillText("Your pits are the bottom row; your store is on the right. CPU: "+(LEVELS[state.level]||LEVELS.standard).label,30,58)}
+ ctx.fillStyle="#0c2233";
+ if(compact)roundRect(24,132,W-48,244,20,true,false);
+ else roundRect(40,150,880,320,26,true,false);
+ const youTurnHi=state.mode==="playing"&&state.turn===1&&!state.cpuThinking;
+ roundStore(g.rx-g.storeW/2,g.sy,g.storeW,g.storeH,state.board[P_STORE],"YOU",youTurnHi,true);
+ roundStore(g.lx-g.storeW/2,g.sy,g.storeW,g.storeH,state.board[C_STORE],"CPU",!youTurnHi&&state.mode==="playing",false);
+ // Sow preview: mark every pit the selected sow would drop a seed into, and say
+ // up front whether it lands home for an extra turn or takes a capture. Counting
+ // the loop is the whole skill of the game, so it should be legible.
+ let preview=null;
+ if(youTurnHi&&state.board[state.cursor]>0){const r=sow(state.board,state.cursor,1);
+  const counts=new Map();for(const idx of r.path)counts.set(idx,(counts.get(idx)||0)+1);
+  preview={counts,again:r.again,captured:r.captured,captureAt:r.captureAt}}
+ for(let i=0;i<=5;i++){const c=pitCenter(i),sel=youTurnHi&&state.cursor===i;
+  drawPit(c.x,c.y,g.r,state.board[i],{mine:true,sel,hint:state.hintPit===i&&!sel,seed:"#7ef9ff",fill0:"#15384f",fill1:"#0a1a2c"})}
+ for(let i=7;i<=12;i++){const c=pitCenter(i);
+  drawPit(c.x,c.y,g.r,state.board[i],{mine:false,seed:"#fbbf66",fill0:"#2a2438",fill1:"#161224"})}
+ if(preview){ctx.textAlign="center";ctx.textBaseline="middle";
+  preview.counts.forEach((n,idx)=>{const c=pitCenter(idx);
+   const isStore=idx===P_STORE;
+   ctx.strokeStyle=isStore?"#5eead4":"rgba(248,251,255,.75)";ctx.lineWidth=2;ctx.setLineDash([5,4]);
+   ctx.beginPath();ctx.arc(c.x,c.y,(isStore?26:g.r)+7,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+   ctx.fillStyle="rgba(7,18,30,.9)";ctx.beginPath();ctx.arc(c.x+(isStore?0:g.r*0.78),c.y-(isStore?34:g.r*0.78),12,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle="#f8fbff";ctx.font="950 14px system-ui";
+   ctx.fillText("+"+n,c.x+(isStore?0:g.r*0.78),c.y-(isStore?34:g.r*0.78)+1)});
+  if(preview.captured>0&&preview.captureAt>=0){const c=pitCenter(preview.captureAt);
+   ctx.strokeStyle="#facc15";ctx.lineWidth=3;ctx.beginPath();ctx.arc(c.x,c.y,g.r+11,0,Math.PI*2);ctx.stroke()}
+  ctx.textAlign="left";ctx.textBaseline="alphabetic";
+  ctx.fillStyle=preview.captured>0?"#facc15":(preview.again?"#5eead4":"#9fb3c8");
+  ctx.font="950 "+(compact?18:17)+"px system-ui";
+  const note=preview.captured>0?("This sow captures "+preview.captured+" seeds.")
+   :preview.again?"This sow ends in your store — extra turn.":"Pick a pit, then Enter or tap to sow.";
+  ctx.fillText(note,compact?22:30,compact?H-18:H-22)}
+ if(state.lastMove){const c=pitCenter(state.lastMove.pit);
+  ctx.strokeStyle="#facc15";ctx.lineWidth=3;ctx.beginPath();ctx.arc(c.x,c.y,g.r+5,0,Math.PI*2);ctx.stroke()}
+ for(const s of state.seeds){if(s.delay>0)continue;
+  const e=Math.min(1,s.t),x=s.x+(s.tx-s.x)*e,y=s.y+(s.ty-s.y)*e-Math.sin(Math.PI*e)*38;
+  ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(x,y,5.5,0,Math.PI*2);ctx.fill()}
+ for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color||"#7ef9ff";
+  ctx.beginPath();ctx.arc(p.x,p.y,3.6,0,Math.PI*2);ctx.fill()}
+ ctx.globalAlpha=1;
+ if(state.mode==="over"){ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(-20,-20,W+40,H+40);
+  ctx.textAlign="center";
+  ctx.fillStyle=state.result==="win"?"#5eead4":state.result==="loss"?"#fb7185":"#facc15";
+  ctx.font="950 "+(compact?40:52)+"px system-ui";
+  ctx.fillText(state.result==="win"?"YOU WIN":state.result==="loss"?"CPU WINS":"DRAW",W/2,H/2-24);
+  ctx.fillStyle="#e6f2ff";ctx.font="900 "+(compact?24:28)+"px system-ui";
+  ctx.fillText((state.board[P_STORE]||0)+" – "+(state.board[C_STORE]||0),W/2,H/2+16);
+  ctx.fillStyle="#9fb3c8";ctx.font="800 "+(compact?16:18)+"px system-ui";
+  ctx.fillText("Streak "+state.streak+"  ·  Best "+state.best+"  ·  Wins "+state.wins,W/2,H/2+50);
+  ctx.fillStyle="#5eead4";
+  ctx.fillText("New Game or press N  ·  CPU "+(LEVELS[state.level]||LEVELS.standard).label,W/2,H/2+80);
+  ctx.textAlign="left"}
+ ctx.setTransform(1,0,0,1,0,0)}
 
-function tick(dt){state.time+=dt;if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}draw()}
-window.advanceTime=ms=>{const n=Math.max(1,Math.ceil(ms/40));for(let i=0;i<n;i++)tick(ms/n);return window.render_game_to_text()};
-window.render_game_to_text=function render_game_to_text(){return JSON.stringify({mode:state.mode,result:state.result,turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),cpuThinking:state.cpuThinking,you:state.board[P_STORE]||0,cpu:state.board[C_STORE]||0,seeds:state.board.reduce((s,v)=>s+v,0),cursor:state.cursor,lastMove:state.lastMove,lastCapture:state.lastCapture,wins:state.wins,streak:state.streak,best:state.best,sound:state.sound,feedback:state.feedback,board:state.board.slice(),coordinateSystem:"14-pit board: 0-5 your pits, 6 your store, 7-12 CPU pits, 13 CPU store; sow counterclockwise"})};
+function tick(dt){state.time+=dt;
+ if(state.flash>0)state.flash=Math.max(0,state.flash-dt/240);
+ if(state.shake>0)state.shake=Math.max(0,state.shake-dt/420);
+ if(state.storePulse>0)state.storePulse=Math.max(0,state.storePulse-dt/300);
+ for(let i=state.seeds.length-1;i>=0;i--){const s=state.seeds[i];
+  if(s.delay>0){s.delay-=dt/1000;continue}
+  s.t+=dt/260;if(s.t>=1)state.seeds.splice(i,1)}
+ for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];
+  p.life-=dt/620;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=dt*.34;
+  if(p.life<=0)state.parts.splice(i,1)}
+ if(state.cpuThinking){state.aiTimer-=dt;if(state.aiTimer<=0){state.cpuThinking=false;doCpu()}}
+ draw()}
+window.advanceTime=ms=>{const total=Math.max(0,Number(ms)||0),n=Math.max(1,Math.ceil(total/40));
+ for(let i=0;i<n;i++)tick(total/n);return window.render_game_to_text()};
+window.render_game_to_text=function render_game_to_text(){
+ let preview=null;
+ if(state.mode==="playing"&&state.turn===1&&!state.cpuThinking&&state.board[state.cursor]>0){
+  const r=sow(state.board,state.cursor,1);
+  preview={pit:state.cursor,again:r.again,captured:r.captured,lands:r.last,seeds:r.path.length}}
+ return JSON.stringify({mode:state.mode,result:state.result,
+  turn:state.mode==="over"?"over":(state.cpuThinking?"cpu":(state.turn===1?"you":"cpu")),
+  cpuThinking:state.cpuThinking,you:state.board[P_STORE]||0,cpu:state.board[C_STORE]||0,
+  seeds:state.board.reduce((s,v)=>s+v,0),cursor:state.cursor,lastMove:state.lastMove,
+  lastCapture:state.lastCapture,wins:state.wins,streak:state.streak,best:state.best,
+  level:state.level,levelDepth:(LEVELS[state.level]||LEVELS.standard).depth,
+  hints:state.hints,hintPit:state.hintPit,preview,extraTurns:state.extraTurns,captures:state.captures,
+  animating:state.seeds.length>0,reducedMotion:reducedMotion,
+  sound:state.sound,feedback:state.feedback,board:state.board.slice(),
+  coordinateSystem:"14-pit board: 0-5 your pits, 6 your store, 7-12 CPU pits, 13 CPU store; sow counterclockwise"})};
 
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
-  if(k==="ArrowLeft"||k==="a")moveCursor(-1);else if(k==="ArrowRight"||k==="d")moveCursor(1);else if(k==="Enter"||k===" ")playerSow(state.cursor);else if(k==="n"||k==="r")reset();else if(k>="1"&&k<="6")playerSow(Number(k)-1)});
-canvas.addEventListener("pointerdown",e=>{canvas.focus();const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,py=(e.clientY-b.top)/b.height*canvas.height,g=pitGeom();for(let i=0;i<=5;i++){const c=pitCenter(i);if((px-c.x)**2+(py-c.y)**2<=(g.r+6)**2){playerSow(i);return}}});
-els.neww.addEventListener("click",()=>{reset();tone("sow")});
-els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();say(state.sound?"Sound enabled.":"Sound muted.");tone("sow")});
+document.addEventListener("keydown",e=>{const t=e.target;
+ if(t&&/^(button|input|select|textarea)$/i.test(t.tagName||""))return;
+ const k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(k))e.preventDefault();
+ if(k==="ArrowLeft"||k==="a")moveCursor(-1);
+ else if(k==="ArrowRight"||k==="d")moveCursor(1);
+ else if(k==="Enter"||k===" ")playerSow(state.cursor);
+ else if(k==="n"||k==="r")reset();
+ else if(k==="h")toggleHints();
+ else if(k==="c"){const i=LEVEL_IDS.indexOf(state.level);setLevel(LEVEL_IDS[(i+1)%LEVEL_IDS.length],true)}
+ else if(k>="1"&&k<="6")playerSow(Number(k)-1)});
+canvas.addEventListener("pointerdown",e=>{canvas.focus();
+ const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*canvas.width,
+  py=(e.clientY-b.top)/b.height*canvas.height,g=pitGeom();
+ for(let i=0;i<=5;i++){const c=pitCenter(i);
+  if((px-c.x)**2+(py-c.y)**2<=(g.r+6)**2){playerSow(i);return}}});
+els.neww.addEventListener("click",()=>{reset();tone("level")});
+els.sound.addEventListener("click",()=>{state.sound=!state.sound;saveSound();update();
+ say(state.sound?"Sound enabled.":"Sound muted.");
+ if(state.sound)tone("level");else if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}});
+if(els.hint)els.hint.addEventListener("click",()=>{toggleHints();canvas.focus()});
+LEVEL_IDS.forEach(id=>{const b=els[id];if(b)b.addEventListener("click",()=>setLevel(id,true))});
 document.querySelectorAll("[data-pit]").forEach(btn=>btn.addEventListener("click",()=>{canvas.focus();playerSow(Number(btn.dataset.pit))}));
-reset();
-let last=performance.now(),rafOn=false;
-function needsFrame(){return state.flash>0||state.cpuThinking}
-function frame(now){const dt=Math.min(80,now-last);last=now;tick(dt);if(needsFrame()){requestAnimationFrame(frame)}else{rafOn=false}}
-function wake(){if(rafOn)return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
-addEventListener("keydown",wake,true);addEventListener("pointerdown",wake,true);
+document.addEventListener("visibilitychange",()=>{if(document.hidden){rafOn=false;
+ if(audio&&audio.suspend){try{audio.suspend()}catch(_){}}}else wake()});
+addEventListener("resize",syncCompact);
+
+let last=0,rafOn=false;
+function needsFrame(){return state.flash>0||state.cpuThinking||state.seeds.length>0||state.parts.length>0||state.shake>0||state.storePulse>0}
+function frame(now){const dt=Math.min(80,last?now-last:0);last=now;tick(dt);
+ if(needsFrame()&&!document.hidden){requestAnimationFrame(frame)}else{rafOn=false;last=0}}
+function wake(){if(rafOn||document.hidden||!needsFrame())return;rafOn=true;last=performance.now();requestAnimationFrame(frame)}
+syncCompact();reset();
 if(needsFrame())wake();
 })();
 </script>
