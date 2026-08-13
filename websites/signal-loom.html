@@ -141,7 +141,8 @@
   function store(){ if(window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch(_) { return null; } }
   function read(k, d){ const s = store(); if(!s) return d; try { const v = s.getItem(k); return v == null ? d : v; } catch(_) { return d; } }
   function write(k, v){ const s = store(); if(!s) return; try { s.setItem(k, String(v)); } catch(_) {} }
-  const state = { mode:"menu", stage:0, pieces:[], cursor:{x:1,y:2}, beat:0, beatMs:0, charge:0, moves:0, score:0, best:Number(read(BEST_KEY, "0")) || 0, sound:!["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase()), lastEvent:"ready", feedback:"Press Start.", feedbackMs:1200, userGesture:false, toneCount:0, lastSound:"none" };
+  function finiteOr0(v){ const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; }
+  const state = { mode:"menu", stage:0, pieces:[], cursor:{x:1,y:2}, beat:0, beatMs:0, charge:0, moves:0, score:0, best:finiteOr0(read(BEST_KEY, "0")), sound:!["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase()), lastEvent:"ready", feedback:"Press Start.", feedbackMs:1200, userGesture:false, toneCount:0, lastSound:"none" };
   let audio = null;
   function setFeedback(text, ms, event){ state.feedback = text; state.feedbackMs = ms || 1200; state.lastEvent = event || "feedback"; els.status.textContent = text; els.live.textContent = text; }
   function ensureAudio(){ if(!state.sound || !state.userGesture) return null; try { if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if(audio.state === "suspended") audio.resume().catch(() => {}); return audio; } catch(_) { audio = null; return null; } }
@@ -149,15 +150,26 @@
   function stage(){ return stages[state.stage]; }
   function clonePieces(){ state.pieces = stage().pieces.map((p) => ({ x:p.x, y:p.y, type:p.type, r:p.r, s:p.s })); }
   function start(){ state.userGesture = true; state.mode = "playing"; state.stage = 0; state.score = 0; setupStage(); tone("start"); canvas.focus(); }
-  function setupStage(){ const st = stage(); clonePieces(); state.cursor = { x: st.pieces[0].x, y: st.pieces[0].y }; state.beat = 0; state.beatMs = 0; state.charge = st.charge; state.moves = 0; setFeedback(st.name + " online. Rotate the first misaligned conduit.", 1500, "stage"); updateUI(); draw(); }
+  function setupStage(){ const st = stage(); clonePieces(); state.cursor = { x: st.pieces[0].x, y: st.pieces[0].y }; state.beat = 0; state.beatMs = 0; state.charge = st.charge; state.moves = 0; setFeedback(st.name + " online. Rotate the first misaligned conduit.", 1500, "stage"); updateUI(); draw(); wakeLoop(); }
   function isSolved(){ return state.pieces.every((p) => p.r % 4 === p.s % 4); }
   function gateOpen(){ const st = stage(); return state.beat % st.beatMod === st.phase; }
+  function beatsUntilOpen(){ const st = stage(); return (st.phase - state.beat % st.beatMod + st.beatMod) % st.beatMod; }
+  // What pulsing right now would do. pulse() runs from this same description, so
+  // the bar above the board cannot promise something the pulse will not deliver.
+  function pulseOutcome(){ const solved = isSolved(), open = gateOpen();
+    if(solved && open){ const gain = 70 + state.charge * 5 + Math.max(0, 18 - (state.moves + 1)), last = state.stage === stages.length - 1;
+      return { ok:true, solved, open, gain, last, cost:0, chargeLeft:state.charge,
+        text: last ? "Pulse completes the loom (+" + gain + ")" : "Pulse reaches the core and opens " + stages[state.stage + 1].name + " (+" + gain + ")" }; }
+    const cost = open ? 1 : 2;
+    const why = !solved && !open ? "route unaligned, gate shut" : !solved ? "route unaligned" : "gate shut";
+    return { ok:false, solved, open, gain:0, last:false, cost, scoreLoss:5, chargeLeft:state.charge - cost,
+      text: "Pulse now: " + why + " - costs " + cost + " charge (" + (state.charge - cost) + " left), 5 score" }; }
   function recommendation(){ const bad = state.pieces.find((p) => p.r % 4 !== p.s % 4); if(bad) return { type:"rotate", x:bad.x, y:bad.y, current:bad.r % 4, target:bad.s % 4, clicks:(bad.s - bad.r + 4) % 4 }; if(!gateOpen()) return { type:"wait", beat:state.beat, targetPhase:stage().phase }; return { type:"pulse" }; }
   function rotateSelected(){ state.userGesture = true; if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; const p = state.pieces.find((q) => q.x === state.cursor.x && q.y === state.cursor.y); if(!p){ setFeedback("Select a conduit tile first.", 900, "empty"); return; } p.r = (p.r + 1) % 4; state.moves += 1; state.score += 1; setFeedback("Conduit rotated.", 750, "rotate"); tone("rotate"); updateUI(); draw(); }
-  function pulse(){ state.userGesture = true; if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; state.moves += 1; if(isSolved() && gateOpen()){ state.score += 70 + state.charge * 5 + Math.max(0, 18 - state.moves); if(state.stage === stages.length - 1){ state.mode = "won"; if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } setFeedback("Signal Loom complete. Score " + state.score + ".", 2400, "win"); tone("win"); } else { state.stage += 1; setupStage(); setFeedback("Pulse reached the loom core. Next route.", 1600, "stage-clear"); tone("win"); } } else { state.charge -= gateOpen() ? 1 : 2; state.score = Math.max(0, state.score - 5); if(state.charge <= 0){ state.mode = "failed"; if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } setFeedback("Charge decayed before the pulse locked.", 2200, "failed"); tone("fail"); } else { setFeedback(gateOpen() ? "Pulse scattered through a wrong turn." : "Timed gate is closed. Wait for the open beat.", 1400, "bad-pulse"); tone("fail"); } } updateUI(); draw(); }
+  function pulse(){ state.userGesture = true; if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; const out = pulseOutcome(); state.moves += 1; if(out.ok){ state.score += out.gain; if(state.stage === stages.length - 1){ state.mode = "won"; if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } setFeedback("Signal Loom complete. Score " + state.score + ".", 2400, "win"); tone("win"); } else { state.stage += 1; setupStage(); setFeedback("Pulse reached the loom core. Next route.", 1600, "stage-clear"); tone("win"); } } else { state.charge -= out.cost; state.score = Math.max(0, state.score - out.scoreLoss); if(state.charge <= 0){ state.mode = "failed"; if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } setFeedback("Charge decayed before the pulse locked.", 2200, "failed"); tone("fail"); } else { setFeedback(gateOpen() ? "Pulse scattered through a wrong turn." : "Timed gate is closed. Wait for the open beat.", 1400, "bad-pulse"); tone("fail"); } } updateUI(); draw(); }
   function moveCursor(dx, dy){ if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; state.cursor.x = Math.max(0, Math.min(W - 1, state.cursor.x + dx)); state.cursor.y = Math.max(0, Math.min(H - 1, state.cursor.y + dy)); setFeedback("Cursor " + state.cursor.x + "," + state.cursor.y + ".", 500, "cursor"); updateUI(); draw(); }
   function step(ms){ if(state.mode === "playing"){ state.beatMs += ms; while(state.beatMs >= 560){ state.beatMs -= 560; state.beat += 1; if(state.feedbackMs <= 0) setFeedback(gateOpen() ? "Gate beat open." : "Gate beat cycling.", 520, "beat"); } } state.feedbackMs = Math.max(0, state.feedbackMs - ms); }
-  function updateUI(){ const st = stage(), rec = recommendation(); els.stage.textContent = (state.stage + 1) + "/" + stages.length; els.resource.textContent = state.charge; els.goal.textContent = st.relays.length + "/" + st.relays.length; els.moves.textContent = state.moves; els.score.textContent = state.score; els.best.textContent = Math.max(state.best, state.score); els.stageName.textContent = st.name; els.mission.textContent = "Rotate conduits, catch the open gate beat, and pulse through every relay to the loom core."; els.need.textContent = isSolved() ? "Open beat" : "Route align"; els.risk.textContent = gateOpen() ? "Gate open" : "Gate closed"; els.next.textContent = rec.type === "rotate" ? "Rotate " + rec.x + "," + rec.y : rec.type === "wait" ? "Wait beat" : "Pulse"; els.key.textContent = "Arrows, Space, Enter"; els.sound.textContent = state.sound ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.sound)); }
+  function updateUI(){ const st = stage(), rec = recommendation(); els.stage.textContent = (state.stage + 1) + "/" + stages.length; els.resource.textContent = state.charge; els.goal.textContent = st.relays.length + "/" + st.relays.length; els.moves.textContent = state.moves; els.score.textContent = state.score; els.best.textContent = Math.max(state.best, state.score); els.stageName.textContent = st.name; els.mission.textContent = "Rotate conduits, catch the open gate beat, and pulse through every relay to the loom core."; els.need.textContent = isSolved() ? "Open beat" : "Route align"; const out = state.mode === "playing" ? pulseOutcome() : null; els.risk.textContent = out ? (out.ok ? "Pulse clears it" : "Pulse costs " + out.cost) : (gateOpen() ? "Gate open" : "Gate closed"); els.next.textContent = rec.type === "rotate" ? "Rotate " + rec.x + "," + rec.y : rec.type === "wait" ? "Wait " + beatsUntilOpen() + (beatsUntilOpen() === 1 ? " beat" : " beats") : "Pulse"; els.key.textContent = "Arrows, Space, Enter"; els.sound.textContent = state.sound ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.sound)); }
   function cellPoint(x,y){ return { x:OX + x * CW + CW / 2, y:OY + y * CW + CW / 2 }; }
   function drawPiece(p){ const c = cellPoint(p.x,p.y), rr = p.r % 4; ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(rr * Math.PI / 2); ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.strokeStyle = p.r % 4 === p.s % 4 ? "#8df0a9" : "#67e8f9"; ctx.beginPath(); if(p.type === "straight"){ ctx.moveTo(-32,0); ctx.lineTo(32,0); } else { ctx.moveTo(-32,0); ctx.lineTo(0,0); ctx.lineTo(0,-32); } ctx.stroke(); ctx.restore(); ctx.fillStyle = "rgba(255,255,255,.08)"; ctx.beginPath(); ctx.arc(c.x,c.y,8,0,Math.PI*2); ctx.fill(); }
   function draw(){ const st = stage(); ctx.clearRect(0,0,960,600); const grd = ctx.createLinearGradient(0,0,960,600); grd.addColorStop(0,"#071923"); grd.addColorStop(1,"#03070d"); ctx.fillStyle = grd; ctx.fillRect(0,0,960,600); ctx.strokeStyle = "rgba(125,211,252,.16)"; ctx.lineWidth = 1; for(let x=0;x<W;x++) for(let y=0;y<H;y++){ ctx.strokeRect(OX+x*CW+8, OY+y*CW+8, CW-16, CW-16); }
@@ -165,8 +177,33 @@
     for(const r of st.relays){ const c = cellPoint(r.x,r.y); ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(c.x,c.y,13,0,Math.PI*2); ctx.fill(); }
     let s = cellPoint(st.source.x, st.source.y); let core = cellPoint(st.core.x, st.core.y); ctx.fillStyle = "#67e8f9"; ctx.fillRect(s.x-40,s.y-16,34,32); ctx.fillStyle = "#8df0a9"; ctx.beginPath(); ctx.arc(core.x, core.y,24,0,Math.PI*2); ctx.fill(); ctx.fillStyle = "#03161b"; ctx.font = "900 13px system-ui"; ctx.textAlign = "center"; ctx.fillText("CORE", core.x, core.y+5);
     const cur = cellPoint(state.cursor.x,state.cursor.y); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.strokeRect(cur.x-42, cur.y-42, 84, 84);
-    ctx.fillStyle = "#e5f7ff"; ctx.font = "900 18px system-ui"; ctx.textAlign = "left"; ctx.fillText(st.name, 24, 34); ctx.font = "800 13px system-ui"; ctx.fillStyle = "#9ab5c2"; ctx.fillText("Beat " + (state.beat % st.beatMod) + "/" + (st.beatMod - 1) + " - gate opens on " + st.phase, 24, 58); if(state.mode !== "playing"){ ctx.fillStyle = "rgba(2,6,12,.72)"; ctx.fillRect(0,0,960,600); ctx.fillStyle = state.mode === "won" ? "#8df0a9" : state.mode === "failed" ? "#fb7185" : "#67e8f9"; ctx.font = "950 44px system-ui"; ctx.textAlign = "center"; ctx.fillText(state.mode === "won" ? "Loom Complete" : state.mode === "failed" ? "Signal Lost" : "Signal Loom", 480, 288); ctx.font = "800 17px system-ui"; ctx.fillStyle = "#dbeafe"; ctx.fillText(state.feedback, 480, 324); } }
-  function text(){ const rec = recommendation(); return JSON.stringify({ game:"signal-loom", mode:state.mode, stage:state.stage + 1, stageName:stage().name, score:state.score, best:state.best, charge:state.charge, moves:state.moves, beat:state.beat, gateOpen:gateOpen(), cursor:state.cursor, pieces:state.pieces.map((p) => ({x:p.x,y:p.y,type:p.type,rotation:p.r,target:p.s,solved:p.r%4===p.s%4})), recommendation:rec, lastEvent:state.lastEvent, feedback:state.feedback, soundEnabled:state.sound, toneCount:state.toneCount, lastSound:state.lastSound }); }
+    ctx.fillStyle = "#e5f7ff"; ctx.font = "900 18px system-ui"; ctx.textAlign = "left"; ctx.fillText(st.name, 24, 34); ctx.font = "800 13px system-ui"; ctx.fillStyle = "#9ab5c2"; ctx.fillText("Charge " + state.charge + " - moves " + state.moves, 24, 58); drawBeatLine(); drawPulseBar(); if(state.mode !== "playing"){ ctx.fillStyle = "rgba(2,6,12,.72)"; ctx.fillRect(0,0,960,600); ctx.fillStyle = state.mode === "won" ? "#8df0a9" : state.mode === "failed" ? "#fb7185" : "#67e8f9"; ctx.font = "950 44px system-ui"; ctx.textAlign = "center"; ctx.fillText(state.mode === "won" ? "Loom Complete" : state.mode === "failed" ? "Signal Lost" : "Signal Loom", 480, 288); ctx.font = "800 17px system-ui"; ctx.fillStyle = "#dbeafe"; ctx.fillText(state.feedback, 480, 324); } }
+  // The whole beat cycle, with the open slot marked and a head showing where in
+  // the current beat you are, so the open gate can be anticipated instead of
+  // only noticed once it flips.
+  function drawBeatLine(){ const st = stage(), x0 = OX, w = W * CW, y = 560, h = 22, slot = w / st.beatMod;
+    const cur = state.beat % st.beatMod, prog = Math.min(1, state.beatMs / 560);
+    for(let i = 0; i < st.beatMod; i++){
+      const open = i === st.phase;
+      ctx.fillStyle = open ? "rgba(250,204,21,.28)" : "rgba(125,211,252,.08)"; ctx.fillRect(x0 + i * slot + 2, y, slot - 4, h);
+      ctx.strokeStyle = open ? "#facc15" : "rgba(148,163,184,.3)"; ctx.lineWidth = open ? 2 : 1; ctx.strokeRect(x0 + i * slot + 2.5, y + 0.5, slot - 5, h - 1);
+      ctx.fillStyle = open ? "#facc15" : "#6b8296"; ctx.font = "900 11px system-ui"; ctx.textAlign = "center";
+      ctx.fillText(open ? "OPEN" : String(i), x0 + i * slot + slot / 2, y + 15);
+    }
+    const head = x0 + (cur + prog) * slot;
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(head, y - 5); ctx.lineTo(head, y + h + 5); ctx.stroke();
+    const until = beatsUntilOpen();
+    ctx.textAlign = "left"; ctx.font = "900 12px system-ui"; ctx.fillStyle = until === 0 ? "#facc15" : "#9ab5c2";
+    ctx.fillText(until === 0 ? "GATE OPEN NOW" : "GATE IN " + until + (until === 1 ? " BEAT" : " BEATS"), 24, y + 15); }
+  function drawPulseBar(){ if(state.mode !== "playing") return;
+    const out = pulseOutcome(), x0 = OX + 90, w = W * CW - 90, y = 18, h = 32;
+    ctx.fillStyle = out.ok ? "rgba(141,240,169,.14)" : "rgba(251,113,133,.14)"; ctx.fillRect(x0, y, w, h);
+    ctx.strokeStyle = out.ok ? "#8df0a9" : "#fb7185"; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y + 1, w - 2, h - 2);
+    ctx.fillStyle = out.ok ? "#bbf7d0" : "#fecdd3"; ctx.textAlign = "center";
+    let size = 15; ctx.font = "900 " + size + "px system-ui";
+    while(size > 9 && ctx.measureText(out.text).width > w - 18){ size -= 1; ctx.font = "900 " + size + "px system-ui"; }
+    ctx.fillText(out.text, x0 + w / 2, y + 21); ctx.textAlign = "left"; }
+  function text(){ const rec = recommendation(); return JSON.stringify({ game:"signal-loom", mode:state.mode, stage:state.stage + 1, stageName:stage().name, score:state.score, best:state.best, charge:state.charge, moves:state.moves, beat:state.beat, gateOpen:gateOpen(), beatsUntilOpen:beatsUntilOpen(), pulsePreview:state.mode === "playing" ? pulseOutcome() : null, cursor:state.cursor, pieces:state.pieces.map((p) => ({x:p.x,y:p.y,type:p.type,rotation:p.r,target:p.s,solved:p.r%4===p.s%4})), recommendation:rec, lastEvent:state.lastEvent, feedback:state.feedback, soundEnabled:state.sound, toneCount:state.toneCount, lastSound:state.lastSound }); }
   function key(ev){ if(ev.key === "ArrowLeft" || ev.key.toLowerCase() === "a"){ ev.preventDefault(); moveCursor(-1,0); } else if(ev.key === "ArrowRight" || ev.key.toLowerCase() === "d"){ ev.preventDefault(); moveCursor(1,0); } else if(ev.key === "ArrowUp" || ev.key.toLowerCase() === "w"){ ev.preventDefault(); moveCursor(0,-1); } else if(ev.key === "ArrowDown" || ev.key.toLowerCase() === "s"){ ev.preventDefault(); moveCursor(0,1); } else if(ev.key === " "){ ev.preventDefault(); rotateSelected(); } else if(ev.key === "Enter"){ ev.preventDefault(); pulse(); } }
   function pointer(ev){ const b = canvas.getBoundingClientRect(); const x = Math.floor(((ev.clientX - b.left) / b.width * canvas.width - OX) / CW); const y = Math.floor(((ev.clientY - b.top) / b.height * canvas.height - OY) / CW); if(x>=0 && y>=0 && x<W && y<H){ state.cursor = {x,y}; setFeedback("Selected " + x + "," + y + ".", 700, "select"); draw(); } canvas.focus(); }
   function toggleHelp(){ if(els.dialog.open) els.dialog.close(); else els.dialog.showModal(); }
@@ -178,19 +215,26 @@
   // the test hook only). Without this the beat stays at 0 and stages 2+ — whose
   // gates open on a later phase — are unwinnable for real players. Redraws only
   // on a beat change so an idle board does not repaint every frame.
-  let rtLast = 0;
+  // The loop must stay alive for the whole of "playing" — check-realtime-progression
+  // drives this game through real time only and asserts the beat climbs — but it
+  // sleeps on the menu and after a run, where it used to spin forever.
+  let rtRaf = 0, rtLast = 0;
+  function loopActive(){ return state.mode === "playing"; }
   function realtimeLoop(now){
+    rtRaf = 0;
     if(rtLast === 0) rtLast = now;
     const dt = Math.min(100, now - rtLast);
     rtLast = now;
     if(dt > 0 && state.mode === "playing"){
       const prevBeat = state.beat;
       step(dt);
-      if(state.beat !== prevBeat){ updateUI(); draw(); }
+      if(state.beat !== prevBeat) updateUI();
+      draw();
     }
-    requestAnimationFrame(realtimeLoop);
+    if(loopActive() && !document.hidden) rtRaf = requestAnimationFrame(realtimeLoop); else rtLast = 0;
   }
-  requestAnimationFrame(realtimeLoop);
+  function wakeLoop(){ if(rtRaf || document.hidden || !loopActive()) return; rtLast = 0; rtRaf = requestAnimationFrame(realtimeLoop); }
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) wakeLoop(); });
   updateUI(); draw();
 })();
 </script>
