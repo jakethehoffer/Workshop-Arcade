@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-13 Claude — overhaul campaign batch 3e: Letter Foundry stops rejecting real words
+
+Fifth landing of batch 3. The capture recipe types `s`, `t`, `o`, `n`, `e` and forges STONE, so round one keeps the STONEAR rack and STONE stays a valid forge. Letters are gameplay input here, so no action is bound to a bare letter key.
+
+- **Same flaw Rune Roster had, and the same fix.** Each rack accepted exactly six words, so a player who typed NOTES or STORE from the STONEAR rack was told they were wrong for not guessing which six the author picked. The lists are now 26 to 82 words per rack, and a load-time filter drops any entry that is under three letters or not actually spellable from its own rack, so a typo in a list can never present a target the letters cannot reach.
+- **Rounds now clear at a goal, not by exhaustion.** Clearing used to require finding *every* word on the list, which was fine at six and would have been a slog at eighty. Each round now carries a goal of four or five words and clears when you reach it, with the rest of the list still there to find if you want the extra score. The progress bar tracks the goal rather than the whole list, and the header reads "Forge 5 words" instead of "Forge all words".
+- **The found panel stopped leaking the answers.** It used to render one blanked chip per word, which both spelled out exactly how many letters every unfound word had and would have become a wall of eighty blanks. It now shows what you have forged, a count against the goal, and how many more words the rack still knows.
+- Verified: a 7-assertion Playwright probe — the exact capture-recipe sequence still forges STONE; a word the old six-word list rejected is now accepted and scores; reaching the goal clears the round; 16 corrupt-storage seeds across the game's own keys survive with zero page errors. Plus scoped `test:games`, `capture:games` (desktop and mobile both 0, screenshot reviewed and the new counters confirmed), `audit:contrast` (92 elements, 0 below threshold), all seven static gates, `npm test` 56/56, and `git diff --check` clean. Protected meta/JSON-LD blocks verified byte-identical to HEAD. The two real-time audits did not apply — this game has no animation loop at all.
+
 ## 2026-08-13 Claude — overhaul campaign batch 3d: Beacon Bastion shows the pulse range and the shades you cannot see
 
 Fourth landing of batch 3, and like Aster Vault a targeted pass rather than a rewrite — this game is also pinned by two harnesses (its capture recipe drives `#wardBtn` and `#pulseBtn`, and `driveBeaconBastion` in `check-best-on-fail-persistence.mjs` pulses to bank score then stops defending, expecting mode `fail` — note this game uses `fail`, not `failed` — with the score written to `beacon-bastion.best.v1`).
