@@ -317,6 +317,7 @@
     state.beatTimer = 0;
     state.flash = 140;
     playBeat();
+    wakeLoop();
     setFeedback("Playing target and forged rhythm.");
     sync();
   }
@@ -436,6 +437,7 @@
   // dead for real players. Redraws only while the beat changes or a flash is
   // decaying so the idle edit grid does not repaint every frame.
   let rtLast = 0;
+  let rtRaf = 0;
   function realtimeLoop(now){
     if(rtLast === 0) rtLast = now;
     const dt = Math.min(100, now - rtLast);
@@ -445,9 +447,17 @@
       update(dt);
       if((state.mode === "playback" && state.beat !== prevBeat) || state.flash > 0) sync();
     }
-    requestAnimationFrame(realtimeLoop);
+    if(loopActive() && !document.hidden) rtRaf = requestAnimationFrame(realtimeLoop);
+    else { rtRaf = 0; rtLast = 0; }
   }
-  requestAnimationFrame(realtimeLoop);
+  function loopActive(){ return state.mode === "playback" || state.flash > 0; }
+  function wakeLoop(){
+    if(rtRaf || document.hidden || !loopActive()) return;
+    rtLast = 0;
+    rtRaf = requestAnimationFrame(realtimeLoop);
+  }
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) wakeLoop(); });
+  wakeLoop();
   rebuildGrid();
   loadLevel(1);
 })();

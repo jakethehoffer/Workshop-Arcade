@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-08-13 Claude — overhaul campaign batch 3f: Tempo Forge stops burning frames on an idle grid
+
+Sixth and final landing of batch 3, and a small, precisely-scoped fix rather than a rewrite — stated plainly because that is what it is.
+
+- **The real-time audit found one of its two defects here.** Timing was already correct (the loop steps by real elapsed milliseconds, clamped at 100), but the loop re-queued itself unconditionally at the end of every frame, so the page ran an animation frame forever — sitting on the step editor with nothing playing, after playback finished, in a background tab. It now sleeps whenever playback is stopped and the beat flash has decayed, and wakes on playback or when the tab becomes visible again.
+- **This one had a trap worth recording.** `scripts/check-realtime-progression.mjs` exists precisely because this game's playback preview once died when its clock diverged from the real loop, and that gate drives Tempo Forge through **real elapsed time with no `advanceTime` call** and asserts the beat advances. So the loop could not simply be gated on "is something animating" — it has to stay genuinely alive for the whole of playback. The sleep condition is playback-aware, and the gate was run in full to prove it: both time-driven games still advance under real time.
+- Verified: a 7-assertion Playwright probe — the idle editor sleeps instead of spinning frames; playback advances the beat under real wall-clock time with no `advanceTime`; the loop is correctly still alive while playback continues; the exact capture-recipe sequence toggles a step and starts playback; 16 corrupt-storage seeds survive with zero page errors. Plus the full `check-realtime-progression` gate, scoped `test:games`, `capture:games` (desktop and mobile both 0), `audit:contrast` (44 elements, 0 below threshold), the static gates, `npm test` 56/56, and `git diff --check` clean. Protected meta/JSON-LD blocks verified byte-identical to HEAD.
+
+**Batch 3 is complete**: seedline, chromalock, aster-vault, beacon-bastion, letter-foundry, tempo-forge. Twenty-two of the hundred games have now been rebuilt or repaired.
+
 ## 2026-08-13 Claude — overhaul campaign batch 3e: Letter Foundry stops rejecting real words
 
 Fifth landing of batch 3. The capture recipe types `s`, `t`, `o`, `n`, `e` and forges STONE, so round one keeps the STONEAR rack and STONE stays a valid forge. Letters are gameplay input here, so no action is bound to a bare letter key.
