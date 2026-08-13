@@ -131,36 +131,114 @@
   const raw=String(read(SOUND_KEY,"1")).toLowerCase();
   const state={mode:"menu",stage:0,score:0,best:Number(read(BEST_KEY,"0"))||0,oxygen:0,ship:{x:80,y:280,vx:0,vy:0},relics:[],keys:{},feedback:"Press Start.",feedbackMs:1500,lastEvent:"ready",lastAction:"none",soundEnabled:!["0","false","off","muted"].includes(raw),lastSound:"none",toneCount:0,userGesture:false,tick:0};
   let audio=null;
+  let reducedMotion=false;
+  try{const q=window.matchMedia("(prefers-reduced-motion: reduce)");reducedMotion=q.matches;q.addEventListener("change",(e)=>{reducedMotion=e.matches})}catch(_){}
+  state.parts=[];state.shake=0;state.flameT=0;state.warnT=0;
   function store(){ if(window.workshopStorage)return window.workshopStorage; try{return window.localStorage}catch(_){return null} }
   function read(k,fb){ const s=store(); if(!s)return fb; try{const v=s.getItem(k); return v==null?fb:v}catch(_){return fb} }
   function write(k,v){ const s=store(); if(!s)return; try{s.setItem(k,String(v))}catch(_){} }
   function feedback(text,ms=1400,event="feedback"){ state.feedback=text; state.feedbackMs=ms; state.lastEvent=event; els.status.textContent=text; els.live.textContent=text; }
   function ensureAudio(){ if(!state.soundEnabled||!state.userGesture)return null; try{ if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==="suspended")audio.resume().catch(()=>{}); return audio; }catch(_){audio=null;return null} }
-  function tone(name){ state.lastSound=state.soundEnabled?name:"muted-"+name; if(!state.soundEnabled)return; state.toneCount++; const ac=ensureAudio(); if(!ac)return; const o=ac.createOscillator(), g=ac.createGain(), now=ac.currentTime; o.type=name==="bad"?"sawtooth":"triangle"; o.frequency.value=({start:300,move:520,hit:700,win:920,bad:150,toggle:380,action:620}[name]||440); g.gain.setValueAtTime(.0001,now); g.gain.exponentialRampToValueAtTime(.045,now+.012); g.gain.exponentialRampToValueAtTime(.0001,now+.18); o.connect(g).connect(ac.destination); o.start(now); o.stop(now+.2); }
+  function blip(freq,dur,type,vol,delay){const ac=ensureAudio();if(!ac)return;
+    try{const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+(delay||0);
+      o.type=type||"triangle";o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol||.05,t+.012);
+      g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+      o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+.02)}catch(_){}}
+  function hiss(dur,vol){const ac=ensureAudio();if(!ac)return;
+    try{const len=Math.max(1,Math.floor(ac.sampleRate*dur)),buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+      const src=ac.createBufferSource(),g=ac.createGain();
+      src.buffer=buf;g.gain.setValueAtTime(vol||.05,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);
+      src.connect(g);g.connect(ac.destination);src.start()}catch(_){}}
+  const RELIC=[523,659,784,988,1175];
+  function tone(name,n){state.lastSound=state.soundEnabled?name:"muted-"+name; if(!state.soundEnabled)return; state.toneCount++;
+    switch(name){
+      case"start": [294,392,523].forEach((f,i)=>blip(f,.24,"triangle",.055,i*.07)); break;
+      case"relic": {const k=Math.min(RELIC.length-1,Math.max(0,(n||1)-1));
+        blip(RELIC[k],.26,"triangle",.06); blip(RELIC[k]*1.5,.18,"sine",.035,.05); break}
+      case"brake": hiss(.16,.05); blip(230,.14,"triangle",.04); break;
+      case"rift": blip(200,.2,"sawtooth",.05); hiss(.12,.04); break;
+      case"stage": [523,659,784,1046].forEach((f,i)=>blip(f,.28,"triangle",.06,i*.07)); break;
+      case"win": [523,659,784,880,1046,1319].forEach((f,i)=>blip(f,.34,"triangle",.07,i*.08)); break;
+      case"breach": hiss(.4,.07); blip(190,.4,"sawtooth",.055); blip(120,.46,"sawtooth",.045,.09); break;
+      case"toggle": blip(420,.12,"triangle",.045); break;
+      default: blip(320,.12,"triangle",.04)}}
   function toggleSound(){ state.userGesture=true; state.soundEnabled=!state.soundEnabled; write(SOUND_KEY,state.soundEnabled?"1":"0"); feedback(state.soundEnabled?"Sound enabled.":"Sound muted.",1000,"toggle"); tone("toggle"); updateUI(); }
   function toggleFullscreen(){ if(document.fullscreenElement){document.exitFullscreen?.();return} els.app.requestFullscreen?.().catch(()=>{}); }
   function openHelp(){ if(typeof els.dialog.showModal==="function"&&!els.dialog.open)els.dialog.showModal(); }
   function closeHelp(){ if(els.dialog.open)els.dialog.close(); canvas.focus(); }
 
+  function forecast(){const pts=[];let x=state.ship.x,y=state.ship.y,vx=state.ship.vx,vy=state.ship.vy;
+    let hitRift=false,hitAt=null;const step=1/60;
+    for(let i=0;i<110;i++){vx*=.996;vy*=.996;x+=vx*step;y+=vy*step;
+      if(x<34||x>866){vx*=-.65;x=Math.max(34,Math.min(866,x))}
+      if(y<34||y>526){vy*=-.65;y=Math.max(34,Math.min(526,y))}
+      if(i%4===0)pts.push({x,y});
+      if(!hitRift)for(const rf of stage().rifts){if(Math.hypot(x-rf[0],y-rf[1])<rf[2]){hitRift=true;hitAt={x,y};break}}
+      if(hitRift)break}
+    return{pts,hitRift,hitAt}}
   function stage(){return STAGES[state.stage]} function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)} function speed(){return Math.hypot(state.ship.vx,state.ship.vy)}
   function loadStage(){const s=stage(); state.oxygen=s.oxygen; state.ship={x:82,y:280,vx:0,vy:0}; state.relics=s.relics.map((r,i)=>({id:i,x:r[0],y:r[1],taken:false})); els.stageName.textContent=s.name; feedback(s.name+": collect relics, then brake at the anchor.",1500,"stage"); updateUI(); render();}
-  function startRun(){state.userGesture=true; state.mode="playing"; state.stage=0; state.score=0; loadStage(); tone("start"); canvas.focus();}
+  function startRun(){state.userGesture=true; state.mode="playing"; state.stage=0; state.score=0; state.parts.length=0; state.shake=0; loadStage(); tone("start"); canvas.focus(); ensureLoop();}
   function restart(){startRun(); state.lastAction="restart";}
-  function brake(){if(state.mode==="menu"){startRun();return} if(state.mode!=="playing")return; state.ship.vx*=.42; state.ship.vy*=.42; state.oxygen=Math.max(0,state.oxygen-1); state.lastAction="brake"; feedback("Retro brake fired.",900,"brake"); tone("action"); updateUI(); render();}
+  function brake(){if(state.mode==="menu"){startRun();return} if(state.mode!=="playing")return; state.ship.vx*=.42; state.ship.vy*=.42; state.oxygen=Math.max(0,state.oxygen-1); state.lastAction="brake"; tone("brake"); feedback("Retro brake fired.",900,"brake"); tone("action"); updateUI(); render();}
   function recommendation(){if(state.mode!=="playing")return null; const next=state.relics.find((r)=>!r.taken); const target=next||stage().anchor; const dx=target.x-state.ship.x, dy=target.y-state.ship.y; const close=Math.hypot(dx,dy)<58; return {target:next?"relic":"anchor",x:Math.round(target.x),y:Math.round(target.y),thrustX:Math.sign(dx),thrustY:Math.sign(dy),brake:!next&&(close||speed()>90),speed:Math.round(speed())};}
-  function check(){for(const r of state.relics){if(!r.taken&&dist(state.ship,r)<28){r.taken=true; state.score+=35; feedback("Relic star recovered.",900,"hit"); tone("hit");}} for(const rf of stage().rifts){const gap=Math.hypot(state.ship.x-rf[0],state.ship.y-rf[1]); if(gap<rf[2]+13){if(speed()>180){state.mode="failed"; if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best)} feedback("Rift shear cracked the vault suit.",2200,"failed"); tone("bad");}else{const a=Math.atan2(state.ship.y-rf[1],state.ship.x-rf[0]); state.ship.vx+=Math.cos(a)*55; state.ship.vy+=Math.sin(a)*55; state.oxygen=Math.max(0,state.oxygen-4); feedback("Slow rift brush drained oxygen.",900,"rift");}}} const done=state.relics.every((r)=>r.taken); if(done&&dist(state.ship,stage().anchor)<34&&speed()<48){state.score+=Math.max(0,Math.round(state.oxygen))+70; if(state.stage>=STAGES.length-1){state.mode="won"; if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best)} feedback("Aster Vault sealed. Score "+state.score+".",2400,"win"); tone("win");}else{state.stage++; loadStage(); tone("hit");}} if(state.oxygen<=0&&state.mode==="playing"){state.mode="failed"; if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best)} feedback("Oxygen spent before anchor lock.",2200,"failed"); tone("bad");}}
-  function update(dt){state.tick+=dt; if(state.feedbackMs>0)state.feedbackMs=Math.max(0,state.feedbackMs-dt*1000); if(state.mode!=="playing")return; const acc=220; if(state.keys.ArrowLeft)state.ship.vx-=acc*dt; if(state.keys.ArrowRight)state.ship.vx+=acc*dt; if(state.keys.ArrowUp)state.ship.vy-=acc*dt; if(state.keys.ArrowDown)state.ship.vy+=acc*dt; state.ship.vx*=.996; state.ship.vy*=.996; state.ship.x+=state.ship.vx*dt; state.ship.y+=state.ship.vy*dt; if(state.ship.x<34||state.ship.x>866){state.ship.vx*=-.65; state.ship.x=Math.max(34,Math.min(866,state.ship.x));} if(state.ship.y<34||state.ship.y>526){state.ship.vy*=-.65; state.ship.y=Math.max(34,Math.min(526,state.ship.y));} state.oxygen-=dt*.9; check();}
+  function check(){for(const r of state.relics){if(!r.taken&&dist(state.ship,r)<28){r.taken=true; state.score+=35;
+    const got=state.relics.filter((q)=>q.taken).length;
+    feedback("Relic star recovered. "+got+" of "+state.relics.length+" aboard.",900,"hit"); tone("relic",got);
+    if(!reducedMotion)for(let i=0;i<12;i++){const a=Math.PI*2*i/12;
+      state.parts.push({x:r.x,y:r.y,vx:Math.cos(a)*110,vy:Math.sin(a)*110,life:1,color:"#c4b5fd"})}}} for(const rf of stage().rifts){const gap=Math.hypot(state.ship.x-rf[0],state.ship.y-rf[1]); if(gap<rf[2]+13){if(speed()>180){state.mode="failed"; if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best)} feedback("Rift shear cracked the vault suit.",2200,"failed"); tone("breach"); if(!reducedMotion)state.shake=1;}else{const a=Math.atan2(state.ship.y-rf[1],state.ship.x-rf[0]); state.ship.vx+=Math.cos(a)*55; state.ship.vy+=Math.sin(a)*55; state.oxygen=Math.max(0,state.oxygen-4); feedback("Slow rift brush drained oxygen.",900,"rift"); tone("rift"); if(!reducedMotion)state.shake=.5;}}} const done=state.relics.every((r)=>r.taken); if(done&&dist(state.ship,stage().anchor)<34&&speed()<48){state.score+=Math.max(0,Math.round(state.oxygen))+70; if(state.stage>=STAGES.length-1){state.mode="won"; if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best)} feedback("Aster Vault sealed. Score "+state.score+".",2400,"win"); tone("win");}else{state.stage++; loadStage(); tone("stage");}} if(state.oxygen<=0&&state.mode==="playing"){state.mode="failed"; if(state.score>state.best){state.best=state.score; write(BEST_KEY,state.best)} feedback("Oxygen spent before anchor lock.",2200,"failed"); tone("breach"); if(!reducedMotion)state.shake=.7;}}
+  function update(dt){state.tick+=dt; if(state.feedbackMs>0)state.feedbackMs=Math.max(0,state.feedbackMs-dt*1000); if(state.mode!=="playing")return; const acc=220; if(state.keys.ArrowLeft)state.ship.vx-=acc*dt; if(state.keys.ArrowRight)state.ship.vx+=acc*dt; if(state.keys.ArrowUp)state.ship.vy-=acc*dt; if(state.keys.ArrowDown)state.ship.vy+=acc*dt; state.ship.vx*=.996; state.ship.vy*=.996; state.ship.x+=state.ship.vx*dt; state.ship.y+=state.ship.vy*dt; if(state.ship.x<34||state.ship.x>866){state.ship.vx*=-.65; state.ship.x=Math.max(34,Math.min(866,state.ship.x));} if(state.ship.y<34||state.ship.y>526){state.ship.vy*=-.65; state.ship.y=Math.max(34,Math.min(526,state.ship.y));} state.oxygen-=dt*.9;
+    if(state.shake>0)state.shake=Math.max(0,state.shake-dt*2.2);
+    if(state.warnT>0)state.warnT=Math.max(0,state.warnT-dt);
+    const thrusting=state.keys.ArrowLeft||state.keys.ArrowRight||state.keys.ArrowUp||state.keys.ArrowDown;
+    if(thrusting&&!reducedMotion){state.flameT+=dt;
+      if(state.flameT>0.045){state.flameT=0;
+        const a=Math.atan2(state.ship.vy,state.ship.vx)||0;
+        state.parts.push({x:state.ship.x-Math.cos(a)*14,y:state.ship.y-Math.sin(a)*14,
+          vx:-Math.cos(a)*70+(Math.random()-.5)*40,vy:-Math.sin(a)*70+(Math.random()-.5)*40,life:1,color:"#93c5fd"})}}
+    for(let i=state.parts.length-1;i>=0;i--){const p=state.parts[i];
+      p.life-=dt*2.2;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.life<=0)state.parts.splice(i,1)}
+    check();}
   function updateUI(){els.stage.textContent=(state.stage+1)+"/"+STAGES.length; els.oxygen.textContent=Math.max(0,Math.round(state.oxygen)); els.relic.textContent=state.relics.filter((r)=>r.taken).length+"/"+state.relics.length; els.speed.textContent=Math.round(speed()); els.score.textContent=state.score; els.best.textContent=Math.max(state.best,state.score); els.sound.textContent=state.soundEnabled?"Sound On":"Sound Off"; els.sound.setAttribute("aria-pressed",String(state.soundEnabled)); els.targets.innerHTML='<div class="sideBtn"><strong><b>Anchor</b><em>'+Math.round(stage().anchor.x)+","+Math.round(stage().anchor.y)+'</em></strong><span>Lock below speed 48 after all relics.</span></div>'+state.relics.map((r,i)=>'<div class="sideBtn"><strong><b>Relic '+(i+1)+'</b><em>'+(r.taken?"stored":"loose")+'</em></strong><span>'+Math.round(r.x)+","+Math.round(r.y)+'</span></div>').join("");}
-  function render(){ctx.clearRect(0,0,900,560); const g=ctx.createLinearGradient(0,0,0,560); g.addColorStop(0,"#0f1d35"); g.addColorStop(1,"#050812"); ctx.fillStyle=g; ctx.fillRect(0,0,900,560); ctx.fillStyle="#93c5fd"; ctx.font="900 30px system-ui"; ctx.fillText("Aster Vault",32,42); ctx.fillStyle="#a7b4c6"; ctx.font="800 13px system-ui"; ctx.fillText(stage().name+" - inertial thrust and anchor braking",32,64); for(const rf of stage().rifts){ctx.strokeStyle="#fb7185"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(rf[0],rf[1],rf[2]+Math.sin(state.tick*4)*3,0,Math.PI*2); ctx.stroke();} for(const r of state.relics){ctx.fillStyle=r.taken?"rgba(134,239,172,.22)":"#c4b5fd"; ctx.beginPath(); ctx.arc(r.x,r.y,13,0,Math.PI*2); ctx.fill();} ctx.strokeStyle="#86efac"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(stage().anchor.x,stage().anchor.y,28,0,Math.PI*2); ctx.stroke(); ctx.fillStyle="#86efac"; ctx.font="900 12px system-ui"; ctx.fillText("ANCHOR",stage().anchor.x-26,stage().anchor.y+48); ctx.save(); ctx.translate(state.ship.x,state.ship.y); ctx.rotate(Math.atan2(state.ship.vy,state.ship.vx)||0); ctx.fillStyle="#f8fbff"; ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-14,-10); ctx.lineTo(-8,0); ctx.lineTo(-14,10); ctx.closePath(); ctx.fill(); ctx.restore(); if(state.mode==="menu"||state.mode==="won"||state.mode==="failed"){ctx.fillStyle="rgba(5,8,18,.78)"; ctx.fillRect(250,210,400,124); ctx.strokeStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#93c5fd"; ctx.strokeRect(250,210,400,124); ctx.fillStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#f8fbff"; ctx.font="900 28px system-ui"; ctx.fillText(state.mode==="menu"?"Press Start":state.mode==="won"?"Vault Sealed":"Suit Breached",325,260); ctx.fillStyle="#a7b4c6"; ctx.font="800 14px system-ui"; ctx.fillText("Relics "+state.relics.filter((r)=>r.taken).length+" / "+state.relics.length+"  Speed "+Math.round(speed()),330,290);}}
-  function key(e){const k=e.key; if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(k)){e.preventDefault(); state.keys[k]=true;} else if(k===" "){e.preventDefault(); brake();} else if(k.toLowerCase()==="r"){e.preventDefault(); restart();} else if(k.toLowerCase()==="m"){e.preventDefault(); toggleSound();} else if(k.toLowerCase()==="f"){e.preventDefault(); toggleFullscreen();} else if(k==="?"||(k==="/"&&e.shiftKey)){e.preventDefault(); openHelp();}}
+  function render(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,900,560);
+  const sh=state.shake>0&&!reducedMotion?state.shake*8:0; const g=ctx.createLinearGradient(0,0,0,560); g.addColorStop(0,"#0f1d35"); g.addColorStop(1,"#050812"); ctx.fillStyle=g; ctx.fillRect(0,0,900,560);
+  if(sh)ctx.setTransform(1,0,0,1,(Math.random()-.5)*sh,(Math.random()-.5)*sh);
+  ctx.fillStyle="#93c5fd"; ctx.font="900 30px system-ui"; ctx.fillText("Aster Vault",32,42); ctx.fillStyle="#a7b4c6"; ctx.font="800 13px system-ui"; ctx.fillText(stage().name+" - inertial thrust and anchor braking",32,64); for(const rf of stage().rifts){ctx.strokeStyle="#fb7185"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(rf[0],rf[1],rf[2]+Math.sin(state.tick*4)*3,0,Math.PI*2); ctx.stroke();} for(const r of state.relics){ctx.fillStyle=r.taken?"rgba(134,239,172,.22)":"#c4b5fd"; ctx.beginPath(); ctx.arc(r.x,r.y,13,0,Math.PI*2); ctx.fill();} ctx.strokeStyle="#86efac"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(stage().anchor.x,stage().anchor.y,28,0,Math.PI*2); ctx.stroke(); ctx.fillStyle="#86efac"; ctx.font="900 12px system-ui"; ctx.fillText("ANCHOR",stage().anchor.x-26,stage().anchor.y+48); if(state.mode==="playing"){const f=forecast();
+    if(f.pts.length>1){ctx.setLineDash([7,7]);ctx.lineWidth=2.5;
+      ctx.strokeStyle=f.hitRift?"rgba(251,113,133,.9)":"rgba(147,197,253,.6)";
+      ctx.beginPath();ctx.moveTo(state.ship.x,state.ship.y);
+      for(const q of f.pts)ctx.lineTo(q.x,q.y);ctx.stroke();ctx.setLineDash([])}
+    if(f.hitRift&&f.hitAt){ctx.strokeStyle="#fb7185";ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(f.hitAt.x,f.hitAt.y,12,0,Math.PI*2);ctx.stroke()}}
+  for(const p of state.parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color||"#93c5fd";
+    ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill()}
+  ctx.globalAlpha=1;
+  if(state.mode==="playing"&&state.oxygen<60){const pulse=.5+.5*Math.sin(state.tick*7);
+    ctx.strokeStyle="rgba(251,113,133,"+(0.25+0.4*pulse).toFixed(3)+")";ctx.lineWidth=6;
+    ctx.strokeRect(20,20,860,520);
+    ctx.fillStyle="#fb7185";ctx.font="900 18px system-ui";ctx.textAlign="center";
+    ctx.fillText("OXYGEN LOW",450,44);ctx.textAlign="left"}
+  ctx.save(); ctx.translate(state.ship.x,state.ship.y); ctx.rotate(Math.atan2(state.ship.vy,state.ship.vx)||0); ctx.fillStyle="#f8fbff"; ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-14,-10); ctx.lineTo(-8,0); ctx.lineTo(-14,10); ctx.closePath(); ctx.fill(); ctx.restore(); if(state.mode==="menu"||state.mode==="won"||state.mode==="failed"){ctx.fillStyle="rgba(5,8,18,.78)"; ctx.fillRect(250,210,400,124); ctx.strokeStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#93c5fd"; ctx.strokeRect(250,210,400,124); ctx.fillStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#f8fbff"; ctx.font="900 28px system-ui"; ctx.fillText(state.mode==="menu"?"Press Start":state.mode==="won"?"Vault Sealed":"Suit Breached",325,260); ctx.fillStyle="#a7b4c6"; ctx.font="800 14px system-ui"; ctx.fillText("Relics "+state.relics.filter((r)=>r.taken).length+" / "+state.relics.length+"  Speed "+Math.round(speed()),330,290);}}
+  function key(e){const k=e.key; if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(k)){e.preventDefault(); state.keys[k]=true;} else if(k===" "){e.preventDefault(); brake();} else if(k.toLowerCase()==="r"){e.preventDefault(); restart();} else if(k.toLowerCase()==="m"){e.preventDefault(); toggleSound();} else if(k.toLowerCase()==="f"){e.preventDefault(); toggleFullscreen();} else if(k==="?"||(k==="/"&&e.shiftKey)){e.preventDefault(); openHelp();} ensureLoop();}
   function keyup(e){if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)){e.preventDefault(); state.keys[e.key]=false;}}
-  function text(){return JSON.stringify({title:"Aster Vault",mode:state.mode,running:state.mode==="playing",started:state.mode!=="menu",coordinateSystem:"canvas pixels, origin top-left, x right, y down",stage:state.stage+1,stageName:stage().name,oxygen:Math.round(state.oxygen),score:state.score,best:Math.max(state.best,state.score),ship:{x:Math.round(state.ship.x),y:Math.round(state.ship.y),vx:Math.round(state.ship.vx),vy:Math.round(state.ship.vy),speed:Math.round(speed())},anchor:stage().anchor,relics:state.relics.map((r)=>({...r,x:Math.round(r.x),y:Math.round(r.y)})),rifts:stage().rifts.map((r)=>({x:r[0],y:r[1],r:r[2]})),recommended:recommendation(),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount});}
+  function text(){return JSON.stringify({reducedMotion:reducedMotion,title:"Aster Vault",mode:state.mode,running:state.mode==="playing",started:state.mode!=="menu",coordinateSystem:"canvas pixels, origin top-left, x right, y down",stage:state.stage+1,stageName:stage().name,oxygen:Math.round(state.oxygen),score:state.score,best:Math.max(state.best,state.score),ship:{x:Math.round(state.ship.x),y:Math.round(state.ship.y),vx:Math.round(state.ship.vx),vy:Math.round(state.ship.vy),speed:Math.round(speed())},anchor:stage().anchor,relics:state.relics.map((r)=>({...r,x:Math.round(r.x),y:Math.round(r.y)})),rifts:stage().rifts.map((r)=>({x:r[0],y:r[1],r:r[2]})),recommended:recommendation(),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount});}
   window.render_game_to_text=text; window.advanceTime=(ms)=>{stopLoop(); const steps=Math.max(1,Math.round(ms/(1000/60))); for(let i=0;i<steps;i++)update(1/60); updateUI(); render(); ensureLoop();};
   els.start.addEventListener("click",startRun); els.brake.addEventListener("click",brake); els.restart.addEventListener("click",restart); els.sound.addEventListener("click",toggleSound); els.full.addEventListener("click",toggleFullscreen); els.help.addEventListener("click",openHelp); els.closeHelp.addEventListener("click",closeHelp); document.addEventListener("keydown",key); document.addEventListener("keyup",keyup); window.addEventListener("blur",()=>{state.keys={};}); document.addEventListener("visibilitychange",()=>{if(document.hidden)state.keys={};}); document.querySelectorAll("[data-key]").forEach((b)=>{b.addEventListener("pointerdown",()=>{state.keys[b.dataset.key]=true;if(b.dataset.key===" ")brake();}); b.addEventListener("pointerup",()=>{state.keys[b.dataset.key]=false;});});
-  let raf=0; function loop(){update(1/60); render(); raf=requestAnimationFrame(loop);} function ensureLoop(){if(!raf)raf=requestAnimationFrame(loop);} function stopLoop(){if(raf){cancelAnimationFrame(raf);raf=0;}}
+  // The old loop ran update(1/60) on every animation frame and never stopped, so
+  // the game ran at double speed on a 120Hz display and burned frames forever on
+  // the menu. Step by real elapsed time, and sleep when nothing is moving.
+  let raf=0,lastFrame=0;
+  function needsFrame(){return state.mode==="playing"||state.feedbackMs>0||state.parts.length>0||state.shake>0}
+  function loop(now){raf=0;const dt=Math.min(.05,lastFrame?(now-lastFrame)/1000:1/60);lastFrame=now;
+    update(dt); render();
+    if(needsFrame()&&!document.hidden)raf=requestAnimationFrame(loop); else lastFrame=0}
+  function ensureLoop(){if(raf||document.hidden||!needsFrame())return;lastFrame=0;raf=requestAnimationFrame(loop)}
+  function stopLoop(){if(raf){cancelAnimationFrame(raf);raf=0}lastFrame=0}
   loadStage(); state.mode="menu"; updateUI(); render(); ensureLoop();
 })();
-
 </script>
 </body>
 </html>
