@@ -187,6 +187,7 @@
   const FLASH_MS = 380;
   const START_DROP_GRACE_MS = 350;
 
+  function finiteOr0(v) { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; }
   function safeGet(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -217,7 +218,7 @@
   const state = {
     mode: "ready",
     score: 0,
-    best: Number(safeGet(BEST_KEY, 0)) || 0,
+    best: finiteOr0(safeGet(BEST_KEY, 0)),
     combo: 0,
     bestCombo: 0,
     stack: [],
@@ -307,6 +308,7 @@
     if (state.feedbackEventCounters[kind] !== undefined) state.feedbackEventCounters[kind] += 1;
   }
   function setStatus(text) { els.status.textContent = text; }
+  function wakeAfterInput() { ensureLoop(); }
   function setFlash(kind) {
     state.flashKind = kind;
     state.flashUntil = state.time + FLASH_MS;
@@ -330,6 +332,7 @@
   }
   function newRun() {
     state.mode = "playing";
+    ensureLoop();
     state.dropArmedAt = state.time + START_DROP_GRACE_MS;
     state.score = 0;
     state.combo = 0;
@@ -353,6 +356,22 @@
     play("restart");
     newRun();
   }
+  // A drop is PERFECT only when the platform's left edge lands within 4px of the
+  // block below, and only a perfect drop grows the tower back by up to 18px.
+  // Both the window and the reward were invisible, so the one mechanic that
+  // stops the tower narrowing to nothing could not be learned.
+  function dropAlignment() {
+    if (state.mode !== "playing" || !state.platform || !state.stack.length) return null;
+    const top = state.stack[state.stack.length - 1], p = state.platform;
+    const overlap = Math.min(p.x + p.w, top.x + top.w) - Math.max(p.x, top.x);
+    const delta = Math.abs(p.x - top.x);
+    const perfect = delta <= PERFECT_TOLERANCE;
+    const reward = Math.min(PERFECT_REWARD, BASE_WIDTH - top.w);
+    return { delta: Math.round(delta * 10) / 10, perfect, overlap: Math.round(overlap),
+      tolerance: PERFECT_TOLERANCE, reward: Math.round(reward),
+      result: overlap <= 0 ? "miss" : perfect ? "perfect" : "shave",
+      widthAfter: overlap <= 0 ? 0 : Math.round(perfect ? top.w + reward : overlap) };
+  }
   function dropPlatform() {
     if (state.mode === "ready") {
       newRun();
@@ -362,14 +381,10 @@
     if (state.time < state.dropArmedAt) return;
     const top = state.stack[state.stack.length - 1];
     const platform = state.platform;
-    const leftA = platform.x;
-    const rightA = platform.x + platform.w;
-    const leftB = top.x;
-    const rightB = top.x + top.w;
-    const overlapLeft = Math.max(leftA, leftB);
-    const overlapRight = Math.min(rightA, rightB);
-    const overlap = overlapRight - overlapLeft;
-    const delta = Math.abs(platform.x - top.x);
+    const aim = dropAlignment();
+    const overlapLeft = Math.max(platform.x, top.x);
+    const overlap = aim.overlap;
+    const delta = aim.delta;
     if (overlap <= 0) {
       state.shavings.push({
         x: platform.x, y: platform.y, w: platform.w, h: platform.h,
@@ -503,6 +518,43 @@
     b = Math.round((1 - a) * b + a * t);
     return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
   }
+  function drawAlignGuide() {
+    const aim = dropAlignment();
+    if (!aim) return;
+    const top = state.stack[state.stack.length - 1], p = state.platform;
+    const good = aim.perfect;
+    // target band on the block below, centred on its left edge
+    ctx.fillStyle = good ? "rgba(94,234,212,.85)" : "rgba(148,163,184,.55)";
+    ctx.fillRect(top.x - PERFECT_TOLERANCE, top.y - 3, PERFECT_TOLERANCE * 2, 3);
+    ctx.strokeStyle = good ? "#5eead4" : "rgba(148,163,184,.5)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(top.x, top.y - 14); ctx.lineTo(top.x, top.y); ctx.stroke();
+    // matching mark on the sliding platform
+    ctx.strokeStyle = good ? "#5eead4" : "#f8fafc";
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + p.h); ctx.stroke();
+  }
+  function drawAlignReadout() {
+    const aim = dropAlignment();
+    if (!aim) return;
+    const good = aim.perfect, w = 340, x = (W - w) / 2, y = 16;
+    const miss = aim.result === "miss";
+    ctx.fillStyle = good ? "rgba(94,234,212,.16)" : miss ? "rgba(251,113,133,.16)" : "rgba(15,23,42,.72)";
+    ctx.fillRect(x, y, w, 44);
+    ctx.strokeStyle = good ? "#5eead4" : miss ? "#fb7185" : "rgba(148,163,184,.45)";
+    ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, 42);
+    ctx.textAlign = "center";
+    ctx.fillStyle = good ? "#5eead4" : miss ? "#fecdd3" : "#e2e8f0";
+    ctx.font = "900 16px system-ui";
+    ctx.fillText(good ? "PERFECT LINE UP" : "OFF BY " + aim.delta + "px", x + w / 2, y + 20);
+    const sub = good ? "drop now: width " + aim.widthAfter + " (+" + aim.reward + ")"
+      : miss ? "no overlap - dropping here ends the run"
+      : "within " + aim.tolerance + "px grows it, otherwise trimmed to " + aim.widthAfter;
+    ctx.fillStyle = good ? "#bbf7d0" : miss ? "#fecdd3" : "#94a3b8";
+    let size = 11; ctx.font = "800 " + size + "px system-ui";
+    while (size > 8 && ctx.measureText(sub).width > w - 16) { size -= 1; ctx.font = "800 " + size + "px system-ui"; }
+    ctx.fillText(sub, x + w / 2, y + 36);
+    ctx.textAlign = "left";
+  }
   function render() {
     drawBackground();
     ctx.save();
@@ -520,7 +572,9 @@
     }
     // Shavings
     for (const sh of state.shavings) drawBlock(sh, sh.y);
+    drawAlignGuide();
     ctx.restore();
+    drawAlignReadout();
     // Flash overlay (decorative juice; suppressed under reduced motion)
     const remaining = Math.max(0, state.flashUntil - state.time);
     if (!reducedMotion && remaining > 0) {
@@ -565,15 +619,22 @@
     els.sound.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
   }
 
-  let last = performance.now();
+  let last = 0, raf = 0;
+  function loopActive() {
+    return state.mode === "playing" || state.shavings.length > 0
+      || state.flashUntil > state.time || Math.abs(state.cameraTarget - state.cameraY) > 0.5;
+  }
+  function ensureLoop() { if (raf || !loopActive() || document.hidden) return; last = 0; raf = requestAnimationFrame(frame); }
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    raf = 0;
+    const dt = Math.min(0.05, last ? (now - last) / 1000 : 1 / 60);
     last = now;
     update(dt);
     render();
     updateHud();
-    requestAnimationFrame(frame);
+    if (loopActive() && !document.hidden) raf = requestAnimationFrame(frame); else last = 0;
   }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ensureLoop(); });
 
   // Controls
   canvas.addEventListener("pointerdown", () => { canvas.focus(); markGesture(); dropPlatform(); });
@@ -644,6 +705,7 @@
       flashRemaining: Math.round(Math.max(0, state.flashUntil - state.time)),
       reducedMotion,
       feedbackActive: feedbackActive(),
+      alignment: dropAlignment(),
       lastDrop: state.lastDrop,
       eventCounters: { ...state.feedbackEventCounters },
       soundEnabled: state.soundEnabled,
@@ -665,7 +727,7 @@
 
   updateHud();
   render();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 </body>
