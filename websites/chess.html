@@ -416,6 +416,7 @@ canvas:focus-visible {
 <div class="overlay" id="gameOver" role="dialog" aria-modal="true" aria-labelledby="goTitle">
   <div class="go-card">
     <h3 class="go-title" id="goTitle">Game Over</h3>
+    <div class="go-sub" id="goDetail"></div>
     <div class="go-actions">
       <button type="button" id="goRematch">Play Again</button>
       <button type="button" id="goReview">Review Board</button>
@@ -496,6 +497,7 @@ const depthEl = document.getElementById('depth');
 // --- Game Over overlay elements ---
 const goEl     = document.getElementById('gameOver');
 const goTitle  = document.getElementById('goTitle');
+const goDetail = document.getElementById('goDetail');
 const goRematch= document.getElementById('goRematch');
 const goReview = document.getElementById('goReview');
 const SOUND_KEY = 'chess.sound.v1';
@@ -572,14 +574,21 @@ async function toggleFullscreen() {
 
 function showOverlay(title){
   goTitle.textContent = title;
+  const detail = (ending && ending.detail) || '';
+  if (goDetail) goDetail.textContent = detail;
   goEl.classList.add('show');
-  announceStatus(`Game over. ${title}.`);
+  announceStatus(`Game over. ${title}. ${detail}`.trim());
   playSound('game-over');
   // Move focus into the dialog (the primary "Play Again" control). The game has
   // ended, so there is no meaningful trigger to restore focus to on close.
   if (goRematch && typeof goRematch.focus === 'function') goRematch.focus();
 }
-function hideOverlay(){ goEl.classList.remove('show'); }
+function hideOverlay(){
+  goEl.classList.remove('show');
+  // Clear the reason with the card, so a stale explanation can never flash on a
+  // later ending before showOverlay writes the new one.
+  if (goDetail) goDetail.textContent = '';
+}
 
 function readSoundPreference() {
   try {
@@ -910,6 +919,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 let state = null;
 let stateHistory = [];
+let ending = null;        // how the game ended, in plain words
 let selected = null;
 const keyboardState = {
   active: false,
@@ -968,6 +978,7 @@ function newGame(options = {}) {
   resetKeyboardFocusForTurn();
   moveHistory = [];
   stateHistory = [];
+  ending = null;
   movesEl.innerHTML = '';
   const statusText = 'White to move.';
   setStatus(statusText, { announce: false });
@@ -1718,6 +1729,7 @@ newBtn.addEventListener('click', () => {
 
 undoBtn.addEventListener('click', () => {
   hideOverlay();
+  ending = null;
   if (aiThinking || currentAnimation) return;
   if (stateHistory.length === 0) return;
 
@@ -2205,12 +2217,54 @@ function fiftyMoveDraw(st) {
 }
 // <<< chess-draw-rules <<<
 
+// Every ending in plain words. The titles alone are chess shorthand — a casual
+// player has no way to know what "insufficient material" or "threefold
+// repetition" means, or why the game just stopped. The overlay title, the new
+// overlay sub-line, the status line, the announcement and the diagnostics all
+// read this one record, so they cannot describe the ending differently.
+// (Three `const sub = 'Result: …'` lines were already being computed below and
+// thrown away — the sub-line was intended and never rendered.)
+function materialSummary(st) {
+  const names = { q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
+  const left = [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const piece = st.board[r][c];
+    if (piece && piece.type !== 'k') left.push(`${piece.color === 'w' ? 'White' : 'Black'} has a ${names[piece.type]}`);
+  }
+  if (!left.length) return 'Only the two kings are left.';
+  return left.join(', ') + ', and that is not enough to force mate.';
+}
+function describeEnding(kind, info) {
+  const opts = info || {};
+  const result = opts.result || '1/2-1/2';
+  const tail = ` Result: ${result}.`;
+  switch (kind) {
+    case 'checkmate':
+      return { kind, result, title: opts.title,
+        detail: `${opts.loser}'s king is under attack and has no legal move left.${tail}` };
+    case 'stalemate':
+      return { kind, result, title: 'Draw — Stalemate',
+        detail: `${opts.stuck} has no legal move but is not in check, so nobody wins.${tail}` };
+    case 'insufficient':
+      return { kind, result, title: 'Draw — Insufficient material',
+        detail: `Neither side has enough pieces left to force a checkmate. ${opts.material}${tail}` };
+    case 'fifty-move':
+      return { kind, result, title: 'Draw — Fifty-move rule',
+        detail: `100 half-moves passed with no capture and no pawn move, so neither side is making progress.${tail}` };
+    case 'threefold':
+      return { kind, result, title: 'Draw — Threefold repetition',
+        detail: `The same position came up three times with the same side to move, so neither side is making progress.${tail}` };
+    default:
+      return { kind: 'none', result: null, title: 'Game Over', detail: '' };
+  }
+}
 function declareDraw(type, title) {
   state.gameOver = true;
   state.result = '1/2-1/2';
   state.drawType = type;
-  setStatus(`${title} (1/2-1/2)`);
-  showOverlay(title);
+  ending = describeEnding(type, { result: '1/2-1/2', material: type === 'insufficient' ? materialSummary(state) : '' });
+  setStatus(`${ending.title} (1/2-1/2)`);
+  showOverlay(ending.title);
 }
 
 // After a move: check for checkmate/stalemate/draw and update status
@@ -2227,15 +2281,16 @@ function postMoveChecks() {
       const winnerColor = (side === 'w') ? 'Black' : 'White';
 
       // Friendly titles for vs Computer
+      const loser = (side === 'w') ? 'White' : 'Black';
       if (vsComputer) {
         const youWin = (winnerColor === 'White'); // you are White vs Computer
         const title = youWin ? 'Checkmate — You win!' : 'Checkmate — You lose';
-        const sub   = youWin ? 'Result: 1-0' : 'Result: 0-1';
+        ending = describeEnding('checkmate', { title, loser, result: youWin ? '1-0' : '0-1' });
         setStatus(`${title} (${youWin ? '1-0' : '0-1'})`);
         showOverlay(title);
       } else {
         const title = `Checkmate — ${winnerColor} wins`;
-        const sub   = `Result: ${state.result}`;
+        ending = describeEnding('checkmate', { title, loser, result: state.result });
         setStatus(`${title} (${state.result})`);
         showOverlay(title);
       }
@@ -2243,10 +2298,9 @@ function postMoveChecks() {
       // Stalemate - no legal moves and not in check
       state.result = '1/2-1/2';
       state.drawType = 'stalemate';
-      const title = 'Draw — Stalemate';
-      const sub   = 'Result: 1/2–1/2';
-      setStatus(`${title} (${state.result})`);
-      showOverlay(title);
+      ending = describeEnding('stalemate', { stuck: side === 'w' ? 'White' : 'Black', result: '1/2-1/2' });
+      setStatus(`${ending.title} (${state.result})`);
+      showOverlay(ending.title);
     }
   } else if (hasInsufficientMaterial(state)) {
     declareDraw('insufficient', 'Draw — Insufficient material');
@@ -2541,6 +2595,8 @@ function renderGameToText(){
     },
     gameOver: !!state.gameOver,
     result: state.result,
+    // How the game ended, in the same words the overlay and the status use.
+    ending: ending ? { kind: ending.kind, result: ending.result, title: ending.title, detail: ending.detail } : null,
     drawType: state.drawType || null,
     halfmoveClock: state.halfmove,
     repetitionCount: repetitionCount(state, stateHistory),
