@@ -139,6 +139,16 @@
   const W = canvas.width;
   const H = canvas.height;
   const keys = { best: "deckforge-duel.best.v1", sound: "deckforge-duel.sound.v1" };
+  // A perfect three-round clear measured under 12000, so 500000 is far above
+  // anything reachable and still rejects junk. The old read rejected Infinity
+  // and negatives but had NO ceiling, so 1e24 survived as an unbeatable best.
+  const MAX_BEST = 500000;
+  // Every attack card silently gains your banked focus AND a flat bonus once the
+  // combo reaches 3. Both were bare literals inside playCard(), so the number
+  // printed on a card was not the number that happened: Spark reads "Deal 4"
+  // and lands 5 at combo 3. cardOutlook() and playCard() now read these two.
+  const COMBO_BONUS_AT = 3;
+  const COMBO_BONUS = 1;
   const els = {
     round: document.getElementById("roundValue"),
     turn: document.getElementById("turnValue"),
@@ -162,11 +172,11 @@
     strike: { id: "strike", name: "Strike", type: "Attack", cost: 1, damage: 6, color: "#fb7185", text: "Deal 6 + focus." },
     guard: { id: "guard", name: "Guard", type: "Shield", cost: 1, block: 7, color: "#5eead4", text: "Gain 7 block." },
     focus: { id: "focus", name: "Focus", type: "Focus", cost: 0, focus: 3, draw: 1, color: "#fbbf24", text: "+3 focus. Draw 1." },
-    lance: { id: "lance", name: "Lance", type: "Attack", cost: 2, damage: 10, pierce: 3, color: "#f97316", text: "Deal 10. Pierce 3." },
+    lance: { id: "lance", name: "Lance", type: "Attack", cost: 2, damage: 10, pierce: 3, color: "#f97316", text: "Deal 10 + focus. Pierce 3." },
     bulwark: { id: "bulwark", name: "Bulwark", type: "Shield", cost: 2, block: 12, color: "#7c9eff", text: "Gain 12 block." },
-    spark: { id: "spark", name: "Spark", type: "Attack", cost: 1, damage: 4, draw: 1, color: "#c084fc", text: "Deal 4. Draw 1." },
+    spark: { id: "spark", name: "Spark", type: "Attack", cost: 1, damage: 4, draw: 1, color: "#c084fc", text: "Deal 4 + focus. Draw 1." },
     channel: { id: "channel", name: "Channel", type: "Focus", cost: 1, focus: 2, energy: 2, color: "#22d3ee", text: "+2 focus. Gain 2 energy." },
-    riposte: { id: "riposte", name: "Riposte", type: "Shield", cost: 1, block: 5, damage: 3, color: "#34d399", text: "Block 5. Deal 3." }
+    riposte: { id: "riposte", name: "Riposte", type: "Shield", cost: 1, block: 5, damage: 3, color: "#34d399", text: "Block 5. Deal 3 + focus." }
   };
   const baseDeck = ["strike","guard","focus","strike","spark","guard","lance","bulwark","channel","riposte","strike","focus"];
   const roundData = [
@@ -201,7 +211,7 @@
     bestStreak: 0,
     focus: 0,
     score: 0,
-    best: (function(){ const n=Number(storage.get(keys.best, "0")); return Number.isFinite(n)&&n>=0?Math.floor(n):0; })(),
+    best: (function(){ const n=Number(storage.get(keys.best, "0")); return Number.isFinite(n)&&n>=0&&n<=MAX_BEST?Math.floor(n):0; })(),
     sound: storage.get(keys.sound, "1") !== "0",
     player: { hp: 44, maxHp: 44, block: 0 },
     enemy: { name: "", hp: 1, maxHp: 1, block: 0, charge: 0, color: "#fb7185" },
@@ -220,12 +230,15 @@
   };
   let audioCtx = null;
   let lastStamp = 0;
+  let raf = 0;
+  let inTick = false;
 
   function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   function card(id){ return cards[id]; }
   function setFeedback(text, seconds = 1.5){
     state.feedback = text;
     state.feedbackTime = seconds;
+    ensureLoop();
   }
   function makeDeck(round){
     const deck = baseDeck.slice();
@@ -316,6 +329,9 @@
     render();
   }
   function restart(){
+    // completeRound() and finish() both bank, but a mid-round Restart used to
+    // wipe everything earned since the last round clear.
+    saveBest();
     state.score = 0;
     state.streak = 0;
     state.bestStreak = 0;
@@ -337,6 +353,7 @@
   }
   function addEffect(x, y, color, label){
     state.effects.push({ x, y, color, label, t: .55, life: .55 });
+    ensureLoop();
   }
   function dealDamage(raw, pierce = 0, label = "Hit"){
     let damage = Math.max(0, raw | 0);
@@ -351,6 +368,38 @@
     setFeedback(`${label} dealt ${damage}${absorbed ? ` after ${absorbed} block` : ""}.`);
     sfx("attack");
     if (state.enemy.hp <= 0) completeRound();
+  }
+  // Pure. What the card would actually do if played right now, with the banked
+  // focus, the combo bonus and the enemy's block all applied. The card face, the
+  // status line and the diagnostics all read this, and playCard() takes its own
+  // damage number from it, so the preview cannot disagree with the result.
+  // NOTE the combo term: playCard() increments state.combo BEFORE it works out
+  // the bonus, so the outlook has to look ahead by one or the preview is short
+  // by exactly COMBO_BONUS on the card that first reaches the threshold.
+  function comboBonusFor(comboAfterPlay){
+    return comboAfterPlay >= COMBO_BONUS_AT ? COMBO_BONUS : 0;
+  }
+  function cardOutlook(id){
+    const c = card(id);
+    if (!c) return null;
+    const bonus = c.damage ? state.focus + comboBonusFor(state.combo + 1) : 0;
+    const raw = c.damage ? c.damage + bonus : 0;
+    const pierce = Math.min(c.pierce || 0, raw);
+    const absorbed = Math.min(state.enemy.block, raw - pierce);
+    const lands = raw - absorbed;
+    const parts = [];
+    if (raw) parts.push(absorbed ? `${lands} past ${absorbed} block` : `${raw} damage`);
+    if (c.block) parts.push(`+${c.block} block`);
+    if (!raw && !c.block && c.focus) parts.push(`+${c.focus} focus`);
+    return {
+      id: c.id, name: c.name, cost: c.cost,
+      affordable: state.mode === "player" && state.energy >= c.cost,
+      raw, lands, absorbed, bonus,
+      focusSpent: c.damage ? state.focus : 0,
+      comboBonus: c.damage ? comboBonusFor(state.combo + 1) : 0,
+      block: c.block || 0, focus: c.focus || 0, energy: c.energy || 0, draw: c.draw || 0,
+      now: parts.join(", ") || "no effect"
+    };
   }
   function playCard(index){
     if (state.mode !== "player") return;
@@ -388,7 +437,9 @@
       addEffect(448, 294, "#fbbf24", `Energy +${c.energy}`);
     }
     if (c.damage) {
-      const bonus = state.focus + (state.combo >= 3 ? 1 : 0);
+      // state.combo was incremented above, so the outlook shown before the play
+      // used state.combo + 1 and matches this exactly.
+      const bonus = state.focus + comboBonusFor(state.combo);
       state.focus = 0;
       dealDamage(c.damage + bonus, c.pierce || 0, c.name);
     } else {
@@ -424,6 +475,7 @@
     if (state.mode !== "player") return;
     state.mode = "enemy";
     state.enemyTimer = .42;
+    ensureLoop();
     setFeedback(`${state.enemy.name} acts: ${intentText()}.`);
     sfx("focus");
     updateHud();
@@ -613,6 +665,24 @@
       }
     }
     ctx.fillText(line, x + 12, ty);
+    // What it does RIGHT NOW, under the printed text. The card's own wording is
+    // static; this line carries the banked focus, the combo bonus and the enemy's
+    // block, which is what actually decides the number.
+    const look = cardOutlook(c.id);
+    if (look) {
+      ctx.textAlign = 'left';
+      ctx.font = '900 11px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = look.affordable ? '#f8fbff' : 'rgba(148,163,184,.75)';
+      ctx.fillText('NOW ' + look.now, x + 12, ty + 17);
+      if (look.focusSpent || look.comboBonus) {
+        const why = [];
+        if (look.focusSpent) why.push('spends ' + look.focusSpent + ' focus');
+        if (look.comboBonus) why.push('+' + look.comboBonus + ' combo');
+        ctx.font = '750 10px ui-sans-serif, system-ui, sans-serif';
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(why.join(', '), x + 12, ty + 31);
+      }
+    }
     ctx.restore();
   }
   function drawArena(){
@@ -695,12 +765,12 @@
     ctx.stroke();
     fillTextCentered("Enemy Intent", 450, 58, 12, "#fbbf24", 950);
     fillTextCentered(intentText(), 450, 88, 17, "#f8fbff", 900);
-    fillTextCentered(`Focus ${state.focus}  Streak ${state.streak}`, 450, 116, 12, "#aab8d2", 850);
+    fillTextCentered(`Focus ${state.focus} · Streak ${state.streak} · Combo ${state.combo}`, 450, 116, 12, "#aab8d2", 220);
     drawPiles();
     state.cardRects = [];
     const n = state.hand.length;
     const cw = 126;
-    const ch = 146;
+    const ch = 164;
     const gap = 10;
     const total = n * cw + Math.max(0, n - 1) * gap;
     let x = (W - total) / 2;
@@ -723,12 +793,31 @@
     }
     drawOverlay();
   }
+  // frame() re-queued unconditionally, so a card game that is doing nothing but
+  // waiting for a click burned 60 frames a second forever. The loop now runs only
+  // while something is genuinely moving: the enemy turn timer, a floating hit
+  // number, or a feedback line counting down. inTick guards against a SECOND
+  // chain, because update() can call resolveEnemy() -> setFeedback() mid-frame at
+  // the moment raf has been zeroed but not yet re-armed. lastStamp is only reset
+  // when a cold chain starts, never inside a per-frame function, so the drifting
+  // background and the enemy timer cannot be frozen at dt 0.
+  function loopActive(){
+    return state.mode === "enemy" || state.effects.length > 0 || state.feedbackTime > 0;
+  }
+  function ensureLoop(){
+    if (raf || inTick || !loopActive()) return;
+    lastStamp = 0;
+    raf = requestAnimationFrame(frame);
+  }
   function frame(stamp){
+    raf = 0;
+    inTick = true;
     const dt = Math.min(.05, (stamp - lastStamp) / 1000 || 1 / 60);
     lastStamp = stamp;
     update(dt);
     render();
-    requestAnimationFrame(frame);
+    inTick = false;
+    if (loopActive()) raf = requestAnimationFrame(frame);
   }
   function canvasPoint(event){
     const rect = canvas.getBoundingClientRect();
@@ -789,6 +878,9 @@
       player: { hp: state.player.hp, maxHp: state.player.maxHp, block: state.player.block },
       enemy: { name: state.enemy.name, hp: state.enemy.hp, maxHp: state.enemy.maxHp, block: state.enemy.block, charge: state.enemy.charge },
       hand: { size: state.hand.length, names: state.hand.map((id) => card(id).name) },
+      focus: state.focus,
+      comboBonusAt: COMBO_BONUS_AT,
+      outlook: state.hand.map((id) => cardOutlook(id)),
       deck: { size: state.deck.length, names: state.deck.map((id) => card(id).name) },
       discard: { size: state.discard.length, names: state.discard.map((id) => card(id).name) },
       enemyIntent: { label: intent.label, kind: intent.kind, damage: intent.damage || 0, block: intent.block || 0, charge: intent.charge || 0, heal: intent.heal || 0, drain: intent.drain || 0, text: intentText(intent) },
@@ -821,7 +913,7 @@
   restart();
   updateHud();
   render();
-  requestAnimationFrame(frame);
+  ensureLoop();
 })();
 </script>
 <script>
