@@ -92,6 +92,25 @@
     color:rgba(94,234,212,0.85);font-weight:700;min-height:18px;
   }
 
+  /* Where you are in the sequence, and how fast it is running. Position only --
+     while a run is live the dots never give away which colour a step is. */
+  .track{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:20px;margin-top:-6px}
+  .steps{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-height:14px;flex:1 1 auto}
+  .step{width:12px;height:12px;border-radius:50%;border:1px solid rgba(94,234,212,0.34);background:rgba(94,234,212,0.07);flex:0 0 auto}
+  .step[data-state="done"]{background:rgba(94,234,212,0.72);border-color:rgba(94,234,212,0.9)}
+  .step[data-state="now"]{background:#fde047;border-color:#fde047;box-shadow:0 0 10px rgba(253,224,71,0.75)}
+  /* The outline survives the colour rules below, so the missed step stays marked
+     even when the step it landed on happens to be the red pad. */
+  .step[data-state="miss"]{background:#fb7185;border-color:#fb7185;outline:2px solid #fb7185;outline-offset:2px;box-shadow:0 0 10px rgba(251,113,133,0.8)}
+  .step[data-color="red"]   {background:#d1394b;border-color:#e0596a}
+  .step[data-color="yellow"]{background:#d8ae2c;border-color:#eac94f}
+  .step[data-color="green"] {background:#27a86c;border-color:#48c98b}
+  .step[data-color="blue"]  {background:#3d74d6;border-color:#6b96e6}
+  .pace{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(160,190,212,0.95);font-weight:700;white-space:nowrap;flex:0 0 auto}
+  .pace[data-topped="true"]{color:rgba(253,224,71,0.95)}
+  .verdict{font-size:12px;color:rgba(200,216,230,0.95);line-height:1.5;margin:2px 0 0}
+  .replay{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+
   .grid{
     display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;
     aspect-ratio:1/1;
@@ -164,6 +183,10 @@
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
   </div>
   <div class="status" id="statusLine" aria-live="polite">Tap a pad or press Start to begin.</div>
+  <div class="track" aria-hidden="true">
+    <div class="steps" id="stepRow"></div>
+    <span class="pace" id="paceValue" data-topped="false">Flash 420ms</span>
+  </div>
   <div class="grid" id="grid" role="application" aria-label="Echo Mimic pads">
     <button class="pad" type="button" data-color="red"    data-index="0" data-active="false" aria-label="Red pad"></button>
     <button class="pad" type="button" data-color="yellow" data-index="1" data-active="false" aria-label="Yellow pad"></button>
@@ -203,6 +226,8 @@
       <div class="pill"><span class="label">Length</span><span class="value" id="goLength">0</span></div>
     </div>
     <p id="goNote">Nice run.</p>
+    <p class="verdict" id="goVerdict">The sequence you were repeating:</p>
+    <div class="replay" id="goSequence"></div>
     <div class="actions"><button class="btn primary" type="button" id="goPlayAgain">Play Again</button></div>
   </div>
 </div>
@@ -217,8 +242,12 @@
   const SOUND_KEY = 'echo-mimic.sound.v1';
   const FLASH_MS = 420;
   const GAP_MS = 140;
+  const ROUND_GAP_MS = 600;
   const SPEEDUP_MIN_FLASH = 220;
   const SPEEDUP_PER_ROUND = 18;
+  // Nobody memorises a thousand-step sequence, so a stored best beyond this is a
+  // corrupt store rather than a score.
+  const MAX_ROUND = 9999;
 
   const els = {
     round:   document.getElementById('roundValue'),
@@ -238,7 +267,11 @@
     goLength:    document.getElementById('goLength'),
     goNote:      document.getElementById('goNote'),
     goPlayAgain: document.getElementById('goPlayAgain'),
-    goTitle:     document.getElementById('gameOverTitle')
+    goTitle:     document.getElementById('gameOverTitle'),
+    stepRow:     document.getElementById('stepRow'),
+    pace:        document.getElementById('paceValue'),
+    goVerdict:   document.getElementById('goVerdict'),
+    goSequence:  document.getElementById('goSequence')
   };
 
   // phase: 'idle' | 'watch' | 'mimic' | 'over'
@@ -256,6 +289,9 @@
     lastCorrectAt: 0,
     lastWrongAt: 0,
     lastCommand: 'none',
+    watchIndex: -1,     // which step of the sequence is flashing right now
+    missIndex: -1,      // which step the run died on
+    missPressed: -1,    // the pad that was pressed there
     lastStatus: '',
     lastInput: 'none',
     lastFeedback: 'idle',
@@ -301,13 +337,56 @@
   }
 
   // ----- Game flow -----
-  function loadBest(){ try { const raw = localStorage.getItem(BEST_KEY); if (!raw) return null; const p = JSON.parse(raw); return (p && typeof p.round === 'number') ? p : null; } catch { return null; } }
+  // A stored {"round":1e400} parses to Infinity, which passes a bare
+  // typeof === 'number' check, prints "Infinity" on the scoreboard and, worse,
+  // JSON.stringify writes it as null so the diagnostics contract breaks. A
+  // negative or absurd round sailed through the same way.
+  function loadBest(){
+    try {
+      const raw = localStorage.getItem(BEST_KEY);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      if (!p || typeof p.round !== 'number' || !Number.isFinite(p.round)) return null;
+      const round = Math.floor(p.round);
+      if (round < 1 || round > MAX_ROUND) return null;
+      const length = Number.isFinite(p.length) ? Math.max(0, Math.min(MAX_ROUND, Math.floor(p.length))) : round;
+      return { round, length, ts: p.ts };
+    } catch { return null; }
+  }
   function saveBest(record){ try { localStorage.setItem(BEST_KEY, JSON.stringify(record)); } catch {} }
 
+  // The flash time shrinks by SPEEDUP_PER_ROUND every round until it floors.
+  // Nothing used to say so, and it is what ends every long run.
+  function flashMsFor(round){
+    return Math.max(SPEEDUP_MIN_FLASH, FLASH_MS - (Math.max(1, round) - 1) * SPEEDUP_PER_ROUND);
+  }
+  // One description of the position track, read by the row and by diagnostics.
+  // 'done' = already watched or already repeated, 'now' = the live step,
+  // 'todo' = still to come. Never carries a colour while a run is live.
+  function trackStates(){
+    const out = [];
+    for (let i = 0; i < state.sequence.length; i += 1){
+      if (state.phase === 'watch') out.push(i < state.watchIndex ? 'done' : i === state.watchIndex ? 'now' : 'todo');
+      else if (state.phase === 'mimic') out.push(i < state.playerIndex ? 'done' : i === state.playerIndex ? 'now' : 'todo');
+      else if (state.phase === 'gap') out.push('done');
+      else if (state.phase === 'over') out.push(i < state.missIndex ? 'done' : i === state.missIndex ? 'miss' : 'todo');
+      else out.push('todo');
+    }
+    return out;
+  }
+  function renderTrack(){
+    const states = trackStates();
+    els.stepRow.innerHTML = states.map((s) => '<span class="step" data-state="' + s + '"></span>').join('');
+    const ms = flashMsFor(state.round || 1);
+    const topped = ms <= SPEEDUP_MIN_FLASH;
+    els.pace.textContent = 'Flash ' + ms + 'ms' + (topped ? ' (top speed)' : '');
+    els.pace.setAttribute('data-topped', topped ? 'true' : 'false');
+  }
   function updateHud(){
     els.round.textContent = String(state.round);
     els.length.textContent = String(state.sequence.length);
-    els.best.textContent = state.bestRound ? String(state.bestRound) : '—';
+    els.best.textContent = (typeof state.bestRound === 'number' && state.bestRound > 0) ? String(state.bestRound) : '—';
+    renderTrack();
   }
   function setStatus(text, feedback = 'status'){
     state.lastStatus = text;
@@ -326,6 +405,28 @@
   function canStartFromPhase(){
     return state.phase === 'idle' || state.phase === 'ready' || state.phase === 'over';
   }
+  function runIsLive(){ return state.phase === 'watch' || state.phase === 'mimic' || state.phase === 'gap'; }
+  // The button used to read "Start" during a live run and do nothing at all when
+  // pressed, in either phase, with no message -- and there was no way to leave a
+  // run except deliberately hitting a wrong pad. It now stops the run instead,
+  // which is the path finishRun(true) was already written for but never reached.
+  function updateStartButton(){
+    const live = runIsLive();
+    els.start.textContent = live ? 'Stop' : state.phase === 'over' ? 'Play Again' : 'Start';
+    els.start.setAttribute('aria-label', live ? 'Stop this run and keep the score' : 'Start a run');
+  }
+  function stopRun(command){
+    if (!runIsLive()) return false;
+    state.lastCommand = command;
+    setLastInput(command);
+    stopLoop();
+    state.playbackQueue = [];
+    els.pads.forEach((_, i) => setPadActive(i, false));
+    state.missIndex = -1;
+    state.missPressed = -1;
+    finishRun(true);
+    return true;
+  }
   function startRun(command){
     if (!canStartFromPhase()) return false;
     const feedback = /restart|play-again/.test(command) ? 'restart' : 'start';
@@ -343,10 +444,14 @@
     state.playerIndex = 0;
     state.round = 0;
     state.playbackQueue = [];
+    state.watchIndex = -1;
+    state.missIndex = -1;
+    state.missPressed = -1;
     setStatus('Ready. Tap a pad or press Start to begin.', 'ready');
     setPadsDisabled(false);
     els.pads.forEach((_, i) => setPadActive(i, false));
     closeOverlay(els.goOverlay);
+    updateStartButton();
     updateHud();
   }
 
@@ -354,36 +459,45 @@
     state.round += 1;
     state.sequence.push(Math.floor(Math.random() * 4));
     state.playerIndex = 0;
+    state.watchIndex = -1;
+    state.missIndex = -1;
+    state.missPressed = -1;
     const lead = launchFeedback === 'restart' ? 'Restarting. ' : launchFeedback === 'start' ? 'Starting. ' : '';
-    setStatus(lead + 'Watch the sequence.', launchFeedback);
+    const flashMs = flashMsFor(state.round);
+    setStatus(lead + 'Watch the sequence. ' + state.sequence.length + ' '
+      + (state.sequence.length === 1 ? 'step' : 'steps') + ' at ' + flashMs + 'ms.', launchFeedback);
     queuePlayback();
     updateHud();
   }
 
   function queuePlayback(){
-    const flashMs = Math.max(SPEEDUP_MIN_FLASH, FLASH_MS - (state.round - 1) * SPEEDUP_PER_ROUND);
+    const flashMs = flashMsFor(state.round);
     state.playbackQueue = [];
     let t = state.now + 250; // small pre-roll
-    for (const idx of state.sequence){
-      state.playbackQueue.push({ type: 'on', at: t, idx });
-      state.playbackQueue.push({ type: 'off', at: t + flashMs, idx });
+    state.sequence.forEach((idx, step) => {
+      state.playbackQueue.push({ type: 'on', at: t, idx, step });
+      state.playbackQueue.push({ type: 'off', at: t + flashMs, idx, step });
       t += flashMs + GAP_MS;
-    }
+    });
     state.playbackQueue.push({ type: 'mimic', at: t + 100 });
     state.phase = 'watch';
     ensureLoop();
     setPadsDisabled(true);
+    updateStartButton();
   }
 
   function drivePlayback(){
-    if (state.phase !== 'watch') return;
+    if (state.phase !== 'watch' && state.phase !== 'gap') return;
     while (state.playbackQueue.length && state.now >= state.playbackQueue[0].at){
       const ev = state.playbackQueue.shift();
+      if (ev.type === 'round'){ startRound(); continue; }
       if (ev.type === 'on'){
         setPadActive(ev.idx, true);
         playPad(COLORS[ev.idx]);
         state.lastPlaybackAt = state.now;
         state.playbackCount += 1;
+        state.watchIndex = ev.step;
+        renderTrack();
       } else if (ev.type === 'off'){
         setPadActive(ev.idx, false);
       } else if (ev.type === 'mimic'){
@@ -395,8 +509,11 @@
   function beginMimic(){
     state.phase = 'mimic';
     state.playerIndex = 0;
+    state.watchIndex = -1;
     setStatus('Repeat the sequence now.', 'repeat');
     setPadsDisabled(false);
+    renderTrack();
+    updateStartButton();
   }
 
   function onPadActivate(idx, input){
@@ -420,17 +537,26 @@
       state.lastCorrectAt = state.now;
       state.correctCount += 1;
       if (state.playerIndex >= state.sequence.length){
-        // Round complete — schedule next round.
+        // Round complete. The next round used to be scheduled on a real
+        // setTimeout, which meant advanceTime() could not cross a round boundary
+        // at all — a scripted run stuck on round one forever. It now waits on the
+        // game's own clock in a short 'gap' phase that the tick loop drives.
         setStatus('Level complete. Get ready.', 'level-complete');
         setPadsDisabled(true);
-        setTimeout(() => { if (state.phase === 'mimic') startRound(); }, 600);
+        state.phase = 'gap';
+        state.playbackQueue = [{ type: 'round', at: state.now + ROUND_GAP_MS }];
+        renderTrack();
+        ensureLoop();
       } else {
         const left = state.sequence.length - state.playerIndex;
         setStatus('Correct. ' + left + ' ' + (left === 1 ? 'step' : 'steps') + ' left.', 'correct');
+        renderTrack();
       }
     } else {
       state.lastWrongAt = state.now;
       state.wrongCount += 1;
+      state.missIndex = state.playerIndex;
+      state.missPressed = idx;
       finishRun(false);
     }
   }
@@ -453,11 +579,28 @@
     const noteParts = ['Reached round ' + state.round + ' (' + state.sequence.length + ' steps).'];
     if (beat && state.round > 1) noteParts.push('New best!');
     els.goNote.textContent = noteParts.join(' ');
+    // The run used to end with no idea which step went wrong or what the
+    // sequence even was. Both are known here, so show them.
+    els.goVerdict.textContent = missReport(playerStopped);
+    els.goSequence.innerHTML = state.sequence.map((idx, i) =>
+      '<span class="step" data-color="' + COLORS[idx] + '"' + (i === state.missIndex ? ' data-state="miss"' : '') + '></span>'
+    ).join('');
     setStatus(playerStopped ? 'Stopped.' : 'Wrong pad. Game over.', playerStopped ? 'stopped' : 'wrong');
     if (!playerStopped) playWrong();
     if (beat && state.round >= 3) playWin();
     openOverlay(els.goOverlay, els.goPlayAgain);
+    updateStartButton();
     updateHud();
+  }
+  function missReport(playerStopped){
+    if (playerStopped){
+      return 'You stopped after ' + state.playerIndex + ' of ' + state.sequence.length
+        + ' correct. Here is the sequence you were repeating, red ring marks where you were.';
+    }
+    if (state.missIndex < 0) return 'Here is the sequence you were repeating.';
+    return 'Step ' + (state.missIndex + 1) + ' of ' + state.sequence.length + ': you pressed '
+      + COLORS[state.missPressed] + ', it was ' + COLORS[state.sequence[state.missIndex]]
+      + '. Here is the whole sequence.';
   }
 
   // ----- Modal management -----
@@ -552,7 +695,10 @@
 
   // ----- Wire controls -----
   els.pads.forEach((pad, idx) => pad.addEventListener('click', () => onPadActivate(idx, 'pad-' + COLORS[idx])));
-  els.start.addEventListener('click', () => { startRun(state.phase === 'over' ? 'button-restart' : 'button-start'); });
+  els.start.addEventListener('click', () => {
+    if (runIsLive()) { stopRun('button-stop'); return; }
+    startRun(state.phase === 'over' ? 'button-restart' : 'button-start');
+  });
   els.fullscreen.addEventListener('click', () => { toggleFullscreen('button-fullscreen'); });
   els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
   els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
@@ -567,7 +713,7 @@
 
   // ----- Tick loop -----
   let lastFrame = 0, raf = 0;
-  function loopActive(){ return state.phase === 'watch'; }
+  function loopActive(){ return state.phase === 'watch' || state.phase === 'gap'; }
   function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(tick); }
   function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function tick(t){
@@ -576,7 +722,9 @@
     state.now += t - lastFrame;
     lastFrame = t;
     drivePlayback();
-    if (loopActive()) raf = requestAnimationFrame(tick);
+    // drivePlayback can start the next round, and queuePlayback re-arms the loop
+    // itself. Without this guard that would leave two rAF chains running.
+    if (!raf && loopActive()) raf = requestAnimationFrame(tick);
   }
   ensureLoop();
 
@@ -594,6 +742,15 @@
       sequence: state.sequence.slice(),
       playerIndex: state.playerIndex,
       bestRound: state.bestRound,
+      flashMs: flashMsFor(state.round || 1),
+      atTopSpeed: flashMsFor(state.round || 1) <= SPEEDUP_MIN_FLASH,
+      track: trackStates(),
+      watchIndex: state.watchIndex,
+      miss: state.missIndex >= 0
+        ? { step: state.missIndex, pressed: state.missPressed, expected: state.sequence[state.missIndex] }
+        : null,
+      canStop: runIsLive(),
+      startLabel: els.start.textContent,
       fullscreen: state.fullscreen,
       lastStatus: state.lastStatus,
       lastInput: state.lastInput,
