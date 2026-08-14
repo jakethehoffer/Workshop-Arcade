@@ -201,12 +201,22 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
   function writeStore(key, value) {
     try { window.localStorage.setItem(key, String(value)); } catch (_) {}
   }
+  // A stored "Infinity" or "1e999" sailed straight through Number(x) || 0: it
+  // printed "Infinity" on the scoreboard, and JSON.stringify writes Infinity as
+  // null, so the diagnostics contract broke outright. "-5" printed a negative
+  // best and 1e24 printed as "1e+24".
+  const MAX_BEST = 9999999;
+  function loadBest() {
+    const value = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isFinite(value) || value <= 0) return 0;
+    return Math.min(Math.floor(value), MAX_BEST);
+  }
 
   const state = {
     mode: "start",
     level: 0,
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
+    best: loadBest(),
     shots: 0,
     totalShots: 0,
     rescuedTotal: 0,
@@ -384,8 +394,13 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     syncUi();
     draw();
   }
+  // The sector payout, parameterised on the shot count and flight time so the
+  // readout and the real award run through one function and cannot drift.
+  function sectorBonus(shots, elapsed) {
+    return 220 + state.pods.length * 80 + Math.max(0, 180 - Math.round(elapsed * 8)) - Math.max(0, shots - 1) * 35;
+  }
   function completeSector() {
-    const levelBonus = 220 + state.pods.length * 80 + Math.max(0, 180 - Math.round(state.elapsed * 8)) - Math.max(0, state.shots - 1) * 35;
+    const levelBonus = sectorBonus(state.shots, state.elapsed);
     state.score += levelBonus;
     storageBest();
     state.mode = state.level === levels.length - 1 ? "complete" : "level-complete";
@@ -413,29 +428,55 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     };
   }
 
-  function update(dt) {
-    state.fullscreen = !!document.fullscreenElement;
-    if (state.mode !== "flight") return;
-    state.elapsed += dt;
+  // One frame of flight physics on a plain {x,y,vx,vy,r} body. The real flight
+  // and the aim preview both step through this, so the arc drawn before launch
+  // cannot drift from the arc actually flown. Returns "planet" on a collision,
+  // tested before integrating exactly as the flight always did.
+  function flightStep(body, planets, dt) {
     let ax = 0, ay = 0;
-    for (const p of activeLevel().planets) {
-      const dx = p.x - state.ship.x, dy = p.y - state.ship.y;
+    for (const p of planets) {
+      const dx = p.x - body.x, dy = p.y - body.y;
       const d2 = Math.max(900, dx * dx + dy * dy);
       const d = Math.sqrt(d2);
       const force = Math.min(520, p.mass / d2);
       ax += dx / d * force;
       ay += dy / d * force;
-      if (d < p.r + state.ship.r) {
-        crash("Gravity well collision.");
-        return;
-      }
+      if (d < p.r + body.r) return "planet";
     }
-    state.ship.vx += ax * dt;
-    state.ship.vy += ay * dt;
-    state.ship.x += state.ship.vx * dt;
-    state.ship.y += state.ship.vy * dt;
-    state.ship.vx *= 0.999;
-    state.ship.vy *= 0.999;
+    body.vx += ax * dt;
+    body.vy += ay * dt;
+    body.x += body.vx * dt;
+    body.y += body.vy * dt;
+    body.vx *= 0.999;
+    body.vy *= 0.999;
+    return "";
+  }
+  // The arc the current aim and power would really fly, for a short horizon.
+  // Deliberately partial: it shows how gravity bends the shot without handing
+  // over the whole solution.
+  const PREVIEW_FRAMES = 100;
+  function previewPath() {
+    const level = activeLevel();
+    const speed = 260 + state.power * 360;
+    const body = { x: level.station.x, y: level.station.y, r: state.ship.r,
+      vx: Math.cos(state.aim) * speed, vy: Math.sin(state.aim) * speed };
+    const points = [{ x: body.x, y: body.y }];
+    let outcome = "open";
+    for (let i = 0; i < PREVIEW_FRAMES; i += 1) {
+      if (flightStep(body, level.planets, 1 / 60) === "planet") { outcome = "planet"; break; }
+      points.push({ x: body.x, y: body.y });
+      if (body.x < -90 || body.x > W + 90 || body.y < -90 || body.y > H + 90) { outcome = "drift"; break; }
+    }
+    return { points, outcome };
+  }
+  function update(dt) {
+    state.fullscreen = !!document.fullscreenElement;
+    if (state.mode !== "flight") return;
+    state.elapsed += dt;
+    if (flightStep(state.ship, activeLevel().planets, dt) === "planet") {
+      crash("Gravity well collision.");
+      return;
+    }
     state.trail.push({ x: state.ship.x, y: state.ship.y });
     if (state.trail.length > 48) state.trail.shift();
     for (const pod of state.pods) {
@@ -472,7 +513,13 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     els.best.textContent = String(state.best);
     els.pods.textContent = `${rescued}/${state.pods.length}`;
     els.power.textContent = `${Math.round(state.power * 100)}%`;
-    els.shots.textContent = String(state.totalShots);
+    // The pill showed the whole run's shot count while the sector bonus is
+    // charged on the shots taken IN THIS SECTOR, so from sector two onward the
+    // number on screen was not the number the penalty used.
+    els.shots.textContent = state.totalShots === state.shots
+      ? String(state.shots)
+      : `${state.shots} (${state.totalShots})`;
+    els.shots.title = `${state.shots} shot${state.shots === 1 ? "" : "s"} in this sector, ${state.totalShots} in the run. Each shot after the first costs 35 of the sector bonus.`;
     els.status.textContent = state.message;
     els.start.textContent = state.mode === "level-complete" ? "Next Sector" : state.mode === "complete" || state.mode === "crashed" ? "Retry" : state.mode === "start" ? "Start" : "Launch";
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
@@ -549,14 +596,38 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
     const tx = s.x + Math.cos(state.aim) * len;
     const ty = s.y + Math.sin(state.aim) * len;
     ctx.save();
-    ctx.strokeStyle = "rgba(103,232,249,.72)";
-    ctx.lineWidth = 3;
+    // The only aiming aid used to be this straight line, which points where the
+    // skiff would go with NO gravity -- never where it actually goes. Keep it as
+    // a short launch heading, then draw the arc the shot really flies.
+    ctx.strokeStyle = "rgba(103,232,249,.34)";
+    ctx.lineWidth = 2;
     ctx.setLineDash([9, 8]);
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
     ctx.lineTo(tx, ty);
     ctx.stroke();
     ctx.setLineDash([]);
+    const arc = previewPath();
+    if (arc.points.length > 2) {
+      ctx.lineCap = "round";
+      for (let i = 1; i < arc.points.length; i += 1) {
+        const a = arc.points[i - 1], b = arc.points[i];
+        const fade = 1 - i / arc.points.length;
+        ctx.strokeStyle = arc.outcome === "planet"
+          ? `rgba(251,113,133,${(0.22 + fade * 0.62).toFixed(3)})`
+          : `rgba(250,204,21,${(0.18 + fade * 0.6).toFixed(3)})`;
+        ctx.lineWidth = 2 + fade * 2;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      const tip = arc.points[arc.points.length - 1];
+      ctx.fillStyle = arc.outcome === "planet" ? "rgba(251,113,133,.85)" : "rgba(250,204,21,.7)";
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, arc.outcome === "planet" ? 7 : 4, 0, TAU);
+      ctx.fill();
+    }
     ctx.fillStyle = "rgba(103,232,249,.24)";
     ctx.beginPath();
     ctx.arc(tx, ty, 10, 0, TAU);
@@ -753,6 +824,9 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.7);border-color:rgba(255,25
       best: state.best,
       shotsInSector: state.shots,
       totalShots: state.totalShots,
+      preview: (() => { const a = previewPath(); return { frames: a.points.length, outcome: a.outcome, points: a.points.map((q) => ({ x: round(q.x), y: round(q.y) })) }; })(),
+      sectorBonusIfDockedNow: sectorBonus(state.shots, state.elapsed),
+      nextShotCosts: 35,
       aimRadians: round(state.aim),
       power: round(state.power),
       elapsed: round(state.elapsed),
