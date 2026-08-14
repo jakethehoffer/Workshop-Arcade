@@ -34,7 +34,14 @@ const BEST_SCORE_GAMES = [
   { url: 'websites/arena.html', key: 'canvasArena:highscore:v1', field: 'highScore' },
   { url: 'websites/flappy-bird.html', key: 'skyhopper_highscore', field: 'highScore' },
   { url: 'websites/rhythm-circuit.html', key: 'rhythm-circuit.bestScore.v1', field: 'bestScore' },
+  { url: 'websites/dice-dynamo.html', key: 'dice-dynamo.best.v1', field: 'best' },
 ];
+
+// A bare Number() lets through far more than NaN: "Infinity" and "1e999" both
+// become Infinity, which JSON.stringify writes as null and so breaks the
+// diagnostics contract outright, and a negative stored value shows a negative
+// best. Every listed game must survive all of these.
+const HOSTILE_BEST_VALUES = ['not-a-number-xyz', 'Infinity', '1e999', '-1'];
 
 const issues = [];
 function fail(message) { issues.push(message); }
@@ -72,17 +79,17 @@ async function startServer() {
   return { server, baseUrl: `http://127.0.0.1:${server.address().port}/` };
 }
 
-async function checkGame(browser, baseUrl, game) {
+async function checkGame(browser, baseUrl, game, hostile) {
   const context = await browser.newContext();
   try {
-    // Seed a non-numeric best value before the game's scripts run.
-    await context.addInitScript((key) => {
-      try { localStorage.setItem(key, 'not-a-number-xyz'); } catch (_) {}
-    }, game.key);
+    // Seed a corrupt best value before the game's scripts run.
+    await context.addInitScript((seed) => {
+      try { localStorage.setItem(seed.key, seed.value); } catch (_) {}
+    }, { key: game.key, value: hostile });
     const page = await context.newPage();
-    page.on('pageerror', (error) => fail(`${game.url}: page error with corrupt best stored: ${error.message}`));
+    page.on('pageerror', (error) => fail(`${game.url} [${hostile}]: page error with corrupt best stored: ${error.message}`));
     page.on('console', (message) => {
-      if (message.type() === 'error') fail(`${game.url}: console error with corrupt best stored: ${message.text()}`);
+      if (message.type() === 'error') fail(`${game.url} [${hostile}]: console error with corrupt best stored: ${message.text()}`);
     });
     await page.goto(new URL(game.url, baseUrl).href, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => typeof window.render_game_to_text === 'function', undefined, { timeout: 8000 });
@@ -90,7 +97,7 @@ async function checkGame(browser, baseUrl, game) {
       try { return JSON.parse(window.render_game_to_text())[field]; } catch (error) { return `unparseable: ${error.message}`; }
     }, game.field);
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-      fail(`${game.url}: ${game.field} must be a finite number >= 0 when storage holds a non-numeric best (got ${JSON.stringify(value)}) — an unguarded Number() makes it NaN and bricks the best display`);
+      fail(`${game.url}: ${game.field} must be a finite number >= 0 when storage holds ${JSON.stringify(hostile)} (got ${JSON.stringify(value)}) — an unguarded Number() turns it into NaN or Infinity and bricks the best display`);
     }
   } finally {
     await context.close();
@@ -104,7 +111,9 @@ try {
   server = started.server;
   browser = await chromium.launch({ headless: true });
   for (const game of BEST_SCORE_GAMES) {
-    await checkGame(browser, started.baseUrl, game);
+    for (const hostile of HOSTILE_BEST_VALUES) {
+      await checkGame(browser, started.baseUrl, game, hostile);
+    }
   }
 } catch (error) {
   fail(error instanceof Error ? error.stack || error.message : String(error));
@@ -119,4 +128,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log(`Best-score guard check passed: ${BEST_SCORE_GAMES.length} game(s) fall back to a finite best when storage holds a non-numeric value.`);
+console.log(`Best-score guard check passed: ${BEST_SCORE_GAMES.length} game(s) x ${HOSTILE_BEST_VALUES.length} corrupt stored value(s) all fall back to a finite best >= 0.`);
