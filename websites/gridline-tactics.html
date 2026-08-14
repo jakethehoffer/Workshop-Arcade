@@ -89,7 +89,7 @@
 <main class="shell">
   <div class="top">
     <h1 class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Gridline Tactics</span></h1>
-    <div class="hint">Arrows/WASD move cursor. Enter/Space moves or attacks. Tab switches unit. R restarts. F fullscreen. M toggles sound.</div>
+    <div class="hint">Arrows/WASD move cursor. Enter/Space moves or attacks. Q switches unit. R restarts. F fullscreen. M toggles sound. The bar over the board says what the cursor square will do.</div>
   </div>
   <section class="hud" aria-label="Game status">
     <div class="pill">Mission<b id="mission">1/5</b></div>
@@ -97,7 +97,7 @@
     <div class="pill">Best<b id="best">0</b></div>
     <div class="pill">Turn<b id="turn">Player</b></div>
     <div class="pill">Unit<b id="unit">A</b></div>
-    <div class="pill">State<b id="state">Ready</b></div>
+    <div class="pill">Cursor<b id="state">Ready</b></div>
   </section>
   <div id="live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Mission ready.</div>
   <canvas id="game" width="900" height="560" tabindex="0" aria-label="Gridline Tactics deterministic turn-based tactics game"></canvas>
@@ -107,7 +107,7 @@
     <button id="full" type="button">Fullscreen</button>
   </section>
   <section class="touch" aria-label="Touch controls">
-    <button type="button" data-key="Tab">Unit</button><button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Action</button><button type="button" data-key="r">Reset</button>
+    <button type="button" data-key="q">Unit</button><button type="button" data-key="ArrowUp">Up</button><button type="button" data-key="Enter" class="wide">Action</button><button type="button" data-key="r">Reset</button>
     <button type="button" data-key="ArrowLeft">Left</button><button type="button" data-key="ArrowDown">Down</button><button type="button" data-key="ArrowRight">Right</button><button type="button" data-key="f" class="wide">Full</button>
   </section>
 </main>
@@ -125,6 +125,15 @@
   };
   const W = 7, H = 6, KEY = "gridline-tactics.best.v1", SOUND = "gridline-tactics.sound.v1";
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  // Every tactical number lives here once. actionPlan() reads them to describe a
+  // square, playerAction()/enemyTurn()/checkWin() read them to resolve it, so the
+  // board can never advertise a rule the game does not actually follow.
+  const MOVE_RANGE = 3, SHOT_RANGE = 2, CRATE_RANGE = 1;
+  const SHOT_DMG = 3, SHOT_DMG_COVERED = 2, CRATE_DMG = 1;
+  const ENEMY_DMG = 2, ENEMY_DMG_COVERED = 1;
+  const MOVE_SCORE = 4, HIT_SCORE = 20, KILL_SCORE = 90, CRATE_SCORE = 8;
+  const CLEAR_BONUS = 250, HP_BONUS = 12;
+  const BOARD_TOP = 100, BOARD_BOTTOM = 46;
   const missions = [
     {name:"Depot Breach",goal:{x:6,y:5},cover:[[2,1],[4,2],[1,4]],units:[[0,0],[0,2]],enemies:[[5,1,4],[4,4,4]]},
     {name:"Crossfire Yard",goal:{x:6,y:0},cover:[[2,0],[2,3],[4,1],[4,4]],units:[[0,5],[1,4]],enemies:[[5,0,4],[6,3,5],[3,5,3]]},
@@ -192,7 +201,9 @@
     announceStatus((reason === "restart" ? "Restarted. " : "Mission start. ") + m.name + ". Select a unit, clear enemies, then reach the goal.", reason === "restart" ? "restart" : "mission");
     pulse(reason === "restart" ? "restart" : "mission");
   }
-  function restart(run=false){ state.score = run ? 0 : state.score; state.mission = run ? 0 : state.mission; state.runComplete=false; state.gameOver=false; startMission(state.mission, "restart"); }
+  // Bank first: abandoning a run mid-mission used to throw away everything scored
+  // since the last mission ended, because best was only saved on win or loss.
+  function restart(run=false){ saveBest(); state.score = run ? 0 : state.score; state.mission = run ? 0 : state.mission; state.runComplete=false; state.gameOver=false; startMission(state.mission, "restart"); }
   function aliveUnits(){ return state.units.filter(u => u.hp > 0); }
   function aliveEnemies(){ return state.enemies.filter(e => e.hp > 0); }
   function selectedUnit(){ return state.units[state.selected] && state.units[state.selected].hp > 0 ? state.units[state.selected] : aliveUnits()[0]; }
@@ -204,6 +215,95 @@
   function coverBetween(a,b){ return state.cover.some(c => c.hp > 0 && ((c.x === a.x && c.x === b.x && between(c.y,a.y,b.y)) || (c.y === a.y && c.y === b.y && between(c.x,a.x,b.x)))); }
   function between(v,a,b){ return v > Math.min(a,b) && v < Math.max(a,b); }
   function float(text,x,y,color){ if (reducedMotion) return; state.feedback.push({text,x,y,color,life:42}); ensureLoop(); }
+  function crateBeside(x,y){ return dirs.some(([dx,dy]) => !!isCover(x+dx,y+dy)); }
+  // Replay the enemy phase on throwaway copies, optionally with one unit standing
+  // somewhere else, and report what each unit would take. This is enemyTurn()'s
+  // logic step for step -- each enemy strikes its nearest live unit when that unit
+  // is within one square and a crate beside the target halves the hit, otherwise
+  // it takes one step closer -- so counting adjacent enemies is never guessed.
+  function previewEnemyPhase(overrideId,ox,oy){
+    const units = state.units.filter(u => u.hp > 0)
+      .map(u => ({id:u.id, x:u.id === overrideId ? ox : u.x, y:u.id === overrideId ? oy : u.y, hp:u.hp, hit:0, hits:[]}));
+    const foes = aliveEnemies().map(e => ({id:e.id,x:e.x,y:e.y}));
+    const taken = (x,y) => x<0 || y<0 || x>=W || y>=H || !!isCover(x,y) ||
+      foes.some(f => f.x === x && f.y === y) || units.some(u => u.hp > 0 && u.x === x && u.y === y);
+    for (const e of foes) {
+      const live = units.filter(u => u.hp > 0).slice().sort((a,b) => dist(e,a) - dist(e,b));
+      const t = live[0]; if (!t) break;
+      if (dist(e,t) <= 1) {
+        const dmg = crateBeside(t.x,t.y) ? ENEMY_DMG_COVERED : ENEMY_DMG;
+        t.hp -= dmg; t.hit += dmg; t.hits.push(e.id);
+      } else {
+        const opts = dirs.map(([dx,dy]) => ({x:e.x+dx,y:e.y+dy})).filter(p => !taken(p.x,p.y)).sort((a,b) => dist(a,t) - dist(b,t));
+        if (opts[0] && dist(opts[0],t) < dist(e,t)) { e.x = opts[0].x; e.y = opts[0].y; }
+      }
+    }
+    return { units, foes };
+  }
+  // What the selected unit would take for standing on a square. Exact once every
+  // other unit has spent its action, because then nothing else can move first.
+  function threatFor(u,x,y){
+    if (!u) return null;
+    const sim = previewEnemyPhase(u.id,x,y);
+    const me = sim.units.find(p => p.id === u.id);
+    if (!me) return null;
+    const closing = sim.foes.filter(f => Math.abs(f.x-x)+Math.abs(f.y-y) <= 1).map(f => f.id);
+    const certain = state.units.every(o => o.hp <= 0 || o.id === u.id || o.acted);
+    return { dmg: me.hit, shooters: me.hits, softened: me.hit > 0 && crateBeside(x,y), certain,
+      closing: closing.filter(id => me.hits.indexOf(id) < 0), fatal: me.hp <= 0 };
+  }
+  function threatAt(x,y){ return threatFor(selectedUnit(),x,y); }
+  // Only squares a unit could actually stand on get a danger marker.
+  function dangerAt(u,x,y){
+    if (enemyAt(x,y) || isCover(x,y)) return null;
+    const t = threatFor(u,x,y);
+    return t && t.dmg > 0 ? t : null;
+  }
+  // The single answer to "what does pressing Action on this square do?".
+  // Pure: it reads state and returns a plan, it never changes anything.
+  function actionPlan(u,tx,ty){
+    if (state.mode !== "playing") return {kind:"none",reason:"finished",short:"--",label:"--",detail:""};
+    if (!u) return {kind:"none",reason:"no unit",short:"--",label:"NO UNIT",detail:"No unit is left to command."};
+    if (state.turn !== "player") return {kind:"none",reason:"enemy turn",short:"WAIT",label:"ENEMY TURN",detail:"The enemy phase is resolving."};
+    if (tx < 0 || ty < 0 || tx >= W || ty >= H) return {kind:"none",reason:"off grid",short:"BLOCKED",label:"OFF GRID",detail:"That square is off the grid."};
+    if (u.acted) return {kind:"none",reason:"acted",short:"SPENT",label:"UNIT SPENT",detail:"Unit " + u.id + " already acted this turn. Press Q for the other unit."};
+    const step = dist(u,{x:tx,y:ty}), e = enemyAt(tx,ty), crate = isCover(tx,ty), mate = unitAt(tx,ty);
+    if (e) {
+      if (step > SHOT_RANGE) return {kind:"none",reason:"out of range",short:"TOO FAR",label:"OUT OF RANGE",
+        detail:e.id + " is " + step + " squares away and your shot reaches " + SHOT_RANGE + "."};
+      const covered = coverBetween(u,e), dmg = covered ? SHOT_DMG_COVERED : SHOT_DMG, kills = e.hp <= dmg;
+      return {kind:"attack",target:e.id,dmg,covered,kills,gain:kills ? KILL_SCORE : HIT_SCORE,
+        short:(kills ? "KO " : "HIT ") + e.id, label:(kills ? "CLEAR " : "SHOOT ") + e.id + " -" + dmg,
+        detail:(covered ? "A crate in the way drops the shot from " + SHOT_DMG + " to " + dmg + ". " : "Clean line, full " + dmg + " damage. ") +
+          (kills ? e.id + " goes down for +" + KILL_SCORE + "." : e.id + " drops to " + (e.hp - dmg) + " HP for +" + HIT_SCORE + ".")};
+    }
+    if (step === 0) return {kind:"none",reason:"self",short:"HERE",label:"ALREADY HERE",detail:"Unit " + u.id + " is standing on that square."};
+    if (crate) {
+      if (step > CRATE_RANGE) return {kind:"none",reason:"crate far",short:"TOO FAR",label:"OUT OF REACH",
+        detail:"You have to stand right beside a crate to smash it. That one is " + step + " squares away."};
+      return {kind:"cover",dmg:CRATE_DMG,gain:CRATE_SCORE,hpAfter:crate.hp - CRATE_DMG,
+        short:"CRATE +" + CRATE_SCORE, label:"SMASH CRATE +" + CRATE_SCORE,
+        detail:"Knocks the crate down to " + (crate.hp - CRATE_DMG) + " of 2" + (crate.hp - CRATE_DMG <= 0 ? ", clearing the square" : "") + "."};
+    }
+    if (mate) return {kind:"none",reason:"occupied",short:"BLOCKED",label:"SQUARE TAKEN",detail:"Unit " + mate.id + " is standing there."};
+    if (step > MOVE_RANGE) return {kind:"none",reason:"too far",short:"TOO FAR",label:"OUT OF RANGE",
+      detail:"That is " + step + " squares away and " + u.id + " moves " + MOVE_RANGE + " a turn."};
+    const winning = !!state.goal.armed && tx === state.goal.x && ty === state.goal.y;
+    const threat = threatFor(u,tx,ty);
+    const hurt = threat && threat.dmg > 0;
+    let detail;
+    if (winning) detail = "Stepping on the goal ends the mission for +" + CLEAR_BONUS + " and +" + HP_BONUS + " for every HP your units still have.";
+    else if (hurt) detail = threat.shooters.join(" and ") + (threat.shooters.length > 1 ? " both reach that square" : " reaches that square") +
+      ", so you take " + threat.dmg + (threat.softened ? " with the crate beside it halving each hit" : "") +
+      (threat.fatal ? " and unit " + u.id + " goes down." : ". " + (threat.certain ? "That is the whole enemy phase." : "Your other unit could still pull them away."));
+    else if (threat && threat.closing.length) detail = "Safe this turn, but " + threat.closing.join(" and ") + " closes to arm's reach for the turn after.";
+    else detail = "No enemy reaches that square this turn.";
+    return {kind:"move",steps:step,gain:MOVE_SCORE,winning,threat,
+      short:winning ? "FINISH" : hurt ? "MOVE -" + threat.dmg : "MOVE +" + MOVE_SCORE,
+      label:winning ? "FINISH THE MISSION" : "MOVE " + step + " +" + MOVE_SCORE + (hurt ? "  TAKE " + threat.dmg : ""),
+      detail};
+  }
+  function currentPlan(){ return actionPlan(selectedUnit(), state.cursor.x, state.cursor.y); }
   function cycleUnit(){
     const live = aliveUnits(); if (!live.length) return;
     let idx = state.selected;
@@ -216,27 +316,29 @@
     if (state.mode === "runComplete" || state.mode === "gameOver") return restart(true);
     if (state.turn !== "player") return;
     let u = selectedUnit(); if (!u) return finishLoss();
-    const target = {x:state.cursor.x,y:state.cursor.y}, e = enemyAt(target.x,target.y);
-    if (e && !u.acted && dist(u,e) <= 2) {
-      const dmg = coverBetween(u,e) ? 2 : 3;
-      e.hp -= dmg; u.acted = true; state.score += e.hp <= 0 ? 90 : 20; float("-"+dmg,e.x,e.y,"#fb7185"); beep("hit");
+    const target = {x:state.cursor.x,y:state.cursor.y};
+    // Resolve exactly the plan the board just advertised -- no second opinion.
+    const plan = actionPlan(u,target.x,target.y);
+    if (plan.kind === "attack") {
+      const e = enemyAt(target.x,target.y);
+      e.hp -= plan.dmg; u.acted = true; state.score += plan.gain; float("-"+plan.dmg,e.x,e.y,"#fb7185"); beep("hit");
       if (e.hp <= 0) float("down",e.x,e.y,"#facc15");
-      announceStatus("Unit " + u.id + " attacked " + e.id + " for " + dmg + " damage" + (e.hp <= 0 ? " and cleared it." : ". " + e.id + " has " + e.hp + " HP."), "attack"); pulse("attack");
+      announceStatus("Unit " + u.id + " attacked " + e.id + " for " + plan.dmg + " damage" + (e.hp <= 0 ? " and cleared it." : ". " + e.id + " has " + e.hp + " HP."), "attack"); pulse("attack");
       afterPlayerAction(); return;
     }
-    if (!e && !u.acted && !blocked(target.x,target.y) && dist(u,target) > 0 && dist(u,target) <= 3) {
-      u.x = target.x; u.y = target.y; u.acted = true; state.score += 4; float("move",u.x,u.y,"#5eead4"); beep("move");
+    if (plan.kind === "move") {
+      u.x = target.x; u.y = target.y; u.acted = true; state.score += plan.gain; float("move",u.x,u.y,"#5eead4"); beep("move");
       announceStatus("Unit " + u.id + " moved to column " + (u.x + 1) + ", row " + (u.y + 1) + ".", "move"); pulse("move");
       afterPlayerAction(); return;
     }
-    const c = isCover(target.x,target.y);
-    if (c && !u.acted && dist(u,c) === 1) {
-      c.hp -= 1; u.acted = true; state.score += 8; float("cover",c.x,c.y,"#f59e0b"); beep("hit");
+    if (plan.kind === "cover") {
+      const c = isCover(target.x,target.y);
+      c.hp -= plan.dmg; u.acted = true; state.score += plan.gain; float("cover",c.x,c.y,"#f59e0b"); beep("hit");
       announceStatus("Unit " + u.id + " damaged cover at column " + (c.x + 1) + ", row " + (c.y + 1) + ".", "damage"); pulse("damage");
       afterPlayerAction(); return;
     }
     float("no line",target.x,target.y,"#94a3b8"); beep("select"); updateHud(); render();
-    announceStatus("No valid move or attack from unit " + u.id + " to column " + (target.x + 1) + ", row " + (target.y + 1) + ".", "blocked"); pulse("blocked");
+    announceStatus("No valid move or attack from unit " + u.id + " to column " + (target.x + 1) + ", row " + (target.y + 1) + ". " + plan.detail, "blocked"); pulse("blocked");
   }
   function afterPlayerAction(){
     if (checkWin()) return;
@@ -253,8 +355,8 @@
       const targets = aliveUnits().sort((a,b)=>dist(e,a)-dist(e,b));
       const t = targets[0]; if (!t) break;
       if (dist(e,t) <= 1) {
-        const inCover = dirs.some(([dx,dy]) => isCover(t.x+dx,t.y+dy));
-        const dmg = inCover ? 1 : 2; t.hp -= dmg; float("-"+dmg,t.x,t.y,"#fb7185"); beep("hit");
+        const dmg = crateBeside(t.x,t.y) ? ENEMY_DMG_COVERED : ENEMY_DMG;
+        t.hp -= dmg; float("-"+dmg,t.x,t.y,"#fb7185"); beep("hit");
         announceStatus("Enemy " + e.id + " dealt " + dmg + " damage to unit " + t.id + ". " + Math.max(0,t.hp) + " HP remains.", "damage"); pulse("damage");
       } else {
         const options = dirs.map(([dx,dy]) => ({x:e.x+dx,y:e.y+dy})).filter(p => !blocked(p.x,p.y)).sort((a,b)=>dist(a,t)-dist(b,t));
@@ -271,7 +373,7 @@
     state.goal.armed = true;
     const allGoal = aliveUnits().some(u => u.x === state.goal.x && u.y === state.goal.y);
     if (!allGoal) { state.action = "reach goal"; updateHud(); render(); announceStatus("Enemies cleared. Move a unit to the cyan goal.", "status"); return false; }
-    state.score += 250 + aliveUnits().reduce((n,u)=>n+u.hp,0)*12; saveBest();
+    state.score += CLEAR_BONUS + aliveUnits().reduce((n,u)=>n+u.hp,0)*HP_BONUS; saveBest();
     if (state.mission === missions.length - 1) { state.mode = "runComplete"; state.runComplete = true; beep("win"); }
     else { state.mode = "missionComplete"; beep("win"); }
     state.action = state.mode; updateHud(); render();
@@ -287,7 +389,7 @@
     if (k === "m") return toggleSound();
     if (k === "r") return restart(true);
     if (k === "f") return toggleFull();
-    if (k === "Tab") return cycleUnit();
+    if (k === "q") return cycleUnit();
     if (k === "Enter" || k === " ") return playerAction();
     if (k === "ArrowLeft" || k === "a") return moveCursor(-1,0);
     if (k === "ArrowRight" || k === "d") return moveCursor(1,0);
@@ -302,31 +404,130 @@
     hud.score.textContent = state.score; hud.best.textContent = state.best;
     hud.turn.textContent = state.turn === "enemy" ? "Enemy" : "Player";
     hud.unit.textContent = u ? u.id + " " + u.hp : "--";
-    hud.state.textContent = state.mode === "playing" ? state.action : state.mode;
+    // Phones render the canvas small, so the cursor verdict is repeated here at
+    // full page text size rather than living only on the board.
+    hud.state.textContent = state.mode === "playing" ? currentPlan().short
+      : state.mode === "missionComplete" ? "NEXT" : state.mode === "runComplete" ? "DONE" : "OVER";
     hud.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     state.fullscreen = !!document.fullscreenElement;
   }
   function cellRect(x,y){
-    const pad = 28, top = 54, size = Math.min((canvas.width-pad*2)/W, (canvas.height-top-26)/H);
-    const ox = (canvas.width - size*W)/2, oy = top + (canvas.height - top - 22 - size*H)/2;
+    const pad = 28, size = Math.min((canvas.width-pad*2)/W, (canvas.height-BOARD_TOP-BOARD_BOTTOM)/H);
+    const ox = (canvas.width - size*W)/2, oy = BOARD_TOP + (canvas.height - BOARD_TOP - BOARD_BOTTOM - size*H)/2;
     return {x:ox+x*size,y:oy+y*size,s:size};
+  }
+  function fitFont(text,maxWidth,weight,startPx,minPx){
+    let px = startPx;
+    ctx.font = weight + " " + px + "px system-ui";
+    while (px > minPx && ctx.measureText(text).width > maxWidth) { px -= 1; ctx.font = weight + " " + px + "px system-ui"; }
+    return px;
+  }
+  const PLAN_TONE = {attack:"#fca5a5", move:"#5eead4", cover:"#fbbf24", none:"#a8bed2"};
+  function drawPlanBar(plan){
+    const x = 28, y = 62, w = canvas.width - 56, h = 32, tone = PLAN_TONE[plan.kind] || PLAN_TONE.none;
+    ctx.fillStyle = "rgba(7,14,24,.94)"; ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle = tone; ctx.lineWidth = 2; ctx.strokeRect(x+1,y+1,w-2,h-2);
+    ctx.fillStyle = tone; ctx.fillRect(x+2,y+2,6,h-4);
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.font = "900 15px system-ui"; ctx.fillStyle = tone;
+    ctx.fillText(plan.label, x+18, y+h/2);
+    const labelW = ctx.measureText(plan.label).width, dx = x + 18 + labelW + 14, room = x + w - 14 - dx;
+    if (plan.detail && room > 60) {
+      fitFont(plan.detail, room, "600", 13, 9);
+      ctx.fillStyle = "#c7d6e6"; ctx.fillText(plan.detail, dx, y+h/2+1);
+    }
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  }
+  // Paint the rules the player would otherwise have to guess: every square the
+  // selected unit can step to, every enemy it can shoot right now with the damage
+  // that shot deals, every crate it can smash, and where the enemy phase reaches.
+  function drawPlanOverlay(u){
+    ctx.textBaseline = "middle";
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+      const r = cellRect(x,y), p = actionPlan(u,x,y);
+      if (p.kind === "move") {
+        ctx.fillStyle = "rgba(94,234,212,.13)"; ctx.fillRect(r.x+3,r.y+3,r.s-6,r.s-6);
+        ctx.strokeStyle = "rgba(94,234,212,.42)"; ctx.lineWidth = 1; ctx.strokeRect(r.x+5.5,r.y+5.5,r.s-11,r.s-11);
+      }
+      // Only squares a unit could actually stand on carry a danger reading.
+      const t = dangerAt(u,x,y);
+      if (t) { ctx.fillStyle = t.softened ? "#fbbf24" : "#fb7185"; ctx.fillRect(r.x+6,r.y+5,r.s-12,5); }
+    }
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+    for (const e of aliveEnemies()) {
+      if (actionPlan(u,e.x,e.y).kind !== "attack") continue;
+      const r = cellRect(e.x,e.y);
+      ctx.strokeStyle = "#facc15"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(r.x+r.s/2,r.y+r.s/2,r.s*.4,0,Math.PI*2); ctx.stroke();
+    }
+    for (const c of state.cover.filter(c => c.hp > 0)) {
+      if (actionPlan(u,c.x,c.y).kind !== "cover") continue;
+      const r = cellRect(c.x,c.y);
+      ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
+      ctx.strokeRect(r.x+7,r.y+7,r.s-14,r.s-14);
+    }
+  }
+  // Drawn after the units so the damage a shot deals always stays readable.
+  function drawTags(u){
+    ctx.font = "900 13px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const pill = (r,tag,bg,side) => {
+      const tw = ctx.measureText(tag).width + 12, bx = side === "right" ? r.x + r.s - tw - 7 : r.x + 7;
+      ctx.fillStyle = bg; ctx.fillRect(bx, r.y+12, tw, 17);
+      ctx.fillStyle = "#1a1503"; ctx.fillText(tag, bx + tw/2, r.y+21);
+    };
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+      const t = dangerAt(u,x,y); if (!t) continue;
+      pill(cellRect(x,y), "-" + t.dmg, t.softened ? "#fbbf24" : "#fb7185", "left");
+    }
+    for (const e of aliveEnemies()) {
+      const p = actionPlan(u,e.x,e.y); if (p.kind !== "attack") continue;
+      pill(cellRect(e.x,e.y), p.kills ? "KO" : "-" + p.dmg, "#facc15", "right");
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
+  function drawLegend(){
+    const items = [
+      {c:"rgba(94,234,212,.5)", t:"you can move here"},
+      {c:"#fb7185", t:"standing here costs you that much"},
+      {c:"#fbbf24", t:"a crate beside it halves each hit"},
+      {c:"#facc15", t:"you can shoot this now", ring:true}
+    ];
+    ctx.font = "600 12px system-ui"; ctx.textBaseline = "middle";
+    const gap = 22, widths = items.map(i => 16 + ctx.measureText(i.t).width);
+    let total = widths.reduce((a,b) => a+b, 0) + gap*(items.length-1);
+    let x = Math.max(20, (canvas.width - total)/2);
+    const y = canvas.height - 22;
+    items.forEach((item,i) => {
+      if (item.ring) { ctx.strokeStyle = item.c; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x+5, y, 5, 0, Math.PI*2); ctx.stroke(); }
+      else { ctx.fillStyle = item.c; ctx.fillRect(x, y-4, 10, 8); }
+      ctx.fillStyle = "#93a6bd"; ctx.fillText(item.t, x+16, y);
+      x += widths[i] + gap;
+    });
+    ctx.textBaseline = "alphabetic";
   }
   function render(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const g = ctx.createLinearGradient(0,0,0,canvas.height); g.addColorStop(0,"#0b1722"); g.addColorStop(1,"#071018"); ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "#e6edf3"; ctx.font = "900 22px system-ui"; ctx.fillText("Gridline Tactics", 28, 34);
-    ctx.font = "12px system-ui"; ctx.fillStyle = "#9fb0c8"; ctx.fillText(missions[state.mission].name + " - clear enemies, then step onto the cyan goal.", 28, 53);
+    ctx.fillStyle = "#e6edf3"; ctx.font = "900 22px system-ui"; ctx.fillText("Gridline Tactics", 28, 32);
+    ctx.font = "12px system-ui"; ctx.fillStyle = "#9fb0c8"; ctx.fillText(missions[state.mission].name + " - clear enemies, then step onto the cyan goal.", 28, 50);
+    const plan = currentPlan();
+    drawPlanBar(plan);
     for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
       const r = cellRect(x,y); ctx.fillStyle = (x+y)%2 ? "#0d1b28" : "#102233"; ctx.fillRect(r.x+2,r.y+2,r.s-4,r.s-4);
-      ctx.strokeStyle = "rgba(94,234,212,.18)"; ctx.strokeRect(r.x+2,r.y+2,r.s-4,r.s-4);
+      ctx.strokeStyle = "rgba(94,234,212,.18)"; ctx.lineWidth = 1; ctx.strokeRect(r.x+2,r.y+2,r.s-4,r.s-4);
     }
     const gr = cellRect(state.goal.x,state.goal.y); ctx.fillStyle = state.goal.armed ? "rgba(94,234,212,.42)" : "rgba(94,234,212,.18)"; ctx.fillRect(gr.x+8,gr.y+8,gr.s-16,gr.s-16);
     ctx.strokeStyle = "#5eead4"; ctx.lineWidth = 3; ctx.strokeRect(gr.x+10,gr.y+10,gr.s-20,gr.s-20);
+    const sel = state.mode === "playing" ? selectedUnit() : null;
+    if (sel) drawPlanOverlay(sel);
     for (const c of state.cover.filter(c=>c.hp>0)) { const r=cellRect(c.x,c.y); ctx.fillStyle="#7c4a1e"; ctx.fillRect(r.x+12,r.y+14,r.s-24,r.s-26); ctx.fillStyle="#f59e0b"; ctx.fillRect(r.x+16,r.y+18,(r.s-32)*(c.hp/2),5); }
     for (const e of aliveEnemies()) drawAgent(e,"#fb7185","#7f1d1d");
     for (const u of aliveUnits()) drawAgent(u,u.id==="A"?"#67e8f9":"#a7f3d0","#0f766e", u.acted);
-    const cr = cellRect(state.cursor.x,state.cursor.y); ctx.strokeStyle="#facc15"; ctx.lineWidth=4; ctx.strokeRect(cr.x+5,cr.y+5,cr.s-10,cr.s-10);
-    for (const f of state.feedback) { const r=cellRect(f.x,f.y); ctx.globalAlpha=Math.max(0,f.life/42); ctx.fillStyle=f.color; ctx.font="900 15px system-ui"; ctx.textAlign="center"; ctx.fillText(f.text,r.x+r.s/2,r.y+18+(42-f.life)*.45); ctx.textAlign="left"; ctx.globalAlpha=1; }
+    if (sel) drawTags(sel);
+    const cr = cellRect(state.cursor.x,state.cursor.y);
+    ctx.strokeStyle = PLAN_TONE[plan.kind] || PLAN_TONE.none; ctx.lineWidth=4; ctx.strokeRect(cr.x+5,cr.y+5,cr.s-10,cr.s-10);
+    drawLegend();
+    for (const f of state.feedback) { const r=cellRect(f.x,f.y); ctx.globalAlpha=Math.max(0,f.life/42); ctx.fillStyle=f.color; ctx.font="900 15px system-ui"; ctx.textAlign="center"; ctx.fillText(f.text,r.x+r.s/2,r.y+r.s-16-(42-f.life)*.45); ctx.textAlign="left"; ctx.globalAlpha=1; }
     if (state.mode !== "playing") {
       ctx.fillStyle="rgba(3,7,18,.72)"; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.textAlign="center"; ctx.fillStyle="#f8fbff"; ctx.font="900 34px system-ui";
@@ -361,7 +562,14 @@
     if (loopActive()) raf = requestAnimationFrame(tick);
     else lastTime = 0;
   }
-  canvas.addEventListener("keydown", e => { if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Tab"].includes(e.key)) e.preventDefault(); handleKey(e.key, "keyboard"); });
+  canvas.addEventListener("keydown", e => {
+    // Tab belongs entirely to the browser now. The board used to swallow it in
+    // both directions, and since every button sits after the canvas in the page,
+    // a keyboard player who focused the board could never reach them again.
+    // Q switches unit instead, and the on-screen Unit button does the same.
+    if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
+    handleKey(e.key, "keyboard");
+  });
   window.addEventListener("keydown", e => { if (e.target === canvas || e.target.tagName === "BUTTON") return; handleKey(e.key, "keyboard"); });
   canvas.addEventListener("pointerdown", e => {
     setInput(e.pointerType || "pointer", "canvas");
@@ -381,6 +589,9 @@
       enemies:state.enemies.filter(e=>e.hp>0).map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp})),
       cover:state.cover.filter(c=>c.hp>0).map(c=>({x:c.x,y:c.y,hp:c.hp})), goal:state.goal,
       cursor:state.cursor, turn:state.turn, action:state.action, selectedAction:state.action, sound:state.sound, fullscreen:state.fullscreen,
+      plan: currentPlan(), threat: threatAt(state.cursor.x, state.cursor.y),
+      rules: {moveRange:MOVE_RANGE, shotRange:SHOT_RANGE, crateRange:CRATE_RANGE, shot:SHOT_DMG, shotCovered:SHOT_DMG_COVERED,
+        enemyHit:ENEMY_DMG, enemyHitCovered:ENEMY_DMG_COVERED, clearBonus:CLEAR_BONUS, hpBonus:HP_BONUS},
       lastStatus:state.lastStatus, lastInput:state.lastInput, lastFeedback:state.lastFeedback,
       reducedMotion: reducedMotion,
       feedbackActive: state.feedback.length > 0,
