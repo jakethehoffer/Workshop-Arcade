@@ -136,7 +136,13 @@
   function store(){if(window.workshopStorage)return window.workshopStorage;try{return window.localStorage}catch(_){return null}}
   function read(k,f){const s=store();if(!s)return f;try{const v=s.getItem(k);return v==null?f:v}catch(_){return f}}
   function write(k,v){const s=store();if(!s)return;try{s.setItem(k,String(v))}catch(_){}}
-  const state = {mode:"menu", stage:0, board:[], player:{x:0,y:0}, rival:{x:6,y:6}, cursor:{x:0,y:0}, ap:2, turn:1, score:0, best:Number(read(BEST_KEY,"0"))||0, feedback:"Press Start.", feedbackMs:1400, lastEvent:"ready", lastAction:"none", soundEnabled:String(read(SOUND_KEY,"1"))!=="0", lastSound:"none", toneCount:0};
+  // A stored "Infinity" or "1e999" sailed straight through Number(x) || 0: it
+  // printed "Infinity" on the scoreboard, and JSON.stringify writes Infinity as
+  // null, so the diagnostics contract broke outright. 1e24 printed as "1e+24".
+  const MAX_BEST = 9999999;
+  function loadBest(){const v=Number(read(BEST_KEY,"0"));if(!Number.isFinite(v)||v<=0)return 0;return Math.min(Math.floor(v),MAX_BEST)}
+  function commitBest(){if(state.score>state.best){state.best=state.score;write(BEST_KEY,state.best)}}
+  const state = {mode:"menu", stage:0, board:[], player:{x:0,y:0}, rival:{x:6,y:6}, cursor:{x:0,y:0}, ap:2, turn:1, score:0, best:loadBest(), feedback:"Press Start.", feedbackMs:1400, lastEvent:"ready", lastAction:"none", soundEnabled:String(read(SOUND_KEY,"1"))!=="0", lastSound:"none", toneCount:0};
   let audio = null;
   function stage(){return STAGES[state.stage]}
   function idx(x,y){return y * SIZE + x}
@@ -163,10 +169,40 @@
     els.stageName.textContent=data.name; els.mission.textContent="Claim "+data.relicGoal+" crests and "+data.target+" connected tiles before the rival crown closes the circuit.";
     setFeedback(data.name+": extend the royal circuit.",1600,"stage"); updateUI(); render();
   }
-  function start(){state.mode="playing";state.score=0;setupStage(0);setFeedback("Crown circuit engaged.",1400,"start");tone("start");canvas.focus()}
+  // Bank first. Best was only ever written when a duel was won or lost, so
+  // restarting part way through threw away everything the run had scored.
+  function start(){commitBest();state.mode="playing";state.score=0;setupStage(0);setFeedback("Crown circuit engaged.",1400,"start");tone("start");canvas.focus()}
   function restart(){start();state.lastAction="restart"}
   function claimable(side,x,y){if(!inBoard(x,y)||blocked(x,y))return false;const here=cell(x,y);if(here.owner===side && !same(side==="p"?state.player:state.rival,{x,y}))return dist(side==="p"?state.player:state.rival,{x,y})===1;const enemy=side==="p"?state.rival:state.player;if(same(enemy,{x,y}))return false;return neighbors(x,y).some(n=>cell(n.x,n.y).owner===side)||dist(side==="p"?state.player:state.rival,{x,y})===1}
   function legalTargets(side){const out=[];for(const c of state.board){if(claimable(side,c.x,c.y))out.push({x:c.x,y:c.y,owner:c.owner,relic:c.relic})}return out}
+  // One answer to "what does Claim do on this tile, and what does it pay?".
+  // Pure: it reads the board and returns a verdict, it never changes anything.
+  // The board overlay draws it, the cursor line reads it and playerAction()
+  // executes from it, so the three can never disagree.
+  function moveOutlook(x,y){
+    if(state.mode!=="playing")return{legal:false,reason:"not-playing",label:"--",detail:"",gain:0};
+    if(!inBoard(x,y))return{legal:false,reason:"off-board",label:"OFF BOARD",detail:"That is off the board.",gain:0};
+    const c=cell(x,y), crown=state.player, steps=dist(crown,{x,y}), near=steps===1;
+    if(c.blocked)return{legal:false,reason:"wall",label:"WALL",detail:"A circuit wall blocks that tile.",gain:0};
+    if(same(state.rival,{x,y}))return{legal:false,reason:"rival-crown",label:"RIVAL CROWN",detail:"The rival crown stands there. Take the tiles around it instead.",gain:0};
+    if(same(crown,{x,y}))return{legal:false,reason:"own-crown",label:"ALREADY HERE",detail:"Your crown already stands there, so claiming it would spend an action for nothing.",gain:0};
+    if(c.owner==="p"){
+      if(!near)return{legal:false,reason:"own-far",label:"ALREADY YOURS",detail:"You already hold that tile and it is "+steps+" steps away, so there is nothing to gain.",gain:0};
+      return{legal:true,kind:"move",gain:3,relic:c.relic,label:"MOVE CROWN +3",detail:"Steps the crown onto your own tile for +3.",wins:false};
+    }
+    const connected=neighbors(x,y).some(n=>cell(n.x,n.y).owner==="p");
+    if(!connected&&!near)return{legal:false,reason:"unconnected",label:"NOT CONNECTED",detail:"Claim only reaches a tile touching your own circuit, or one step from your crown. That one is "+steps+" steps away.",gain:0};
+    const takesRival=c.owner==="r", canMove=near&&!takesRival;
+    const gain=(takesRival?18:10)+(c.relic?24:0)+(canMove?3:0);
+    const data=stage(), afterControl=control("p")+1, afterCrests=relics("p")+(c.relic?1:0);
+    const wins=afterControl>=data.target&&afterCrests>=data.relicGoal;
+    const label=(c.relic?"CLAIM CREST":takesRival?"TAKE RIVAL TILE":"CLAIM TILE")+" +"+gain;
+    const detail=(takesRival?"Takes a rival tile":"Claims a neutral tile")+(c.relic?" holding a crest":"")+" for +"+gain
+      +(canMove?", and steps your crown onto it":"")+". Control "+afterControl+"/"+data.target+", crests "+afterCrests+"/"+data.relicGoal+"."
+      +(wins?" That wins the duel.":"");
+    return{legal:true,kind:takesRival?"take":"claim",gain,relic:c.relic,label,detail,wins};
+  }
+  function cursorOutlook(){return moveOutlook(state.cursor.x,state.cursor.y)}
   function candidateScore(side,t){const opponent=side==="p"?"r":"p";const c=cell(t.x,t.y);const crown=side==="p"?state.player:state.rival;let v=c.owner===side?-34:0;if(c.relic&&c.owner!==side)v+=100;if(c.owner===opponent)v+=side==="p"?8:3;if(c.owner==="")v+=24;v+=Math.max(0,12-dist(crown,t));v+=Math.max(0,8-dist({x:3,y:3},t));if(side==="p")v-=dist(t,state.rival)*.4;else v-=dist(t,state.player)*.3;return v}
   function recommended(side){const raw=legalTargets(side);const neutral=raw.filter(t=>cell(t.x,t.y).owner===""||cell(t.x,t.y).relic&&cell(t.x,t.y).owner!==side);const expandable=raw.filter(t=>cell(t.x,t.y).owner!==side);const targets=neutral.length?neutral:expandable.length?expandable:raw;let best=null,bv=-999;for(const t of targets){const v=candidateScore(side,t);if(v>bv){best=t;bv=v}}if(!best)return null;const c=cell(best.x,best.y);return {side, target:{x:best.x,y:best.y}, owner:c.owner||"neutral", relic:c.relic, score:+bv.toFixed(1), action:c.owner===side?"move":"claim"}}
   function applySideAction(side,target,source){
@@ -178,7 +214,9 @@
     if(side==="p"){
       state.ap=Math.max(0,state.ap-1);
       state.score += (oldOwner==="r"?18:oldOwner===""?10:0) + (c.relic&&oldOwner!==side?24:0) + (canMove?3:0);
-      setFeedback((c.relic?"Crest claimed.":"Circuit tile claimed.")+" AP "+state.ap+".",1200,c.relic?"relic":"claim");
+      const paid=(oldOwner==="r"?18:oldOwner===""?10:0)+(c.relic&&oldOwner!==side?24:0)+(canMove?3:0);
+      setFeedback((c.relic?"Crest claimed":oldOwner==="r"?"Rival tile taken":canMove&&oldOwner===side?"Crown stepped":"Circuit tile claimed")
+        +" for +"+paid+". Control "+control("p")+"/"+stage().target+", crests "+relics("p")+"/"+stage().relicGoal+". AP "+state.ap+".",1600,c.relic?"relic":"claim");
       tone(c.relic?"relic":"claim");
     }
     state.lastAction=(source||"action")+":"+sideName(side)+":"+target.x+","+target.y;
@@ -188,7 +226,14 @@
     if(state.mode==="menu"){start();return}
     if(state.mode!=="playing")return;
     const target={x:state.cursor.x,y:state.cursor.y};
-    if(!applySideAction("p",target,"commit")){setFeedback("No connected circuit can reach that tile.",1100,"illegal");tone("bad");return}
+    // Refuse exactly what the board just refused, and say the same reason it
+    // showed. The old build only ever said "no connected circuit can reach that
+    // tile", even when the real reason was a wall, the rival crown, or a tile
+    // already yours -- and standing on your own crown was accepted, spending an
+    // action for literally nothing.
+    const plan=moveOutlook(target.x,target.y);
+    if(!plan.legal){setFeedback(plan.detail||"That tile cannot be claimed.",1600,"illegal");tone("bad");updateUI();render();return}
+    if(!applySideAction("p",target,"commit")){setFeedback(plan.detail||"That tile cannot be claimed.",1600,"illegal");tone("bad");return}
     if(checkOutcome())return;
     if(state.ap<=0)enemyTurn();
     updateUI(); render();
@@ -205,11 +250,11 @@
     const data=stage(), pc=control("p"), rc=control("r"), pr=relics("p"), rr=relics("r");
     if(pc>=data.target && pr>=data.relicGoal){
       state.score += 80 + Math.max(0,(data.maxTurns-state.turn)*18) + pc*3;
-      if(state.stage>=STAGES.length-1){state.mode="won";if(state.score>state.best){state.best=state.score;write(BEST_KEY,state.best)}setFeedback("Royal circuit complete. Score "+state.score+".",2400,"win");tone("win")}
+      if(state.stage>=STAGES.length-1){state.mode="won";commitBest();setFeedback("Royal circuit complete. Score "+state.score+".",2400,"win");tone("win")}
       else{setupStage(state.stage+1);setFeedback("Duel won. "+stage().name+" opens.",1800,"stage-clear");tone("win")}
       return true;
     }
-    if((rc>=data.target+1 && rr>=data.relicGoal)||state.turn>data.maxTurns){state.mode="failed";if(state.score>state.best){state.best=state.score;write(BEST_KEY,state.best)}setFeedback("Rival circuit prevails. Restart the duel.",2400,"failed");tone("bad");return true}
+    if((rc>=data.target+1 && rr>=data.relicGoal)||state.turn>data.maxTurns){state.mode="failed";commitBest();setFeedback("Rival circuit prevails. Restart the duel.",2400,"failed");tone("bad");return true}
     return false;
   }
   function moveCursor(dx,dy){state.cursor.x=Math.max(0,Math.min(SIZE-1,state.cursor.x+dx));state.cursor.y=Math.max(0,Math.min(SIZE-1,state.cursor.y+dy));state.lastAction="cursor";updateUI();render()}
@@ -227,9 +272,41 @@
     for(const c of state.board){const x=OX+c.x*CELL,y=OY+c.y*CELL;ctx.fillStyle=c.blocked?"#0a0f19":c.owner==="p"?"rgba(253,230,138,.34)":c.owner==="r"?"rgba(251,113,133,.3)":"rgba(148,163,184,.11)";ctx.fillRect(x+3,y+3,CELL-6,CELL-6);ctx.strokeStyle=c.owner==="p"?"#fde68a":c.owner==="r"?"#fb7185":"rgba(148,163,184,.28)";ctx.lineWidth=2;ctx.strokeRect(x+3,y+3,CELL-6,CELL-6);if(c.blocked){ctx.strokeStyle="rgba(148,163,184,.25)";for(let i=8;i<CELL;i+=12){ctx.beginPath();ctx.moveTo(x+i,y+6);ctx.lineTo(x+6,y+i);ctx.stroke()}}if(c.relic){ctx.fillStyle=c.owner==="p"?"#86efac":c.owner==="r"?"#fb7185":"#67e8f9";ctx.beginPath();ctx.moveTo(x+CELL/2,y+14);ctx.lineTo(x+CELL-16,y+CELL/2);ctx.lineTo(x+CELL/2,y+CELL-14);ctx.lineTo(x+16,y+CELL/2);ctx.closePath();ctx.fill();ctx.fillStyle="#07111d";ctx.font="900 13px system-ui";ctx.textAlign="center";ctx.fillText("C",x+CELL/2,y+CELL/2+5);ctx.textAlign="left"}}
     for(const c of state.board){if(!c.owner)continue;const cx=OX+c.x*CELL+CELL/2,cy=OY+c.y*CELL+CELL/2;ctx.strokeStyle=c.owner==="p"?"rgba(253,230,138,.56)":"rgba(251,113,133,.5)";ctx.lineWidth=4;for(const n of neighbors(c.x,c.y)){if(n.x<c.x||n.y<c.y)continue;if(cell(n.x,n.y).owner===c.owner){ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(OX+n.x*CELL+CELL/2,OY+n.y*CELL+CELL/2);ctx.stroke()}}}
     drawCrown(state.player.x,state.player.y,"#fde68a","P"); drawCrown(state.rival.x,state.rival.y,"#fb7185","R");
+    // Only three of the forty-nine tiles are playable at the opening and the
+    // board used to mark none of them, so the player had to hunt with the cursor
+    // and press blind. Mark every legal tile with what it pays.
+    if(state.mode==="playing"){
+      ctx.textAlign="center";
+      for(const c of state.board){
+        const plan=moveOutlook(c.x,c.y); if(!plan.legal)continue;
+        const x=OX+c.x*CELL, y=OY+c.y*CELL;
+        const tint=plan.wins?"#facc15":plan.relic?"#67e8f9":plan.kind==="take"?"#fca5a5":plan.kind==="move"?"#c4b5fd":"#86efac";
+        ctx.strokeStyle=tint;ctx.lineWidth=3;ctx.setLineDash([5,4]);ctx.strokeRect(x+7,y+7,CELL-14,CELL-14);ctx.setLineDash([]);
+        const tag="+"+plan.gain;ctx.font="900 12px system-ui";
+        const tw=ctx.measureText(tag).width+10;
+        ctx.fillStyle=tint;ctx.fillRect(x+CELL/2-tw/2,y+CELL-19,tw,15);
+        ctx.fillStyle="#07111d";ctx.fillText(tag,x+CELL/2,y+CELL-8);
+      }
+      ctx.textAlign="left";
+    }
     const cx=OX+state.cursor.x*CELL, cy=OY+state.cursor.y*CELL;ctx.strokeStyle=claimable("p",state.cursor.x,state.cursor.y)?"#86efac":"#67e8f9";ctx.lineWidth=5;ctx.strokeRect(cx+1,cy+1,CELL-2,CELL-2);
     const rec=recommended("p"); if(rec){ctx.strokeStyle="rgba(134,239,172,.75)";ctx.lineWidth=3;ctx.setLineDash([8,8]);ctx.strokeRect(OX+rec.target.x*CELL+9,OY+rec.target.y*CELL+9,CELL-18,CELL-18);ctx.setLineDash([])}
-    ctx.fillStyle="#f8fbff";ctx.font="900 18px system-ui";ctx.fillText("Target "+stage().target+" control + "+stage().relicGoal+" crests",34,548);ctx.fillStyle="#a8b8ca";ctx.font="800 13px system-ui";ctx.fillText("Cursor "+state.cursor.x+","+state.cursor.y+"  Recommended "+(rec?rec.target.x+","+rec.target.y:"none"),34,570);
+    // What the cursor tile would do, before you commit to it. This strip used to
+    // carry "Target N control + M crests" and "Cursor x,y Recommended x,y", both
+    // of which the side panel already showed and the board already outlined, so
+    // they carried no information the player did not have.
+    if(state.mode==="playing"){
+      const view=cursorOutlook(), tone2=view.legal?(view.wins?"#facc15":"#86efac"):"#fb7185";
+      const bx=34, by=552, bw=W-68, bh=34;
+      ctx.fillStyle="rgba(5,10,20,.86)";ctx.strokeStyle=tone2;ctx.lineWidth=2;
+      ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx,by,bw,bh);
+      ctx.fillStyle=tone2;ctx.font="900 15px system-ui";ctx.fillText(view.label,bx+13,by+22);
+      const lw=ctx.measureText(view.label).width;
+      let size=13;ctx.font="800 "+size+"px system-ui";
+      const room=bw-lw-38;
+      while(size>9&&ctx.measureText(view.detail).width>room){size-=1;ctx.font="800 "+size+"px system-ui"}
+      ctx.fillStyle="#cbd8e6";ctx.fillText(view.detail,bx+lw+25,by+22);
+    }
     if(state.mode==="menu"||state.mode==="won"||state.mode==="failed"){ctx.fillStyle="rgba(5,8,18,.8)";ctx.fillRect(280,214,400,136);ctx.strokeStyle=state.mode==="failed"?"#fb7185":state.mode==="won"?"#86efac":"#fde68a";ctx.lineWidth=3;ctx.strokeRect(280,214,400,136);ctx.fillStyle=ctx.strokeStyle;ctx.font="900 30px system-ui";ctx.fillText(state.mode==="menu"?"Press Start":state.mode==="won"?"Circuit Crowned":"Duel Lost",334,270);ctx.fillStyle="#dbeafe";ctx.font="800 14px system-ui";ctx.fillText(state.feedback,308,302)}
   }
   function update(dt){if(state.feedbackMs>0)state.feedbackMs=Math.max(0,state.feedbackMs-dt*1000);for(const c of state.board)c.lastPulse=Math.max(0,c.lastPulse-dt)}
@@ -239,14 +316,28 @@
   function closeHelp(){if(els.dialog.open)els.dialog.close();canvas.focus()}
   function key(e){if(els.dialog.open)return;const k=e.key.toLowerCase();if(["arrowup","w"].includes(k)){e.preventDefault();moveCursor(0,-1)}else if(["arrowdown","s"].includes(k)){e.preventDefault();moveCursor(0,1)}else if(["arrowleft","a"].includes(k)){e.preventDefault();moveCursor(-1,0)}else if(["arrowright","d"].includes(k)){e.preventDefault();moveCursor(1,0)}else if(e.key==="Enter"||e.code==="Space"){e.preventDefault();playerAction()}else if(k==="e"){e.preventDefault();endTurn()}else if(k==="r"){e.preventDefault();restart()}else if(k==="m"){e.preventDefault();toggleSound()}else if(k==="f"){e.preventDefault();toggleFull()}else if(e.key==="?"||(e.key==="/"&&e.shiftKey)){e.preventDefault();openHelp()}}
   function pointer(e){const r=canvas.getBoundingClientRect();const x=Math.floor(((e.clientX-r.left)/r.width*W-OX)/CELL),y=Math.floor(((e.clientY-r.top)/r.height*H-OY)/CELL);if(!inBoard(x,y))return;const sameCursor=state.cursor.x===x&&state.cursor.y===y;state.cursor={x,y};if(sameCursor)playerAction();else{updateUI();render()}canvas.focus()}
-  function renderText(){const rec=recommended("p"), data=stage();return JSON.stringify({title:"Crown Circuit",mode:state.mode,running:state.mode==="playing",coordinateSystem:"7x7 board, x right, y down, origin top-left",stage:state.stage+1,stageName:data.name,turn:state.turn,ap:state.ap,cursor:{...state.cursor},player:{...state.player},rival:{...state.rival},control:{player:control("p"),rival:control("r"),target:data.target},crests:{player:relics("p"),rival:relics("r"),target:data.relicGoal},score:state.score,best:Math.max(state.best,state.score),legalTargets:legalTargets("p"),recommended:rec,board:state.board.map(c=>({x:c.x,y:c.y,owner:c.owner||"neutral",blocked:c.blocked,relic:c.relic})),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount})}
+  function renderText(){const rec=recommended("p"), data=stage();return JSON.stringify({title:"Crown Circuit",mode:state.mode,running:state.mode==="playing",coordinateSystem:"7x7 board, x right, y down, origin top-left",stage:state.stage+1,stageName:data.name,turn:state.turn,ap:state.ap,cursor:{...state.cursor},player:{...state.player},rival:{...state.rival},control:{player:control("p"),rival:control("r"),target:data.target},crests:{player:relics("p"),rival:relics("r"),target:data.relicGoal},score:state.score,best:Math.max(state.best,state.score),legalTargets:legalTargets("p"),recommended:rec,cursorPlan:cursorOutlook(),playable:state.board.filter(c=>moveOutlook(c.x,c.y).legal).map(c=>({x:c.x,y:c.y,gain:moveOutlook(c.x,c.y).gain})),board:state.board.map(c=>({x:c.x,y:c.y,owner:c.owner||"neutral",blocked:c.blocked,relic:c.relic})),lastAction:state.lastAction,lastEvent:state.lastEvent,feedbackActive:state.feedbackMs>0,feedback:{text:state.feedback,active:state.feedbackMs>0},soundEnabled:state.soundEnabled,lastSound:state.lastSound,toneCount:state.toneCount})}
   window.render_game_to_text=renderText;window.advanceTime=ms=>{stopLoop();const steps=Math.max(1,Math.round(ms/(1000/60)));for(let i=0;i<steps;i++)update(1/60);updateUI();render();ensureLoop();return renderText()};
   els.start.addEventListener("click",start);els.action.addEventListener("click",playerAction);els.end.addEventListener("click",endTurn);els.restart.addEventListener("click",restart);els.sound.addEventListener("click",toggleSound);els.full.addEventListener("click",toggleFull);els.help.addEventListener("click",openHelp);els.closeHelp.addEventListener("click",closeHelp);document.addEventListener("keydown",key);canvas.addEventListener("pointerdown",pointer);document.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>{document.dispatchEvent(new KeyboardEvent("keydown",{key:b.dataset.key,code:b.dataset.key,bubbles:true,cancelable:true}))}));
   let raf=0;
   function loopActive(){return state.feedbackMs>0||state.board.some(c=>c.lastPulse>0)}
-  function ensureLoop(){if(raf||!loopActive())return;raf=requestAnimationFrame(loop)}
-  function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0}
-  function loop(){raf=0;update(1/60);updateUI();render();if(loopActive())raf=requestAnimationFrame(loop)}
+  // The loop only decays the status line and the tile pulse, but it stepped a
+  // fixed 1/60s per animation frame, so both faded twice as fast on a 120Hz
+  // display. Cosmetic here rather than a gameplay bug -- this board is
+  // turn-based -- but it now consumes real elapsed time in fixed slices, with
+  // the per-frame elapsed clamped so a backgrounded tab cannot dump a catch-up.
+  const STEP=1/60; let lastFrame=0, carry=0;
+  function ensureLoop(){if(raf||!loopActive())return;lastFrame=0;carry=0;raf=requestAnimationFrame(loop)}
+  function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;lastFrame=0;carry=0}
+  function loop(ts){
+    raf=0;
+    if(!lastFrame)lastFrame=ts;
+    carry+=Math.min(.25,Math.max(0,(ts-lastFrame)/1000));
+    lastFrame=ts;
+    while(carry>=STEP){update(STEP);carry-=STEP}
+    updateUI();render();
+    if(loopActive())raf=requestAnimationFrame(loop); else {lastFrame=0;carry=0}
+  }
   setupStage(0);state.mode="menu";updateUI();render();ensureLoop();
 })();
 </script>
