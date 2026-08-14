@@ -152,15 +152,33 @@
   function read(k, f){ const s = store(); if(!s) return f; try { const v = s.getItem(k); return v == null ? f : v; } catch (_) { return f; } }
   function write(k, v){ const s = store(); if(!s) return; try { s.setItem(k, String(v)); } catch (_) {} }
   const rawSound = String(read(SOUND_KEY, "1")).toLowerCase();
-  const state = { mode: "menu", stage: 0, score: 0, best: Number(read(BEST_KEY, "0")) || 0, lane: 1, heat: 6, time: 0,
+  // A stored "Infinity" or "1e999" sailed straight through Number(x) || 0: it
+  // printed "Infinity" on the scoreboard, and JSON.stringify writes Infinity as
+  // null, so the diagnostics contract broke outright. 1e24 printed as "1e+24".
+  const MAX_BEST = 9999999;
+  function loadBest(){
+    const value = Number(read(BEST_KEY, "0"));
+    if(!Number.isFinite(value) || value <= 0) return 0;
+    return Math.min(Math.floor(value), MAX_BEST);
+  }
+  const state = { mode: "menu", stage: 0, score: 0, best: loadBest(), lane: 1, heat: 6, time: 0,
     combo: 1, notes: [], feedback: "Press Start.", feedbackMs: 1200, lastEvent: "ready", lastAction: "none",
     sound: !["0","false","off","muted"].includes(rawSound), userGesture: false, toneCount: 0, lastSound: "none" };
   let audio = null;
+  const STEP_MS = 1000 / 60;
+  let raf = 0, lastFrame = 0, carry = 0;
   const track = () => TRACKS[state.stage];
   const beatMs = () => 60000 / track().bpm;
   const noteTime = (note) => note.beat * beatMs() + PREROLL_MS;
   const laneY = (lane) => 160 + lane * 86;
-  function setFeedback(text, ms = 1200, event = "feedback"){ state.feedback = text; state.feedbackMs = ms; state.lastEvent = event; els.status.textContent = text; els.live.textContent = text; }
+  function setFeedback(text, ms = 1200, event = "feedback"){ state.feedback = text; state.feedbackMs = ms; state.lastEvent = event; els.status.textContent = text; els.live.textContent = text; ensureLoop(); }
+  // A rhythm game that only says "missed timing" teaches nothing. Every strike
+  // knows its signed distance from the beat, so say it.
+  function offsetWord(delta){
+    const ms = Math.round(delta);
+    if(Math.abs(ms) <= 25) return "dead on the beat";
+    return Math.abs(ms) + "ms " + (ms < 0 ? "early" : "late");
+  }
   function ensureAudio(){ if(!state.sound || !state.userGesture) return null; try { if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if(audio.state === "suspended") audio.resume().catch(() => {}); return audio; } catch (_) { audio = null; return null; } }
   function tone(name){ state.lastSound = state.sound ? name : "muted-" + name; if(!state.sound) return; state.toneCount += 1; const ac = ensureAudio(); if(!ac) return; const now = ac.currentTime, osc = ac.createOscillator(), gain = ac.createGain(); const base = { start: 260, lane: 390, hit: 720, miss: 130, clear: 880, toggle: 360 }[name] || 440; osc.type = name === "miss" ? "sawtooth" : "triangle"; osc.frequency.setValueAtTime(base, now); if(name === "clear") osc.frequency.linearRampToValueAtTime(base + 250, now + .17); gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.055, now + .012); gain.gain.exponentialRampToValueAtTime(.0001, now + .18); osc.connect(gain).connect(ac.destination); osc.start(now); osc.stop(now + .22); }
   function cloneNotes(){ return track().notes.map((n, i) => ({ ...n, id: i + 1, hit: false, missed: false })); }
@@ -171,7 +189,9 @@
     state.stage = i; state.time = 0; state.lane = track().startLane; state.heat = track().heat; state.combo = 1; state.notes = cloneNotes();
     setFeedback(track().name + ": arm the hammer.", 1300, "stage"); updateUI(); draw();
   }
-  function startRun(){ state.userGesture = true; state.mode = "playing"; state.score = 0; loadStage(0); tone("start"); canvas.focus(); }
+  // Bank first. Best was only ever written on a win or a heat collapse, so
+  // restarting part way through threw away everything the run had scored.
+  function startRun(){ state.userGesture = true; commitBest(); state.mode = "playing"; state.score = 0; carry = 0; loadStage(0); tone("start"); ensureLoop(); canvas.focus(); }
   function restart(){ state.lastAction = "restart"; startRun(); }
   function commitBest(){ if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } }
   function fail(text){ state.mode = "failed"; commitBest(); setFeedback(text, 2300, "failed"); tone("miss"); updateUI(); draw(); }
@@ -187,15 +207,19 @@
     else { state.stage += 1; loadStage(state.stage); setFeedback("Mold locked. " + track().name + " begins.", 1600, "stage-clear"); tone("clear"); }
   }
   function miss(reason){
+    const hadCombo = state.combo;
     state.heat -= 1; state.combo = 1; state.lastEvent = "miss"; tone("miss");
-    if(state.heat <= 0) fail("Foundry heat collapsed on " + reason + ".");
-    else { setFeedback("Missed " + reason + ". Heat " + state.heat + ".", 1100, "miss"); updateUI(); draw(); }
+    // The combo reset is the quiet part: it is the score multiplier, and a miss
+    // drops it all the way back to one. Say so when there was one to lose.
+    const comboNote = hadCombo > 1 ? " Combo x" + hadCombo + " lost." : "";
+    if(state.heat <= 0) fail("Foundry heat collapsed: " + reason + ".");
+    else { setFeedback("Missed: " + reason + "." + comboNote + " Heat " + state.heat + ".", 1600, "miss"); updateUI(); draw(); }
   }
   function autoMissLate(){
     if(state.mode !== "playing") return;
     for(const note of state.notes) {
       if(!note.hit && !note.missed && state.time > noteTime(note) + WINDOW) {
-        note.missed = true; miss("beat " + note.beat); if(state.mode !== "playing") return;
+        note.missed = true; miss("spark " + note.id + " in lane " + (note.lane + 1) + " went cold, never struck"); if(state.mode !== "playing") return;
       }
     }
     if(state.mode === "playing" && doneCount() === state.notes.length) clearStage();
@@ -216,15 +240,19 @@
   function strike(source = "key"){
     state.userGesture = true; if(state.mode === "menu"){ startRun(); return; } if(state.mode !== "playing") return;
     state.lastAction = source + "-strike"; const note = nextNote(); if(!note) { clearStage(); return; }
-    const offset = Math.abs(state.time - noteTime(note));
+    const delta = state.time - noteTime(note), offset = Math.abs(delta);
     if(state.lane === note.lane && offset <= WINDOW) {
-      note.hit = true; state.score += 22 * state.combo + Math.max(0, Math.round((WINDOW - offset) / 12)); state.combo = Math.min(6, state.combo + 1);
-      setFeedback("Spark " + note.id + " fused.", 900, "hit"); tone("hit");
+      note.hit = true;
+      const bonus = Math.max(0, Math.round((WINDOW - offset) / 12)), gained = 22 * state.combo + bonus;
+      state.score += gained; state.combo = Math.min(6, state.combo + 1);
+      setFeedback("Spark " + note.id + " fused " + offsetWord(delta) + ". +" + gained + ", combo x" + state.combo + ".", 1100, "hit"); tone("hit");
       if(doneCount() === state.notes.length) clearStage(); else { updateUI(); draw(); }
     } else {
-      const late = state.time - noteTime(note) > WINDOW;
+      const late = delta > WINDOW;
       if(state.lane === note.lane && late) note.missed = true;
-      miss(state.lane !== note.lane ? "lane " + (note.lane + 1) : "timing");
+      miss(state.lane !== note.lane
+        ? "spark " + note.id + " is in lane " + (note.lane + 1) + ", the hammer is in lane " + (state.lane + 1)
+        : "spark " + note.id + " struck " + offsetWord(delta) + ", outside the " + WINDOW + "ms window");
     }
   }
   function update(ms){
@@ -284,6 +312,7 @@
       stage: state.stage + 1, stageName: track().name, bpm: track().bpm, timeMs: Math.round(state.time), beat: +(state.time / beatMs()).toFixed(3),
       lane: state.lane, heat: state.heat, combo: state.combo, hits: hitCount(), totalNotes: state.notes.length, score: state.score, best: Math.max(state.best, state.score),
       nextNote: nextPayload(), recommendation: recommendation(), notes: state.notes.map((n) => ({ id: n.id, lane: n.lane, beat: n.beat, hit: n.hit, missed: n.missed })),
+      windowMs: WINDOW, loopAwake: raf !== 0,
       lastAction: state.lastAction, lastEvent: state.lastEvent, feedbackActive: state.feedbackMs > 0, feedback: { text: state.feedback, active: state.feedbackMs > 0 },
       soundEnabled: state.sound, lastSound: state.lastSound, toneCount: state.toneCount });
   }
@@ -303,7 +332,25 @@
   function toggleFull(){ if(document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else els.app.requestFullscreen?.().catch(() => {}); }
   function openHelp(){ if(typeof els.dialog.showModal === "function" && !els.dialog.open) els.dialog.showModal(); }
   function closeHelp(){ if(els.dialog.open) els.dialog.close(); canvas.focus(); }
-  function loop(){ update(1000 / 60); updateUI(); draw(); requestAnimationFrame(loop); }
+  // The loop used to add a FIXED 16.67ms per animation frame, so on a 120Hz
+  // display the whole foundry ran at exactly double speed -- fatal for a rhythm
+  // game, where every spark then arrives twice as fast inside the same 190ms
+  // window. It now consumes real elapsed time in fixed 60Hz slices. advanceTime()
+  // still feeds those same fixed slices, so the scripted path is untouched.
+  // It also used to re-queue unconditionally and burn frames forever on the menu
+  // and after a run ended; now it sleeps once nothing is moving.
+  function loopActive(){ return state.mode === "playing" || state.feedbackMs > 0; }
+  function ensureLoop(){ if(raf || !loopActive()) return; lastFrame = 0; carry = 0; raf = requestAnimationFrame(loop); }
+  function loop(ts){
+    raf = 0;
+    if(!lastFrame) lastFrame = ts;
+    carry += Math.min(250, Math.max(0, ts - lastFrame));   // clamp a backgrounded tab
+    lastFrame = ts;
+    while(carry >= STEP_MS){ update(STEP_MS); carry -= STEP_MS; }
+    updateUI(); draw();
+    if(loopActive()) raf = requestAnimationFrame(loop);
+    else { lastFrame = 0; carry = 0; }
+  }
   window.render_game_to_text = text;
   window.advanceTime = (ms) => { const steps = Math.max(1, Math.round(ms / (1000 / 60))); for(let i = 0; i < steps; i++) update(ms / steps); updateUI(); draw(); return text(); };
   els.start.addEventListener("click", startRun); els.strike.addEventListener("click", () => strike("button")); els.restart.addEventListener("click", restart);
@@ -313,7 +360,7 @@
   document.querySelectorAll("[data-key]").forEach((button) => button.addEventListener("click", () => {
     const keyName = button.dataset.key; if(keyName === "ArrowUp" || keyName === "ArrowLeft") moveLane(-1, "pad"); else if(keyName === "ArrowDown" || keyName === "ArrowRight") moveLane(1, "pad"); else strike("pad");
   }));
-  loadStage(0); state.mode = "menu"; state.score = 0; setFeedback("Press Start.", 1400, "ready"); updateUI(); draw(); requestAnimationFrame(loop);
+  loadStage(0); state.mode = "menu"; state.score = 0; setFeedback("Press Start.", 1400, "ready"); updateUI(); draw(); ensureLoop();
 })();
 </script>
 </body>
