@@ -83,7 +83,7 @@
   .brand{display:flex; align-items:baseline; gap:10px}
   .eyebrow{color:var(--cyan); font-size:10px; font-weight:950; letter-spacing:.2em; text-transform:uppercase}
   .title{font-size:clamp(22px,4vw,34px); font-weight:950; text-transform:uppercase; margin:0; line-height:1}
-  .hud{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px}
+  .hud{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px}
   .pill{
     border:1px solid var(--line); border-radius:10px; padding:7px 8px;
     background:linear-gradient(180deg,var(--panel2),var(--panel));
@@ -132,6 +132,7 @@
     <div class="pill"><div class="label">Stretch</div><div class="value" id="stretchValue">1 / 5</div></div>
     <div class="pill"><div class="label">Armor</div><div class="value good" id="armorValue">4</div></div>
     <div class="pill"><div class="label">Heat</div><div class="value" id="heatValue">0%</div></div>
+    <div class="pill"><div class="label">Combo</div><div class="value" id="comboValue">x1</div></div>
     <div class="pill"><div class="label">Score</div><div class="value" id="scoreValue">0</div></div>
     <div class="pill"><div class="label">Best</div><div class="value" id="bestValue">0</div></div>
   </div>
@@ -160,8 +161,9 @@
     <div class="row"><span>Steer</span><span><kbd>&larr;</kbd><kbd>&rarr;</kbd> / <kbd>A</kbd><kbd>D</kbd> / hold screen sides</span></div>
     <div class="row"><span>Fire cannon</span><span><kbd>Space</kbd> / <kbd>&uarr;</kbd> / FIRE</span></div>
     <div class="row"><span>Ram</span><span>steer into a rival</span></div>
+    <div class="row"><span>Combo</span><span>each downed rival adds x1, up to x9</span></div>
     <div class="row"><span>Start / Restart</span><span><kbd>Enter</kbd> / <kbd>R</kbd></span></div>
-    <p style="font-size:13px;color:#9fd6e6;margin:12px 0 0">Destroy red rivals, dodge armored blockers, oil and the road edges. Don't gun white civilians. Clear five stretches.</p>
+    <p style="font-size:13px;color:#9fd6e6;margin:12px 0 0">Destroy red rivals, dodge armored blockers, oil and the road edges. Don't gun white civilians. Clear five stretches. The combo multiplies every kill and every metre you drive, and any hit knocks it back to x1.</p>
     <button class="btn primary" id="helpClose" type="button" style="margin-top:14px;width:100%">Close</button>
   </div>
 </div>
@@ -177,7 +179,7 @@ const ctx = canvas.getContext("2d", { alpha: false });
 const W = 960, H = 540;
 
 const els = {
-  stretch: $("stretchValue"), armor: $("armorValue"), heat: $("heatValue"),
+  stretch: $("stretchValue"), armor: $("armorValue"), heat: $("heatValue"), combo: $("comboValue"),
   score: $("scoreValue"), best: $("bestValue"), status: $("status"),
   start: $("startBtn"), restart: $("restartBtn"), sound: $("soundBtn"),
   full: $("fullBtn"), help: $("helpBtn"), helpClose: $("helpClose"),
@@ -206,6 +208,18 @@ function writeStore(key, value) {
 }
 const BEST_KEY = "chrome-convoy:best";
 const SOUND_KEY = "chrome-convoy:sound";
+// A run is five 18 s stretches, so the distance score alone tops out near
+// 5000 even held at x9, and the spawn tables cap the kills on top of that.
+// 100000 is far above anything reachable and still rejects a junk record.
+const MAX_BEST = 100000;
+// The old read was Number(v) || 0, which let Infinity, -40, 12.7 and 1e24 all
+// through: a negative or absurd best is unbeatable forever in one direction or
+// the other, and Infinity printed on the pill while serializing to null.
+function readBest() {
+  const n = Number(readStore(BEST_KEY, 0));
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > MAX_BEST) return 0;
+  return n;
+}
 
 /* ---- Web Audio tone helper (gated on sound) ---- */
 let audio = null;
@@ -265,7 +279,7 @@ const state = {
   lastInput: "", lastEvent: "",
   nextId: 1,
 };
-state.best = Number(readStore(BEST_KEY, 0)) || 0;
+state.best = readBest();
 state.sound = readStore(SOUND_KEY, "1") !== "0";
 
 /* ---- Feedback + HUD ---- */
@@ -274,7 +288,28 @@ function setFeedback(text, dur = 1.6) {
   els.status.textContent = text;
 }
 
+// The multiplier and the stretch progress in one record. Both were computed
+// every frame and published in the diagnostics, and neither reached a pixel:
+// the combo silently multiplies every kill AND the distance score up to nine
+// times, and the game printed "Combo lost" for a number the player had never
+// been shown. The pill, the road bar and the diagnostics all read this.
+const MAX_COMBO = 9;
+function runStatus() {
+  return {
+    combo: state.combo, maxCombo: MAX_COMBO,
+    label: "x" + state.combo,
+    detail: state.combo > 1
+      ? "Every kill and every metre scores " + state.combo + " times over. Taking a hit resets it to x1."
+      : "Down rivals without taking a hit to build the multiplier, up to x" + MAX_COMBO + ".",
+    stretchProgress: clamp(state.dist, 0, 1),
+    stretch: Math.min(state.stretch + 1, TOTAL_STRETCHES), totalStretches: TOTAL_STRETCHES
+  };
+}
 function syncHud() {
+  const run = runStatus();
+  els.combo.textContent = run.label;
+  els.combo.title = run.detail;
+  els.combo.className = "value " + (state.combo >= 5 ? "good" : state.combo > 1 ? "hot" : "");
   els.stretch.textContent = (Math.min(state.stretch + 1, TOTAL_STRETCHES)) + " / " + TOTAL_STRETCHES;
   els.armor.textContent = String(state.armor);
   els.armor.className = "value " + (state.armor > 2 ? "good" : state.armor > 1 ? "hot" : "bad");
@@ -452,9 +487,10 @@ function drawThreats() {
 /* ---- Collision, combat resolution, armor ---- */
 function damage(n, reason) {
   state.armor = clamp(state.armor - n, 0, MAX_ARMOR);
+  const lostCombo = state.combo;
   state.combo = 1;
   state.lastEvent = reason;
-  setFeedback(reason, 1.0);
+  setFeedback(lostCombo > 1 ? reason + ": the x" + lostCombo + " multiplier is gone" : reason, 1.2);
   tone(140, 0.16, 0.04, "sawtooth");
   if (state.armor <= 0) failRun(reason);
 }
@@ -462,7 +498,11 @@ function killRival(th, viaRam) {
   th.dead = true;
   const base = viaRam ? 90 : 70;
   state.score += base * state.combo;
-  state.combo = Math.min(9, state.combo + 1);
+  // Ramming calls damage() in the same frame, and damage() resets the combo to
+  // x1, so the old unconditional +1 here was written and wiped before anything
+  // could read it. Only the gun builds the multiplier, which keeps the number
+  // on the tag equal to the number that actually scored.
+  if (!viaRam) state.combo = Math.min(MAX_COMBO, state.combo + 1);
   state.lastEvent = viaRam ? "ram-kill" : "gun-kill";
   if (!viaRam) setFeedback("Rival down!", 0.8);
   tone(viaRam ? 220 : 520, 0.09, 0.04, "square");
@@ -480,9 +520,11 @@ function resolveCombat(dt) {
       if (Math.abs(th.y - s.y) < NEAR_Y && overlapX(th.x, s.x, CAR_W * 0.6)) {
         state.shots.splice(i, 1);
         if (th.type === "civ") {
+          const lostCombo = state.combo;
           state.combo = 1; state.score = Math.max(0, state.score - 60);
           state.lastEvent = "civ-shot";
-          setFeedback("Gunned a civilian! Combo lost", 1.1); tone(180, 0.12, 0.03, "sine");
+          setFeedback(lostCombo > 1 ? "Gunned a civilian: -60 and the x" + lostCombo + " multiplier is gone" : "Gunned a civilian: -60 points", 1.4);
+          tone(180, 0.12, 0.03, "sine");
         } else {
           th.hp -= 1;
           if (th.hp <= 0) { if (th.type === "rival") killRival(th, false); else { th.dead = true; state.score += 40; } }
@@ -498,7 +540,7 @@ function resolveCombat(dt) {
     if (!overlapX(th.x, state.playerX, CAR_W * 0.82)) continue;
     if (th.type === "token") { th.dead = true; state.armor = clamp(state.armor + 1, 0, MAX_ARMOR); setFeedback("Armor +1", 0.9); tone(880, 0.1, 0.04, "triangle"); }
     else if (th.type === "rival") { killRival(th, true); damage(1, "Rammed a rival"); }
-    else if (th.type === "civ") { th.dead = true; state.combo = 1; state.score = Math.max(0, state.score - 60); setFeedback("Hit a civilian! Combo lost", 1.1); tone(180, 0.12, 0.03, "sine"); }
+    else if (th.type === "civ") { th.dead = true; const lostCombo = state.combo; state.combo = 1; state.score = Math.max(0, state.score - 60); setFeedback(lostCombo > 1 ? "Hit a civilian: -60 and the x" + lostCombo + " multiplier is gone" : "Hit a civilian: -60 points", 1.4); tone(180, 0.12, 0.03, "sine"); }
     else if (th.type === "oil") { th.dead = true; state.vx += (state.playerX < 0.5 ? 0.5 : -0.5); setFeedback("Oil slick!", 0.8); }
     else if (th.type === "blocker") { damage(1, "Slammed a blocker"); th.y = 1.2; }
   }
@@ -532,6 +574,10 @@ function startRun() {
 }
 function restartRun() {
   ensureAudio();
+  // Restarting mid-run used to wipe the score without banking it, so a good
+  // drive cut short by R never reached the best. Wrecking and winning already
+  // commit; this makes the third way out of a run do the same.
+  commitBest();
   resetRun();
   focusCanvas();
   draw();
@@ -581,10 +627,66 @@ function update(dt) {
   resolveCombat(dt);
 }
 
-function draw() {
-  ctx.fillStyle = "#020912";
+
+// The stretch gauge and the multiplier tag, drawn on the shoulders where the
+// eye already is. state.dist and state.combo were both computed every frame
+// and published in the diagnostics, and neither had ever reached a pixel.
+function drawRunGauge() {
+  const run = runStatus();
+  const x = ROAD_L - 52, w = 24, top = 74, bottom = H - 74, h = bottom - top;
+  const seg = h / run.totalStretches;
+  ctx.fillStyle = "rgba(2,9,18,.72)";
+  ctx.fillRect(x - 8, top - 26, w + 16, h + 40);
+  for (let i = 0; i < run.totalStretches; i++) {
+    // segment 0 sits at the bottom: the run climbs the gauge
+    const sy = bottom - (i + 1) * seg;
+    const done = i < state.stretch;
+    const here = i === state.stretch;
+    ctx.fillStyle = "rgba(103,232,249,.14)";
+    ctx.fillRect(x, sy + 2, w, seg - 4);
+    if (done || here) {
+      const fill = done ? seg - 4 : (seg - 4) * run.stretchProgress;
+      ctx.fillStyle = done ? "#a3e635" : "#67e8f9";
+      ctx.fillRect(x, sy + 2 + (seg - 4 - fill), w, fill);
+    }
+    ctx.strokeStyle = "rgba(103,232,249,.45)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, sy + 2.5, w - 1, seg - 5);
+  }
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#67e8f9";
+  ctx.font = "950 12px system-ui,Segoe UI,Arial";
+  ctx.fillText("STRETCH", x + w / 2, top - 10);
+  ctx.fillStyle = "#e7fbff";
+  ctx.font = "950 16px system-ui,Segoe UI,Arial";
+  ctx.fillText(run.stretch + " / " + run.totalStretches, x + w / 2, bottom + 24);
+}
+
+function drawComboTag() {
+  const run = runStatus();
+  const x = ROAD_R + 60, y = PLAYER_Y - 40;
+  const hot = run.combo > 1;
+  // Two lines only. A third caption line was tried and dropped: at phone size it
+  // collided with the number and read as mush, and the pill tooltip plus the help
+  // card already carry the "it multiplies everything" part.
+  ctx.fillStyle = hot ? "rgba(250,204,21,.18)" : "rgba(2,9,18,.72)";
+  ctx.fillRect(x - 40, y - 26, 80, 52);
+  ctx.strokeStyle = hot ? "rgba(250,204,21,.75)" : "rgba(103,232,249,.4)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - 39, y - 25, 78, 50);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#67e8f9";
+  ctx.font = "950 11px system-ui,Segoe UI,Arial";
+  ctx.fillText("COMBO", x, y - 6);
+  ctx.fillStyle = run.combo >= 5 ? "#a3e635" : hot ? "#facc15" : "#e7fbff";
+  ctx.font = "950 26px system-ui,Segoe UI,Arial";
+  ctx.fillText(run.label, x, y + 20);
+}
+
+function draw() {  ctx.fillStyle = "#020912";
   ctx.fillRect(0, 0, W, H);
   drawRoad();
+  if (state.mode !== "menu") { drawRunGauge(); drawComboTag(); }
   drawShots();
   drawThreats();
   if (state.mode !== "menu") drawPlayer();
@@ -730,6 +832,7 @@ function snapshot() {
     armor: state.armor, maxArmor: MAX_ARMOR,
     heat: round(state.heat), overheated: state.overheated,
     score: Math.round(state.score), combo: state.combo, best: Math.round(state.best),
+    run: runStatus(),
     playerX: round(state.playerX),
     threats: state.threats.slice(0, 8).map((t) => ({ type: t.type, x: round(t.x), y: round(t.y), hp: t.hp })),
     shots: state.shots.length,
