@@ -169,6 +169,7 @@
     <div class="pill" id="aiPill"><span class="label">AI</span><span class="value" id="aiScore">0</span></div>
     <div class="pill"><span class="label">Rally</span><span class="value" id="rallyValue">0</span></div>
     <div class="pill" id="pulsePill"><span class="label">Pulse</span><span class="value" id="pulseValue">0%</span></div>
+    <div class="pill" id="aimPill"><span class="label">Aim</span><span class="value" id="aimValue">--</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></div>
   </div>
   <div class="arena-wrap">
@@ -188,7 +189,7 @@
   <div class="overlay-card">
     <span class="eyebrow">Workshop Arcade</span>
     <h3 id="helpTitle">How to Play</h3>
-    <p>Return the ball with the left paddle. Longer rallies build pulse, brighten the table, and speed up the ball. First side to 7 wins.</p>
+    <p>Return the ball with the left paddle. <strong>Where the ball meets your paddle sets the angle it leaves at</strong>: the marked middle band sends it flat, the end bands send it up to 61 degrees up or down. Longer rallies build pulse, brighten the table, and speed up the ball. First side to 7 wins.</p>
     <ul>
       <li>Keyboard: <kbd>W</kbd>/<kbd>S</kbd> or <kbd>ArrowUp</kbd>/<kbd>ArrowDown</kbd> moves the paddle.</li>
       <li>Touch: drag anywhere on the playfield to set the paddle height.</li>
@@ -206,7 +207,20 @@
   const W = 960;
   const H = 540;
   const WIN_SCORE = 7;
+  // Where the ball meets the paddle is the ONLY thing that sets the return
+  // angle: the contact offset runs -1 at the top edge to +1 at the bottom, and
+  // the ball leaves at offset * MAX_ANGLE. That rule ran on every single hit and
+  // appeared nowhere -- not on the paddle, not in the HUD, not in the help text.
+  // reflectFromPaddle() now reads these same two constants, so the map drawn on
+  // the paddle and the physics can never drift apart.
+  const MAX_ANGLE = Math.PI * 0.34;
+  const AIM_BANDS = 5;
   const BEST_KEY = "paddle-pulse.bestRally.v1";
+  // A rally is bounded only by how long the two paddles keep returning, so the
+  // ceiling is generous rather than tight: 9999 exchanges is far past any real
+  // session, while the old finite-and-positive test let 1e24 through and printed
+  // "1e+24" on the Best pill, which no rally could ever beat.
+  const MAX_BEST_RALLY = 9999;
   const SOUND_KEY = "paddle-pulse.sound.v1";
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
@@ -218,6 +232,8 @@
     rally: document.getElementById("rallyValue"),
     pulse: document.getElementById("pulseValue"),
     pulsePill: document.getElementById("pulsePill"),
+    aim: document.getElementById("aimValue"),
+    aimPill: document.getElementById("aimPill"),
     best: document.getElementById("bestValue"),
     status: document.getElementById("statusLine"),
     controls: document.getElementById("controls"),
@@ -260,7 +276,8 @@
     winner: null,
     now: 0,
     message: "Press Start to serve.",
-    serveDir: -1
+    serveDir: -1,
+    lastAim: null
   };
 
   let soundEnabled = loadSoundPref();
@@ -280,7 +297,11 @@
 
   function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   function loadBestRally(){
-    try { const n=Number(localStorage.getItem(BEST_KEY)); return Number.isFinite(n)&&n>0?Math.round(n):0; } catch { return 0; }
+    try {
+      const n = Number(localStorage.getItem(BEST_KEY));
+      if (!Number.isFinite(n) || n <= 0 || n > MAX_BEST_RALLY) return 0;
+      return Math.round(n);
+    } catch { return 0; }
   }
   function saveBestRally(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
   function loadSoundPref(){
@@ -358,6 +379,7 @@
     ball.trail = [];
     state.rally = 0;
     state.pulse = 0;
+    state.lastAim = null;
   }
 
   function startMatch(){
@@ -409,6 +431,28 @@
   }
 
   function paddleCenter(p){ return p.y + paddle.h / 2; }
+  // Pure: the same offset -> angle rule the physics uses, in the form every
+  // surface reads. No state is touched here.
+  function contactOffset(p, y){ return clamp((y - paddleCenter(p)) / (paddle.h / 2), -1, 1); }
+  function aimDegrees(offset){ return offset * MAX_ANGLE * 180 / Math.PI; }
+  function aimLabel(offset){
+    const deg = Math.round(aimDegrees(offset));
+    if (deg <= -4) return Math.abs(deg) + "° up";
+    if (deg >= 4) return deg + "° down";
+    return "Flat";
+  }
+  function aimStatus(){
+    const maxDeg = Math.round(MAX_ANGLE * 180 / Math.PI);
+    const last = state.lastAim;
+    return {
+      maxDegrees: maxDeg,
+      bands: AIM_BANDS,
+      last: last ? { offset: Math.round(last.offset * 1000) / 1000, degrees: last.degrees, label: last.label,
+        side: last.side, x: Math.round(last.x), y: Math.round(last.y) } : null,
+      label: last ? last.label : "--",
+      detail: "Where the ball meets your paddle sets the return angle. The middle band sends it flat, the end bands send it up to " + maxDeg + " degrees."
+    };
+  }
   function ballIntersects(p){
     return ball.x - ball.r < p.x + paddle.w &&
       ball.x + ball.r > p.x &&
@@ -416,11 +460,12 @@
       ball.y - ball.r < p.y + paddle.h;
   }
   function reflectFromPaddle(p, dir){
-    const offset = clamp((ball.y - paddleCenter(p)) / (paddle.h / 2), -1, 1);
+    const offset = contactOffset(p, ball.y);
     const speed = clamp(Math.hypot(ball.vx, ball.vy) + 18 + state.rally * 1.2, 340, 720);
-    const maxAngle = Math.PI * 0.34;
-    ball.vx = Math.cos(offset * maxAngle) * speed * dir;
-    ball.vy = Math.sin(offset * maxAngle) * speed;
+    ball.vx = Math.cos(offset * MAX_ANGLE) * speed * dir;
+    ball.vy = Math.sin(offset * MAX_ANGLE) * speed;
+    state.lastAim = { offset, degrees: Math.round(aimDegrees(offset)), label: aimLabel(offset),
+      side: p === player ? "player" : "ai", x: ball.x, y: ball.y, at: state.now };
     ball.x = dir > 0 ? p.x + paddle.w + ball.r + 0.5 : p.x - ball.r - 0.5;
     state.rally += 1;
     state.pulse = clamp(Math.round((state.rally / 9) * 100), 0, 100);
@@ -433,7 +478,9 @@
     if (p === player) {
       feedback.lastPlayerHitAt = state.now;
       feedback.activePaddle = "player";
-      state.message = state.pulse >= 100 ? "Pulse maxed. Keep control." : `You returned. Rally ${state.rally}.`;
+      state.message = state.pulse >= 100
+        ? `Pulse maxed. Sent it ${state.lastAim.label}.`
+        : `You returned ${state.lastAim.label}. Rally ${state.rally}.`;
     } else {
       feedback.lastAiHitAt = state.now;
       feedback.activePaddle = "ai";
@@ -498,6 +545,67 @@
     if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
   }
 
+  // The band map is drawn ON the paddle, whose fill is near-white, so the ink
+  // here has to be dark to read at all. The centre band is marked heaviest
+  // because that is the one that sends the ball flat.
+  function drawAimGuide(p){
+    const h = paddle.h, top = p.y, mid = top + h / 2;
+    ctx.save();
+    ctx.lineCap = "butt";
+    for (let i = 1; i < AIM_BANDS; i += 1) {
+      const y = top + (h * i) / AIM_BANDS;
+      // 0.42 alpha at 1.5px was measurably invisible: composited over the
+      // near-white paddle it came out brighter than the plain fill's own
+      // midpoint, so a pixel probe could not tell mark from paddle.
+      ctx.strokeStyle = "rgba(6,20,32,0.62)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p.x + 3.5, y);
+      ctx.lineTo(p.x + paddle.w - 3.5, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(6,20,32,0.85)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(p.x + 1.5, mid);
+    ctx.lineTo(p.x + paddle.w - 1.5, mid);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // A short trace of the return that just happened, along the line the ball
+  // actually left on, with the angle it produced. It shows what you DID, not
+  // what is coming, so it teaches the rule without answering the next shot.
+  const AIM_TRACE_MS = 620;
+  function drawAimTrace(){
+    const last = state.lastAim;
+    if (!last || last.side !== "player") return;
+    const age = state.now - last.at;
+    if (age < 0 || age > AIM_TRACE_MS) return;
+    const fade = 1 - age / AIM_TRACE_MS;
+    const rad = (last.degrees * Math.PI) / 180;
+    const len = 112;
+    ctx.save();
+    // A dot at the contact point plus a ray along the line the ball left on: the
+    // two ends of the rule in one picture, WHERE it struck and WHAT came out.
+    // The degrees are deliberately NOT drawn here. They already appear on the Aim
+    // pill and in the status line, and a third copy on the canvas landed under the
+    // drag cue at phone width, where it was unreadable.
+    ctx.strokeStyle = `rgba(94,234,212,${0.85 * fade})`;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([7, 6]);
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(last.x + Math.cos(rad) * len, last.y + Math.sin(rad) * len);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(223,255,248,${0.95 * fade})`;
+    ctx.fill();
+    ctx.restore();
+  }
+
   function render(){
     ctx.clearRect(0,0,W,H);
     const pulseAlpha = state.pulse / 100;
@@ -555,6 +663,7 @@
     }
     drawRoundedRect(player.x,player.y,paddle.w,paddle.h,9,paddleFill,playerActive ? "rgba(94,234,212,0.96)" : "rgba(94,234,212,0.75)");
     ctx.shadowBlur = 0;
+    drawAimGuide(player);
     if (aiActive) {
       ctx.shadowColor = "rgba(124,158,255,0.68)";
       ctx.shadowBlur = 18;
@@ -570,6 +679,7 @@
     ctx.fillStyle = "#dffff8";
     ctx.fill();
     ctx.shadowBlur = 0;
+    drawAimTrace();
 
     ctx.font = "800 56px ui-sans-serif, system-ui";
     ctx.textAlign = "center";
@@ -601,6 +711,10 @@
     els.aiScore.textContent = String(state.aiScore);
     els.rally.textContent = String(state.rally);
     els.pulse.textContent = `${state.pulse}%`;
+    const aim = aimStatus();
+    els.aim.textContent = aim.label;
+    els.aimPill.title = aim.detail;
+    els.aimPill.dataset.hot = aim.last && aim.last.side === "player" && Math.abs(aim.last.degrees) >= 30 ? "true" : "false";
     els.best.textContent = String(state.bestRally);
     els.pulsePill.dataset.hot = state.pulse >= 75 ? "true" : "false";
     els.playerPill.dataset.active = playerActive ? "true" : "false";
@@ -759,6 +873,7 @@
       rally: state.rally,
       bestRally: state.bestRally,
       pulse: state.pulse,
+      aim: aimStatus(),
       winner: state.winner,
       message: state.message,
       player: { x: Math.round(player.x), y: Math.round(player.y), centerY: Math.round(paddleCenter(player)), vy: Math.round(player.vy), w: paddle.w, h: paddle.h },
