@@ -267,6 +267,7 @@
   .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
   .dot.red{background:var(--red)}
   .dot.black{background:var(--blue)}
+  .dot.draw{background:linear-gradient(90deg,var(--red) 50%,var(--blue) 50%)}
 
   .board{
     position:relative;
@@ -661,7 +662,8 @@
   <div id="gameOver" class="gameover" role="dialog" aria-modal="true" aria-labelledby="goTitle">
   <div class="go-card">
     <h2 id="goTitle" class="go-title">Game Over</h2>
-    <p class="go-sub"><strong><span id="goWinner">Red</span></strong> wins!</p>
+    <p class="go-sub" id="goDetail">Play on.</p>
+    <span id="goWinner" hidden>Red</span>
     <div class="go-actions">
       <button type="button" id="goPlay" class="btn">Play again</button>
     </div>
@@ -699,6 +701,11 @@ let noProgressPlies = 0;        // plies since the last capture or man (non-king
 let positionCounts = new Map(); // board+side signature -> times reached
 let drawType = null;            // 'fifty-move' | 'threefold' | null
 let lastPlyProgress = false;    // did the move just applied reset the no-progress clock?
+// How the game ended, in full. The overlay printed a fixed "wins!" after the
+// winner, so a draw read "Draw wins!", and neither ending ever said WHY: a win
+// could be "no pieces left" or "every piece blocked", and a draw could be
+// threefold repetition or the no-progress clock. One record, one wording.
+let outcome = null;
 let focusSquare = null;
 const keyboardDiagnostics = {
   lastInput: null,
@@ -740,6 +747,8 @@ const elLiveStatus = document.getElementById('liveStatus');
 // Game over elements
 const elGameOver = document.getElementById('gameOver');
 const elGoWinner = document.getElementById('goWinner');
+const elGoTitle  = document.getElementById('goTitle');
+const elGoDetail = document.getElementById('goDetail');
 const elGoPlay   = document.getElementById('goPlay');
 const elHelp     = document.getElementById('help');
 const elHelpBtn  = document.getElementById('helpBtn');
@@ -912,13 +921,51 @@ const Sound = (() => {
 document.addEventListener('pointerdown', () => Sound.resume(), { once:true });
 document.addEventListener('keydown', () => Sound.resume(), { once:true });
 
+// The one place the ending is put into words. `outcome` is set by whichever
+// terminal fired; the overlay headline, the sub-line, the screen-reader
+// announcement and the diagnostics all read this same record, so they cannot
+// describe the ending differently from one another.
+function describeOutcome(record){
+  if(!record) return { headline: 'Game Over', detail: '' };
+  if(record.kind === 'draw'){
+    const detail = record.reason === 'threefold'
+      ? 'The same position with the same side to move came up three times, so neither side can make progress.'
+      : `${NO_PROGRESS_LIMIT} moves passed with no capture and no man moved, so neither side can make progress.`;
+    return { headline: 'Draw', detail: detail };
+  }
+  const loser = record.loser;
+  const detail = record.loserPieces === 0
+    ? `${loser} has no pieces left.`
+    : `${loser} still has ${record.loserPieces} ${record.loserPieces === 1 ? 'piece' : 'pieces'} but not one of them can move.`;
+  return { headline: `${record.winner} wins`, detail: detail };
+}
+function countPiecesFor(side){
+  let n = 0;
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){ const v = board[r][c]; if(v && colorOf(v) === side) n++; }
+  return n;
+}
+// Build the record for "the side to move has no legal move", which is a win for
+// the other side either because its pieces are all gone or because they are all
+// blocked — two very different endings that read identically before.
+function blockedOutcome(loserSide){
+  const winnerSide = -loserSide;
+  return { kind: 'win', winner: winnerSide === RED ? 'Red' : 'Black', loser: loserSide === RED ? 'Red' : 'Black',
+    loserPieces: countPiecesFor(loserSide), reason: countPiecesFor(loserSide) === 0 ? 'no-pieces' : 'blocked' };
+}
+function drawOutcome(){
+  return { kind: 'draw', winner: null, loser: null, loserPieces: null, reason: drawType,
+    noProgressPlies: noProgressPlies, repetitions: positionCounts.size ? Math.max(...positionCounts.values()) : 0 };
+}
 function showGameOver(winnerText){
   locked = true;                  // freeze board interactions
+  const said = describeOutcome(outcome);
   elGoWinner.textContent = winnerText;
+  elGoTitle.textContent = said.headline;
+  elGoDetail.textContent = said.detail;
   elGameOver.classList.add('show');
   // a11y (A1): move focus to the primary control (Play again) when shown.
   setTimeout(()=> (focusableWithin(elGameOver)[0] || elGoPlay)?.focus({preventScroll:true}), 0);
-  announceStatus(winnerText === 'Draw' ? 'Game over. Draw.' : `Game over. ${winnerText} wins.`);
+  announceStatus(`Game over. ${said.headline}. ${said.detail}`);
   // Win/loss jingle in singleplayer; local two-player treats either winner as a human win.
   if(winnerText === 'Draw'){
     Sound.gameover('draw');
@@ -1272,6 +1319,11 @@ function maxCaptureDepth(moves){
 }
 
 function currentCaptureStatus(){
+  // A finished game has no capture situation; this used to keep reading
+  // "Free move" beside the result.
+  if(elGameOver && elGameOver.classList.contains('show')){
+    return { text: 'Game over', tone: 'is-clear' };
+  }
   if(mustContinueFrom){
     return {
       text: `Multi-jump from ${squareName(mustContinueFrom.r, mustContinueFrom.c)}`,
@@ -1301,7 +1353,10 @@ function currentActionStatus(){
     return { text: feedback.invalidFeedback.message, tone: 'is-alert' };
   }
   if(elGameOver && elGameOver.classList.contains('show')){
-    return { text: `${elGoWinner.textContent} wins.`, tone: '' };
+    // This said "<winner> wins." for every ending, so a draw read "Draw wins."
+    // and no ending ever said why. Same wording as the overlay.
+    const said = describeOutcome(outcome);
+    return { text: `${said.headline}. ${said.detail}`.trim(), tone: '' };
   }
   if(locked && mode === 'SP' && turn === aiPlays){
     return { text: `${sideLabel(turn)} is thinking.`, tone: '' };
@@ -1357,6 +1412,14 @@ function updateReadableStatus(){
 }
 
 function updateTurnUI(){
+  // Once the game is over nobody is "to move"; this pill used to keep saying
+  // "Red to move" right beside "Red wins".
+  if(elGameOver && elGameOver.classList.contains('show')){
+    elTurnText.textContent = describeOutcome(outcome).headline;
+    elTurnDot.className = 'dot ' + (outcome && outcome.kind === 'draw' ? 'draw' : (outcome && outcome.winner === 'Red' ? 'red' : 'black'));
+    updateReadableStatus();
+    return;
+  }
   const thinking = locked && mode === 'SP' && turn === aiPlays;
   elTurnText.textContent = sideLabel(turn) + (thinking ? ' thinking' : ' to move');
   elTurnDot.className = 'dot ' + (turn===RED ? 'red' : 'black');
@@ -1983,11 +2046,13 @@ function endTurn(){
   const oppMoves = generateMoves(board, opp);
   if(oppMoves.length===0){
     // The side that just moved (current 'turn') is the winner
+    outcome = blockedOutcome(opp);
     showGameOver(turn===RED ? 'Red' : 'Black');
     render();
     return;
   }
   if(registerPlyAndCheckDraw(lastPlyProgress, opp===RED)){
+    outcome = drawOutcome();
     showGameOver('Draw');
     render();
     return;
@@ -2016,6 +2081,7 @@ async function aiMove(){
 
   // If AI has no legal moves, human wins
   if(!mv){
+    outcome = blockedOutcome(aiPlays);
     showGameOver((-aiPlays) === RED ? 'Red' : 'Black');
     render();
     return;
@@ -2031,11 +2097,13 @@ async function aiMove(){
   const humanSide = -aiPlays;
   const humanMoves = generateMoves(board, humanSide);
   if(humanMoves.length === 0){
+    outcome = blockedOutcome(humanSide);
     showGameOver(aiPlays === RED ? 'Red' : 'Black'); // AI wins
     render();
     return;
   }
   if(registerPlyAndCheckDraw(lastPlyProgress, humanSide===RED)){
+    outcome = drawOutcome();
     showGameOver('Draw');
     render();
     return;
@@ -2113,6 +2181,7 @@ function undo(){
   noProgressPlies = state.noProgress ?? 0;
   positionCounts = new Map(state.posCounts || []);
   drawType = state.drawType ?? null;
+  outcome = null;
   selected = null;
   legalDest = [];
   feedback.lastMove = null;
@@ -2254,6 +2323,8 @@ function renderGameToText(){
     historyCount: history.length,
     gameOver: elGameOver.classList.contains('show'),
     winner: elGameOver.classList.contains('show') ? elGoWinner.textContent : null,
+    // Why the game ended, in the same words the overlay and the announcement use.
+    outcome: outcome ? { ...outcome, ...describeOutcome(outcome) } : null,
     drawType,
     noProgressPlies,
     noProgressLimit: NO_PROGRESS_LIMIT,
@@ -2317,6 +2388,7 @@ function newGame(soundCue = 'new-game'){
   noProgressPlies = 0;
   positionCounts = new Map();
   drawType = null;
+  outcome = null;
   lastPlyProgress = false;
   positionCounts.set(boardSignature(board, turn === RED), 1);
   focusSquare = firstPlayableFocus();
