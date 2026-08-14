@@ -98,7 +98,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
 <main class="app" aria-label="Bulwark Burst radial defense shooter">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Bulwark Burst</span></div>
-    <div class="help">Rotate the cannon around the core, fire bursts into incoming drones, and pulse the shield only when the ring is crowded.</div>
+    <div class="help">Rotate the cannon around the core, fire bursts into incoming drones, and pulse the shield when the dashed ring is crowded. The pulse hits every drone inside that ring.</div>
   </header>
   <section class="hud" aria-label="Bulwark status">
     <div class="pill"><span class="label">Wave</span><span class="value" id="waveValue">1/5</span></div>
@@ -130,7 +130,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
 </main>
 <dialog id="helpDialog" aria-modal="true" aria-labelledby="helpTitle">
   <h2 id="helpTitle">Bulwark Burst Controls</h2>
-  <p>Protect the central core. Drones fly in from the edge, shots build heat, and a shield pulse knocks back close threats on a long cooldown.</p>
+  <p>Protect the central core. Drones fly in from the edge and shots build heat, and the cannon refuses to fire above 92. The dashed ring around the core is the shield's reach: a pulse damages and knocks back every drone inside it, then recharges for about 5 seconds. Drones the pulse would catch are ringed.</p>
   <ul>
     <li>Arrow Left/Right or A/D: rotate cannon</li>
     <li>Space or Enter: fire a burst</li>
@@ -152,7 +152,23 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   const CY = H / 2;
   const TAU = Math.PI * 2;
   const STEP = 1 / 60;
+  // The shield pulse hits every drone inside 178px of the core and knocks it
+  // back. That radius was a bare literal inside pulseShield(), used once and
+  // drawn nowhere, while the header told the player to "pulse the shield only
+  // when the ring is crowded" -- and there was no ring on screen. The faint
+  // decorative grid rings sit at 92/146/200, so the nearest visible circle was
+  // not even the right one. pulseShield() and the renderer now read this.
+  const PULSE_REACH = 178;
+  const PULSE_KNOCKBACK = 34;
+  const PULSE_COOLDOWN = 4.6;
+  // The cannon refuses to fire above this. The HUD tinted the Heat pill at 58
+  // and 82, so all three numbers on screen disagreed with the one that decides.
+  const HEAT_LIMIT = 92;
   const BEST_KEY = "bulwark-burst.best.v1";
+  // A full clear measured 8620 with a perfect core, so 200000 is far above
+  // anything reachable and still rejects a junk record. The old read was
+  // Number(v) || 0, which let Infinity, -40, 12.7 and 1e24 all through.
+  const MAX_BEST = 200000;
   const SOUND_KEY = "bulwark-burst.sound.v1";
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
   const round = (n) => Math.round(n * 10) / 10;
@@ -193,6 +209,11 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     if (!source) return;
     try { source.setItem(key, String(value)); } catch (_) {}
   }
+  function readBest() {
+    const n = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > MAX_BEST) return 0;
+    return n;
+  }
   function readSound() {
     return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
   }
@@ -200,7 +221,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   const state = {
     mode: "ready", wave: 0, waveTime: 0, spawnIndex: 0, angle: -Math.PI / 2,
     core: 100, heat: 0, cooldown: 0, pulseCooldown: 0, score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0, sound: readSound(),
+    best: readBest(), sound: readSound(),
     enemies: [], shots: [], bursts: [],
     feedback: "Press Start. Hold the core through five attack waves.", feedbackTimer: 0,
     lastInput: "none", lastEvent: "ready", shake: 0, hitFlash: 0, kills: 0, leaks: 0
@@ -209,6 +230,8 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   let shotId = 1;
   let audio = null;
   let lastFrame = 0;
+  let raf = 0;
+  let inTick = false;
   let clock = 0;
   // Honor prefers-reduced-motion: gate decorative screen shake and burst rings
   // (cosmetic feedback, no gameplay effect) for motion-sensitive players.
@@ -233,6 +256,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     state.feedback = text;
     state.feedbackTimer = 1.4;
     state.lastEvent = event;
+    ensureLoop();
   }
   function ensureAudio() {
     if (!state.sound || audio) return;
@@ -258,6 +282,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     return { id: enemyId++, angle, x: CX + Math.cos(angle) * radius, y: CY + Math.sin(angle) * radius, hp: spec.hp, maxHp: spec.hp, speed: spec.v * .78, size: 16 + spec.hp * 3, hit: 0 };
   }
   function resetRun(start = false) {
+    commitBest();
     state.mode = start ? "active" : "ready";
     state.wave = 0;
     state.waveTime = 0;
@@ -288,18 +313,26 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     tone(280, .06, .03);
     canvas.focus({ preventScroll: true });
   }
+  // Only a WIN used to bank the score. A breach threw the whole run away, and so
+  // did Restart, so a run worth 1921 points that ended in a breach left Best at 0.
+  // Every way out of a run now commits first.
+  function commitBest() {
+    if (state.score > state.best && state.score <= MAX_BEST) {
+      state.best = state.score;
+      writeStore(BEST_KEY, state.best);
+    }
+  }
   function finishRun(mode) {
     state.mode = mode;
     if (mode === "won") {
-      state.score += Math.max(0, Math.round(state.core * 12 - state.heat * 2));
-      if (state.score > state.best) {
-        state.best = state.score;
-        writeStore(BEST_KEY, state.best);
-      }
-      setFeedback("Bulwark held. All waves cleared.", "won");
+      const bonus = Math.max(0, Math.round(state.core * 12 - state.heat * 2));
+      state.score += bonus;
+      commitBest();
+      setFeedback(`Bulwark held. Core bonus +${bonus}.`, "won");
       tone(740, .11, .04, "sine");
       tone(990, .13, .03, "sine");
     } else {
+      commitBest();
       setFeedback("Core breached. Restart and tighten your angles.", "failed");
       tone(130, .16, .04, "sawtooth");
     }
@@ -308,10 +341,12 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   function rotate(delta) {
     state.angle = normalizeAngle(state.angle + delta);
     state.lastInput = delta < 0 ? "rotate-left" : "rotate-right";
+    nudge();
   }
   function aimAt(x, y) {
     state.angle = normalizeAngle(Math.atan2(y - CY, x - CX));
     state.lastInput = "aim";
+    nudge();
   }
   function fire() {
     if (state.mode !== "active") {
@@ -322,7 +357,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
       setFeedback("Cannon cycling.", "cooldown");
       return;
     }
-    if (state.heat > 92) {
+    if (state.heat > HEAT_LIMIT) {
       setFeedback("Cannon overheated. Let it cool.", "overheat");
       tone(170, .05, .025, "square");
       return;
@@ -335,6 +370,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     state.cooldown = .13;
     state.lastInput = "fire";
     state.lastEvent = "fire";
+    ensureLoop();
     state.hitFlash = .18;
     tone(460 + state.heat * 2, .045, .026, "square");
   }
@@ -347,20 +383,20 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
       setFeedback(`Shield charging ${Math.ceil(state.pulseCooldown)}s.`, "shield-cooldown");
       return;
     }
-    state.pulseCooldown = 4.6;
+    state.pulseCooldown = PULSE_COOLDOWN;
     state.heat = clamp(state.heat + 8, 0, 100);
     state.bursts.push({ x: CX, y: CY, r: 62, life: .5, color: "#67e8f9" });
     let hits = 0;
     const destroyed = new Set();
     for (const enemy of state.enemies) {
       const d = dist(enemy.x, enemy.y, CX, CY);
-      if (d < 178) {
+      if (d < PULSE_REACH) {
         enemy.hp -= 1;
         enemy.hit = .35;
         const awayX = (enemy.x - CX) / Math.max(1, d);
         const awayY = (enemy.y - CY) / Math.max(1, d);
-        enemy.x += awayX * 34;
-        enemy.y += awayY * 34;
+        enemy.x += awayX * PULSE_KNOCKBACK;
+        enemy.y += awayY * PULSE_KNOCKBACK;
         hits += 1;
         if (enemy.hp <= 0) {
           destroyed.add(enemy.id);
@@ -476,12 +512,32 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     state.bursts = state.bursts.filter((burst) => burst.life > 0);
     updateHud();
   }
+  // Pure. The ring, the drone outlines, the Shield button, the status text and
+  // the diagnostics all read this one record, so what is drawn and what the
+  // pulse actually does cannot drift apart.
+  function inReachList() {
+    return state.enemies.filter((enemy) => dist(enemy.x, enemy.y, CX, CY) < PULSE_REACH);
+  }
+  function shieldStatus() {
+    const inReach = inReachList().length;
+    const ready = state.pulseCooldown <= 0;
+    return {
+      reach: PULSE_REACH,
+      cooldown: round(state.pulseCooldown),
+      ready,
+      inReach,
+      total: state.enemies.length,
+      label: ready ? (inReach ? `Pulse ${inReach}` : "Pulse Shield") : `Shield ${Math.ceil(state.pulseCooldown)}s`,
+      detail: `The pulse hits every drone inside the ring, ${PULSE_REACH} px from the core. ${inReach} of ${state.enemies.length} drone(s) are inside it now.`
+    };
+  }
   function updateHud() {
     els.wave.textContent = `${Math.min(state.wave + 1, waves.length)}/${waves.length}`;
     els.core.textContent = Math.round(state.core);
     els.core.className = `value ${state.core < 34 ? "bad" : state.core > 74 ? "good" : ""}`.trim();
-    els.heat.textContent = Math.round(state.heat);
-    els.heat.className = `value ${state.heat > 82 ? "bad" : state.heat > 58 ? "hot" : ""}`.trim();
+    // Tint from the limit that actually refuses the shot, not from two other numbers.
+    els.heat.textContent = `${Math.round(state.heat)}/${HEAT_LIMIT}`;
+    els.heat.className = `value ${state.heat > HEAT_LIMIT ? "bad" : state.heat > HEAT_LIMIT * .7 ? "hot" : ""}`.trim();
     els.drones.textContent = state.enemies.length;
     els.score.textContent = state.score;
     els.best.textContent = state.best;
@@ -489,7 +545,10 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", String(state.sound));
     els.start.textContent = state.mode === "active" ? "Running" : "Start";
-    els.pulse.textContent = state.pulseCooldown > 0 ? `Shield ${Math.ceil(state.pulseCooldown)}s` : "Pulse Shield";
+    const shield = shieldStatus();
+    els.pulse.textContent = shield.label;
+    els.pulse.title = shield.detail;
+    els.pulse.dataset.ready = shield.ready && shield.inReach > 0 ? "true" : "false";
     els.live.textContent = state.feedbackTimer > 1.25 ? state.feedback : "";
   }
   function drawBackground() {
@@ -522,6 +581,38 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
       ctx.lineTo(CX + Math.cos(a) * 430, CY + Math.sin(a) * 430);
       ctx.stroke();
     }
+  }
+  // The reach the pulse actually has, drawn where it actually is. Bright while
+  // the shield is charged, faint while it recharges, so the ring says WHICH
+  // drones a pulse would hit without saying anything about where to shoot.
+  function drawShieldRing() {
+    const shield = shieldStatus();
+    ctx.save();
+    ctx.setLineDash([10, 9]);
+    ctx.lineWidth = shield.ready ? 2.5 : 1.5;
+    ctx.strokeStyle = shield.ready
+      ? (shield.inReach ? "rgba(103,232,249,.92)" : "rgba(103,232,249,.5)")
+      : "rgba(148,163,184,.34)";
+    ctx.beginPath();
+    ctx.arc(CX, CY, shield.reach, 0, TAU);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Ring the drones the pulse would actually catch.
+    if (shield.inReach) {
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = shield.ready ? "rgba(103,232,249,.95)" : "rgba(148,163,184,.55)";
+      for (const enemy of inReachList()) {
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.size + 7, 0, TAU);
+        ctx.stroke();
+      }
+    }
+    ctx.font = "700 13px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = shield.ready ? "rgba(103,232,249,.95)" : "rgba(148,163,184,.7)";
+    ctx.fillText(shield.ready ? `SHIELD REACH · ${shield.inReach} INSIDE` : `SHIELD CHARGING ${Math.ceil(state.pulseCooldown)}s`,
+      CX, CY - shield.reach - 9);
+    ctx.restore();
   }
   function drawCore() {
     const pulse = 1 + Math.sin(clock * 4) * .04;
@@ -658,6 +749,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     }
     drawBackground();
     drawBursts();
+    drawShieldRing();
     drawShots();
     drawEnemies();
     drawCore();
@@ -681,6 +773,8 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
       score: state.score,
       best: state.best,
       cannon: { x: CX, y: CY, angle: round(state.angle), degrees: angleDeg(state.angle), cooldown: round(state.cooldown), pulseCooldown: round(state.pulseCooldown) },
+      heatLimit: HEAT_LIMIT,
+      shield: shieldStatus(),
       enemies: state.enemies.slice(0, 8).map((enemy) => ({ id: enemy.id, x: round(enemy.x), y: round(enemy.y), hp: enemy.hp, maxHp: enemy.maxHp, distance: round(dist(enemy.x, enemy.y, CX, CY)), angleDegrees: angleDeg(Math.atan2(enemy.y - CY, enemy.x - CX)) })),
       nearestTarget: nearest ? { id: nearest.id, x: round(nearest.x), y: round(nearest.y), hp: nearest.hp, distance: round(dist(nearest.x, nearest.y, CX, CY)), angleDegrees: angleDeg(Math.atan2(nearest.y - CY, nearest.x - CX)) } : null,
       shots: state.shots.slice(0, 5).map((shot) => ({ x: round(shot.x), y: round(shot.y), life: round(shot.life) })),
@@ -699,13 +793,36 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     for (let i = 0; i < frames; i += 1) update(STEP);
     draw();
   }
+  // tick() used to re-queue unconditionally, so the ready screen and every
+  // finished run kept burning 60 frames a second forever. The loop now runs only
+  // while something is genuinely moving. inTick guards against a SECOND chain:
+  // update() calls updateHud() and setFeedback() mid-frame, and either could
+  // otherwise call ensureLoop() while raf is momentarily 0 and arm a rival loop.
+  // lastFrame is deliberately only reset when a cold chain starts, never inside
+  // a per-frame function, so the world clock cannot be frozen at dt 0.
+  function loopActive() {
+    return state.mode === "active" || state.bursts.length > 0 ||
+      state.shake > 0 || state.hitFlash > 0 || state.feedbackTimer > 0;
+  }
+  function ensureLoop() {
+    if (raf || inTick || !loopActive()) return;
+    lastFrame = 0;
+    raf = requestAnimationFrame(tick);
+  }
+  function nudge() {
+    ensureLoop();
+    if (!raf && !inTick) draw();
+  }
   function tick(now) {
+    raf = 0;
+    inTick = true;
     if (!lastFrame) lastFrame = now;
     const dt = Math.min(.05, Math.max(0, (now - lastFrame) / 1000) || STEP);
     lastFrame = now;
     update(dt);
     draw();
-    requestAnimationFrame(tick);
+    inTick = false;
+    if (loopActive()) raf = requestAnimationFrame(tick);
   }
   function canvasPoint(event) {
     const rect = canvas.getBoundingClientRect();
@@ -723,6 +840,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     writeStore(SOUND_KEY, state.sound ? "1" : "0");
     if (state.sound) tone(520, .06, .03);
     updateHud();
+    nudge();
   }
   async function toggleFullscreen() {
     const root = document.documentElement;
@@ -802,7 +920,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   window.advanceTime = step;
 
   resetRun(false);
-  requestAnimationFrame(tick);
+  ensureLoop();
 })();
 </script>
 </body>
