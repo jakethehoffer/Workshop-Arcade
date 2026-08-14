@@ -93,6 +93,11 @@
   }
   .btn[aria-pressed="true"],.btn.primary{background:linear-gradient(180deg,#6cf0d8,#22d3ee);color:#06242a;border-color:transparent}
   .btn:hover{border-color:rgba(94,234,212,.6)}
+  .btn.tower{display:inline-flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
+  .towerStats{font-size:9px;font-weight:800;letter-spacing:.02em;color:#9fb4cc;text-transform:none}
+  /* The selected button turns bright teal, so the light-grey stats line has to
+     flip dark with it or it disappears against its own background. */
+  .btn.tower[aria-pressed="true"] .towerStats{color:#06242a}
   .help{color:#aab8d2;text-align:center;font-size:12px;line-height:1.35}
   @media (max-width:560px){
     body{padding:12px 8px 20px}
@@ -119,9 +124,9 @@
   <div class="stage"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Three lane tower defense canvas. Build towers on nine pads to stop six waves."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Build a tower, then press S to start wave 1.</div>
   <div class="toolbar" aria-label="Tower controls">
-    <button class="btn" type="button" data-tower="bolt" aria-pressed="true">1 Bolt 55</button>
-    <button class="btn" type="button" data-tower="beam" aria-pressed="false">2 Beam 80</button>
-    <button class="btn" type="button" data-tower="burst" aria-pressed="false">3 Burst 110</button>
+    <button class="btn tower" type="button" data-tower="bolt" aria-pressed="true"><span class="towerName">1 Bolt 55</span><span class="towerStats" data-stats="bolt"></span></button>
+    <button class="btn tower" type="button" data-tower="beam" aria-pressed="false"><span class="towerName">2 Beam 80</span><span class="towerStats" data-stats="beam"></span></button>
+    <button class="btn tower" type="button" data-tower="burst" aria-pressed="false"><span class="towerName">3 Burst 110</span><span class="towerStats" data-stats="burst"></span></button>
     <button class="btn primary" type="button" id="startBtn">Start Wave</button>
     <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
     <button class="btn" type="button" id="restartBtn">Restart</button>
@@ -169,6 +174,15 @@
     set(key, value){ try { localStorage.setItem(key, String(value)); } catch (_) {} }
   };
   const keys = { best: "signal-siege.bestWave.v1", sound: "signal-siege.sound.v1" };
+  // Number(x) || 0 let -40, 12.7 and 1e24 through as a "best wave", and
+  // Infinity printed on the pill while serializing to null in the diagnostics.
+  // There are only six waves.
+  const MAX_BEST_WAVE = 6;
+  function readBestWave(){
+    const n = Number(storage.get(keys.best, "0"));
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(Math.floor(n), MAX_BEST_WAVE);
+  }
   let audioCtx = null;
   let lastStamp = 0;
   let enemyId = 1;
@@ -191,7 +205,7 @@
     core: 100,
     credits: 120,
     score: 0,
-    bestWave: Number(storage.get(keys.best, "0")) || 0,
+    bestWave: readBestWave(),
     selectedTower: "bolt",
     selectedPad: 4,
     sound: storage.get(keys.sound, "1") !== "0",
@@ -256,13 +270,40 @@
     updateHud();
     render();
   }
+  const MAX_LEVEL = 3;
+  const upgradeCost = (level) => 40 + level * 35;
+  // What tapping a pad would do, and why, worked out before anything changes.
+  // The refusals were already being written into state and then dropped: every
+  // early return below skipped updateHud(), so "Need 75 credits to upgrade."
+  // never reached the screen and a refused tap looked like nothing at all.
+  function padPlan(index = state.selectedPad){
+    const existing = towerAt(index);
+    if (existing) {
+      const cost = upgradeCost(existing.level);
+      if (existing.level >= MAX_LEVEL) {
+        return { kind: "maxed", tone: "warn", cost: 0, text: `${existing.name} on this pad is already at level ${MAX_LEVEL}.` };
+      }
+      if (state.credits < cost) {
+        return { kind: "poor-upgrade", tone: "warn", cost,
+          text: `Upgrading ${existing.name} to level ${existing.level + 1} costs ${cost}. You have ${Math.floor(state.credits)}.` };
+      }
+      return { kind: "upgrade", tone: "good", cost,
+        text: `Tap to upgrade ${existing.name} to level ${existing.level + 1} for ${cost}.` };
+    }
+    const type = towerTypes[state.selectedTower];
+    if (state.credits < type.cost) {
+      return { kind: "poor-build", tone: "warn", cost: type.cost,
+        text: `A ${type.name} tower costs ${type.cost}. You have ${Math.floor(state.credits)}.` };
+    }
+    return { kind: "build", tone: "good", cost: type.cost, text: `Tap to build a ${type.name} tower for ${type.cost}.` };
+  }
   function buildOrUpgrade(index = state.selectedPad){
     ensureAudio();
     const existing = towerAt(index);
     if (existing) {
-      const cost = 40 + existing.level * 35;
-      if (existing.level >= 3) return setFeedback("Tower is fully upgraded.", "build");
-      if (state.credits < cost) return setFeedback(`Need ${cost} credits to upgrade.`, "build");
+      const cost = upgradeCost(existing.level);
+      if (existing.level >= MAX_LEVEL) { setFeedback(padPlan(index).text, "build"); updateHud(); render(); return; }
+      if (state.credits < cost) { setFeedback(padPlan(index).text, "build"); updateHud(); render(); return; }
       state.credits -= cost;
       existing.level += 1;
       existing.cooldown = Math.min(existing.cooldown, .1);
@@ -271,7 +312,7 @@
       beep(520 + existing.level * 70, .07, .04);
     } else {
       const type = towerTypes[state.selectedTower];
-      if (state.credits < type.cost) return setFeedback(`Need ${type.cost} credits for ${type.name}.`, "build");
+      if (state.credits < type.cost) { setFeedback(padPlan(index).text, "build"); updateHud(); render(); return; }
       const pad = padAt(index);
       state.credits -= type.cost;
       state.towers.push({ pad: index, lane: pad.lane, x: pad.x, y: pad.y, type: type.key, name: type.name, level: 1, cooldown: .05, target: null });
@@ -298,7 +339,10 @@
     if (!towerTypes[key]) return;
     state.selectedTower = key;
     els.towerButtons.forEach((btn) => btn.setAttribute("aria-pressed", String(btn.dataset.tower === key)));
-    setFeedback(`${towerTypes[key].name} selected.`, "build");
+    // Picking a different tower changes what a tap on the current pad costs, so
+    // say the new plan rather than only "Beam selected."
+    setFeedback(padPlan(state.selectedPad).text, "build");
+    updateHud();
     render();
   }
   function update(dt){
@@ -403,6 +447,24 @@
       }
     }
     updateHud();
+  }
+  // The three towers differ in damage, reach, fire rate and splash, and the
+  // buttons carried only a name and a price -- the numbers that decide the whole
+  // game were nowhere on screen. Written straight from towerTypes so they cannot
+  // drift from what the towers actually do.
+  function towerBlurb(type){
+    const shots = 1 / type.rate;
+    return `${type.damage} dmg · ${shots.toFixed(1)}/s · ${type.range} reach${type.splash ? " · splash" : ""}`;
+  }
+  function fillTowerStats(){
+    for (const node of document.querySelectorAll("[data-stats]")) {
+      const type = towerTypes[node.dataset.stats];
+      if (!type) continue;
+      node.textContent = towerBlurb(type);
+      const button = node.closest("[data-tower]");
+      if (button) button.setAttribute("aria-label",
+        `${type.name} tower, ${type.cost} credits, ${type.damage} damage, ${(1 / type.rate).toFixed(1)} shots per second, ${type.range} reach${type.splash ? ", splash damage" : ""}`);
+    }
   }
   function updateHud(){
     els.wave.textContent = `${Math.min(state.wave, waves.length)}/${waves.length}`;
@@ -572,6 +634,8 @@
     const lane = Math.max(0, Math.min(2, pad.lane + dy));
     state.selectedPad = lane * 3 + col;
     render();
+    // Say what a tap on the newly selected pad would do, including the cost.
+    setFeedback(padPlan(state.selectedPad).text, "build");
   }
   function toggleFullscreen(){
     if (!document.fullscreenElement) {
@@ -591,6 +655,13 @@
       bestWave: state.bestWave,
       selectedTower: state.selectedTower,
       selectedPad: padAt(state.selectedPad),
+      // What tapping the selected pad would do, and the numbers behind each
+      // tower, so what the buttons show and what a tap does cannot drift apart.
+      padPlan: padPlan(state.selectedPad),
+      towerStats: Object.values(towerTypes).map((t) => ({ key: t.key, name: t.name, cost: t.cost,
+        damage: t.damage, range: t.range, shotsPerSecond: Number((1 / t.rate).toFixed(2)), splash: t.splash, blurb: towerBlurb(t) })),
+      upgradeCosts: [1, 2].map((level) => ({ fromLevel: level, cost: upgradeCost(level) })),
+      maxLevel: MAX_LEVEL,
       enemies: state.enemies.map((enemy) => ({ id: enemy.id, lane: enemy.lane, x: Math.round(enemy.x), y: enemy.y, hp: Math.ceil(enemy.hp), speed: enemy.speed })),
       projectiles: state.projectiles.map((p) => ({ id: p.id, x: Math.round(p.x), y: Math.round(p.y), target: p.target, damage: p.damage })),
       towers: state.towers.map((tower) => ({ pad: tower.pad, lane: tower.lane, x: tower.x, y: tower.y, type: tower.type, level: tower.level, cooldown: Number(tower.cooldown.toFixed(2)), target: tower.target })),
@@ -672,6 +743,7 @@
       return this;
     };
   }
+  fillTowerStats();
   selectTower("bolt");
   updateHud();
   render();
