@@ -164,8 +164,9 @@
     if (["1", "true", "on", "unmuted", "enabled"].includes(text)) return true;
     return true;
   }
+  function finiteOr0(v) { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; }
   const state = {
-    mode: "playing", timeMs: 0, score: 0, best: Number(safe.get(BEST_KEY, 0)) || 0, combo: 0, misses: 0,
+    mode: "ready", timeMs: 0, score: 0, best: finiteOr0(safe.get(BEST_KEY, 0)), combo: 0, misses: 0,
     selected: 0, queue: [], completed: [], spawnIndex: 0, spawnTimer: 300, served: 0,
     stationState: stations.map(() => ({ orderId: null, progress: 0, ready: false })),
     sound: loadSound(), userGesture: false, lastSound: "none", feedback: "Shift open.", feedbackMs: 900,
@@ -175,7 +176,7 @@
     const base = menu[(index * 5 + 2) % menu.length];
     return { id: orderSeq++, item: base.item, station: base.station, stationName: stations[base.station].name, patienceMax: base.patience - Math.min(3200, index * 90), patience: base.patience - Math.min(3200, index * 90), value: base.value + (index % 4) * 10 };
   }
-  function setFeedback(text, ms = 700) { state.feedback = text; state.feedbackMs = Math.max(state.feedbackMs, ms); }
+  function setFeedback(text, ms = 700) { state.feedback = text; state.feedbackMs = Math.max(state.feedbackMs, ms);  ensureLoop(); }
   function updateBest() { if (state.score > state.best) { state.best = state.score; safe.set(BEST_KEY, state.best); } }
   function markGesture() { state.userGesture = true; canvas.focus({ preventScroll: true }); }
   function play(name) {
@@ -222,6 +223,11 @@
     st.orderId = order.id; st.progress = 0; st.ready = false;
     setFeedback("Preparing " + order.item + ".", 620); play("prep");
   }
+  // What serving the ready order pays right now. Patience keeps draining while
+  // it sits ready, so the bonus visibly decays - that pressure was never shown.
+  function servePayout(order) { if (!order) return null; const ratio = Math.max(0, order.patience / order.patienceMax);
+    const patienceBonus = Math.round(ratio * 70), comboBonus = (state.combo + 1) * 12;
+    return { base: order.value, patienceBonus, comboBonus, total: order.value + patienceBonus + comboBonus }; }
   function serve(id) {
     const st = selectedStation();
     const index = state.queue.findIndex((order) => order.id === id);
@@ -230,7 +236,7 @@
     const patienceRatio = Math.max(0, order.patience / order.patienceMax);
     state.combo += 1;
     state.served += 1;
-    const gain = order.value + Math.round(patienceRatio * 70) + state.combo * 12;
+    const gain = order.value + Math.round(patienceRatio * 70) + state.combo * 12;   // matches servePayout(order) taken before the combo bump
     state.score += gain;
     state.completed.push({ id: order.id, item: order.item, score: gain, combo: state.combo });
     if (state.completed.length > 8) state.completed.shift();
@@ -252,7 +258,7 @@
     updateBest(); setFeedback(text, 1400); play(won ? "done" : "over");
   }
   function update(dt) {
-    if (state.gameOver || state.runComplete) { state.feedbackMs = Math.max(0, state.feedbackMs - dt); return; }
+    if (state.mode === "ready" || state.gameOver || state.runComplete) { state.feedbackMs = Math.max(0, state.feedbackMs - dt); return; }
     state.timeMs += dt;
     state.feedbackMs = Math.max(0, state.feedbackMs - dt);
     state.spawnTimer -= dt;
@@ -280,6 +286,7 @@
     while (stepAccumulator >= TICK_MS && ticks < 100000) { update(TICK_MS); stepAccumulator -= TICK_MS; ticks++; }
     render();
   }
+  function beginShift() { if (state.mode !== "ready") return; state.mode = "playing"; stepAccumulator = 0; state.timeMs = 0; setFeedback("Shift open. Orders are arriving.", 900); ensureLoop(); }
   function selectStation(index) {
     state.selected = (index + stations.length) % stations.length;
     els.stationButtons.forEach((b, i) => { b.classList.toggle("primary", i === state.selected); b.setAttribute("aria-current", String(i === state.selected)); });
@@ -313,7 +320,10 @@
       const order = state.queue.find((o) => o.id === ss.orderId), pct = ss.ready ? 1 : Math.min(1, ss.progress / station.prep);
       ctx.fillStyle = "#e6edf3"; ctx.font = "800 13px system-ui"; ctx.fillText(order ? order.item : "Order", station.x, y+62);
       ctx.fillStyle = "rgba(2,6,23,.8)"; ctx.fillRect(x+24,y+82,w-48,12); ctx.fillStyle = ss.ready ? "#fbbf24" : station.color; ctx.fillRect(x+24,y+82,(w-48)*pct,12);
-      ctx.fillStyle = ss.ready ? "#fbbf24" : "#aab8d2"; ctx.font = "900 12px system-ui"; ctx.fillText(ss.ready ? "READY" : "PREP", station.x, y+112);
+      const pay = ss.ready ? servePayout(order) : null;
+      ctx.fillStyle = ss.ready ? "#fbbf24" : "#aab8d2"; ctx.font = "900 12px system-ui";
+      ctx.fillText(ss.ready ? "SERVE NOW +" + pay.total : "PREP", station.x, y+112);
+      if (pay) { ctx.fillStyle = "#9fb3c8"; ctx.font = "800 10px system-ui"; ctx.fillText(pay.base + " + " + pay.patienceBonus + " fresh + " + pay.comboBonus + " combo", station.x, y+126); }
     } else {
       ctx.fillStyle = "#94a3b8"; ctx.font = "800 13px system-ui"; ctx.fillText("Idle", station.x, y+76);
     }
@@ -330,6 +340,14 @@
     state.queue.slice(0, 8).forEach(drawOrder);
     stations.forEach(drawStation);
     if (!reducedMotion) for (const p of state.particles) { ctx.globalAlpha = Math.max(0, p.life / 850); ctx.fillStyle = "#fbbf24"; ctx.font = "900 22px system-ui"; ctx.textAlign = "center"; ctx.fillText(p.text, p.x, p.y); ctx.globalAlpha = 1; }
+    if (state.mode === "ready") {
+      ctx.fillStyle = "rgba(3,7,18,.72)"; ctx.fillRect(0,0,W,H); ctx.textAlign = "center";
+      ctx.fillStyle = "#5eead4"; ctx.font = "900 34px system-ui"; ctx.fillText("SHIFT READY", W/2, H/2-16);
+      ctx.fillStyle = "#e6edf3"; ctx.font = "800 16px system-ui";
+      ctx.fillText("Press 1, 2, 3, Space or tap a station to open the doors.", W/2, H/2+18);
+      ctx.fillStyle = "#9fb3c8"; ctx.font = "800 13px system-ui";
+      ctx.fillText("Customers only start waiting once you do.", W/2, H/2+44);
+    }
     if (state.gameOver || state.runComplete) {
       ctx.fillStyle = "rgba(3,7,18,.74)"; ctx.fillRect(0,0,W,H); ctx.textAlign = "center"; ctx.fillStyle = state.runComplete ? "#5eead4" : "#fb7185"; ctx.font = "900 38px system-ui"; ctx.fillText(state.runComplete ? "DAY COMPLETE" : "SHIFT MISSED", W/2, H/2-18);
       ctx.fillStyle = "#e6edf3"; ctx.font = "800 16px system-ui"; ctx.fillText("Score "+state.score+" · Served "+state.served+" · Best "+state.best, W/2, H/2+20);
@@ -344,7 +362,7 @@
       patience: state.queue.map((o) => Math.max(0, Math.round(o.patience))), combo: state.combo, misses: state.misses, sound: state.sound,
       fullscreen: Boolean(document.fullscreenElement), feedbackActive: state.feedbackMs > 0 || state.particles.length > 0,
       gameOver: state.gameOver, "game-over": state.gameOver, runComplete: state.runComplete, "run-complete": state.runComplete,
-      served: state.served, completed: state.completed, feedback: state.feedback, lastSound: state.lastSound,
+      served: state.served, servePayout: (() => { const st = state.stationState[state.selected]; if (!st.ready || !st.orderId) return null; const o = state.queue.find((q) => q.id === st.orderId); const pay = servePayout(o); return pay && { orderId: st.orderId, ...pay }; })(), completed: state.completed, feedback: state.feedback, lastSound: state.lastSound,
       reducedMotion
     });
   }
@@ -352,10 +370,11 @@
     markGesture();
     const r = canvas.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
     const hit = stations.findIndex((s) => Math.abs(x - s.x) < 115 && Math.abs(y - s.y) < 85);
+    beginShift();
     if (hit >= 0) { selectStation(hit); act(); }
   });
-  els.stationButtons.forEach((b) => b.addEventListener("click", () => { markGesture(); selectStation(Number(b.dataset.station)); }));
-  els.action.addEventListener("click", () => { markGesture(); act(); render(); });
+  els.stationButtons.forEach((b) => b.addEventListener("click", () => { markGesture(); beginShift(); selectStation(Number(b.dataset.station)); }));
+  els.action.addEventListener("click", () => { markGesture(); beginShift(); act(); render(); });
   els.restart.addEventListener("click", () => { markGesture(); restart(); });
   els.sound.addEventListener("click", () => { markGesture(); toggleSound(); });
   els.full.addEventListener("click", () => { markGesture(); toggleFullscreen(); });
@@ -364,6 +383,7 @@
     const k = e.key, moves = { ArrowLeft:-1, ArrowUp:-1, a:-1, A:-1, w:-1, W:-1, ArrowRight:1, ArrowDown:1, d:1, D:1, s:1, S:1 };
     if (["1","2","3"," ","Enter","r","R","f","F","m","M"].includes(k) || moves[k]) e.preventDefault();
     markGesture();
+    if (["1","2","3"," ","Enter"].includes(k) || moves[k]) beginShift();
     if (k === "1" || k === "2" || k === "3") selectStation(Number(k)-1);
     else if (moves[k]) selectStation(state.selected + moves[k]);
     else if (k === " " || k === "Enter") { act(); render(); }
@@ -372,9 +392,17 @@
     else if (k === "m" || k === "M") toggleSound();
   });
   window.render_game_to_text = snapshot;
-  window.advanceTime = (ms = 0) => { step(Number(ms) || 0); return snapshot(); };
-  function frame(now) { step(Math.min(50, now - lastTs)); lastTs = now; requestAnimationFrame(frame); }
-  render(); requestAnimationFrame(frame);
+  window.advanceTime = (ms = 0) => { beginShift(); step(Number(ms) || 0); return snapshot(); };
+  // The board is still while the shift is closed or over, so the loop sleeps
+  // there instead of stepping and repainting for ever. Real elapsed time was
+  // already handled correctly by step()'s accumulator.
+  let raf = 0;
+  function loopActive() { return state.mode === "playing" || state.feedbackMs > 0 || state.particles.length > 0; }
+  function ensureLoop() { if (raf || !loopActive() || document.hidden) return; lastTs = 0; raf = requestAnimationFrame(frame); }
+  function frame(now) { raf = 0; step(Math.min(50, lastTs ? now - lastTs : TICK_MS)); lastTs = now;
+    if (loopActive() && !document.hidden) raf = requestAnimationFrame(frame); else lastTs = 0; }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ensureLoop(); });
+  render(); ensureLoop();
 })();
 </script>
 </body>
