@@ -67,7 +67,7 @@
 .app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.title{display:block;margin-top:4px;font-size:clamp(23px,4vw,35px);font-weight:950;letter-spacing:.035em;text-transform:uppercase}
 .pill,.btn{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 15px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06)}.pill{min-width:75px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--cyan);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
 .stage{overflow:hidden;border:1px solid rgba(111,227,240,.32);border-radius:8px;background:#07151d;box-shadow:0 26px 62px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/10;max-height:67vh;background:#07151d;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.9);outline-offset:-4px}
-.status{min-height:20px;text-align:center;color:var(--lime);font-size:12px;font-weight:900;text-transform:uppercase}.btn{min-height:37px;padding:8px 11px;color:var(--ink);font:inherit;font-size:12px;font-weight:950;text-transform:uppercase;cursor:pointer}.btn:hover,.btn:focus-visible{border-color:rgba(255,209,102,.72)}.btn:focus-visible{outline:3px solid rgba(255,209,102,.75);outline-offset:2px}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8af4fa,#34cde1);color:#05242b}.btn.good{border-color:rgba(127,240,166,.54);color:var(--lime)}.btn.warn{border-color:rgba(255,125,150,.42);color:var(--gold)}.btn:disabled{opacity:.46;cursor:not-allowed}.help{color:var(--muted);font-size:12px;line-height:1.4;text-align:center}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;padding:0 5px;border:1px solid rgba(111,227,240,.28);border-radius:6px;background:#07151d;color:var(--ink);font-weight:950}
+.status{min-height:20px;text-align:center;color:var(--lime);font-size:12px;font-weight:900;text-transform:uppercase}.plan{min-height:20px;text-align:center;color:#a5c0ca;font-size:12px;font-weight:850}.plan.tight{color:#ffd166}.plan.warn{color:#fb7185}.btn{min-height:37px;padding:8px 11px;color:var(--ink);font:inherit;font-size:12px;font-weight:950;text-transform:uppercase;cursor:pointer}.btn:hover,.btn:focus-visible{border-color:rgba(255,209,102,.72)}.btn:focus-visible{outline:3px solid rgba(255,209,102,.75);outline-offset:2px}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8af4fa,#34cde1);color:#05242b}.btn.good{border-color:rgba(127,240,166,.54);color:var(--lime)}.btn.warn{border-color:rgba(255,125,150,.42);color:var(--gold)}.btn:disabled{opacity:.46;cursor:not-allowed}.help{color:var(--muted);font-size:12px;line-height:1.4;text-align:center}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;padding:0 5px;border:1px solid rgba(111,227,240,.28);border-radius:6px;background:#07151d;color:var(--ink);font-weight:950}
 @media(max-width:720px){body{padding:8px 6px 12px;place-items:start center}.app{gap:7px}.title{font-size:21px}.eyebrow{font-size:9px}.pill{flex:1 1 29%;min-width:60px;padding:6px}.value{font-size:14px}.btn{flex:1 1 100px;padding:7px 8px;font-size:11px}canvas{max-height:58vh}.help{font-size:11px}.stage{border-radius:7px}}
 </style>
 <script src="workshop-runtime.js"></script>
@@ -90,6 +90,7 @@
     </div>
   </main>
   <div class="status" id="statusLine" aria-live="polite">Trace the target words. Linked starts earn chain bonuses.</div>
+  <div class="plan" id="planText">Thread left 18, still needed 14, spare 4.</div>
   <div class="actions" aria-label="Wordweave controls">
     <button class="btn primary" id="submitBtn" type="button">Submit</button>
     <button class="btn good" id="clearBtn" type="button">Undo</button>
@@ -116,18 +117,51 @@
     { name: "Thread Gate", budget: 18, rows: ["GRIDL","VAPEO","NIXWO","DQKUM","AERHT"], words: ["GRID","LOOM","THREAD"] },
     { name: "Knot Spark", budget: 17, rows: ["KOLTK","NIGER","OWYTA","TULMP","PATHS"], words: ["KNOT","PATH","SPARK"] }
   ];
+  // Every target must actually be traceable on its own board through touching
+  // cells without reusing one. Checked once at load and published, so a future
+  // edit to a board or a word list cannot quietly ship an impossible target.
+  function tracePathFor(rows, word) {
+    const walk = (r, c, i, used) => {
+      if (rows[r][c] !== word[i]) return null;
+      const key = r * N + c;
+      if (used.has(key)) return null;
+      used.add(key);
+      if (i === word.length - 1) { const path = [...used]; used.delete(key); return path; }
+      for (let dr = -1; dr <= 1; dr += 1) for (let dc = -1; dc <= 1; dc += 1) {
+        if (!dr && !dc) continue;
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= N || nc >= N) continue;
+        const got = walk(nr, nc, i + 1, used);
+        if (got) return got;
+      }
+      used.delete(key);
+      return null;
+    };
+    for (let r = 0; r < N; r += 1) for (let c = 0; c < N; c += 1) { const path = walk(r, c, 0, new Set()); if (path) return path; }
+    return null;
+  }
+  const BOARD_AUDIT = STAGES.map((s) => {
+    const words = s.words.map((word) => ({ word, traceable: !!tracePathFor(s.rows, word), length: word.length }));
+    const threadNeeded = words.reduce((total, w) => total + w.length, 0);
+    return { board: s.name, words, threadNeeded, budget: s.budget, spare: s.budget - threadNeeded, allTraceable: words.every((w) => w.traceable) };
+  });
   const $ = (id) => document.getElementById(id);
   const els = {
-    board: $("boardValue"), thread: $("threadValue"), score: $("scoreValue"), streak: $("streakValue"), best: $("bestValue"),
+    board: $("boardValue"), thread: $("threadValue"), score: $("scoreValue"), streak: $("streakValue"), best: $("bestValue"), plan: $("planText"),
     status: $("statusLine"), submit: $("submitBtn"), clear: $("clearBtn"), next: $("nextBtn"), restart: $("restartBtn"),
     sound: $("soundBtn"), full: $("fullBtn")
   };
   function storage() { if (window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch (_) { return null; } }
   function read(key, fallback) { const s = storage(); if (!s) return fallback; try { const value = s.getItem(key); return value == null ? fallback : value; } catch (_) { return fallback; } }
   function write(key, value) { const s = storage(); if (!s) return; try { s.setItem(key, String(value)); } catch (_) {} }
+  // A stored "Infinity" or "1e999" sailed straight through Number(x) || 0: it
+  // printed "Infinity" on the scoreboard, and JSON.stringify writes Infinity as
+  // null, so the diagnostics contract broke outright. 1e24 printed as "1e+24".
+  const MAX_BEST = 9999999;
+  function loadBest() { const v = Number(read(BEST_KEY, "0")); if (!Number.isFinite(v) || v <= 0) return 0; return Math.min(Math.floor(v), MAX_BEST); }
   const soundRaw = String(read(SOUND_KEY, "1")).toLowerCase();
   const state = {
-    mode: "playing", stageIndex: 0, budget: 0, score: 0, streak: 0, chain: 0, best: Number(read(BEST_KEY, "0")) || 0,
+    mode: "playing", stageIndex: 0, budget: 0, score: 0, streak: 0, chain: 0, best: loadBest(),
     found: [], path: [], cursor: { r: 2, c: 2 }, lastEnd: null, solvedBoards: 0, pointerId: null,
     feedback: "Trace the target words. Linked starts earn chain bonuses.", feedbackMs: 2400, clock: 0,
     soundEnabled: !["0","false","off","muted"].includes(soundRaw), lastSound: "none", toneCount: 0, userGesture: false,
@@ -174,6 +208,9 @@
   function wordsFound() { return state.found.length; }
   function currentTargets() { return stage().words.map((word) => ({ word, found: state.found.includes(word) })); }
   function syncHud() {
+    const plan = planLine();
+    els.plan.textContent = plan.text;
+    els.plan.className = "plan" + (plan.tone ? " " + plan.tone : "");
     els.board.textContent = (state.stageIndex + 1) + "/" + STAGES.length;
     els.thread.textContent = String(state.budget);
     els.score.textContent = String(state.score);
@@ -222,24 +259,43 @@
     tone("complete");
   }
   function failRun() {
+    // The message the player actually sees is this one, so it carries the
+    // numbers rather than just announcing the end.
+    const view = threadOutlook();
     state.mode = "out-of-thread";
     state.path = [];
     state.streak = 0;
     state.chain = 0;
-    feedback("Out of thread. Restart for a fresh run.", 4200);
+    feedback(view.count
+      ? "Out of thread: " + view.count + " word" + (view.count === 1 ? "" : "s") + " left need " + view.needed + " thread and only " + view.left + " remains. Restart for a fresh run."
+      : "Out of thread. Restart for a fresh run.", 4200);
     tone("reject");
   }
   function canTrace() { return state.mode === "playing" && state.budget > 0; }
-  // Shortest still-unfound target word; 0 when all are found.
-  function minUnfoundWordLength() {
-    const lengths = stage().words.filter((word) => !state.found.includes(word)).map((word) => word.length);
-    return lengths.length ? Math.min(...lengths) : 0;
+  // Thread is spent and never refilled inside a board, so "left minus the total
+  // still owed" is a provable figure, not a guess: once it goes negative the
+  // board cannot be finished no matter what you trace next. Every board opens
+  // with exactly 4 spare, which is why a single wrong five-letter guess hurts.
+  function threadOutlook() {
+    const unfound = stage().words.filter((word) => !state.found.includes(word));
+    const needed = unfound.reduce((total, word) => total + word.length, 0);
+    return { unfound, count: unfound.length, needed, left: state.budget, spare: state.budget - needed, shortest: unfound.length ? Math.min(...unfound.map((w) => w.length)) : 0 };
   }
-  // Dead end: words remain but the thread budget can no longer trace even the
-  // shortest one, so the run is unwinnable. Without this the run sits at
-  // budget > 0 forever (silent limbo) because failRun only fired at budget <= 0.
+  // Dead end: the thread left can no longer cover every word still owed. This
+  // used to compare against only the SHORTEST unfound word, so a board needing
+  // 4 + 6 with 9 thread left read as fine -- provably lost, but the run carried
+  // on in limbo until a later trace happened to expose it.
   function isDeadEnd() {
-    return wordsFound() < stage().words.length && state.budget < minUnfoundWordLength();
+    return wordsFound() < stage().words.length && threadOutlook().spare < 0;
+  }
+  function planLine() {
+    const view = threadOutlook();
+    if (state.mode === "out-of-thread") return { tone: "warn", text: view.count
+      ? "Out of thread: " + view.count + " word" + (view.count === 1 ? "" : "s") + " left need " + view.needed + " thread and only " + view.left + " remains."
+      : "Out of thread. Restart for a fresh run." };
+    if (!view.count) return { tone: "", text: "Every target on this board is woven." };
+    if (view.spare < 0) return { tone: "warn", text: "This board can no longer be finished: " + view.count + " word" + (view.count === 1 ? "" : "s") + " left need " + view.needed + " thread and only " + view.left + " remains." };
+    return { tone: view.spare <= 2 ? "tight" : "", text: "Thread left " + view.left + ", still needed " + view.needed + " for " + view.count + " word" + (view.count === 1 ? "" : "s") + ", spare " + view.spare + "." };
   }
   function beginTrace(cell) {
     if (!canTrace()) return;
@@ -416,6 +472,10 @@
       trace: { word: activeWord(), cells: state.path.map((cell) => ({ r: cell.r, c: cell.c })), length: state.path.length },
       cursor: { r: state.cursor.r, c: state.cursor.c, letter: letterAt(state.cursor.r, state.cursor.c) },
       budget: { remaining: state.budget, start: stage().budget },
+      thread: threadOutlook(),
+      plan: planLine().text,
+      deadEnd: isDeadEnd(),
+      boardAudit: BOARD_AUDIT,
       score: state.score,
       streak: state.streak,
       chain: state.chain,
