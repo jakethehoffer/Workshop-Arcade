@@ -134,7 +134,8 @@
   function store(){ if(window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch(_) { return null; } }
   function read(k, d){ const s = store(); if(!s) return d; try { const v = s.getItem(k); return v == null ? d : v; } catch(_) { return d; } }
   function write(k, v){ const s = store(); if(!s) return; try { s.setItem(k, String(v)); } catch(_) {} }
-  const state = { mode:"menu", stage:0, crews:[], cores:[], pending:{}, selected:"A", tick:0, air:0, score:0, best:Number(read(BEST_KEY, "0")) || 0, sound:!["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase()), lastEvent:"ready", feedback:"Press Start.", feedbackMs:1200, userGesture:false, toneCount:0, lastSound:"none" };
+  function finiteOr0(v){ const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; }
+  const state = { mode:"menu", stage:0, crews:[], cores:[], pending:{}, selected:"A", tick:0, air:0, score:0, best:finiteOr0(read(BEST_KEY, "0")), sound:!["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase()), lastEvent:"ready", feedback:"Press Start.", feedbackMs:1200, userGesture:false, toneCount:0, lastSound:"none" };
   let audio = null;
   function st(){ return stages[state.stage]; }
   function keyOf(p){ return p.x + "," + p.y; }
@@ -148,24 +149,88 @@
   function selectCrew(id){ if(state.mode === "menu"){ start(); return; } if(state.crews.some((c) => c.id === id)){ state.selected = id; setFeedback("Crew " + id + " selected.", 700, "select"); buildChoices(); updateUI(); draw(); } }
   function assign(cmd){ if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; state.pending[state.selected] = cmd; setFeedback("Crew " + state.selected + " queued " + cmd + ".", 900, "assign"); tone("assign"); buildChoices(); updateUI(); draw(); }
   function openLock(p, tick){ const lock = st().locks.find((l) => l.x === p.x && l.y === p.y); if(!lock) return true; return tick % 2 === lock.phase; }
-  function runTick(){ state.userGesture = true; if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; const walls = wallSet(); const next = new Map(); for(const c of state.crews){ const cmd = state.pending[c.id] || "Wait"; const d = dirs[cmd] || dirs.Wait; const target = { x:c.x + d.x, y:c.y + d.y }; if(target.x < 0 || target.y < 0 || target.x >= W || target.y >= H || walls.has(keyOf(target))){ return fail("Crew " + c.id + " hit a sealed bulkhead.", "wall"); } if(!openLock(target, state.tick)){ return fail("Crew " + c.id + " hit a closed airlock.", "closed-lock"); } next.set(c.id, target); }
-    const keys = new Map(); for(const [id,p] of next){ const k = keyOf(p); if(keys.has(k)) return fail("Mutex conflict: crews " + keys.get(k) + " and " + id + " targeted one cell.", "conflict"); keys.set(k, id); }
-    for(const a of state.crews){ for(const b of state.crews){ if(a.id >= b.id) continue; const na = next.get(a.id), nb = next.get(b.id); if(na.x === b.x && na.y === b.y && nb.x === a.x && nb.y === a.y) return fail("Swap conflict across an airlock threshold.", "swap"); } }
-    for(const c of state.crews){ const p = next.get(c.id); c.x = p.x; c.y = p.y; }
+  // Running a tick can end the run four different ways - a bulkhead, a closed
+  // airlock, two crews claiming one cell, or two crews swapping - and the queue
+  // was only checked at the moment of commit. This is that same check, run
+  // before you commit so the board can warn you.
+  function previewTick(){
+    if(state.mode !== "playing") return null;
+    const walls = wallSet(), next = new Map(), moves = [];
+    for(const c of state.crews){
+      const cmd = state.pending[c.id] || "Wait";
+      const d = dirs[cmd] || dirs.Wait;
+      const target = { x:c.x + d.x, y:c.y + d.y };
+      const offGrid = target.x < 0 || target.y < 0 || target.x >= W || target.y >= H;
+      const wall = !offGrid && walls.has(keyOf(target));
+      const shutLock = !offGrid && !wall && !openLock(target, state.tick);
+      moves.push({ id:c.id, command:cmd, from:{x:c.x,y:c.y}, to:target, legal:!(offGrid||wall||shutLock) });
+      if(offGrid || wall) return { ok:false, reason:"wall", crew:c.id, moves, text:"Crew " + c.id + " would hit a sealed bulkhead" };
+      if(shutLock) return { ok:false, reason:"closed-lock", crew:c.id, moves, text:"Crew " + c.id + " would walk into a closed airlock" };
+      next.set(c.id, target);
+    }
+    const seen = new Map();
+    for(const [id,pt] of next){ const k = keyOf(pt);
+      if(seen.has(k)) return { ok:false, reason:"conflict", crew:id, other:seen.get(k), moves, text:"Crews " + seen.get(k) + " and " + id + " would claim the same cell" };
+      seen.set(k, id); }
+    for(const a of state.crews) for(const b of state.crews){ if(a.id >= b.id) continue;
+      const na = next.get(a.id), nb = next.get(b.id);
+      if(na.x === b.x && na.y === b.y && nb.x === a.x && nb.y === a.y)
+        return { ok:false, reason:"swap", crew:a.id, other:b.id, moves, text:"Crews " + a.id + " and " + b.id + " would swap through a hatch" };
+    }
+    const picked = state.cores.filter((co) => !co.collected && [...next.values()].some((pt) => pt.x === co.x && pt.y === co.y)).length;
+    return { ok:true, reason:"ok", moves, cores:picked, airAfter:state.air - 1, gain:8 + picked * 35,
+      text:"Safe tick: +" + (8 + picked * 35) + " score, " + (state.air - 1) + " air left" };
+  }
+  function runTick(){ state.userGesture = true; if(state.mode === "menu"){ start(); return; } if(state.mode !== "playing") return; const plan = previewTick();
+    if(!plan.ok){
+      if(plan.reason === "wall") return fail("Crew " + plan.crew + " hit a sealed bulkhead.", "wall");
+      if(plan.reason === "closed-lock") return fail("Crew " + plan.crew + " hit a closed airlock.", "closed-lock");
+      if(plan.reason === "conflict") return fail("Mutex conflict: crews " + plan.other + " and " + plan.crew + " targeted one cell.", "conflict");
+      return fail("Swap conflict across an airlock threshold.", "swap");
+    }
+    for(const m of plan.moves){ const c = state.crews.find((x) => x.id === m.id); c.x = m.to.x; c.y = m.to.y; }
     state.tick += 1; state.air -= 1; state.score += 8; for(const core of state.cores){ if(!core.collected && state.crews.some((c) => c.x === core.x && c.y === core.y)){ core.collected = true; state.score += 35; } } for(const c of state.crews) state.pending[c.id] = "Wait"; if(cleared()){ state.score += 80 + state.air * 6; if(state.stage === stages.length - 1){ state.mode = "won"; if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } setFeedback("Moonbase Mutex complete. Score " + state.score + ".", 2400, "win"); tone("win"); } else { state.stage += 1; setupStage(); setFeedback("Shift clear. Next airlock schedule.", 1500, "stage-clear"); tone("win"); } } else if(state.air <= 0){ return fail("Air budget expired before habitat sync.", "air"); } else { setFeedback("Tick " + state.tick + " resolved.", 850, "tick"); tone("tick"); } buildChoices(); updateUI(); draw(); }
   function fail(text, event){ state.mode = "failed"; if(state.score > state.best){ state.best = state.score; write(BEST_KEY, state.best); } setFeedback(text, 2300, event || "failed"); tone("fail"); updateUI(); draw(); }
   function cleared(){ return state.cores.every((c) => c.collected) && state.crews.every((c) => c.x === c.exit.x && c.y === c.exit.y); }
   function recommendation(){ const plan = st().plan[state.tick] || {}; const ids = state.crews.map((c) => c.id); for(const id of ids){ const want = plan[id] || "Wait"; if((state.pending[id] || "Wait") !== want) return { type:"assign", crew:id, command:want, tick:state.tick }; } return { type:"commit", tick:state.tick, commands:plan }; }
   function buildChoices(){ const rows = []; for(const c of state.crews){ rows.push('<button type="button" data-crew="' + c.id + '" aria-pressed="' + (state.selected === c.id) + '">Crew ' + c.id + '</button>'); } for(const cmd of ["N","S","E","W","Wait"]){ rows.push('<button type="button" data-command="' + cmd + '" aria-pressed="' + ((state.pending[state.selected] || "Wait") === cmd) + '">' + cmd + '</button>'); } rows.push('<button type="button" data-commit="1">Run Tick</button>'); els.choices.innerHTML = rows.join(""); els.choices.querySelectorAll("[data-crew]").forEach((b) => b.addEventListener("click", () => selectCrew(b.dataset.crew))); els.choices.querySelectorAll("[data-command]").forEach((b) => b.addEventListener("click", () => assign(b.dataset.command))); els.choices.querySelector("[data-commit]")?.addEventListener("click", runTick); }
-  function updateUI(){ const rec = state.mode === "playing" ? recommendation() : {type:"start"}; els.stage.textContent = (state.stage + 1) + "/" + stages.length; els.resource.textContent = state.air; els.goal.textContent = state.cores.filter((c) => c.collected).length + "/" + state.cores.length; els.moves.textContent = state.tick; els.score.textContent = state.score; els.best.textContent = Math.max(state.best, state.score); els.stageName.textContent = st().name; els.mission.textContent = "Queue simultaneous crew moves. Two crews cannot claim the same cell, swap through a hatch, or enter a closed airlock."; els.need.textContent = "Cores and exits"; els.risk.textContent = st().locks.map((l) => l.phase === state.tick % 2 ? "open " + l.x + "," + l.y : "closed " + l.x + "," + l.y).join(" "); els.next.textContent = rec.type === "assign" ? "Crew " + rec.crew + " " + rec.command : rec.type === "commit" ? "Run tick" : "Start"; els.key.textContent = "1-3, Arrows, Space"; els.sound.textContent = state.sound ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.sound)); }
+  function updateUI(){ const rec = state.mode === "playing" ? recommendation() : {type:"start"}; els.stage.textContent = (state.stage + 1) + "/" + stages.length; els.resource.textContent = state.air; els.goal.textContent = state.cores.filter((c) => c.collected).length + "/" + state.cores.length; els.moves.textContent = state.tick; els.score.textContent = state.score; els.best.textContent = Math.max(state.best, state.score); els.stageName.textContent = st().name; els.mission.textContent = "Queue simultaneous crew moves. Two crews cannot claim the same cell, swap through a hatch, or enter a closed airlock."; const plan = state.mode === "playing" ? previewTick() : null; els.need.textContent = plan ? (plan.ok ? "Safe: +" + plan.gain : "STOP: " + plan.reason) : "Cores and exits"; els.risk.textContent = st().locks.map((l) => l.phase === state.tick % 2 ? "open " + l.x + "," + l.y : "closed " + l.x + "," + l.y).join(" "); els.next.textContent = rec.type === "assign" ? "Crew " + rec.crew + " " + rec.command : rec.type === "commit" ? "Run tick" : "Start"; els.key.textContent = "1-3, Arrows, Space"; els.sound.textContent = state.sound ? "Sound On" : "Sound Off"; els.sound.setAttribute("aria-pressed", String(state.sound)); }
   function point(x,y){ return { x:OX + x * CW + CW / 2, y:OY + y * CW + CW / 2 }; }
+  // Ghost each queued destination and name the exact problem before committing,
+  // because committing an illegal queue ends the run with no second chance.
+  function drawTickPreview(){
+    const plan = previewTick();
+    if(!plan) return;
+    for(const m of plan.moves){
+      if(m.from.x === m.to.x && m.from.y === m.to.y) continue;
+      const inside = m.to.x >= 0 && m.to.y >= 0 && m.to.x < W && m.to.y < H;
+      if(!inside) continue;
+      const q = point(m.to.x, m.to.y);
+      ctx.strokeStyle = m.legal ? "rgba(141,240,169,.85)" : "#fb7185";
+      ctx.lineWidth = 3; ctx.setLineDash(m.legal ? [6,5] : []);
+      ctx.strokeRect(q.x-26, q.y-26, 52, 52); ctx.setLineDash([]);
+      ctx.fillStyle = m.legal ? "rgba(141,240,169,.75)" : "#fb7185";
+      ctx.font = "900 13px system-ui"; ctx.textAlign = "center";
+      ctx.fillText(m.id, q.x, q.y + 5); ctx.textAlign = "left";
+    }
+    const w = 620, x = (960 - w) / 2, y = 528, h = 40;
+    ctx.fillStyle = plan.ok ? "rgba(141,240,169,.14)" : "rgba(251,113,133,.16)";
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = plan.ok ? "#8df0a9" : "#fb7185"; ctx.lineWidth = 2;
+    ctx.strokeRect(x+1, y+1, w-2, h-2);
+    ctx.fillStyle = plan.ok ? "#bbf7d0" : "#fecdd3"; ctx.textAlign = "center";
+    let size = 16; ctx.font = "900 " + size + "px system-ui";
+    const label = plan.ok ? plan.text : "RUN TICK ENDS THE SHIFT - " + plan.text;
+    while(size > 9 && ctx.measureText(label).width > w - 20){ size -= 1; ctx.font = "900 " + size + "px system-ui"; }
+    ctx.fillText(label, x + w/2, y + 25); ctx.textAlign = "left";
+  }
   function draw(){ ctx.clearRect(0,0,960,600); ctx.fillStyle = "#06111b"; ctx.fillRect(0,0,960,600); const walls = wallSet(); for(let x=0;x<W;x++) for(let y=0;y<H;y++){ const p = point(x,y); ctx.fillStyle = walls.has(x + "," + y) ? "#172333" : "#0b1b26"; ctx.fillRect(p.x-CW/2+6,p.y-CW/2+6,CW-12,CW-12); ctx.strokeStyle = "rgba(125,211,252,.16)"; ctx.strokeRect(p.x-CW/2+6,p.y-CW/2+6,CW-12,CW-12); }
     for(const lock of st().locks){ const p = point(lock.x,lock.y), open = state.tick % 2 === lock.phase; ctx.fillStyle = open ? "rgba(141,240,169,.24)" : "rgba(251,113,133,.22)"; ctx.fillRect(p.x-33,p.y-33,66,66); ctx.strokeStyle = open ? "#8df0a9" : "#fb7185"; ctx.lineWidth = 4; ctx.strokeRect(p.x-33,p.y-33,66,66); }
     for(const c of state.cores){ const p = point(c.x,c.y); ctx.fillStyle = c.collected ? "#334155" : "#ddd6fe"; ctx.beginPath(); ctx.arc(p.x,p.y,14,0,Math.PI*2); ctx.fill(); }
     for(const crew of state.crews){ const p = point(crew.x,crew.y), ex = point(crew.exit.x, crew.exit.y); ctx.strokeStyle = crew.color; ctx.lineWidth = 3; ctx.strokeRect(ex.x-28,ex.y-28,56,56); ctx.fillStyle = crew.color; ctx.beginPath(); ctx.arc(p.x,p.y,22,0,Math.PI*2); ctx.fill(); ctx.fillStyle = "#03161b"; ctx.font = "950 17px system-ui"; ctx.textAlign = "center"; ctx.fillText(crew.id,p.x,p.y+6); const cmd = state.pending[crew.id] || "Wait"; ctx.fillStyle = "#dbeafe"; ctx.font = "800 11px system-ui"; ctx.fillText(cmd,p.x,p.y+39); if(crew.id === state.selected){ ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x,p.y,30,0,Math.PI*2); ctx.stroke(); } }
-    ctx.fillStyle = "#e5f7ff"; ctx.font = "900 18px system-ui"; ctx.textAlign = "left"; ctx.fillText(st().name, 24, 34); ctx.font = "800 13px system-ui"; ctx.fillStyle = "#9ab5c2"; ctx.fillText("Tick " + state.tick + " - air " + state.air + " - open parity " + (state.tick % 2), 24, 58); if(state.mode !== "playing"){ ctx.fillStyle = "rgba(2,6,12,.72)"; ctx.fillRect(0,0,960,600); ctx.fillStyle = state.mode === "won" ? "#8df0a9" : state.mode === "failed" ? "#fb7185" : "#7dd3fc"; ctx.font = "950 44px system-ui"; ctx.textAlign = "center"; ctx.fillText(state.mode === "won" ? "Habitat Synced" : state.mode === "failed" ? "Mutex Fault" : "Moonbase Mutex", 480, 288); ctx.font = "800 17px system-ui"; ctx.fillStyle = "#dbeafe"; ctx.fillText(state.feedback, 480, 324); } }
+    ctx.fillStyle = "#e5f7ff"; ctx.font = "900 18px system-ui"; ctx.textAlign = "left"; ctx.fillText(st().name, 24, 34); ctx.font = "800 13px system-ui"; ctx.fillStyle = "#9ab5c2"; ctx.fillText("Tick " + state.tick + " - air " + state.air + " - open parity " + (state.tick % 2), 24, 58); drawTickPreview(); if(state.mode !== "playing"){ ctx.fillStyle = "rgba(2,6,12,.72)"; ctx.fillRect(0,0,960,600); ctx.fillStyle = state.mode === "won" ? "#8df0a9" : state.mode === "failed" ? "#fb7185" : "#7dd3fc"; ctx.font = "950 44px system-ui"; ctx.textAlign = "center"; ctx.fillText(state.mode === "won" ? "Habitat Synced" : state.mode === "failed" ? "Mutex Fault" : "Moonbase Mutex", 480, 288); ctx.font = "800 17px system-ui"; ctx.fillStyle = "#dbeafe"; ctx.fillText(state.feedback, 480, 324); } }
   function key(ev){ if(/^Digit[123]$/.test(ev.code)){ ev.preventDefault(); const idx = Number(ev.code.slice(5)) - 1; if(state.crews[idx]) selectCrew(state.crews[idx].id); return; } if(ev.key === "ArrowUp" || ev.key.toLowerCase() === "w"){ ev.preventDefault(); assign("N"); } else if(ev.key === "ArrowDown" || ev.key.toLowerCase() === "s"){ ev.preventDefault(); assign("S"); } else if(ev.key === "ArrowLeft" || ev.key.toLowerCase() === "a"){ ev.preventDefault(); assign("W"); } else if(ev.key === "ArrowRight" || ev.key.toLowerCase() === "d"){ ev.preventDefault(); assign("E"); } else if(ev.key === " " || ev.key === "Enter"){ ev.preventDefault(); runTick(); } }
-  function text(){ return JSON.stringify({ game:"moonbase-mutex", mode:state.mode, stage:state.stage + 1, stageName:st().name, score:state.score, best:state.best, air:state.air, tick:state.tick, selectedCrew:state.selected, crews:state.crews.map((c) => ({id:c.id,x:c.x,y:c.y,exit:c.exit,pending:state.pending[c.id]||"Wait"})), cores:state.cores, locks:st().locks.map((l) => ({x:l.x,y:l.y,open:state.tick%2===l.phase})), recommendation:state.mode === "playing" ? recommendation() : {type:"start"}, lastEvent:state.lastEvent, feedback:state.feedback, soundEnabled:state.sound, toneCount:state.toneCount, lastSound:state.lastSound }); }
+  function text(){ return JSON.stringify({ game:"moonbase-mutex", mode:state.mode, stage:state.stage + 1, stageName:st().name, score:state.score, best:state.best, air:state.air, tick:state.tick, selectedCrew:state.selected, crews:state.crews.map((c) => ({id:c.id,x:c.x,y:c.y,exit:c.exit,pending:state.pending[c.id]||"Wait"})), cores:state.cores, locks:st().locks.map((l) => ({x:l.x,y:l.y,open:state.tick%2===l.phase})), recommendation:state.mode === "playing" ? recommendation() : {type:"start"}, tickPreview:previewTick(), lastEvent:state.lastEvent, feedback:state.feedback, soundEnabled:state.sound, toneCount:state.toneCount, lastSound:state.lastSound }); }
   function toggleHelp(){ if(els.dialog.open) els.dialog.close(); else els.dialog.showModal(); }
   function toggleFull(){ const node = document.getElementById("app"); if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if(node.requestFullscreen) node.requestFullscreen().catch(() => {}); }
   els.start.addEventListener("click", start); els.primary.addEventListener("click", runTick); els.secondary.addEventListener("click", () => assign("Wait")); els.restart.addEventListener("click", start); els.sound.addEventListener("click", () => { state.userGesture = true; state.sound = !state.sound; write(SOUND_KEY, state.sound ? "1" : "0"); tone("toggle"); updateUI(); }); els.full.addEventListener("click", toggleFull); els.help.addEventListener("click", toggleHelp); els.closeHelp.addEventListener("click", () => els.dialog.close()); canvas.addEventListener("pointerdown", (ev) => { const b = canvas.getBoundingClientRect(); const x = Math.floor(((ev.clientX - b.left) / b.width * canvas.width - OX) / CW); const y = Math.floor(((ev.clientY - b.top) / b.height * canvas.height - OY) / CW); const crew = state.crews.find((c) => c.x === x && c.y === y); if(crew) selectCrew(crew.id); canvas.focus(); });
