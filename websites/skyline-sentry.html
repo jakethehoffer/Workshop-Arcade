@@ -151,6 +151,10 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   const SOUND_KEY = "skyline-sentry.sound.v1";
   const laneY = [155, 270, 385];
   const laneNames = ["top", "middle", "low"];
+  const PULSE_RANGE = 430, PULSE_COST = 28, PULSE_DAMAGE = 2, PULSE_COOLDOWN = 3.2;
+  // A perfect run tops out in the low thousands, so anything past this is a
+  // corrupt store rather than a score.
+  const MAX_BEST = 9999999;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
   const round = (n) => Math.round(n * 10) / 10;
   const $ = (id) => document.getElementById(id);
@@ -191,6 +195,15 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
   function readSound() {
     return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
   }
+  // A stored "Infinity" or "1e999" sailed straight through Number(x) || 0: it
+  // printed "Infinity" on the scoreboard, and JSON.stringify writes Infinity as
+  // null, so the diagnostics contract broke outright. 1e24 printed as "1e+24"
+  // and a negative value printed as a negative best.
+  function loadBest() {
+    const value = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isFinite(value) || value <= 0) return 0;
+    return Math.min(Math.floor(value), MAX_BEST);
+  }
 
   const state = {
     mode: "ready",
@@ -201,7 +214,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     core: 100,
     shield: 100,
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
+    best: loadBest(),
     sound: readSound(),
     feedback: "Press Start. Defend the skyline core through five waves.",
     lastInput: "none",
@@ -318,23 +331,49 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     setFeedback(`Sentry firing ${laneNames[state.selectedLane]} lane.`);
     beep("shot");
   }
+  // What pressing Pulse would actually do, right now. Pure: it reads state and
+  // returns a verdict. The button label, the refusal message and the pulse
+  // itself all run from this, so they cannot disagree.
+  function pulseState() {
+    if (state.mode !== "playing") return { ready: false, reason: "idle", label: "Pulse Shield", detail: "Start the run first.", inRange: 0 };
+    const inRange = state.enemies.filter((enemy) => enemy.hp > 0 && enemy.x < PULSE_RANGE).length;
+    if (state.pulseCooldown > 0) return { ready: false, reason: "cooling", inRange,
+      label: `Pulse ${state.pulseCooldown.toFixed(1)}s`, detail: `Shield pulse is recharging, ${state.pulseCooldown.toFixed(1)} seconds left.` };
+    if (state.shield < PULSE_COST) return { ready: false, reason: "low-shield", inRange,
+      label: `Pulse needs ${PULSE_COST}`, detail: `A pulse costs ${PULSE_COST} shield and you have ${Math.round(state.shield)}. The shield refills on its own.` };
+    if (inRange === 0) return { ready: false, reason: "empty", inRange: 0,
+      label: "Pulse 0 in range", detail: `No drone is inside pulse range yet, so a pulse would spend ${PULSE_COST} shield for nothing. Let them close in.` };
+    return { ready: true, reason: "ready", inRange,
+      label: `Pulse ${inRange} in range`, detail: `Hits ${inRange} drone${inRange === 1 ? "" : "s"} for ${PULSE_DAMAGE} each, costing ${PULSE_COST} shield.` };
+  }
   function pulseShield(source) {
     if (state.mode === "ready") startGame();
-    if (state.mode !== "playing" || state.pulseCooldown > 0 || state.shield < 28) return;
-    state.shield = Math.max(0, state.shield - 28);
-    state.pulseCooldown = 3.2;
+    if (state.mode !== "playing") return;
+    // Every refusal used to be silent, and a pulse with nothing in range spent
+    // 28 shield, changed nothing, and reported "armed the skyline barrier".
+    const plan = pulseState();
+    if (!plan.ready) {
+      state.lastInput = source || "pulse";
+      setFeedback(plan.detail);
+      beep("hit");
+      syncHud();
+      render();
+      return;
+    }
+    state.shield = Math.max(0, state.shield - PULSE_COST);
+    state.pulseCooldown = PULSE_COOLDOWN;
     state.lastInput = source || "pulse";
     state.shake = .18;
     let hits = 0;
     state.enemies.forEach((enemy) => {
-      if (enemy.x < 430) {
-        enemy.hp -= 2;
+      if (enemy.x < PULSE_RANGE) {
+        enemy.hp -= PULSE_DAMAGE;
         enemy.hit = .2;
         hits += 1;
         state.bursts.push({ x: enemy.x, y: enemy.y, r: 10, life: .28, color: "#67e8f9" });
       }
     });
-    setFeedback(hits ? `Shield pulse hit ${hits} drone${hits === 1 ? "" : "s"}.` : "Shield pulse armed the skyline barrier.");
+    setFeedback(`Shield pulse hit ${hits} drone${hits === 1 ? "" : "s"} for ${PULSE_DAMAGE} each. ${PULSE_COST} shield spent, ${Math.round(state.shield)} left.`);
     beep("pulse");
     vibrate(25);
   }
@@ -405,7 +444,10 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
         state.core = clamp(state.core - leak, 0, 100);
         state.shake = .3;
         state.bursts.push({ x: 84, y: enemy.y, r: 18, life: .4, color: "#fb7185" });
-        setFeedback(`Core impact on ${laneNames[enemy.lane]} lane. Integrity ${Math.round(state.core)}.`);
+        // The shield is what decides a long run, and its work was invisible:
+        // the old line named only the integrity left, never how much the shield
+        // had just absorbed on the player's behalf.
+        setFeedback(`Core impact on ${laneNames[enemy.lane]} lane. Shield absorbed ${Math.round(block)}, core took ${Math.round(leak)}, integrity ${Math.round(state.core)}.`);
         enemy.hp = 0;
         beep("hit");
       }
@@ -432,6 +474,13 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
     els.shield.className = `value ${state.shield < 30 ? "bad" : state.shield < 55 ? "warn" : ""}`;
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", String(state.sound));
+    // The pulse button never changed at all before, so it looked equally usable
+    // whether it was ready, recharging, short of shield, or aimed at empty sky.
+    const plan = pulseState();
+    els.pulse.textContent = plan.label;
+    els.pulse.setAttribute("aria-disabled", String(!plan.ready));
+    els.pulse.dataset.ready = String(plan.ready);
+    els.pulse.title = plan.detail;
     els.start.textContent = state.mode === "playing" ? "Running" : state.mode === "win" || state.mode === "gameover" ? "Start" : "Start";
     els.lane.forEach((button, i) => button.dataset.active = String(i === state.selectedLane));
   }
@@ -609,6 +658,7 @@ dialog{width:min(440px,calc(100% - 24px));border-radius:10px;color:#edf7ff;paddi
       enemies: state.enemies.map((e) => ({ lane: e.lane, x: round(e.x), hp: e.hp, speed: e.speed })),
       projectiles: state.projectiles.map((p) => ({ lane: p.lane, x: round(p.x) })),
       core: { integrity: Math.round(state.core), shield: Math.round(state.shield), pulseCooldown: round(state.pulseCooldown) },
+      pulse: pulseState(),
       score: state.score,
       best: state.best,
       sound: state.sound ? "on" : "off",
