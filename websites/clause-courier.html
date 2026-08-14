@@ -82,6 +82,7 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
     <span class="pill"><span class="label">Moves</span><span class="value" id="movesValue">0</span></span>
     <span class="pill"><span class="label">Par</span><span class="value" id="parValue">6</span></span>
     <span class="pill"><span class="label">Budget</span><span class="value" id="budgetValue">10</span></span>
+    <span class="pill"><span class="label">Swaps To Go</span><span class="value" id="togoValue">0</span></span>
     <span class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></span>
     <span class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></span>
   </section>
@@ -120,17 +121,28 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
   ];
   const $ = (id) => document.getElementById(id);
   const els = {
-    stage: $("stageValue"), moves: $("movesValue"), par: $("parValue"), budget: $("budgetValue"), score: $("scoreValue"), best: $("bestValue"),
+    stage: $("stageValue"), moves: $("movesValue"), par: $("parValue"), budget: $("budgetValue"), score: $("scoreValue"), best: $("bestValue"), togo: $("togoValue"),
     status: $("statusLine"), live: $("liveStatus"), select: $("selectBtn"), left: $("leftBtn"), right: $("rightBtn"), next: $("nextBtn"),
     restart: $("restartBtn"), sound: $("soundBtn"), full: $("fullBtn"), app: $("app")
   };
   function store() { if (window.workshopStorage) return window.workshopStorage; try { return window.localStorage; } catch (_) { return null; } }
   function read(key, fallback) { const s = store(); if (!s) return fallback; try { const value = s.getItem(key); return value == null ? fallback : value; } catch (_) { return fallback; } }
   function write(key, value) { const s = store(); if (!s) return; try { s.setItem(key, String(value)); } catch (_) {} }
+  // A stored 1e400 parses to Infinity and sails straight through Number(x) || 0:
+  // it printed "Infinity" on the scoreboard, and JSON.stringify writes Infinity
+  // as null, so the diagnostics contract broke outright. Negatives and absurd
+  // magnitudes got through the same way, the latter printing as "1e+24".
+  const MAX_SCORE = 9999999, MAX_STAGE = STAGES.length;
+  function sane(value, cap) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(Math.floor(n), cap);
+  }
   function readStats() {
     try {
       const value = JSON.parse(read(STATS_KEY, "{}"));
-      return { bestScore: Number(value.bestScore) || 0, bestStage: Number(value.bestStage) || 0 };
+      if (!value || typeof value !== "object") return { bestScore: 0, bestStage: 0 };
+      return { bestScore: sane(value.bestScore, MAX_SCORE), bestStage: sane(value.bestStage, MAX_STAGE) };
     } catch (_) {
       return { bestScore: 0, bestStage: 0 };
     }
@@ -148,6 +160,49 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
   const activeIndex = () => state.selected == null ? state.cursor : state.selected;
   const correctAt = (i) => state.tiles[i] === stage().target[i];
   const isSolved = () => state.tiles.every((word, i) => word === stage().target[i]);
+  // The exact number of adjacent swaps still required is the inversion count of
+  // the current rail against the target. Not an estimate: no shorter route
+  // exists, and every single swap either lowers it by one or raises it by one.
+  function swapsNeeded(tiles, target) {
+    const slots = new Map();
+    target.forEach((word, i) => { if (!slots.has(word)) slots.set(word, []); slots.get(word).push(i); });
+    const taken = new Map();
+    const perm = [];
+    for (const word of tiles) {
+      const list = slots.get(word);
+      if (!list) return null;
+      const k = taken.get(word) || 0;
+      if (k >= list.length) return null;
+      taken.set(word, k + 1);
+      perm.push(list[k]);
+    }
+    let inversions = 0;
+    for (let i = 0; i < perm.length; i += 1) {
+      for (let j = i + 1; j < perm.length; j += 1) if (perm[i] > perm[j]) inversions += 1;
+    }
+    return inversions;
+  }
+  // The stage payout, parameterised on the move count so the preview and the
+  // real award run through one function and cannot drift apart.
+  function stagePayout(moves, stageIndex = state.stageIndex) {
+    const st = STAGES[stageIndex];
+    const underPar = Math.max(0, st.par - moves);
+    const overPar = Math.max(0, moves - st.par);
+    const raw = 650 + Math.max(0, st.budget - moves) * 55 + underPar * 90 - overPar * 20 + (stageIndex + 1) * 35;
+    return Math.max(250, raw);
+  }
+  // Everything the rail can tell you before you commit another swap.
+  function outlook() {
+    const st = stage();
+    const needed = swapsNeeded(state.tiles, st.target);
+    const movesLeft = Math.max(0, st.budget - state.moves);
+    if (needed == null) return { needed: null, movesLeft, doomed: false, finishClean: 0, wasteCost: 0, slack: 0 };
+    const cleanTotal = state.moves + needed;
+    const finishClean = stagePayout(cleanTotal);
+    // A wasted swap costs two moves in the end: the swap itself, and undoing it.
+    const wasteCost = finishClean - stagePayout(cleanTotal + 2);
+    return { needed, movesLeft, doomed: needed > movesLeft, finishClean, wasteCost, slack: movesLeft - needed };
+  }
   function feedback(text, ms = 1800) {
     state.feedback = text;
     state.feedbackMs = ms;
@@ -206,6 +261,9 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
     els.budget.textContent = String(st.budget);
     els.score.textContent = String(state.score);
     els.best.textContent = String(state.bestScore);
+    const view = outlook();
+    els.togo.textContent = view.needed == null ? "--" : String(view.needed);
+    els.togo.style.color = view.doomed ? "#fb7185" : view.needed === 0 ? "#86efac" : "";
     els.select.textContent = state.selected == null ? "Select" : "Release";
     els.select.disabled = state.mode !== "playing";
     els.left.disabled = state.mode !== "playing" || activeIndex() <= 0;
@@ -231,7 +289,9 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
     state.moves = 0;
     state.mode = "playing";
     state.flash = 0;
-    feedback(stage().name + ": put the dispatch back in order.", 2400);
+    const view = outlook();
+    feedback(stage().name + ": " + view.needed + " swaps is the shortest route, and you have "
+      + view.movesLeft + " moves. Finish clean for " + view.finishClean + ".", 2800);
     syncHud();
     render();
   }
@@ -287,6 +347,7 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
   function swapTiles(a, b, source = "keyboard") {
     if (state.mode !== "playing" || Math.abs(a - b) !== 1) return;
     markGesture(source, "swap");
+    const before = swapsNeeded(state.tiles, stage().target);
     const temp = state.tiles[a];
     state.tiles[a] = state.tiles[b];
     state.tiles[b] = temp;
@@ -295,7 +356,6 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
     state.moves += 1;
     state.flash = 1;
     tone("swap");
-    const correct = state.tiles.filter((word, i) => word === stage().target[i]).length;
     if (isSolved()) {
       completeStage();
     } else if (state.moves >= stage().budget) {
@@ -303,17 +363,25 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
       feedback("Move budget spent. Restart this dispatch and try a shorter route.", 3600);
       tone("fail");
     } else {
-      feedback(correct + " of " + state.tiles.length + " words are in the right place.", 1400);
+      // Every swap moves the needed count by exactly one, either way, so the rail
+      // can always say plainly whether the move you just made was worth making.
+      const view = outlook();
+      const helped = view.needed != null && before != null && view.needed < before;
+      const lead = helped ? "Good swap. " : "Wasted swap, that went the wrong way. ";
+      if (view.doomed) {
+        feedback(lead + view.needed + " swaps still needed but only " + view.movesLeft + " moves left. Restart this dispatch.", 4000);
+        tone("fail");
+      } else {
+        feedback(lead + view.needed + " more needed, " + view.movesLeft + " moves left. Finish clean for " + view.finishClean + ".", 1800);
+      }
     }
     syncHud();
     render();
   }
   function completeStage() {
     const st = stage();
-    const underPar = Math.max(0, st.par - state.moves);
     const overPar = Math.max(0, state.moves - st.par);
-    const score = 650 + Math.max(0, st.budget - state.moves) * 55 + underPar * 90 - overPar * 20 + (state.stageIndex + 1) * 35;
-    state.score += Math.max(250, score);
+    state.score += stagePayout(state.moves);
     state.solvedStages = Math.max(state.solvedStages, state.stageIndex + 1);
     state.bestStage = Math.max(state.bestStage, state.solvedStages);
     if (state.score > state.bestScore) state.bestScore = state.score;
@@ -454,11 +522,27 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
     ctx.moveTo(72, railY);
     ctx.lineTo(72 + (W - 144) * progress, railY);
     ctx.stroke();
+    // The one number the rail never showed: exactly how many swaps are left to
+    // make, and whether the budget can still cover them.
+    const view = outlook();
+    if (state.mode === "playing" && view.needed != null) {
+      const tone = view.doomed ? "#fb7185" : view.needed === 0 ? "#86efac" : "#ffd166";
+      const label = view.doomed
+        ? "NO ROUTE LEFT: " + view.needed + " SWAPS NEEDED, " + view.movesLeft + " MOVES LEFT"
+        : view.needed + " SWAP" + (view.needed === 1 ? "" : "S") + " STILL NEEDED"
+          + "  ·  " + view.movesLeft + " LEFT IN BUDGET"
+          + "  ·  CLEAN FINISH " + view.finishClean;
+      ctx.fillStyle = "rgba(7,16,28,.72)";
+      ctx.strokeStyle = tone;
+      ctx.lineWidth = 2;
+      roundRect(72, 404, W - 144, 32, 10, true, true);
+      drawTextFit(label, W / 2, 425, W - 176, 16, tone);
+    }
     const message = state.mode === "failed" ? "BUDGET SPENT" : state.mode === "run-complete" ? "ALL DISPATCHES DELIVERED" : state.mode === "stage-complete" ? "DISPATCH DELIVERED" : (state.selected == null ? "SELECT A WORD" : "SWAP WITH A NEIGHBOR");
     ctx.fillStyle = state.mode === "failed" ? "#fb7185" : state.mode === "playing" ? "#ffd166" : "#86efac";
     ctx.font = "950 24px system-ui,-apple-system,Segoe UI,sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(message, W / 2, 455);
+    ctx.fillText(message, W / 2, 465);
     ctx.fillStyle = "#a8bfd0";
     ctx.font = "800 13px system-ui,-apple-system,Segoe UI,sans-serif";
     ctx.fillText(state.feedback, W / 2, 482);
@@ -518,6 +602,8 @@ button{font:inherit}.app{width:min(1000px,100%);display:grid;gap:9px}.top,.hud,.
       par: st.par,
       budget: st.budget,
       correctCount: state.tiles.filter((word, i) => word === st.target[i]).length,
+      outlook: outlook(),
+      stageBest: stagePayout(state.moves + (swapsNeeded(state.tiles, st.target) || 0)),
       solved: isSolved(),
       score: state.score,
       bestScore: state.bestScore,
