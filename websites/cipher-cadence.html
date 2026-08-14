@@ -65,7 +65,7 @@
 :root{color-scheme:dark;--bg:#071018;--panel:#0d2230;--panel2:#14364a;--ink:#f5fbff;--muted:#9db7c9;--cyan:#5eead4;--blue:#7dd3fc;--gold:#ffd166;--rose:#fb7185;--green:#86efac;--line:rgba(125,211,252,.3)}
 *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{min-height:100dvh;display:grid;place-items:center;overflow-x:hidden;overscroll-behavior:none;padding:12px;background:radial-gradient(760px 460px at 10% -10%,rgba(94,234,212,.18),transparent 62%),radial-gradient(700px 460px at 100% 0%,rgba(255,209,102,.12),transparent 62%),linear-gradient(180deg,#071018,#050914 84%);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.actions,.choices{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.brand{line-height:1}.eyebrow{display:block;color:var(--cyan);font-size:10px;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.title{display:block;margin-top:4px;font-size:clamp(23px,4vw,36px);font-weight:950;letter-spacing:.025em;text-transform:uppercase}.help{max-width:570px;color:var(--muted);font-size:12px;line-height:1.4;text-align:right}
-.pill,.btn,.choice{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 15px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06)}.pill{min-width:78px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--cyan);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
+.pill,.btn,.choice{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 15px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06)}.pill{min-width:78px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--cyan);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}.value.good{color:var(--green)}.value.warn{color:var(--gold)}
 .stage{overflow:hidden;border:1px solid rgba(125,211,252,.32);border-radius:8px;background:#07151f;box-shadow:0 26px 62px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/9;max-height:66vh;background:#07151f;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.9);outline-offset:-4px}.status{min-height:20px;text-align:center;color:var(--green);font-size:12px;font-weight:900;text-transform:uppercase}.btn,.choice{min-height:38px;padding:8px 11px;color:var(--ink);font-size:12px;font-weight:950;text-transform:uppercase;cursor:pointer;touch-action:manipulation}.btn:hover,.btn:focus-visible,.choice:hover,.choice:focus-visible{border-color:rgba(255,209,102,.72)}.btn:focus-visible,.choice:focus-visible{outline:3px solid rgba(255,209,102,.72);outline-offset:2px}.btn.primary,.btn[aria-pressed=true],.choice[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#8af4fa,#34cde1);color:#05242b}.btn.good{border-color:rgba(134,239,172,.56);color:var(--green)}.btn.warn{border-color:rgba(251,113,133,.46);color:#fecdd3}.btn:disabled,.choice:disabled{opacity:.5;cursor:not-allowed}.choices{justify-content:center}.choice{flex:1 1 140px;max-width:240px}.choice .num{color:var(--gold);margin-right:6px}.sr-only{position:fixed;left:-10000px;top:auto;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:720px){body{padding:8px 6px 12px;place-items:start center}.app{gap:7px}.top{align-items:start}.title{font-size:21px}.eyebrow{font-size:9px}.help{text-align:left;font-size:11px}.pill{flex:1 1 29%;min-width:60px;padding:6px}.value{font-size:14px}.btn{flex:1 1 100px;min-height:40px;padding:7px 8px;font-size:11px}.choice{flex:1 1 44%;max-width:none;min-height:40px;padding:7px 8px;font-size:11px}canvas{max-height:56vh}.stage{border-radius:7px}}
 </style>
@@ -82,6 +82,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
     <span class="pill"><span class="label">Word</span><span class="value" id="wordValue">1/4</span></span>
     <span class="pill"><span class="label">Beat</span><span class="value" id="beatValue">12</span></span>
     <span class="pill"><span class="label">Integrity</span><span class="value" id="integrityValue">6</span></span>
+    <span class="pill"><span class="label">Timing</span><span class="value" id="timingValue">--</span></span>
     <span class="pill"><span class="label">Combo</span><span class="value" id="comboValue">0</span></span>
     <span class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></span>
     <span class="pill"><span class="label">Best</span><span class="value" id="bestValue">0</span></span>
@@ -110,6 +111,15 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
   const W = canvas.width;
   const H = canvas.height;
   const BEST_KEY = "cipher-cadence.best.v1";
+  // Number(x) || 0 let 12.7 and 1e24 through as a best, and Infinity printed on
+  // the pill while Math.max carried it into the diagnostics, where it serialized
+  // to null. Five tracks cannot award more than a few tens of thousands.
+  const MAX_BEST = 9999999;
+  function readBest() {
+    const n = Number(read(BEST_KEY, "0"));
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(Math.floor(n), MAX_BEST);
+  }
   const SOUND_KEY = "cipher-cadence.sound.v1";
   const TARGET_PROGRESS = .72;
   const TIMING_WINDOW = .17;
@@ -126,7 +136,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
   const DECOYS = ["TRACE","LOCK","GLOW","MAP","RAIL","TOKEN","VAULT","SILENT","NORTH","SPARK","RIVER","GATE","MORSE","LASER","PANEL","VAULT","DRIFT","SIGNAL","BRIDGE","NOON","SHIFT","HARBOR","LUMEN","ORBIT","STACK","FORGE"];
   const $ = (id) => document.getElementById(id);
   const els = {
-    track: $("trackValue"), word: $("wordValue"), beat: $("beatValue"), integrity: $("integrityValue"), combo: $("comboValue"),
+    track: $("trackValue"), word: $("wordValue"), beat: $("beatValue"), integrity: $("integrityValue"), timing: $("timingValue"), combo: $("comboValue"),
     score: $("scoreValue"), best: $("bestValue"), status: $("statusLine"), live: $("liveStatus"), choices: $("choiceRow"),
     start: $("startBtn"), confirm: $("confirmBtn"), restart: $("restartBtn"), sound: $("soundBtn"), full: $("fullBtn"), app: $("app")
   };
@@ -136,7 +146,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
   const soundRaw = String(read(SOUND_KEY, "1")).toLowerCase();
   const state = {
     mode: "menu", trackIndex: 0, wordIndex: 0, beatIndex: 0, beatElapsed: 0, selectedLane: 0, integrity: 6,
-    score: 0, combo: 0, bestScore: Number(read(BEST_KEY, "0")) || 0, soundEnabled: !["0","false","off","muted"].includes(soundRaw),
+    score: 0, combo: 0, bestScore: readBest(), soundEnabled: !["0","false","off","muted"].includes(soundRaw),
     feedback: "Start the cipher and catch the first word on beat.", feedbackMs: 2600, lastInput: "none", lastEvent: "ready",
     userGesture: false, toneCount: 0, lastSound: "none", time: 0, flashLane: -1, flashMs: 0, candidateButtons: [], raf: 0, lastFrame: 0
   };
@@ -221,6 +231,27 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
     if (state.mode !== "playing") return 0;
     return Math.max(0, Math.min(1, state.beatElapsed / stage().tempo));
   }
+  // The whole timing rule in one record. The game has always computed the target
+  // progress, the tolerance and the milliseconds left before the pulse, and put
+  // all of it in the diagnostics and none of it on screen -- the board showed a
+  // single hairline and nothing about how much room a confirm has. The canvas
+  // band, the new readout and the diagnostics all read this, so they agree.
+  function beatVerdict() {
+    const p = progress();
+    const delta = p - TARGET_PROGRESS;
+    const msLeft = Math.round((TARGET_PROGRESS - p) * stage().tempo);
+    const inside = Math.abs(delta) <= TIMING_WINDOW;
+    const phase = inside ? "on-beat" : delta < 0 ? "early" : "late";
+    return {
+      progress: Number(p.toFixed(3)), delta: Number(delta.toFixed(3)), msUntilPulse: msLeft, inside, phase,
+      window: TIMING_WINDOW, targetProgress: TARGET_PROGRESS,
+      label: inside ? "ON BEAT" : phase === "early" ? "TOO EARLY" : "TOO LATE",
+      detail: inside
+        ? "Confirm now: " + Math.max(0, Math.round((TIMING_WINDOW - Math.abs(delta)) * stage().tempo)) + " ms of the window left."
+        : phase === "early" ? "Hold " + Math.max(0, msLeft - Math.round(TIMING_WINDOW * stage().tempo)) + " ms more."
+        : "The pulse passed " + Math.abs(msLeft) + " ms ago."
+    };
+  }
   function timingLabel(delta) {
     if (Math.abs(delta) <= TIMING_WINDOW) return "on-beat";
     return delta < 0 ? "early" : "late";
@@ -248,6 +279,10 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
     els.word.textContent = Math.min(state.wordIndex + 1, st.phrase.length) + "/" + st.phrase.length;
     els.beat.textContent = String(beatsLeft());
     els.integrity.textContent = String(state.integrity);
+    const verdict = beatVerdict();
+    els.timing.textContent = state.mode === "playing" ? verdict.label : "--";
+    els.timing.title = state.mode === "playing" ? verdict.detail : "Timing shows how close a confirm is to the pulse.";
+    els.timing.className = "value" + (state.mode !== "playing" ? "" : verdict.inside ? " good" : " warn");
     els.combo.textContent = String(state.combo);
     els.score.textContent = String(state.score);
     els.best.textContent = String(Math.max(state.bestScore, state.score));
@@ -267,6 +302,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
     const full = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
     els.full.textContent = full ? "Exit Fullscreen" : "Fullscreen";
     els.full.setAttribute("aria-pressed", String(full));
+    ensureLoop();
   }
   function startRun(source = "button") {
     markInput(source, "start");
@@ -516,6 +552,18 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
       roundRect(start + i * (tokenW + tokenGap), 101, tokenW, 28, 8, true, true);
       fitText(phrase[i], start + i * (tokenW + tokenGap) + tokenW / 2, 121, tokenW - 12, 14, done ? "#d7ffe7" : "#f5fbff");
     }
+    // The tolerance band, drawn where only a hairline used to be. A confirm
+    // counts anywhere inside it; the tile travels from START_X to PULSE_X as the
+    // beat runs, so the band is the same distance either side of the pulse.
+    const bandHalf = (PULSE_X - START_X) * (TIMING_WINDOW / TARGET_PROGRESS);
+    const verdict = beatVerdict();
+    ctx.fillStyle = verdict.inside && state.mode === "playing" ? "rgba(134,239,172,.16)" : "rgba(255,209,102,.09)";
+    ctx.fillRect(PULSE_X - bandHalf, 142, bandHalf * 2, 272);
+    ctx.strokeStyle = verdict.inside && state.mode === "playing" ? "rgba(134,239,172,.55)" : "rgba(255,209,102,.3)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    ctx.strokeRect(PULSE_X - bandHalf, 142, bandHalf * 2, 272);
+    ctx.setLineDash([]);
     ctx.strokeStyle = "rgba(255,209,102,.78)";
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -526,6 +574,11 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
     ctx.font = "950 12px system-ui,-apple-system,Segoe UI,sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("PULSE", PULSE_X, 432);
+    if (state.mode === "playing") {
+      ctx.fillStyle = verdict.inside ? "#86efac" : "#ffd166";
+      ctx.font = "950 13px system-ui,-apple-system,Segoe UI,sans-serif";
+      ctx.fillText(verdict.label, PULSE_X, 132);
+    }
     const p = progress();
     const x = START_X + (PULSE_X - START_X) * Math.min(1.18, p / TARGET_PROGRESS);
     const candidates = currentCandidates();
@@ -592,14 +645,25 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
     }
     return best;
   }
+  // The loop used to re-queue unconditionally, so the menu and every finished
+  // screen burned 60 frames a second forever. It now runs only while a beat is
+  // actually advancing or a cue is still fading, and render() re-arms it.
+  function loopActive() { return state.mode === "playing" || state.feedbackMs > 0 || state.flashMs > 0; }
+  // Deliberately does NOT reset lastFrame: syncHud() calls this every frame, so
+  // clearing the stamp here made every delta zero and froze the beat clock.
+  // update() already clamps a long gap to 120ms, which covers a cold restart.
+  function ensureLoop() { if (state.raf || !loopActive()) return; state.raf = requestAnimationFrame(frame); }
   function frame(now) {
+    state.raf = 0;
     if (!state.lastFrame) state.lastFrame = now;
     const delta = now - state.lastFrame;
     state.lastFrame = now;
     update(delta);
     syncHud();
     render();
-    state.raf = requestAnimationFrame(frame);
+    // syncHud() calls ensureLoop(), so only arm a frame here when that has
+    // not already done it, or two chains would run at once.
+    if (!state.raf && loopActive()) state.raf = requestAnimationFrame(frame);
   }
   window.advanceTime = (ms) => {
     const total = Math.max(0, Number(ms) || 0);
@@ -635,6 +699,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
       selectedLane: state.selectedLane + 1,
       visibleWords: candidates,
       timingWindow: { targetProgress: TARGET_PROGRESS, window: TIMING_WINDOW, progress: Number(p.toFixed(3)), msUntilPulse: Math.round((TARGET_PROGRESS - p) * st.tempo) },
+      // the same record the band, the pill and the canvas label all read
+      beat: beatVerdict(),
       score: state.score,
       combo: state.combo,
       integrity: state.integrity,
@@ -677,7 +743,9 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.hud,.
   buildChoices();
   syncHud();
   render();
-  state.raf = requestAnimationFrame(frame);
+  // syncHud() already arms the loop through ensureLoop(); arming a second one
+  // here would leave two chains running and double the frame rate.
+  ensureLoop();
 })();
 </script>
 </body>
