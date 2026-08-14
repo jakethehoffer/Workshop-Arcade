@@ -87,6 +87,8 @@
   canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#071018;touch-action:none}
   canvas:focus-visible{outline:3px solid rgba(94,234,212,.8);outline-offset:-4px}
   .status{min-height:20px;text-align:center;color:#5eead4;font-size:12px;font-weight:900;text-transform:uppercase}
+  .plan{min-height:18px;text-align:center;color:#a7bccd;font-size:12px;font-weight:800;line-height:1.4;padding:0 8px}
+  .plan.safe{color:#86efac}.plan.clear{color:#facc15}.plan.bad{color:#fb7185}
   .btn{
     border:1px solid rgba(94,234,212,.24);border-radius:8px;background:linear-gradient(180deg,rgba(18,28,45,.96),rgba(9,15,27,.97));
     color:#e6edf3;font:inherit;font-size:12px;font-weight:850;text-transform:uppercase;padding:8px 11px;cursor:pointer;
@@ -125,6 +127,7 @@
   </div>
   <div class="stage"><canvas id="game" width="900" height="560" tabindex="0" aria-label="Grid stealth puzzle canvas. Move with arrow keys or WASD, use Space or Enter to flip a switch or wait, avoid guard light cones, collect the key, and reach the exit."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Collect the key, flip switches, and stay out of light.</div>
+  <div class="plan" id="planLine">Guard light that is about to sweep in is outlined in red.</div>
   <div class="toolbar" aria-label="Game controls">
     <button class="btn primary" type="button" id="restartBtn">Restart</button>
     <button class="btn" type="button" id="nextBtn" disabled>Next Level</button>
@@ -151,7 +154,10 @@
   const TAU = Math.PI * 2;
   const BEST_KEY = "shadow-switch.best.v1";
   const SOUND_KEY = "shadow-switch.sound.v1";
+  const MAX_BEST_STEPS = 999999;
+  const MAX_BEST_TIME = 999999;
   const els = {
+    plan: document.getElementById("planLine"),
     level: document.getElementById("levelValue"),
     steps: document.getElementById("stepsValue"),
     time: document.getElementById("timeValue"),
@@ -304,13 +310,23 @@
     gameOver: false
   };
 
+  // A hand-edited record could carry Infinity, a negative or an absurd number.
+  // typeof accepts all three, and a negative best can never be beaten, so the
+  // scoreboard would be stuck showing nonsense forever. Demand sane figures.
+  function sane(value, max, whole){
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > max) return null;
+    return whole ? Math.round(value) : round(value);
+  }
   function loadBest(){
     try {
       const raw = storage.get(BEST_KEY, "");
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed.steps !== "number" || typeof parsed.time !== "number") return null;
-      return parsed;
+      if (!parsed || typeof parsed !== "object") return null;
+      const steps = sane(parsed.steps, MAX_BEST_STEPS, true);
+      const time = sane(parsed.time, MAX_BEST_TIME, false);
+      if (steps === null || time === null) return null;
+      return { steps: steps, time: time, levels: LEVELS.length };
     } catch (_) {
       return null;
     }
@@ -509,6 +525,70 @@
     }
     return Array.from(seen.values());
   }
+  // Where a guard stands after it takes its step. Pure: it reads the patrol path
+  // and returns a plain guard-shaped object, it never moves anything.
+  function guardAfterStep(guard){
+    const old = guard.path[guard.pathIndex];
+    const next = guard.path[(guard.pathIndex + 1) % guard.path.length];
+    return { id: guard.id, x: next.x, y: next.y, range: guard.range,
+      dir: directionName(next.x - old.x, next.y - old.y) };
+  }
+  // The cones that judge the SECOND half of a turn. The board only ever drew the
+  // guards' current cones, but a turn runs: you arrive, you are checked, the
+  // guards step, and you are checked again -- so a cell can be clear of every
+  // cone on screen and still be lit when the turn finishes.
+  function nextSightCells(){
+    const cells = [];
+    for (const guard of state.guards) {
+      const after = guardAfterStep(guard);
+      cells.push({ x: after.x, y: after.y, guardId: after.id });
+      for (const cell of guardSightCells(after)) cells.push({ x: cell.x, y: cell.y, guardId: after.id });
+    }
+    return cells;
+  }
+  function litNowBy(x, y){
+    for (const guard of state.guards) {
+      if (guard.x === x && guard.y === y) return guard.id;
+      if (guardSightCells(guard).some((c) => c.x === x && c.y === y)) return guard.id;
+    }
+    return "";
+  }
+  function litNextBy(x, y){
+    const hit = nextSightCells().find((c) => c.x === x && c.y === y);
+    return hit ? hit.guardId : "";
+  }
+  // What a candidate step would do, end to end. One pure answer that the board
+  // draws and the status line reads.
+  function turnOutlook(dx, dy){
+    if (state.mode !== "playing") return { kind: "idle", label: "", detail: "" };
+    const nx = state.player.x + dx, ny = state.player.y + dy;
+    if (dx === 0 && dy === 0) {
+      const now = litNowBy(nx, ny);
+      if (now) return { kind: "caught", label: "CAUGHT BY " + now, detail: "You are already standing in " + now + "'s light.", x: nx, y: ny };
+      const next = litNextBy(nx, ny);
+      if (next) return { kind: "caught", label: "CAUGHT BY " + next, detail: "Waiting here puts you in " + next + "'s light once it steps.", x: nx, y: ny };
+      return { kind: "safe", label: "WAITING IS SAFE", detail: "No cone reaches this cell after the guards step.", x: nx, y: ny };
+    }
+    const door = doorAt(nx, ny);
+    if (!passable(nx, ny)) {
+      return { kind: "blocked", label: "BLOCKED",
+        detail: door && !door.open ? "Door " + String(door.id).toUpperCase() + " is locked. Find its switch." : "A shadow wall blocks that cell.",
+        x: nx, y: ny };
+    }
+    const now = litNowBy(nx, ny);
+    if (now) return { kind: "caught", label: "CAUGHT BY " + now, detail: "That cell is inside " + now + "'s light right now.", x: nx, y: ny };
+    const wouldHoldKey = state.key.taken || (nx === state.key.x && ny === state.key.y);
+    if (wouldHoldKey && nx === state.exit.x && ny === state.exit.y) {
+      return { kind: "clear", label: "FLOOR CLEARS", detail: "You reach the hatch holding the key and the cell is dark. Floor complete.", x: nx, y: ny };
+    }
+    const next = litNextBy(nx, ny);
+    if (next) return { kind: "caught", label: "CAUGHT BY " + next,
+      detail: "That cell is dark now, but " + next + "'s light sweeps onto it when the guards step.", x: nx, y: ny };
+    const grabsKey = !state.key.taken && nx === state.key.x && ny === state.key.y;
+    return { kind: "safe", label: grabsKey ? "SAFE, TAKES THE KEY" : "SAFE STEP",
+      detail: grabsKey ? "The key is on that cell and no cone reaches it after the guards step."
+        : "No cone reaches that cell after the guards step.", x: nx, y: ny };
+  }
   function detectPlayer(){
     for (const guard of state.guards) guard.alert = false;
     for (const guard of state.guards) {
@@ -594,6 +674,7 @@
     render();
   }
   function movePlayer(dx, dy){
+    state.lastDir = [dx, dy];
     if (state.mode === "level-complete") return nextLevel();
     if (state.mode === "run-complete") return newRun();
     if (state.mode === "game-over") return restartLevel();
@@ -662,6 +743,12 @@
     updateUi();
   }
   function updateUi(){
+    const plan = turnOutlook(state.lastDir ? state.lastDir[0] : 0, state.lastDir ? state.lastDir[1] : 0);
+    if (els.plan) {
+      els.plan.textContent = plan.kind === "idle" ? "" : plan.label + " — " + plan.detail;
+      els.plan.className = "plan" + (plan.kind === "safe" ? " safe" : plan.kind === "clear" ? " clear"
+        : plan.kind === "caught" || plan.kind === "blocked" ? " bad" : "");
+    }
     els.level.textContent = `${state.levelIndex + 1}/${LEVELS.length}`;
     els.steps.textContent = String(state.steps);
     els.time.textContent = formatTime(state.time);
@@ -746,6 +833,51 @@
         const onPlayer = cell.x === state.player.x && cell.y === state.player.y;
         ctx.fillStyle = onPlayer || guard.alert ? "rgba(251,113,133,.32)" : "rgba(251,191,36,.17)";
         ctx.fillRect(px + 3, py + 3, v.tile - 6, v.tile - 6);
+      }
+    }
+    // A turn is: you arrive, you are checked, the guards step, you are checked
+    // again. Only the first check used the amber cones above, so the light that
+    // sweeps in on the second check was invisible. Outline it.
+    if (state.mode === "playing") {
+      for (const cell of nextSightCells()) {
+        const px = cell.x * v.tile, py = cell.y * v.tile;
+        ctx.strokeStyle = "rgba(251,113,133,.62)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.strokeRect(px + 4.5, py + 4.5, v.tile - 9, v.tile - 9);
+        ctx.setLineDash([]);
+      }
+    }
+    ctx.restore();
+  }
+  // Each step you could take, marked with what it would do. Drawn last and in the
+  // tile corner so a key, a switch or a door can never hide the danger mark.
+  function drawStepPlans(){
+    if (state.mode !== "playing") return;
+    const v = view();
+    ctx.save();
+    ctx.translate(v.ox, v.oy);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const plan = turnOutlook(dx, dy);
+      if (plan.kind === "blocked" || plan.kind === "idle") continue;
+      const r = Math.max(4, v.tile * .13);
+      const cx = plan.x * v.tile + v.tile - r - 4, cy = plan.y * v.tile + r + 4;
+      ctx.fillStyle = plan.kind === "caught" ? "rgba(251,113,133,.95)"
+        : plan.kind === "clear" ? "rgba(250,204,21,.92)" : "rgba(134,239,172,.88)";
+      ctx.strokeStyle = "rgba(2,6,23,.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (plan.kind === "caught") {
+        // The one you must not miss: a cross inside the red mark.
+        ctx.strokeStyle = "rgba(2,6,23,.92)";
+        ctx.lineWidth = Math.max(1.5, r * .3);
+        ctx.beginPath();
+        ctx.moveTo(cx - r * .45, cy - r * .45); ctx.lineTo(cx + r * .45, cy + r * .45);
+        ctx.moveTo(cx + r * .45, cy - r * .45); ctx.lineTo(cx - r * .45, cy + r * .45);
+        ctx.stroke();
       }
     }
     ctx.restore();
@@ -930,6 +1062,7 @@
     drawObjects();
     drawGuards();
     drawPlayer();
+    drawStepPlans();
     drawOverlay();
   }
   function frame(stamp){
@@ -1042,6 +1175,8 @@
         lastSound: state.lastSound
       },
       best: state.best,
+      nextSight: nextSightCells(),
+      stepPlans: [[1,0],[-1,0],[0,1],[0,-1],[0,0]].map(([dx,dy]) => { const p = turnOutlook(dx,dy); return { dx, dy, kind: p.kind, label: p.label, detail: p.detail, x: p.x, y: p.y }; }),
       sound: {
         enabled: state.soundOn,
         audioReady: Boolean(audioCtx),
