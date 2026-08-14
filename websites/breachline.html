@@ -79,6 +79,8 @@ button{font:inherit}
 canvas{display:block;width:100%;aspect-ratio:16/9;background:#06101d;touch-action:none}
 canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px solid rgba(103,232,249,.78);outline-offset:2px}
 .status{min-height:22px;color:#93e8ff;text-align:center;font-size:12px;font-weight:900;text-transform:uppercase}
+.plan{min-height:20px;color:#a9bed4;text-align:center;font-size:12px;font-weight:800;line-height:1.4;padding:0 8px}
+.plan.safe{color:#86efac}.plan.win{color:#facc15}.plan.bad{color:#fb7185}
 .bar{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
 .btn,.touch button{border-radius:8px;color:#edf7ff;cursor:pointer;font-size:12px;font-weight:950;text-transform:uppercase;padding:9px 12px;min-height:40px;touch-action:manipulation}
 .btn.primary{border-color:transparent;background:linear-gradient(180deg,#91f6ff,#22d3ee);color:#06272e}
@@ -108,6 +110,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   </section>
   <div class="stage"><canvas id="game" width="960" height="540" tabindex="0" aria-label="Breachline synchronized stealth tactics grid."></canvas></div>
   <div class="status" id="statusLine" aria-live="polite">Queue a route for Alpha and Beta.</div>
+  <div class="plan" id="planLine">Queue a move for each agent to see what the beat will do.</div>
   <div class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Mission ready.</div>
   <section class="bar" aria-label="Mission controls">
     <button class="btn primary" id="executeBtn" type="button">Execute Beat</button>
@@ -223,6 +226,7 @@ const els = {
   score: $("scoreValue"),
   best: $("bestValue"),
   status: $("statusLine"),
+  plan: $("planLine"),
   live: $("liveStatus"),
   execute: $("executeBtn"),
   agentBtn: $("agentBtn"),
@@ -253,10 +257,22 @@ const state = {
 function storage() {
   try { return window.localStorage || window.workshopStorage || null; } catch (_) { return window.workshopStorage || null; }
 }
+const MAX_BEST = 9999999;
+// Best was only ever written when a mission cleared, so a run that scored and
+// then got spotted or restarted threw its score away.
+function bankBest() {
+  if (state.score > state.best) {
+    state.best = state.score;
+    writeNumber(BEST_KEY, state.best);
+  }
+}
 function readNumber(key, fallback) {
   try {
     const value = parseInt(storage()?.getItem(key), 10);
-    return Number.isFinite(value) ? value : fallback;
+    // parseInt already stops NaN and Infinity, but "-5" came through as a
+    // negative best and a huge value printed on the scoreboard as "1e+24".
+    if (!Number.isFinite(value) || value <= 0) return fallback;
+    return Math.min(value, MAX_BEST);
   } catch (_) {
     return fallback;
   }
@@ -394,6 +410,74 @@ function switchAgent() {
   sync();
   draw();
 }
+// Replay the whole queued beat on throwaway copies: both moves, all four ways a
+// beat can be blocked, the core pickup, and the sight check against where the
+// patrols will be AFTER they step. Pure -- it changes nothing. executeBeat()
+// runs from it and the board draws it, so the warning cannot be wrong.
+function beatOutlook() {
+  if (state.mode !== "planning") return { kind: "idle", label: "--", detail: "", cells: {} };
+  const targets = {};
+  let blocked = null;
+  for (const id of ["A", "B"]) {
+    const agent = state.agents[id];
+    const cmd = state.commands[id];
+    const [dx, dy] = dirs[cmd];
+    const x = agent.x + dx, y = agent.y + dy;
+    if (!inBounds(x, y) || isWall(x, y) || occupiedByPatrol(x, y, 0)) {
+      if (cmd !== "wait") {
+        blocked = blocked || { who: id,
+          why: !inBounds(x, y) ? "would step off the grid"
+            : isWall(x, y) ? "would walk into a wall"
+            : "would walk straight into a patrol" };
+      }
+      targets[id] = { x: agent.x, y: agent.y };
+    } else {
+      targets[id] = { x, y };
+    }
+  }
+  if (!blocked && targets.A.x === targets.B.x && targets.A.y === targets.B.y && !isExit(targets.A.x, targets.A.y)) {
+    blocked = { who: "both", why: "would land on the same square, and only an exit can hold both" };
+  }
+  if (!blocked && targets.A.x === state.agents.B.x && targets.A.y === state.agents.B.y
+    && targets.B.x === state.agents.A.x && targets.B.y === state.agents.A.y) {
+    blocked = { who: "both", why: "would swap places, which the beat cannot do" };
+  }
+  if (blocked) {
+    return { kind: "blocked", label: "BEAT BLOCKED",
+      detail: (blocked.who === "both" ? "Alpha and Beta " : (blocked.who === "A" ? "Alpha " : "Beta ")) + blocked.why + ". Nothing moves.",
+      cells: {} };
+  }
+  // The patrols step at the same time you do, so the cones that judge this beat
+  // are the NEXT ones, not the ones sitting on the board while you plan.
+  const nextGuards = mission().patrols.map((patrol) => patrolState(patrol, 1));
+  const danger = [];
+  let caught = null;
+  for (const guard of nextGuards) {
+    const cone = visionCells(guard, 0);
+    for (const cell of [[guard.x, guard.y], ...cone]) danger.push(cell);
+    for (const id of ["A", "B"]) {
+      const t = targets[id];
+      if ((guard.x === t.x && guard.y === t.y) || cone.some(([x, y]) => x === t.x && y === t.y)) {
+        caught = caught || { who: id, guard: guard.id };
+      }
+    }
+  }
+  const grabs = !state.coreHeld && [targets.A, targets.B].some((t) => t.x === mission().core[0] && t.y === mission().core[1]);
+  const held = state.coreHeld || grabs;
+  const wins = held && isExit(targets.A.x, targets.A.y) && isExit(targets.B.x, targets.B.y);
+  if (caught) {
+    return { kind: "spotted", label: "SPOTTED BY " + caught.guard,
+      detail: (caught.who === "A" ? "Alpha" : "Beta") + " ends the beat inside " + caught.guard
+        + "'s cone once the patrols step. That ends the run.",
+      targets, danger, cells: {} };
+  }
+  return { kind: wins ? "win" : "safe",
+    label: wins ? "MISSION CLEARS" : grabs ? "SAFE, GRABS THE CORE" : "SAFE BEAT",
+    detail: wins ? "Both agents reach an exit holding the core. Mission complete."
+      : grabs ? "The core is secured this beat, and neither agent ends inside a cone. +128."
+      : "Neither agent ends inside a cone once the patrols step. +8.",
+    targets, danger, cells: {} };
+}
 function executeBeat() {
   if (state.mode === "cleared") return nextMission();
   if (state.mode === "failed" || state.mode === "complete") return restartAll();
@@ -415,7 +499,9 @@ function executeBeat() {
   if (targets.A.x === targets.B.x && targets.A.y === targets.B.y && !isExit(targets.A.x, targets.A.y)) blocked = true;
   if (targets.A.x === state.agents.B.x && targets.A.y === state.agents.B.y && targets.B.x === state.agents.A.x && targets.B.y === state.agents.A.y) blocked = true;
   if (blocked) {
-    say("Route blocked. Re-queue the beat.");
+    // Four different things collapse into "blocked"; say which one it was.
+    const plan = beatOutlook();
+    say(plan.kind === "blocked" ? plan.detail + " Re-queue the beat." : "Route blocked. Re-queue the beat.");
     state.lastEvent = "blocked";
     state.pulse = 1; ensureLoop();
     sfx("block");
@@ -458,6 +544,7 @@ function checkSight(reason) {
     for (const agent of Object.values(state.agents)) {
       if ((guard.x === agent.x && guard.y === agent.y) || vision.some(([x, y]) => x === agent.x && y === agent.y)) {
         state.mode = "failed";
+        bankBest();
         agent.seen = true;
         state.pulse = 1; ensureLoop();
         state.lastEvent = "spotted-" + reason;
@@ -485,10 +572,7 @@ function clearMission() {
     state.lastEvent = "mission-clear";
     say(m.name + " cleared. Press Next Mission.");
   }
-  if (state.score > state.best) {
-    state.best = state.score;
-    writeNumber(BEST_KEY, state.best);
-  }
+  bankBest();
   writeNumber(PROGRESS_KEY, Math.max(readNumber(PROGRESS_KEY, 0), state.mission));
   sfx("win");
   vibrate([24, 24, 24]);
@@ -503,12 +587,14 @@ function nextMission() {
   }
 }
 function restartAll() {
+  bankBest();
   state.mission = 0;
   state.score = 0;
   resetMission(true);
   sfx("switch");
 }
 function restartMission() {
+  bankBest();
   resetMission(state.mission === 0);
   sfx("switch");
 }
@@ -565,10 +651,26 @@ function draw() {
   for (const [x, y] of mission().walls) drawBlock(x, y, g, "#233044", "#94a3b8", "X");
   for (const [x, y] of mission().exits) drawBlock(x, y, g, "rgba(34,211,238,.2)", "#67e8f9", "E");
   if (!state.coreHeld) drawBlock(mission().core[0], mission().core[1], g, "rgba(250,204,21,.22)", "#facc15", "C");
+  // The cones on the board used to be this beat's, but the patrols step at the
+  // same time you do, so the cones that actually catch you are the NEXT ones.
+  // Faint: where they watch right now. Solid red: where they will watch when
+  // this beat resolves, which is what the sight check uses.
   for (const patrol of mission().patrols) {
     for (const [x, y] of visionCells(patrolState(patrol), 0)) {
-      ctx.fillStyle = "rgba(251,191,36,.18)";
+      ctx.fillStyle = "rgba(251,191,36,.10)";
       ctx.fillRect(x * g.cell + 5, y * g.cell + 5, g.cell - 13, g.cell - 13);
+    }
+  }
+  if (state.mode === "planning") {
+    for (const patrol of mission().patrols) {
+      const nextGuard = patrolState(patrol, 1);
+      for (const [x, y] of [[nextGuard.x, nextGuard.y], ...visionCells(nextGuard, 0)]) {
+        ctx.fillStyle = "rgba(251,113,133,.24)";
+        ctx.fillRect(x * g.cell + 5, y * g.cell + 5, g.cell - 13, g.cell - 13);
+        ctx.strokeStyle = "rgba(251,113,133,.55)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x * g.cell + 5.5, y * g.cell + 5.5, g.cell - 14, g.cell - 14);
+      }
     }
   }
   for (const patrol of mission().patrols) drawPatrol(patrolState(patrol), g);
@@ -675,6 +777,10 @@ function roundRect(x, y, w, h, r, fill, stroke) {
   if (stroke) ctx.stroke();
 }
 function sync() {
+  const plan = beatOutlook();
+  els.plan.textContent = plan.kind === "idle" ? "" : plan.label + " — " + plan.detail;
+  els.plan.className = "plan" + (plan.kind === "safe" ? " safe" : plan.kind === "win" ? " win"
+    : plan.kind === "spotted" || plan.kind === "blocked" ? " bad" : "");
   els.mission.textContent = (state.mission + 1) + "/" + missions.length;
   els.beat.textContent = String(state.beat) + "/" + mission().par;
   els.agent.textContent = state.selected;
@@ -747,6 +853,7 @@ function snapshot() {
     }),
     score: state.score,
     best: state.best,
+    beatPlan: (() => { const p = beatOutlook(); return { kind: p.kind, label: p.label, detail: p.detail, targets: p.targets || null, danger: p.danger || [] }; })(),
     sound: state.sound,
     feedback: state.feedback,
     lastEvent: state.lastEvent,
