@@ -88,6 +88,7 @@
   }
   .pill .label{font-size:9px;letter-spacing:0.26em;text-transform:uppercase;color:rgba(94,234,212,0.85);font-weight:700}
   .pill .value{font-size:18px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums}
+  .pill .sublabel{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(230,237,243,0.62);font-weight:700;font-variant-numeric:tabular-nums;min-height:11px}
 
   .stage{
     position:relative;width:100%;aspect-ratio:5/3;min-height:220px;
@@ -230,7 +231,7 @@
     <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">0/5</span></div>
     <div class="pill"><span class="label">Last</span><span class="value" id="lastValue">—</span></div>
     <div class="pill"><span class="label">Avg</span><span class="value" id="avgValue">—</span></div>
-    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span></div>
+    <div class="pill"><span class="label">Best</span><span class="value" id="bestValue">—</span><span class="sublabel" id="bestRounds"></span></div>
   </div>
 
   <button class="stage" id="stage" type="button" data-state="idle" aria-live="polite" aria-label="Tap to start. When the panel turns green, tap as fast as you can.">
@@ -285,6 +286,7 @@
     last:       document.getElementById('lastValue'),
     avg:        document.getElementById('avgValue'),
     best:       document.getElementById('bestValue'),
+    bestRounds: document.getElementById('bestRounds'),
     stage:      document.getElementById('stage'),
     headline:   document.getElementById('stageHeadline'),
     sub:        document.getElementById('stageSub'),
@@ -395,6 +397,7 @@
     falseStartCount: 0,
     now: 0,
     bestAvg: null,
+    best: null,          // {avg,count,ts} -- the count is what makes the avg mean anything
     // event-frame feedback
     lastFlashAt: 0,
     lastResultAt: 0,
@@ -402,11 +405,33 @@
     flashCount: 0
   };
 
+  // This is a five-round game, so a best average only means something alongside
+  // how many valid rounds produced it. The count was already being stored and
+  // then ignored: `avg < prev.avg` alone let a run of four false starts plus one
+  // lucky round set a wall a full five-round run could never beat. More valid
+  // rounds wins first; among equal counts, the lower average wins.
+  function betterRun(candidate, previous){
+    if (!previous) return true;
+    if (candidate.count !== previous.count) return candidate.count > previous.count;
+    return candidate.avg < previous.avg;
+  }
+  // typeof 'number' is true for Infinity and for negatives: a stored -40 printed
+  // "Best -40 ms" and nothing could ever beat it, and 1e999 printed "Infinity ms"
+  // on the pill while the diagnostics reported null for the same value.
+  function saneBest(p){
+    if (!p || typeof p !== 'object') return null;
+    const avg = Number(p.avg);
+    if (!Number.isFinite(avg) || avg <= 0) return null;
+    // Records written before the count mattered are treated as a single round,
+    // which is the cautious reading and keeps them beatable.
+    let count = Number(p.count);
+    if (!Number.isFinite(count) || count < 1) count = 1;
+    count = Math.min(Math.round(count), ROUNDS);
+    return { avg: avg, count: count, ts: Number.isFinite(Number(p.ts)) ? Number(p.ts) : 0 };
+  }
   function loadBest(){
     try { const raw = localStorage.getItem(BEST_KEY); if (!raw) return null;
-      const p = JSON.parse(raw);
-      if (!p || typeof p.avg !== 'number') return null;
-      return p;
+      return saneBest(JSON.parse(raw));
     } catch { return null; }
   }
   function saveBest(record){ try { localStorage.setItem(BEST_KEY, JSON.stringify(record)); } catch {} }
@@ -432,8 +457,14 @@
     } else {
       els.avg.textContent = '—';
     }
-    const best = state.bestAvg;
-    els.best.textContent = best ? fmtMs(best) : '—';
+    // A best average is only comparable alongside the number of valid rounds
+    // behind it, so the pill now says both.
+    const best = state.best;
+    els.best.textContent = best ? fmtMs(best.avg) : '—';
+    els.best.title = best ? fmtMs(best.avg) + ' over ' + best.count + ' valid round' + (best.count === 1 ? '' : 's') : 'No best run yet';
+    // Spelled out rather than "5/5", which sat next to the Round pill's own
+    // "5/5" and read as the same number. There is no tooltip on a phone.
+    if (els.bestRounds) els.bestRounds.textContent = best ? best.count + (best.count === 1 ? ' round' : ' rounds') : '';
   }
 
   function renderResults(){
@@ -519,13 +550,14 @@
     if (valid.length){
       const avg = valid.reduce((a,b)=>a+b.ms,0) / valid.length;
       const prev = loadBest();
-      if (!prev || avg < prev.avg){
-        const record = { avg, count: valid.length, ts: Date.now() };
-        saveBest(record);
-        state.bestAvg = avg;
+      const candidate = { avg: avg, count: valid.length, ts: Date.now() };
+      if (betterRun(candidate, prev)){
+        saveBest(candidate);
+        state.best = candidate;
       } else {
-        state.bestAvg = prev.avg;
+        state.best = prev;
       }
+      state.bestAvg = state.best ? state.best.avg : null;
     }
     setStage('done', 'Run Complete', valid.length ? 'Avg ' + fmtMs(state.results.filter(r=>!r.falseStart).reduce((a,b)=>a+b.ms,0)/Math.max(1,valid.length)) + ' over ' + valid.length + ' valid rounds. Tap to start a new run.' : 'No valid rounds. Tap to start a new run.', 'New five-round run');
     playDone();
@@ -659,7 +691,11 @@
       results: state.results.map(r => r.falseStart ? { falseStart: true } : { ms: Math.round(r.ms) }),
       avgMs: avgMs ? Math.round(avgMs) : null,
       falseStartCount: state.falseStartCount,
-      bestAvg: state.bestAvg ? Math.round(state.bestAvg) : null,
+      bestAvg: state.bestAvg != null && Number.isFinite(state.bestAvg) ? Math.round(state.bestAvg) : null,
+      // The best average only means something with the number of valid rounds
+      // behind it, so publish both and the rule that compares them.
+      best: state.best ? { avg: Math.round(state.best.avg), count: state.best.count } : null,
+      bestRule: 'more valid rounds wins first, then the lower average',
       cta: els.cue.textContent || null,
       soundEnabled,
       fullscreenEnabled: fullscreenSupported(),
@@ -687,6 +723,7 @@
   // Init
   state.now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const initialBest = loadBest();
+  state.best = initialBest;
   state.bestAvg = initialBest ? initialBest.avg : null;
   soundEnabled = loadSoundPref();
   updateSoundButton();
