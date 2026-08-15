@@ -78,7 +78,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Slipstream Sprint</span></div>
-    <div class="help">Switch lanes, draft behind rivals to recharge boost, and spend that boost to overtake through a fixed three-lap sprint.</div>
+    <div class="help" id="helpText">Hold your lane inside the marked slipstream strip behind a rival to draft: +28 boost a second. Boosting cancels the draft. Boost needs 3 to engage, passes rivals cleanly, and cuts barrier damage from 27 to 15. Three laps.</div>
   </header>
   <section class="hud" aria-label="Slipstream Sprint status">
     <span class="pill"><span class="label">Lap</span><span class="value" id="lapValue">1/3</span></span>
@@ -119,6 +119,26 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   const LAP_LENGTH = 1180;
   const TOTAL_LAPS = 3;
   const TOTAL_DISTANCE = LAP_LENGTH * TOTAL_LAPS;
+  // Every rule the player has to read off the screen lives here, and both the
+  // physics and the renderer read these same names. A number that decides the
+  // race must not exist only inside update().
+  const PERSPECTIVE = .55;            // canvas pixels per unit of distance ahead
+  const DRAFT_NEAR = 75;              // closest gap that still counts as drafting
+  const DRAFT_FAR = 205;              // furthest gap that still counts as drafting
+  const DRAFT_BOOST_RATE = 28;        // boost per second gained while drafting
+  const DRAFT_SCORE_RATE = 8;         // score per second gained while drafting
+  const HIT_RANGE = 52;               // gap at which a marker makes contact
+  const BOOST_MIN = 3;                // boost needed to engage AND to pass clean
+  const BOOST_DRAIN = 31;             // boost per second spent while boosting
+  const BOOST_SPEED = 165;            // extra target speed while boosting
+  const BRAKE_SPEED = 90;             // target speed given up while braking
+  const PAD_BOOST = 36;               // boost collected from a pad
+  const TRAFFIC_LOSS = 18;            // integrity lost clipping a rival
+  const BARRIER_LOSS = 27;            // integrity lost hitting a barrier
+  const BARRIER_LOSS_BOOSTING = 15;   // integrity lost scraping one while boosting
+  // A best is capped as part of the guard: a stored 1e24 would otherwise print
+  // on the pill and stand unbeatable forever. A perfect sprint scores ~3300.
+  const BEST_CAP = 5000000;
   const BEST_KEY = "slipstream-sprint.best.v1";
   const SOUND_KEY = "slipstream-sprint.sound.v1";
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -184,6 +204,13 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   function readSound() {
     return !["0", "false", "off", "muted"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
   }
+  // Guard the DIRECTION and the SIZE, not just the type: a stored "Infinity",
+  // "-40" or "1e24" all pass a bare Number(v) || 0 and print on the Best pill.
+  function readBest() {
+    const raw = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isFinite(raw) || raw < 0) return 0;
+    return Math.min(BEST_CAP, Math.round(raw));
+  }
 
   const state = {
     mode: "ready",
@@ -195,7 +222,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     boost: 54,
     integrity: 100,
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
+    best: readBest(),
     overtakes: 0,
     collisions: 0,
     draftSeconds: 0,
@@ -211,10 +238,16 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     shake: 0,
     flash: 0,
     finishTime: null,
-    failedReason: ""
+    failedReason: "",
+    finishBreakdown: null
   };
   let audio = null;
-  let lastFrame = 0, raf = 0;
+  // inTick guards against a SECOND animation chain: loop() zeroes raf before
+  // running update(), and update() calls setFeedback() -> ensureLoop(), which
+  // would see raf === 0 and arm a rival chain that loop() then arms again.
+  // Both flags live beside lastFrame because setFeedback() is defined far above
+  // the loop machinery and would otherwise read them in their dead zone.
+  let lastFrame = 0, raf = 0, inTick = false;
   let simTime = 0;
   let boostAutoOffTimer = null;
   let brakeAutoOffTimer = null;
@@ -226,6 +259,17 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     reducedMotion = motionQuery.matches;
     motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
+  } catch (_) {}
+  // The 960x540 backing store is scaled uniformly, so on a phone every canvas
+  // label shrinks with it and 11px store text lands under 5px on screen. Below
+  // the stylesheet's own breakpoint the margin panels and the in-lane label are
+  // dropped; the strip still carries the rule as shape and colour, and the
+  // header sentence plus the Boost pill carry the words at a readable size.
+  let compact = false;
+  try {
+    const widthQuery = window.matchMedia("(max-width: 760px)");
+    compact = widthQuery.matches;
+    widthQuery.addEventListener("change", (event) => { compact = event.matches; draw(); ensureLoop(); });
   } catch (_) {}
 
   function setFeedback(text, event = "status", duration = 1.6) {
@@ -273,8 +317,17 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       brakeAutoOffTimer = null;
     }
   }
+  // Every exit from a run banks, not just the winning one. Most sprints end in
+  // a crash or a restart, so a win-only bank leaves the Best pill decorative.
+  function bankBest() {
+    const score = Math.round(state.score);
+    if (!Number.isFinite(score) || score <= state.best) return;
+    state.best = Math.min(BEST_CAP, score);
+    writeStore(BEST_KEY, state.best);
+  }
   function resetRace(keepReady = false) {
     clearButtonAutoOffTimers();
+    bankBest();
     Object.assign(state, {
       mode: keepReady ? "ready" : "running",
       distance: 0,
@@ -298,7 +351,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       shake: 0,
       flash: 0,
       finishTime: null,
-      failedReason: ""
+      failedReason: "",
+      finishBreakdown: null
     });
     syncHud();
     draw();
@@ -317,14 +371,17 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     state.boosting = false;
     state.braking = false;
     state.finishTime = state.runTime;
-    const finishBonus = Math.max(0, Math.round(1800 - state.runTime * 25));
-    state.score += finishBonus + Math.round(state.integrity * 8) + Math.round(state.boost * 4);
-    state.score = Math.round(state.score);
-    if (state.score > state.best) {
-      state.best = state.score;
-      writeStore(BEST_KEY, state.best);
-    }
-    setFeedback("Sprint cleared. Final score " + state.score + ".", "finish", 5);
+    // The finish used to add three sizeable bonuses in silence, so the score
+    // jumped by thousands with nothing on screen saying where it came from.
+    const raced = Math.round(state.score);
+    const timeBonus = Math.max(0, Math.round(1800 - state.runTime * 25));
+    const integrityBonus = Math.round(state.integrity * 8);
+    const boostBonus = Math.round(state.boost * 4);
+    state.score = raced + timeBonus + integrityBonus + boostBonus;
+    state.finishBreakdown = { raced, timeBonus, integrityBonus, boostBonus, total: state.score };
+    bankBest();
+    setFeedback("Sprint cleared in " + round(state.runTime) + "s. " + state.score + " = " + raced
+      + " raced + " + timeBonus + " time + " + integrityBonus + " integrity + " + boostBonus + " boost left.", "finish", 5);
     tone(760, .18, .05);
   }
   function failRace(reason) {
@@ -332,7 +389,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     state.failedReason = reason;
     state.boosting = false;
     state.braking = false;
-    setFeedback(reason + " Restart to try the sprint again.", "failed", 5);
+    bankBest();
+    setFeedback(reason + " Scored " + Math.round(state.score) + ". Restart to try the sprint again.", "failed", 5);
     tone(150, .18, .05, "sawtooth");
   }
   function laneMove(delta, source = "keyboard") {
@@ -349,7 +407,9 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     tone(360 + next * 60, .045, .022);
   }
   function setBoost(on, source = "keyboard") {
-    state.boosting = Boolean(on) && state.mode === "running" && state.boost > 2;
+    // Engaging and passing clean now share BOOST_MIN. They used to be 2 and 3,
+    // so at boost 2.5 the button lit, the flame drew, and the pass still failed.
+    state.boosting = Boolean(on) && state.mode === "running" && state.boost > BOOST_MIN;
     els.boostBtn.dataset.active = String(state.boosting);
     els.boostBtn.setAttribute("aria-pressed", String(state.boosting));
     markInput(source, state.boosting ? "boost" : "boost-off");
@@ -366,9 +426,15 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   function sector() {
     return clamp(Math.floor((state.distance % LAP_LENGTH) / (LAP_LENGTH / 3)) + 1, 1, 3);
   }
+  // Both zones are FIXED horizontal strips on screen, because both are defined
+  // purely by the gap to the player and the player never moves off PLAYER_Y.
+  // That is what makes them drawable: yForRel(DRAFT_FAR)..yForRel(DRAFT_NEAR)
+  // is the slipstream, and yForRel(HIT_RANGE) is where contact begins.
+  function yForRel(rel) {
+    return PLAYER_Y - rel * PERSPECTIVE;
+  }
   function eventY(event) {
-    const rel = event.distance - state.distance;
-    return PLAYER_Y - rel * .55;
+    return yForRel(event.distance - state.distance);
   }
   function visibleEvents() {
     return state.events
@@ -376,18 +442,42 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       .map((event) => ({ event, rel: event.distance - state.distance, y: eventY(event) }))
       .filter((item) => item.rel > -140 && item.rel < 840);
   }
-  function nearestDraftTarget() {
-    return visibleEvents()
-      .filter((item) => item.event.type === "traffic" && item.event.lane === state.targetLane && item.rel > 75 && item.rel < 205)
-      .sort((a, b) => a.rel - b.rel)[0] || null;
+  // One pure reading of the slipstream that BOTH the physics and the renderer
+  // consume, so the drawn strip can never drift from what actually charges.
+  function draftStatus() {
+    const traffic = visibleEvents().filter((item) => item.event.type === "traffic");
+    const mine = traffic.filter((item) => item.event.lane === state.targetLane);
+    const inBand = mine.filter((item) => item.rel > DRAFT_NEAR && item.rel < DRAFT_FAR).sort((a, b) => a.rel - b.rel)[0] || null;
+    if (inBand && state.boosting) {
+      return { target: inBand, inBand: true, charging: false, phase: "cancelled", headline: "BOOST CANCELS DRAFT", note: "Release boost to charge." };
+    }
+    if (inBand && state.mode === "running") {
+      return { target: inBand, inBand: true, charging: true, phase: "charging", headline: "+" + DRAFT_BOOST_RATE + " BOOST/S", note: "Drafting. Hold this gap." };
+    }
+    if (inBand) {
+      return { target: inBand, inBand: true, charging: false, phase: "ready", headline: "SLIPSTREAM", note: "Start the race to draft." };
+    }
+    const close = mine.filter((item) => item.rel <= DRAFT_NEAR && item.rel > -HIT_RANGE).sort((a, b) => b.rel - a.rel)[0];
+    if (close) {
+      return { target: close, inBand: false, charging: false, phase: "close", headline: "TOO CLOSE", note: "Contact at " + HIT_RANGE + " back." };
+    }
+    const far = mine.filter((item) => item.rel >= DRAFT_FAR).sort((a, b) => a.rel - b.rel)[0];
+    if (far) {
+      return { target: far, inBand: false, charging: false, phase: "far", headline: Math.round(far.rel - DRAFT_FAR) + " TO CLOSE", note: "Rival ahead in your lane." };
+    }
+    const other = traffic.filter((item) => item.rel > DRAFT_NEAR).sort((a, b) => a.rel - b.rel)[0];
+    if (other) {
+      return { target: null, inBand: false, charging: false, phase: "lane", headline: "RIVAL IN LANE " + (other.event.lane + 1), note: "Change lane to draft." };
+    }
+    return { target: null, inBand: false, charging: false, phase: "none", headline: "NO RIVAL AHEAD", note: "Draft to refill boost." };
   }
   function handleEvents(dt) {
-    const draft = nearestDraftTarget();
-    if (draft && !state.boosting) {
+    const draft = draftStatus();
+    if (draft.charging) {
       state.draftSeconds += dt;
-      state.boost = clamp(state.boost + dt * 28, 0, 100);
-      state.score += dt * 8;
-      if (state.feedbackTimer <= 0) setFeedback("Drafting rival wake. Boost is charging.", "draft", .8);
+      state.boost = clamp(state.boost + dt * DRAFT_BOOST_RATE, 0, 100);
+      state.score += dt * DRAFT_SCORE_RATE;
+      if (state.feedbackTimer <= 0) setFeedback("Drafting. Boost +" + DRAFT_BOOST_RATE + " a second.", "draft", .8);
     }
     for (const event of state.events) {
       if (event.resolved) continue;
@@ -400,17 +490,17 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
         }
         continue;
       }
-      if (rel > 52 || Math.abs(rel) > 52 || event.lane !== state.targetLane) continue;
+      if (Math.abs(rel) > HIT_RANGE || event.lane !== state.targetLane) continue;
       event.resolved = true;
       event.hit = true;
       if (event.type === "boost") {
-        state.boost = clamp(state.boost + 36, 0, 100);
+        state.boost = clamp(state.boost + PAD_BOOST, 0, 100);
         state.score += 120;
         state.flash = .18;
-        setFeedback("Boost pad collected.", "boost-pad", 1.2);
+        setFeedback("Boost pad collected. +" + PAD_BOOST + " boost.", "boost-pad", 1.2);
         tone(680, .08, .04);
       } else if (event.type === "traffic") {
-        if (state.boosting && state.boost > 3) {
+        if (state.boosting && state.boost > BOOST_MIN) {
           state.overtakes += 1;
           state.score += 210;
           state.flash = .14;
@@ -418,19 +508,19 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
           tone(800, .08, .042);
         } else {
           state.collisions += 1;
-          state.integrity = clamp(state.integrity - 18, 0, 100);
+          state.integrity = clamp(state.integrity - TRAFFIC_LOSS, 0, 100);
           state.speed *= .55;
           state.shake = .25;
-          setFeedback("Rival clipped. Integrity down.", "collision", 1.4);
+          setFeedback("Rival clipped. Integrity -" + TRAFFIC_LOSS + ".", "collision", 1.4);
           tone(170, .12, .045, "sawtooth");
         }
       } else if (event.type === "barrier") {
         state.collisions += 1;
-        const loss = state.boosting ? 15 : 27;
+        const loss = state.boosting ? BARRIER_LOSS_BOOSTING : BARRIER_LOSS;
         state.integrity = clamp(state.integrity - loss, 0, 100);
         state.speed *= .45;
         state.shake = .34;
-        setFeedback(state.boosting ? "Boost scraped through the barrier." : "Barrier hit. Integrity down.", "barrier", 1.5);
+        setFeedback((state.boosting ? "Boost scraped the barrier. Integrity -" : "Barrier hit. Integrity -") + loss + ".", "barrier", 1.5);
         tone(130, .14, .048, "square");
       }
     }
@@ -443,16 +533,18 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     state.laneX += (LANES[state.targetLane] - state.laneX) * Math.min(1, dt * 13);
     if (state.mode !== "running") return;
     state.runTime += dt;
-    if (state.boosting && state.boost <= 0) setBoost(false, state.lastInput);
-    const boostPower = state.boosting ? 165 : 0;
-    const brakePower = state.braking ? -90 : 0;
+    const boostPower = state.boosting ? BOOST_SPEED : 0;
+    const brakePower = state.braking ? -BRAKE_SPEED : 0;
     const damageDrag = (100 - state.integrity) * .55;
     const targetSpeed = clamp(270 + boostPower + brakePower - damageDrag, 115, 470);
     state.speed += (targetSpeed - state.speed) * Math.min(1, dt * 4.8);
     if (state.boosting) {
-      state.boost = clamp(state.boost - dt * 31, 0, 100);
+      state.boost = clamp(state.boost - dt * BOOST_DRAIN, 0, 100);
       state.score += dt * 14;
     }
+    // Disengage AFTER the drain and at the same threshold a clean pass needs,
+    // so by the time handleEvents runs, "boosting" already implies "will pass".
+    if (state.boosting && state.boost <= BOOST_MIN) setBoost(false, state.lastInput);
     state.distance = clamp(state.distance + state.speed * dt, 0, TOTAL_DISTANCE);
     state.score += state.speed * dt * .018;
     handleEvents(dt);
@@ -465,7 +557,13 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
   function syncHud() {
     els.lap.textContent = Math.min(TOTAL_LAPS, currentLap() + 1) + "/" + TOTAL_LAPS;
     els.sector.textContent = String(sector());
-    els.boost.textContent = String(Math.round(state.boost));
+    // The pill is the one draft signal that survives a phone screen, where the
+    // in-canvas text shrinks to specks. It carries the rate, not just the level.
+    const draft = draftStatus();
+    els.boost.textContent = draft.charging
+      ? Math.round(state.boost) + " +" + DRAFT_BOOST_RATE + "/s"
+      : String(Math.round(state.boost));
+    els.boost.className = "value " + (draft.charging ? "good" : state.boost > BOOST_MIN ? "hot" : "bad");
     els.integrity.textContent = String(Math.round(state.integrity));
     els.integrity.className = "value " + (state.integrity > 55 ? "good" : state.integrity > 25 ? "hot" : "bad");
     els.score.textContent = String(Math.round(state.score));
@@ -582,7 +680,103 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       ctx.restore();
     }
   }
+  // The slipstream corridor, drawn where the rule actually is. Rails sit at
+  // +/-78 from the lane centre, clear of the 38px car half-width, so the strip
+  // stays readable even when a rival is sitting inside it.
+  const ZONE_HALF_W = 78;
+  function drawZones(status) {
+    const x = state.laneX;
+    const yFar = yForRel(DRAFT_FAR);
+    const yNear = yForRel(DRAFT_NEAR);
+    const edge = status.charging ? "#a3e635" : status.phase === "cancelled" ? "#facc15" : "rgba(103,232,249,.5)";
+    ctx.save();
+    if (status.charging || status.phase === "cancelled") {
+      ctx.fillStyle = status.charging ? "rgba(163,230,53,.15)" : "rgba(250,204,21,.15)";
+      ctx.fillRect(x - ZONE_HALF_W, yFar, ZONE_HALF_W * 2, yNear - yFar);
+    }
+    ctx.strokeStyle = edge;
+    // Thicker rails in compact mode: at a phone's ~0.4 scale a 2px store line
+    // is under one device pixel and disappears.
+    ctx.lineWidth = (status.inBand ? 3 : 2) * (compact ? 2 : 1);
+    ctx.setLineDash([9, 7]);
+    ctx.beginPath();
+    ctx.moveTo(x - ZONE_HALF_W, yFar); ctx.lineTo(x - ZONE_HALF_W, yNear);
+    ctx.moveTo(x + ZONE_HALF_W, yFar); ctx.lineTo(x + ZONE_HALF_W, yNear);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    for (const y of [yFar, yNear]) {
+      ctx.moveTo(x - ZONE_HALF_W, y); ctx.lineTo(x - ZONE_HALF_W + 24, y);
+      ctx.moveTo(x + ZONE_HALF_W - 24, y); ctx.lineTo(x + ZONE_HALF_W, y);
+    }
+    ctx.stroke();
+    // Where contact starts. Ticked at the lane edges, not across the lane, so
+    // the player's own car does not paint over it.
+    const yHit = yForRel(HIT_RANGE);
+    ctx.strokeStyle = "rgba(251,113,133,.78)";
+    ctx.lineWidth = compact ? 6 : 3;
+    ctx.beginPath();
+    ctx.moveTo(x - ZONE_HALF_W, yHit); ctx.lineTo(x - ZONE_HALF_W + 28, yHit);
+    ctx.moveTo(x + ZONE_HALF_W - 28, yHit); ctx.lineTo(x + ZONE_HALF_W, yHit);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawZoneLabel(status) {
+    const text = status.charging ? "DRAFT " + status.headline : status.inBand ? status.headline : "SLIPSTREAM";
+    const y = yForRel(DRAFT_FAR) - 9;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.font = "950 13px system-ui";
+    // A rival or a barrier can sit directly behind this line, so the label gets
+    // its own backing plate rather than being read off whatever is under it.
+    const width = Math.min(ZONE_HALF_W * 2 - 8, ctx.measureText(text).width) + 12;
+    ctx.fillStyle = "rgba(4,12,22,.82)";
+    ctx.beginPath();
+    ctx.roundRect(state.laneX - width / 2, y - 13, width, 18, 5);
+    ctx.fill();
+    ctx.fillStyle = status.charging ? "#a3e635" : status.phase === "cancelled" ? "#facc15" : "#8fb6cd";
+    ctx.fillText(text, state.laneX, y, ZONE_HALF_W * 2 - 8);
+    ctx.restore();
+  }
+  // The free margins either side of the road carry the numbers that decide the
+  // race. Drawn after the overlay so they stay readable on the ready screen.
+  function drawSidePanels(status) {
+    ctx.save();
+    ctx.textAlign = "left";
+    let y = 108;
+    ctx.fillStyle = "#67e8f9";
+    ctx.font = "950 11px system-ui";
+    ctx.fillText("SLIPSTREAM", 16, y);
+    y += 21;
+    ctx.fillStyle = status.charging ? "#a3e635" : status.phase === "cancelled" ? "#facc15" : "#e3f4ff";
+    ctx.font = "950 13px system-ui";
+    ctx.fillText(status.headline, 16, y, 150);
+    y += 17;
+    ctx.fillStyle = "#a7c1d5";
+    ctx.font = "800 11px system-ui";
+    ctx.fillText(status.note, 16, y, 150);
+    y += 25;
+    ctx.fillStyle = "#8fb6cd";
+    for (const line of ["SAME LANE ONLY", "GAP " + DRAFT_NEAR + "-" + DRAFT_FAR + " BACK", "PAYS +" + DRAFT_BOOST_RATE + " BOOST/S", "CONTACT AT " + HIT_RANGE + " BACK"]) {
+      ctx.fillText(line, 16, y, 150);
+      y += 15;
+    }
+    ctx.textAlign = "right";
+    y = 108;
+    ctx.fillStyle = "#facc15";
+    ctx.font = "950 11px system-ui";
+    ctx.fillText("BOOST", 944, y);
+    y += 21;
+    ctx.fillStyle = "#a7c1d5";
+    ctx.font = "800 11px system-ui";
+    for (const line of ["NEEDS " + BOOST_MIN + " TO FIRE", "ADDS " + BOOST_SPEED + " SPEED", "COSTS " + BOOST_DRAIN + " A SEC", "PASSES RIVALS CLEAN", "BARRIER -" + BARRIER_LOSS_BOOSTING + " NOT -" + BARRIER_LOSS, "PAD GIVES +" + PAD_BOOST]) {
+      ctx.fillText(line, 944, y, 156);
+      y += 15;
+    }
+    ctx.restore();
+  }
   function draw() {
+    const status = draftStatus();
     const shakeX = state.shake && !reducedMotion ? Math.sin(simTime * 64) * state.shake * 12 : 0;
     const shakeY = state.shake && !reducedMotion ? Math.cos(simTime * 53) * state.shake * 8 : 0;
     ctx.clearRect(0, 0, W, H);
@@ -603,7 +797,8 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-    drawRoad(state.distance * .55);
+    drawRoad(state.distance * PERSPECTIVE);
+    drawZones(status);
     for (const item of visibleEvents().sort((a, b) => a.y - b.y)) {
       drawEvent(item);
     }
@@ -618,6 +813,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       ctx.fill();
     }
     drawCar(state.laneX, PLAYER_Y, state.boosting ? "#facc15" : "#67e8f9", 1.12, "YOU");
+    if (!compact) drawZoneLabel(status);
     const progress = state.distance / TOTAL_DISTANCE;
     ctx.fillStyle = "rgba(6,17,30,.82)";
     ctx.strokeStyle = "rgba(103,232,249,.32)";
@@ -648,6 +844,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       const copy = state.mode === "ready" ? "Press Start Race. Arrow keys switch lanes, Space boosts, Down brakes." : state.feedback;
       wrapText(copy, W / 2, 246, 640, 24);
     }
+    if (!compact) drawSidePanels(status);
   }
   function wrapText(text, x, y, maxWidth, lineHeight) {
     const words = String(text).split(/\s+/);
@@ -674,6 +871,7 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       resolved: item.event.resolved
     }));
     const next = state.events.find((event) => !event.resolved && event.distance - state.distance > -30);
+    const draft = draftStatus();
     return {
       game: "slipstream-sprint",
       coordinateSystem: "canvas 960x540, origin top-left, x increases right, y increases down",
@@ -696,6 +894,26 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
       overtakes: state.overtakes,
       collisions: state.collisions,
       draftSeconds: round(state.draftSeconds),
+      draft: {
+        phase: draft.phase,
+        charging: draft.charging,
+        inBand: draft.inBand,
+        headline: draft.headline,
+        gap: draft.target ? round(draft.target.rel) : null,
+        band: [DRAFT_NEAR, DRAFT_FAR],
+        rate: DRAFT_BOOST_RATE
+      },
+      rules: {
+        hitRange: HIT_RANGE,
+        boostMin: BOOST_MIN,
+        boostDrain: BOOST_DRAIN,
+        boostSpeed: BOOST_SPEED,
+        padBoost: PAD_BOOST,
+        trafficLoss: TRAFFIC_LOSS,
+        barrierLoss: BARRIER_LOSS,
+        barrierLossBoosting: BARRIER_LOSS_BOOSTING
+      },
+      finishBreakdown: state.finishBreakdown,
       runTime: round(state.runTime),
       feedback: state.feedback,
       feedbackActive: state.feedbackTimer > 0,
@@ -725,16 +943,21 @@ button{font:inherit}.app{width:min(1040px,100%);display:grid;gap:9px}.top,.actio
     return renderText();
   }
   function loopActive() { return state.mode === "running" || state.feedbackTimer > 0 || state.shake > 0 || state.flash > 0 || Math.abs(state.laneX - LANES[state.targetLane]) > 0.5; }
-  function ensureLoop() { if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(loop); }
+  function ensureLoop() { if (raf || inTick || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(loop); }
   function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
   function loop(ts) {
     raf = 0;
-    if (!lastFrame) lastFrame = ts;
-    const dt = Math.min(.05, Math.max(0, (ts - lastFrame) / 1000));
-    lastFrame = ts;
-    update(dt);
-    syncHud();
-    draw();
+    inTick = true;
+    try {
+      if (!lastFrame) lastFrame = ts;
+      const dt = Math.min(.05, Math.max(0, (ts - lastFrame) / 1000));
+      lastFrame = ts;
+      update(dt);
+      syncHud();
+      draw();
+    } finally {
+      inTick = false;
+    }
     if (loopActive()) raf = requestAnimationFrame(loop);
   }
 
