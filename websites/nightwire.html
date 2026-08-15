@@ -159,7 +159,7 @@
     <div class="row"><span>End turn</span><span><kbd>Space</kbd> / <kbd>E</kbd></span></div>
     <div class="row"><span>Peek cones</span><span>hold <kbd>Shift</kbd></span></div>
     <div class="row"><span>Start / Restart</span><span><kbd>Enter</kbd> / <kbd>R</kbd></span></div>
-    <p style="font-size:13px;color:#9fd6e6;margin:12px 0 0">Stay out of amber cones. Take guards down from behind — but a body in a cone re-trips the alarm. Grab the asset, reach the exit, stay unseen.</p>
+    <p style="font-size:13px;color:#9fd6e6;margin:12px 0 0">Stay out of amber cones. Take guards down from behind — but a body in a cone re-trips the alarm. Grab the asset, reach the exit, stay unseen. <strong>Each sighting adds 34 to a 100 alarm, so the third one catches you.</strong> Standing in a cone is seen twice in one turn, once on the step and again after the guards move. At 50 they go alert and every cone reaches 4 tiles instead of 3. A quiet turn pays back 4.</p>
     <button class="btn primary" id="helpClose" type="button" style="margin-top:14px;width:100%">Close</button>
   </div>
 </div>
@@ -200,6 +200,10 @@ function writeStore(k, v) {
   try { s.setItem(k, String(v)); } catch (_) {}
 }
 const BEST_KEY = "nightwire:best";
+// A perfect five-stage extraction measured well under 20000, so 200000 is far
+// above anything reachable and still rejects junk. The old read was
+// Number(v) || 0, which let Infinity, -40, 12.7 and 1e24 all through.
+const MAX_BEST = 200000;
 const SOUND_KEY = "nightwire:sound";
 
 /* ---------- Web Audio tone helper ---------- */
@@ -245,6 +249,7 @@ const state = {
   alarm: 0,
   alert: false,
   lastSeen: null,          // {x,y}
+  justEscalated: false,    // set by raiseAlarm, consumed by the message it belongs to
   biasTurns: 0,
   pendingDistract: false,  // armed: next direction throws a lure
   peek: false,
@@ -253,7 +258,7 @@ const state = {
   feedback: "", feedbackTimer: 0,
   lastEvent: "",
 };
-state.best = Number(readStore(BEST_KEY, 0)) || 0;
+state.best = readBest();
 state.sound = readStore(SOUND_KEY, "1") !== "0";
 
 /* ---------- Feedback, HUD, render loop ---------- */
@@ -261,8 +266,10 @@ function setFeedback(text, dur = 1.6) { state.feedback = text; state.feedbackTim
 
 function syncHud() {
   els.stage.textContent = Math.min(state.stage + 1, TOTAL_STAGES) + " / " + TOTAL_STAGES;
-  els.alarm.textContent = Math.round(state.alarm) + "%";
-  els.alarm.className = "value " + (state.alarm >= ALERT_THRESH ? "bad" : state.alarm > 0 ? "hot" : "good");
+  const al = alarmStatus();
+  els.alarm.textContent = al.label;
+  els.alarm.title = al.detail;
+  els.alarm.className = "value " + (al.alert ? "bad" : al.alarm > 0 ? "hot" : "good");
   els.ap.textContent = state.mode === "playing" ? ("•".repeat(state.ap) + "·".repeat(MAX_AP - state.ap)) : "—";
   els.lures.textContent = String(state.distractsLeft);
   els.score.textContent = String(Math.round(state.score));
@@ -443,9 +450,50 @@ function drawGuards() {
   }
 }
 
+// The alarm meter, drawn in the free margin beside the board. Three segments,
+// one per sighting you can survive, with the alert line marked where the cones
+// grow. It shows YOUR budget, never anything about where a guard will look.
+function drawAlarmMeter() {
+  const al = alarmStatus();
+  const x = 26, w = 34, top = OY + 26, bottom = OY + GH * T - 26, h = bottom - top;
+  ctx.save();
+  ctx.fillStyle = "rgba(2,9,18,.8)";
+  ctx.fillRect(x - 8, top - 30, w + 16, h + 56);
+  ctx.fillStyle = "rgba(103,232,249,.12)";
+  ctx.fillRect(x, top, w, h);
+  // fill from the bottom up: a full bar is caught
+  const filled = h * (al.alarm / al.max);
+  ctx.fillStyle = al.alert ? "#fb7185" : al.alarm > 0 ? "#facc15" : "#22d3ee";
+  ctx.fillRect(x, bottom - filled, w, filled);
+  // one divider per sighting the alarm can still take
+  ctx.strokeStyle = "rgba(231,251,255,.42)";
+  ctx.lineWidth = 1.5;
+  for (let v = al.perSighting; v < al.max; v += al.perSighting) {
+    const y = bottom - h * (v / al.max);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.stroke();
+  }
+  // the alert line: where every cone gets a tile longer
+  const ay = bottom - h * (al.alertAt / al.max);
+  ctx.strokeStyle = "#fb7185";
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath(); ctx.moveTo(x - 6, ay); ctx.lineTo(x + w + 6, ay); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(103,232,249,.5)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + .5, top + .5, w - 1, h - 1);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#67e8f9";
+  ctx.font = "950 11px system-ui,Segoe UI,Arial";
+  ctx.fillText("ALARM", x + w / 2, top - 14);
+  ctx.fillStyle = al.alert ? "#fb7185" : "#e7fbff";
+  ctx.font = "950 13px system-ui,Segoe UI,Arial";
+  ctx.fillText(al.sightingsLeft + " LEFT", x + w / 2, bottom + 20);
+  ctx.restore();
+}
 function draw() {
   ctx.fillStyle = "#020912"; ctx.fillRect(0, 0, W, H);
-  if (state.mode !== "menu") { drawBoard(); drawCones(); drawBodies(); drawGuards(); drawAgent(); }
+  if (state.mode !== "menu") { drawBoard(); drawCones(); drawBodies(); drawGuards(); drawAgent(); drawAlarmMeter(); }
   if (state.mode !== "playing") drawOverlay();
 }
 function drawOverlay() {
@@ -487,9 +535,17 @@ function startRun() {
 }
 function restartRun() {
   ensureAudio();
+  // Being caught and extracting both bank the score; Restart did not, so a run
+  // cut short partway through stage four left Best untouched.
+  commitBest();
   state.mode = "playing"; state.stage = 0; state.score = 0; state.combo = 1; state.turn = 0;
   loadLevel(0); stageUnseen = true;
   setFeedback("Restarted.", 1.0); focusCanvas();
+}
+function readBest() {
+  const n = Number(readStore(BEST_KEY, 0));
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > MAX_BEST) return 0;
+  return n;
 }
 function commitBest() { if (state.score > state.best) { state.best = Math.round(state.score); writeStore(BEST_KEY, state.best); } }
 function failRun(reason) {
@@ -606,16 +662,52 @@ function guardsTurn() {
 }
 
 /* ---------- Detection, alarm meter, alert escalation ---------- */
+// The whole tension of the game lived in four constants and NONE of them reached
+// a pixel: a sighting costs 34 of a 100 alarm, so you survive exactly THREE;
+// guards go alert at 50, which silently stretches every vision cone from 3 tiles
+// to 4; and a quiet turn pays back only 4. The pill showed a bare percentage and
+// changed colour, which says something is wrong but never says how much is left.
+// The pill, the canvas meter and the diagnostics all read this one record.
+function alarmStatus() {
+  const alarm = Math.round(state.alarm);
+  const alert = state.alert;
+  const sightingsLeft = Math.max(0, Math.ceil((ALARM_MAX - alarm) / ALARM_SPOT) - 1);
+  return {
+    alarm, max: ALARM_MAX, perSighting: ALARM_SPOT, decayPerQuietTurn: ALARM_DECAY,
+    alertAt: ALERT_THRESH, alert,
+    sightingsLeft,
+    vision: alert ? ALERT_VISION : BASE_VISION,
+    visionCalm: BASE_VISION, visionAlert: ALERT_VISION,
+    label: alarm + "% · " + sightingsLeft + " left",
+    detail: "Each sighting adds " + ALARM_SPOT + " to a " + ALARM_MAX + " alarm, so the third one catches you. "
+      + "Standing in a cone is seen twice in one turn, once on the step and again after the guards move. "
+      + "At " + ALERT_THRESH + " they go alert and every cone reaches " + ALERT_VISION
+      + " tiles instead of " + BASE_VISION + ". A quiet turn pays back " + ALARM_DECAY + "."
+  };
+}
 function raiseAlarm(n, reason) {
   stageUnseen = false;
   state.alarm = clamp(state.alarm + n, 0, ALARM_MAX);
   state.combo = 1; state.lastEvent = reason || "spotted";
   if (state.alarm >= ALARM_MAX) { failRun("Alarm maxed"); return; }
+  const wasAlert = state.alert;
   state.alert = state.alarm >= ALERT_THRESH;
+  // Cones silently grow a tile at the alert threshold. Do NOT announce it here:
+  // every caller follows raiseAlarm with its own setFeedback, which would wipe
+  // the notice before a frame was drawn. Flag it and let the caller say it once.
+  state.justEscalated = state.alert && !wasAlert;
   state.lastSeen = { x: state.agent.x, y: state.agent.y }; state.biasTurns = ALERT_BIAS_TURNS;
 }
+// One message, carrying the escalation when it has just happened.
+function alarmNote(base) {
+  if (!state.justEscalated) return base;
+  state.justEscalated = false;
+  return base + " Alert: every cone now reaches " + ALERT_VISION + " tiles.";
+}
 function onSpotted() {                              // immediate (player stepped into a cone)
-  raiseAlarm(ALARM_SPOT, "spotted"); setFeedback("Spotted!", 1.2); tone(180, 0.16, 0.05, "sawtooth");
+  raiseAlarm(ALARM_SPOT, "spotted");
+  if (state.mode !== "playing") return;
+  setFeedback(alarmNote("Spotted!"), 1.6); tone(180, 0.16, 0.05, "sawtooth");
 }
 function resolveDetection() {                        // end of guards' turn
   let spotted = false, alarmRaised = false;
@@ -627,11 +719,17 @@ function resolveDetection() {                        // end of guards' turn
       const g = nearestGuard(b);
       if (g && !g.invest) { g.invest = { x: b.x, y: b.y }; g.investTurns = INVEST_TURNS; }
       alarmRaised = true;
-      raiseAlarm(ALARM_SPOT, "body"); setFeedback("Body spotted!", 1.2); tone(160, 0.18, 0.05, "sawtooth");
+      raiseAlarm(ALARM_SPOT, "body");
+      if (state.mode !== "playing") return;
+      setFeedback(alarmNote("Body spotted!"), 1.6); tone(160, 0.18, 0.05, "sawtooth");
       if (state.mode !== "playing") return;
     }
   }
-  if (spotted) { raiseAlarm(ALARM_SPOT, "spotted"); setFeedback("Spotted!", 1.2); tone(180, 0.16, 0.05, "sawtooth"); }
+  if (spotted) {
+    raiseAlarm(ALARM_SPOT, "spotted");
+    if (state.mode !== "playing") return;
+    setFeedback(alarmNote("Spotted!"), 1.6); tone(180, 0.16, 0.05, "sawtooth");
+  }
   else if (!alarmRaised) { state.alarm = Math.max(0, state.alarm - ALARM_DECAY); state.alert = state.alarm >= ALERT_THRESH; } // no decay on a body-discovery turn
 }
 
@@ -755,6 +853,7 @@ function snapshot() {
     turn: state.turn, ap: state.ap, maxAp: MAX_AP,
     agent: { x: state.agent.x, y: state.agent.y },
     alarm: Math.round(state.alarm), alertLevel: state.alert ? "alert" : "calm",
+    alarmStatus: alarmStatus(),
     assetHeld: state.assetHeld, asset: { x: state.asset.x, y: state.asset.y, taken: state.asset.taken },
     exit: { x: state.exit.x, y: state.exit.y },
     guards: state.guards.slice(0, 8).map((g) => ({ id: g.id, x: g.x, y: g.y, dir: g.dir, vision: state.alert ? ALERT_VISION : BASE_VISION, down: g.down, investigating: !!g.invest })),
