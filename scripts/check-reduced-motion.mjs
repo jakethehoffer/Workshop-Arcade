@@ -161,6 +161,24 @@ const MOTION_AWARE_GAMES = [
   'websites/bulb-brigade.html',
   'websites/last-light.html',
   'websites/starline-strafe.html',
+  // Added 2026-08-16 after a runtime census of all 100 games: these already
+  // reported the live media state and loaded clean under both settings, they
+  // were simply never listed, so nothing protected them from regressing.
+  'websites/aster-vault.html',
+  'websites/blackjack.html',
+  'websites/chromalock.html',
+  'websites/dungeon-circuit.html',
+  'websites/eclipse-grid.html',
+  'websites/floodgate.html',
+  'websites/flux-reversi.html',
+  'websites/fourfall.html',
+  'websites/gemline-cascade.html',
+  'websites/rune-roster.html',
+  'websites/seedline.html',
+  'websites/shard-sheriff.html',
+  // Already gated its sparks, shake, confetti, squash and bob behind a live
+  // matchMedia read; it just never reported the flag, so it sat outside here.
+  'websites/pylon-shift.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {

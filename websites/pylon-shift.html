@@ -469,6 +469,10 @@ window.render_game_to_text=function render_game_to_text(){return JSON.stringify(
   hint:state.hint?{from:state.hint.from+1,to:state.hint.to+1}:null,
   best:{score:state.best.score,moves:state.best.moves,stars:state.best.stars},
   sound:state.sound,feedback:state.feedback,
+  // reduced() reads the media query live, so this tracks a mid-session change
+  // with no listener. Exposing it lets the catalog's reduced-motion gate cover
+  // this game, which already stills its sparks, shake, confetti, squash and bob.
+  reducedMotion:reduced(),
   coordinateSystem:"pegs[0..2] bottom→top, disc sizes 1(small)..N(large); legal move drops a smaller disc onto a larger one or an empty pylon; optimal moves chain a combo multiplier; goal: full ordered stack on pylon 3"})};
 
 // ---------- input ----------
