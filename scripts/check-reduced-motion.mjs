@@ -134,6 +134,7 @@ const MOTION_AWARE_GAMES = [
   'websites/metro-dash.html',
   'websites/arena.html',
   'websites/slipstream-sprint.html',
+  'websites/lumen-lander.html',
   'websites/skyline-sentry.html',
   'websites/brick-breaker.html',
   'websites/paddle-pulse.html',

@@ -98,7 +98,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
 <main class="app" id="app" aria-label="Lumen Lander lunar landing game">
   <header class="top">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Lumen Lander</span></div>
-    <div class="help">Arrows or A/D rotate. Up, W, or Space burns fuel. Land on the lit pad below the velocity and tilt limits.</div>
+    <div class="help" id="helpText">Arrows or A/D rotate. Up, W, or Space burns fuel at 12 a second, and thrust adds 94 against a gravity that rises every stage. Land on the lit pad under sideways 34, drop 48, tilt 12.</div>
   </header>
   <section class="hud" aria-label="Lander status">
     <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/4</span></div>
@@ -116,7 +116,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     <div class="cue" id="thrustCue" data-tone="thrust" data-active="false"><span>Thrust</span><strong id="thrustCueValue">Idle</strong></div>
     <div class="cue" id="landingCue" data-tone="landing" data-active="false"><span>Landing</span><strong id="landingCueValue">Armed</strong></div>
   </section>
-  <div class="status" id="statusLine" aria-live="polite">Press Start. Safe pad limit: horizontal 34, vertical 48, tilt 12 deg.</div>
+  <div class="status" id="statusLine" aria-live="polite">Press Start. Glow Basin gravity 36. Safe pad limit: sideways 34, drop 48, tilt 12 deg.</div>
   <section class="bar" aria-label="Run controls">
     <button class="btn primary" id="startBtn" type="button">Start</button>
     <button class="btn" id="nextBtn" type="button">Next Stage</button>
@@ -141,6 +141,15 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   const STEP = 1 / 60;
   const TAU = Math.PI * 2;
   const SAFE = { vx: 34, vy: 48, tilt: 12 };
+  // The flight model, in one place, read by both the physics and the readouts.
+  // Gravity is the only one that CHANGES between stages, and it was the one
+  // number the player was never told.
+  const THRUST = 94;                  // upward acceleration while burning
+  const BURN_RATE = 12;               // fuel spent per second of burn
+  const SPIN_RATE = 5.8;              // rotation acceleration while steering
+  // A best is capped as part of the guard: a stored 1e24 would otherwise print
+  // on the pill and stand unbeatable forever. A perfect run scores under 5000.
+  const BEST_CAP = 5000000;
   const BEST_KEY = "lumen-lander.best.v1";
   const SOUND_KEY = "lumen-lander.sound.v1";
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -183,6 +192,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   let stamp = 0;
   let manualClock = false;
   let raf = 0;
+  let carry = 0;   // unspent real milliseconds, banked between animation frames
 
   function storage() {
     if (window.workshopStorage) return window.workshopStorage;
@@ -206,12 +216,22 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   function readSound() {
     return !["0", "false", "off"].includes(String(readStore(SOUND_KEY, "1")).toLowerCase());
   }
+  // Guard the DIRECTION and the SIZE, not just the type: a stored "Infinity",
+  // "-40" or "1e24" all pass a bare Number(v) || 0 and print on the Best pill.
+  function readBest() {
+    const raw = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isFinite(raw) || raw < 0) return 0;
+    return Math.min(BEST_CAP, Math.round(raw));
+  }
   const state = {
     mode: "ready",
     stage: 0,
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
-    message: "Press Start. Safe pad limit: horizontal 34, vertical 48, tilt 12 deg.",
+    best: readBest(),
+    // Built from the stage table and SAFE, never written as literals, so the
+    // sentence cannot drift from the rules it describes.
+    message: "Press Start. " + stages[0].name + " gravity " + stages[0].gravity
+      + ". Safe pad limit: sideways " + SAFE.vx + ", drop " + SAFE.vy + ", tilt " + SAFE.tilt + " deg.",
     sound: readSound(),
     lastSound: "none",
     time: 0,
@@ -277,6 +297,42 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   }
   function status(text) {
     state.message = text;
+  }
+  // One pure reading of the landing rule. contact() decides with it, the pills
+  // colour from it, the Landing cue reports it and a rejection names the exact
+  // test that failed, so none of them can drift from the others.
+  function landingCheck() {
+    const craft = state.lander;
+    const hx = Math.abs(craft.vx);
+    const tilt = tiltDegrees();
+    const pad = onPad(craft.x);
+    // Note the asymmetry: sideways speed and tilt are magnitudes, but the drop
+    // test is SIGNED, so a craft still rising has no vertical problem at all.
+    const hxOk = hx <= SAFE.vx;
+    const vyOk = craft.vy <= SAFE.vy;
+    const tiltOk = tilt <= SAFE.tilt;
+    return { onPad: pad, hx, hxOk, vy: craft.vy, vyOk, tilt, tiltOk, ok: pad && hxOk && vyOk && tiltOk };
+  }
+  function rejectReason(check) {
+    const bad = [];
+    if (!check.hxOk) bad.push("sideways " + Math.ceil(check.hx) + " over " + SAFE.vx);
+    if (!check.vyOk) bad.push("drop " + Math.ceil(check.vy) + " over " + SAFE.vy);
+    if (!check.tiltOk) bad.push("tilt " + Math.ceil(check.tilt) + " over " + SAFE.tilt);
+    return bad.length ? "Pad rejected: " + bad.join(", ") + "." : "Pad rejected the touchdown.";
+  }
+  // Live burn budget. The Fuel pill used to show a bare number with no way to
+  // know what it bought; at BURN_RATE a full tank is under ten seconds.
+  function burnSeconds(fuel) {
+    return Math.max(0, fuel) / BURN_RATE;
+  }
+  function stageBriefing(index) {
+    const stage = stages[index];
+    const previous = index > 0 ? stages[index - 1].gravity : null;
+    const change = previous === null ? "" : stage.gravity > previous
+      ? ", up from " + previous
+      : stage.gravity < previous ? ", down from " + previous : ", unchanged";
+    return stage.name + ". Gravity " + stage.gravity + change
+      + ". Fuel " + Math.round(stage.fuel) + " is " + burnSeconds(stage.fuel).toFixed(1) + "s of burn.";
   }
   function clearFeedback() {
     state.feedback.startPulse = 0;
@@ -371,12 +427,12 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   function beginRun() {
     if (state.mode === "ready" && state.stage === 0 && state.score === 0) {
       state.mode = "flying";
-      status("Stage 1: settle on the lit pad.");
+      status("Stage 1: " + stageBriefing(0));
       pulseFeedback("start", 1.05);
       sound("start");
     } else if (state.mode === "ready") {
       state.mode = "flying";
-      status(stageData().name + ": engines live.");
+      status("Engines live. " + stageBriefing(state.stage));
       pulseFeedback("start", .9);
       sound("next");
     }
@@ -388,7 +444,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     state.stage = 0;
     state.score = 0;
     resetStage("ready");
-    status("Run reset. Press Start for Glow Basin.");
+    status("Run reset. Stage 1: " + stageBriefing(0) + " Press Start.");
     sound("start");
     draw();
   }
@@ -396,7 +452,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     if (state.mode !== "stageClear") return;
     state.stage += 1;
     resetStage("ready");
-    status("Stage " + (state.stage + 1) + ": " + stageData().name + ". Press Start.");
+    status("Stage " + (state.stage + 1) + ": " + stageBriefing(state.stage) + " Press Start.");
     sound("next");
     draw();
   }
@@ -438,13 +494,13 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     const ground = padSurface(stageData(), craft.x);
     if (craft.y + craft.r < ground) return;
     craft.y = ground - craft.r;
-    const tilted = tiltDegrees();
-    if (onPad(craft.x) && Math.abs(craft.vx) <= SAFE.vx && craft.vy <= SAFE.vy && tilted <= SAFE.tilt) {
+    const check = landingCheck();
+    if (check.ok) {
       stageLanding();
-    } else if (!onPad(craft.x)) {
+    } else if (!check.onPad) {
       crash("Hull struck the crater rim.");
     } else {
-      crash("Pad rejected speed or tilt.");
+      crash(rejectReason(check));
     }
   }
   function step(dt) {
@@ -458,7 +514,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
       return;
     }
     const steer = Number(input.right) - Number(input.left);
-    craft.spin += steer * 5.8 * dt;
+    craft.spin += steer * SPIN_RATE * dt;
     craft.spin *= .985;
     craft.spin = clamp(craft.spin, -2.7, 2.7);
     craft.angle = wrapAngle(craft.angle + craft.spin * dt);
@@ -467,9 +523,9 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     if (state.thrusting) {
       if (!state.wasThrusting) pulseFeedback("thrust", .72);
       else holdFeedback("thrust", .72);
-      craft.vx += Math.sin(craft.angle) * 94 * dt;
-      craft.vy -= Math.cos(craft.angle) * 94 * dt;
-      craft.fuel = Math.max(0, craft.fuel - 12 * dt);
+      craft.vx += Math.sin(craft.angle) * THRUST * dt;
+      craft.vy -= Math.cos(craft.angle) * THRUST * dt;
+      craft.fuel = Math.max(0, craft.fuel - BURN_RATE * dt);
       if (Math.floor(state.time * 11) % 5 === 0) sound("burn");
     }
     state.wasThrusting = state.thrusting;
@@ -563,17 +619,28 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
   function syncHud() {
     const craft = state.lander;
     els.stage.textContent = (state.stage + 1) + "/" + stages.length;
-    els.fuel.textContent = Math.ceil(craft.fuel);
-    els.velocity.textContent = Math.round(Math.abs(craft.vx)) + "/" + Math.round(Math.abs(craft.vy));
-    els.tilt.textContent = Math.round(tiltDegrees()) + " deg";
+    const check = landingCheck();
+    // Fuel is meaningless as a bare number; what the pilot needs is how many
+    // seconds of burn it buys.
+    els.fuel.textContent = Math.ceil(craft.fuel) + " · " + burnSeconds(craft.fuel).toFixed(1) + "s";
+    // Round UP against an upper limit. Math.round printed "48" at a real drop of
+    // 48.2, so the pill read exactly the legal limit on a touchdown the pad then
+    // rejected. With ceil, a shown number at or under the limit is always legal.
+    // The old "34/48" format also collided with the limits themselves (34 and
+    // 48), so a player read it as "34 out of 48"; the axes are named now.
+    els.velocity.textContent = "H" + Math.ceil(check.hx)
+      + " V" + (check.vy >= 0 ? Math.ceil(check.vy) : -Math.ceil(-check.vy));
+    els.tilt.textContent = Math.ceil(check.tilt) + " deg";
     els.score.textContent = state.score;
     els.best.textContent = state.best;
     els.status.textContent = state.message;
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", String(state.sound));
     els.fuel.className = "value" + (craft.fuel < 22 ? " warn" : "");
-    els.velocity.className = "value" + ((Math.abs(craft.vx) > SAFE.vx || Math.abs(craft.vy) > SAFE.vy) ? " bad" : "");
-    els.tilt.className = "value" + (tiltDegrees() > SAFE.tilt ? " bad" : "");
+    // Colour from the same check the pad uses. The old test was |vy| > 48, which
+    // flagged a fast CLIMB as a fatal speed even though the rule ignores it.
+    els.velocity.className = "value" + ((!check.hxOk || !check.vyOk) ? " bad" : "");
+    els.tilt.className = "value" + (check.tiltOk ? "" : " bad");
     els.start.disabled = state.mode === "flying" || state.mode === "stageClear" || state.mode === "complete";
     els.next.disabled = state.mode !== "stageClear";
     syncFeedback();
@@ -732,6 +799,16 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     reducedMotion = motionQuery.matches;
     motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
   } catch (_) {}
+  // The 960x540 store is scaled uniformly, so on a phone these 12px readouts
+  // land under 5px and render as an illegible smudge. Below the stylesheet's own
+  // breakpoint they are dropped: the header sentence, the status line and the
+  // pills already carry the same numbers at a readable size.
+  let compact = false;
+  try {
+    const widthQuery = window.matchMedia("(max-width: 720px)");
+    compact = widthQuery.matches;
+    widthQuery.addEventListener("change", (event) => { compact = event.matches; draw(); ensureLoop(); });
+  } catch (_) {}
   function draw() {
     const stage = stageData();
     ctx.clearRect(0, 0, W, H);
@@ -757,9 +834,15 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     ctx.fillStyle = "rgba(237,247,255,.82)";
     ctx.font = "900 15px system-ui,Segoe UI,sans-serif";
     ctx.fillText(stage.name, 22, 32);
-    ctx.fillStyle = "rgba(125,211,252,.82)";
-    ctx.font = "800 12px system-ui,Segoe UI,sans-serif";
-    ctx.fillText("SAFE: HX <= 34  VY <= 48  TILT <= 12", 22, 52);
+    if (!compact) {
+      ctx.fillStyle = "rgba(125,211,252,.82)";
+      ctx.font = "800 12px system-ui,Segoe UI,sans-serif";
+      ctx.fillText("SAFE: SIDEWAYS <= " + SAFE.vx + "   DROP <= " + SAFE.vy + "   TILT <= " + SAFE.tilt, 22, 52);
+      // Gravity changes every stage and reached no surface at all before this.
+      ctx.fillStyle = "rgba(250,204,21,.85)";
+      ctx.fillText("GRAVITY " + stage.gravity + "   THRUST " + THRUST
+        + "   BURN " + BURN_RATE + "/S   " + burnSeconds(state.lander.fuel).toFixed(1) + "S LEFT", 22, 71);
+    }
     if (state.mode === "ready") overlay("LUMEN LANDER", "Start, then feather thrust onto the lit pad.");
     if (state.mode === "stageClear") overlay("PAD LIT", "Press Next Stage or Enter.");
     if (state.mode === "complete") overlay("RUN COMPLETE", "Final score " + state.score + ". Restart for another run.");
@@ -781,7 +864,9 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     return {
       coordinates: "origin top-left; x right; y down; velocities px/s",
       mode: state.mode,
-      stage: { index: state.stage + 1, total: stages.length, name: stageData().name },
+      stage: { index: state.stage + 1, total: stages.length, name: stageData().name, gravity: stageData().gravity },
+      flight: { thrust: THRUST, burnRate: BURN_RATE, burnSecondsLeft: round(burnSeconds(state.lander.fuel)) },
+      landingCheck: landingCheck(),
       lander: { x: round(craft.x), y: round(craft.y), vx: round(craft.vx), vy: round(craft.vy), angleDeg: round(wrapAngle(craft.angle) * 180 / Math.PI), tiltDeg: round(tiltDegrees()), fuel: round(craft.fuel), thrusting: state.thrusting },
       pad: { x: pad[0], y: pad[1], width: pad[2] },
       safe: SAFE,
@@ -795,6 +880,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
       feedback: { startPulse: feedback.startPulse, thrustPulse: feedback.thrustPulse, landingPulse: feedback.landingPulse, crashFlash: feedback.crashFlash },
       feedbackCounts: state.feedbackCounts,
       fullscreen: fullActive(),
+      reducedMotion,
       message: state.message
     };
   }
@@ -824,6 +910,7 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     stamp = 0;
+    carry = 0;
   }
   function frame(time) {
     raf = 0;
@@ -831,12 +918,20 @@ canvas:focus-visible,.btn:focus-visible,.touch button:focus-visible{outline:3px 
     const elapsed = manualClock ? 0 : clamp(time - stamp, 0, 80);
     stamp = time;
     if (!manualClock) {
-      const steps = Math.max(1, Math.round(elapsed / (STEP * 1000)));
-      for (let i = 0; i < steps; i++) step(STEP);
+      // Bank the REAL elapsed time and spend it in whole 1/60 slices, carrying
+      // the remainder into the next frame. The old code ran
+      // max(1, round(elapsed / 16.67)) slices per frame, so a 120Hz display got
+      // a full slice every 8.3ms: measured, the lander fell at 1.90x speed and
+      // a landing tuned on a 60Hz screen was unflyable on a fast one.
+      carry = Math.min(carry + elapsed, 200);
+      while (carry >= STEP * 1000) {
+        step(STEP);
+        carry -= STEP * 1000;
+      }
     }
     draw();
     if (loopActive()) raf = requestAnimationFrame(frame);
-    else stamp = 0;
+    else { stamp = 0; carry = 0; }
   }
   resetStage("ready");
   syncFull();
