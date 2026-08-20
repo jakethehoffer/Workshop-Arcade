@@ -68,7 +68,7 @@
 main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 12px 28px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05);color:var(--ink);font:inherit;font-size:12px;font-weight:850}.pill{min-width:78px;padding:7px 9px;text-align:center;line-height:1.05}.label{display:block;color:var(--mint);font-size:9px;font-weight:950;text-transform:uppercase;white-space:nowrap}.value{display:block;margin-top:3px;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums}
 .primaryPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,142px);gap:8px;align-items:stretch;border:1px solid rgba(130,238,178,.3);border-radius:8px;padding:8px;background:linear-gradient(180deg,rgba(21,43,37,.94),rgba(10,24,20,.94));box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05)}.actionMeta{display:grid;gap:7px;min-width:0}.actionRow{justify-content:flex-start;align-items:stretch}.selectedCue{min-width:126px;padding:8px 10px;line-height:1.08}.selectedCue .value{font-size:16px;text-transform:uppercase}.goalStrip{justify-content:flex-start;flex:1 1 280px}.goalChip{min-width:142px;flex:1 1 142px;padding:7px 9px;line-height:1.15}.goalChip.done{border-color:rgba(105,230,168,.65);background:linear-gradient(180deg,rgba(57,126,86,.55),rgba(16,43,30,.75))}.goalChip .value{font-size:14px;text-transform:capitalize}.goalChip .label{color:var(--gold)}.primaryPanel #dayBtn{width:100%;min-height:100%;font-size:13px}
 .stage{border:1px solid rgba(130,238,178,.3);border-radius:8px;overflow:hidden;background:#07110f;box-shadow:0 22px 54px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04)}canvas{display:block;width:100%;aspect-ratio:16/10;max-height:66vh;background:#07110f;touch-action:none}canvas:focus-visible{outline:3px solid rgba(255,209,102,.8);outline-offset:-4px}
-.status{min-height:20px;color:var(--mint);font-size:12px;font-weight:900;text-transform:uppercase;line-height:1.3}.btn{min-height:36px;padding:7px 10px;cursor:pointer;text-transform:uppercase}.btn:hover{border-color:rgba(255,209,102,.65)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#9af5c0,#46d88b);color:#062018}.btn.warn{color:var(--gold);border-color:rgba(255,209,102,.46)}.btn:disabled{opacity:.48;cursor:not-allowed}.help{color:var(--muted);text-align:center;font-size:12px;line-height:1.35}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;border:1px solid rgba(130,238,178,.25);border-radius:6px;background:#07110f;color:var(--ink);font-weight:900}
+.status{min-height:20px;color:var(--mint);font-size:12px;font-weight:900;text-transform:uppercase;line-height:1.3}.btn{min-height:36px;padding:7px 10px;cursor:pointer;text-transform:uppercase}.btn:hover{border-color:rgba(255,209,102,.65)}.btn.primary,.btn[aria-pressed=true]{border-color:transparent;background:linear-gradient(180deg,#9af5c0,#46d88b);color:#062018}.btn.warn{color:var(--gold);border-color:rgba(255,209,102,.46)}.btn.primary.finalRisk{background:linear-gradient(180deg,#ffb3c4,#ff7b9b);color:#2b0710;border-color:transparent}.btn:disabled{opacity:.48;cursor:not-allowed}.help{color:var(--muted);text-align:center;font-size:12px;line-height:1.35}.kbd{display:inline-grid;place-items:center;min-width:21px;height:20px;border:1px solid rgba(130,238,178,.25);border-radius:6px;background:#07110f;color:var(--ink);font-weight:900}
 @media(max-width:700px){body{padding:8px 6px 12px}.app{gap:7px}.top{align-items:start}.title{font-size:21px}.eyebrow{font-size:9px}.pill{min-width:62px;padding:6px}.value{font-size:14px}.primaryPanel{grid-template-columns:1fr;padding:7px;gap:7px}.primaryPanel #dayBtn{min-height:42px}.selectedCue{min-width:118px;padding:7px 8px}.goalChip{min-width:126px;padding:7px 8px}.status{font-size:11px}.btn{font-size:11px;padding:7px 8px;flex:1 1 96px}canvas{max-height:55vh}.help{font-size:11px}.stage{border-radius:7px}}
 @media(max-width:430px){.hud{justify-content:stretch}.pill{flex:1 1 29%}.controls,.palette,.actionRow,.goalStrip{gap:5px}.selectedCue{flex:1 1 100%}.goalChip{flex:1 1 calc(50% - 5px);min-width:0}.goalChip .value{font-size:13px}.btn{flex-basis:31%}}
 </style>
@@ -110,6 +110,7 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     <button class="btn" id="fullBtn" type="button">Fullscreen</button>
   </div>
   <div class="help"><span class="kbd">Arrows</span>/<span class="kbd">WASD</span> cursor <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span> tools <span class="kbd">Enter</span>/<span class="kbd">Space</span> place <span class="kbd">N</span> day <span class="kbd">R</span> restart <span class="kbd">F</span> fullscreen</div>
+  <div class="help">Sprinklers water day+1 squares each way, one wider each day. Sprout: first watered day. Bloom: watered 2 days. Leaf: shade beside + water. Star: water + shade, 3 days. Dry days wilt plants back. Placing or clearing a piece costs a move.</div>
 </div>
 <script>
 (() => {
@@ -121,6 +122,7 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
   const BOARD = { x: 164, y: 72, w: 490, h: 490 };
   const CELL = BOARD.w / N;
   const BEST_KEY = "bloomkeeper-grid.best.v1";
+  const BEST_CAP = 5000; // five stage bonuses cannot exceed ~1120 each even with every move unspent
   const SOUND_KEY = "bloomkeeper-grid.sound.v1";
   const TOOLS = ["seed", "sprinkler", "shade"];
   const COLORS = {
@@ -155,8 +157,12 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     const s = storage(); if (!s) return;
     try { s.setItem(key, JSON.stringify(value)); } catch (_) {}
   }
+  function readBest() {
+    const raw = Number(getStored(BEST_KEY, 0));
+    return Number.isFinite(raw) && raw >= 0 && raw <= BEST_CAP ? Math.floor(raw) : 0;
+  }
   const state = {
-    mode: "planning", stageIndex: 0, day: 0, score: 0, best: Number(getStored(BEST_KEY, 0)) || 0,
+    mode: "planning", stageIndex: 0, day: 0, score: 0, best: readBest(),
     movesLeft: 0, selectedTool: "seed", cursor: { r: 3, c: 3 }, cells: [], feedback: "Place seeds near future water waves.",
     feedbackMs: 1600, complete: false, fail: false, runComplete: false, sound: getStored(SOUND_KEY, true) !== false,
     lastSound: "none", soundCount: 0, gesture: false, lastGrowth: [], solvedStages: [], lastAction: "ready"
@@ -237,38 +243,62 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     tone("restart");
   }
   function countItems(type) { return flatCells().filter((x) => x.item === type).length; }
-  function hasNeighborType(r, c, type) {
+  function hasNeighborTypeIn(cells, r, c, type) {
     return [[1,0],[-1,0],[0,1],[0,-1]].some(([dr, dc]) => {
-      const n = cell(r + dr, c + dc);
+      const row = cells[r + dr];
+      const n = row && row[c + dc];
       return n && n.item === type;
     });
   }
-  function sprinklerDistance(r, c) {
+  function sprinklerDistanceIn(cells, r, c) {
     let best = 99;
-    flatCells().forEach((x) => {
+    cells.forEach((row) => row.forEach((x) => {
       if (x.item === "sprinkler") best = Math.min(best, Math.abs(x.r - r) + Math.abs(x.c - c));
-    });
+    }));
     return best;
   }
-  function derivePlant(x) {
+  function derivePlantIn(cells, day, x) {
     if (x.item !== "seed") {
       x.age = 0; x.watered = false; x.shaded = x.item === "shade"; x.shape = "bare"; x.color = x.soil; x.wave = 0;
       return;
     }
-    const dist = sprinklerDistance(x.r, x.c);
-    const shaded = hasNeighborType(x.r, x.c, "shade") || x.item === "shade";
-    const watered = dist <= state.day + 1;
+    const dist = sprinklerDistanceIn(cells, x.r, x.c);
+    const shaded = hasNeighborTypeIn(cells, x.r, x.c, "shade") || x.item === "shade";
+    const watered = dist <= day + 1;
     x.watered = watered;
     x.shaded = shaded;
-    x.wave = dist < 99 ? Math.max(0, state.day + 1 - dist) : 0;
+    x.wave = dist < 99 ? Math.max(0, day + 1 - dist) : 0;
     if (watered) x.age = Math.min(4, x.age + 1);
-    else if (state.day > 0) x.age = Math.max(0, x.age - 1);
+    else if (day > 0) x.age = Math.max(0, x.age - 1);
     if (watered && shaded && x.age >= 3) x.shape = "star";
     else if (shaded && x.age >= 1) x.shape = "leaf";
     else if (watered && x.age >= 2) x.shape = "bloom";
     else if (x.age >= 1) x.shape = "sprout";
     else x.shape = "seed";
     x.color = x.soil;
+  }
+  function derivePlant(x) { derivePlantIn(state.cells, state.day, x); }
+  // dayOutlook simulates the NEXT Day press through the same derivePlantIn the real
+  // press runs (advanceDay increments state.day first, so the clones derive at day + 1).
+  function dayOutlook() {
+    const copies = state.cells.map((row) => row.map((x) => ({ ...x })));
+    copies.flat().forEach((x) => derivePlantIn(copies, state.day + 1, x));
+    const willPlants = copies.flat().filter((x) => x.item === "seed");
+    const goals = goalProgress().map((g) => {
+      const will = willPlants.filter((x) => x.color === g.color && x.shape === g.shape).length;
+      return { color: g.color, shape: g.shape, need: g.need, have: g.have, will, ready: will >= g.need };
+    });
+    const wins = goals.every((g) => g.ready);
+    const nextDay = state.day + 1;
+    const lastDay = nextDay >= stage().maxDays;
+    const bonusIfReady = Math.max(80, 260 + (stage().maxDays - nextDay) * 60 + state.movesLeft * 25 + countItems("seed") * 8);
+    return { nextDay, lastDay, wins, fails: !wins && lastDay, bonusIfReady, goals };
+  }
+  function planning() { return !state.fail && !state.complete && !state.runComplete; }
+  function outlookPhrase(o) {
+    const parts = o.goals.map((g) => g.will + "/" + g.need + " " + g.color + " " + g.shape).join(" · ");
+    const verdict = o.wins ? " · ready +" + o.bonusIfReady : o.fails ? " · garden would fail" : "";
+    return "Day " + o.nextDay + " grows " + parts + verdict;
   }
   function goalProgress() {
     const plants = flatCells().filter((x) => x.item === "seed");
@@ -303,12 +333,15 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     }
     if (els.goalStrip) {
       els.goalStrip.replaceChildren();
-      goalProgress().forEach((g) => {
+      const o = planning() ? dayOutlook() : null;
+      const goals = o ? o.goals : goalProgress();
+      goals.forEach((g) => {
+        const willBeDone = o ? g.ready : g.done;
         const chip = document.createElement("span");
-        chip.className = "goalChip" + (g.done ? " done" : "");
+        chip.className = "goalChip" + (willBeDone ? " done" : "");
         const label = document.createElement("span");
         label.className = "label";
-        label.textContent = g.done ? "Ready" : "Goal";
+        label.textContent = o ? "Day " + o.nextDay + " → " + g.will + "/" + g.need : (g.done ? "Ready" : "Goal");
         const value = document.createElement("span");
         value.className = "value";
         value.textContent = goalPhrase(g);
@@ -339,9 +372,10 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     state.lastAction = state.complete && !state.runComplete ? "next-stage" : "advance-day";
     if (state.complete || state.runComplete) {
       if (!state.runComplete) nextStage();
+      else { state.lastAction = "blocked-day"; setFeedback("Run complete. Press R for a fresh run.", 1800); }
       return;
     }
-    if (state.fail) return;
+    if (state.fail) { state.lastAction = "blocked-day"; setFeedback("Garden failed. Press R to restart.", 1600); return; }
     markGesture();
     state.day += 1;
     const before = flatCells().map((x) => x.shape);
@@ -394,11 +428,31 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     if (state.movesLeft <= 0 && x.item !== tool) return false;
     return true;
   }
+  function placeMessage(x) {
+    if (x.item === "seed") {
+      const dist = sprinklerDistanceIn(state.cells, x.r, x.c);
+      if (dist >= 99) return "Seed planted. No sprinkler reaches it yet.";
+      if (x.watered) return "Seed planted in water reach: " + x.shape + " already.";
+      const arrival = dist - 1;
+      return arrival > stage().maxDays
+        ? "Seed planted. Water cannot reach it within " + stage().maxDays + " days."
+        : "Seed planted. Water arrives on day " + arrival + ".";
+    }
+    if (x.item === "sprinkler") {
+      const reach = state.day + 1;
+      return "Sprinkler placed. Waters " + reach + " square" + (reach === 1 ? "" : "s") + " each way, one wider each day.";
+    }
+    return "Shade placed. Watered plants beside it grow leaves, then stars.";
+  }
   function placeTool() {
     const x = cell(state.cursor.r, state.cursor.c);
     if (!canPlace(x, state.selectedTool)) {
       state.lastAction = "blocked-place";
-      setFeedback(state.fail ? "Restart after a failed garden." : "No moves left for this stage.", 1500);
+      setFeedback(
+        state.fail ? "Restart after a failed garden."
+        : state.runComplete ? "Run complete. Press R for a fresh run."
+        : state.complete ? "Stage complete. Press Day or N for the next plot."
+        : "No moves left. Clearing your own pieces is still free.", 1500);
       tone("fail");
       return;
     }
@@ -406,9 +460,10 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     x.item = prev === state.selectedTool ? "" : state.selectedTool;
     x.age = 0;
     derivePlant(x);
-    if (prev !== x.item && state.movesLeft > 0) state.movesLeft -= 1;
+    const spent = prev !== x.item && state.movesLeft > 0;
+    if (spent) state.movesLeft -= 1;
     state.lastAction = x.item ? "place-" + state.selectedTool : "clear-cell";
-    setFeedback(x.item ? state.selectedTool + " placed." : "Cell cleared.", 1000);
+    setFeedback(x.item ? placeMessage(x) : (spent ? "Cell cleared. That cost a move." : "Cell cleared."), 1400);
     tone("place");
     syncHud();
     render();
@@ -453,7 +508,7 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
       if (state.runComplete) state.feedback = "Run complete.";
       else if (state.fail) state.feedback = "Failed garden. Restart to try a new plan.";
       else if (state.complete) state.feedback = "Stage complete. Press Day or N for the next plot.";
-      else state.feedback = stage().name + ": " + goalProgress().map((g) => g.have + "/" + g.need + " " + g.color + " " + g.shape).join(" | ");
+      else state.feedback = outlookPhrase(dayOutlook());
       els.status.textContent = state.feedback;
     }
     render();
@@ -465,7 +520,10 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     els.score.textContent = String(state.score);
     els.best.textContent = String(state.best);
     els.dayBtn.textContent = state.complete && !state.runComplete ? "Next" : "Day";
-    els.dayBtn.setAttribute("aria-label", state.complete && !state.runComplete ? "Next plot" : "Advance day");
+    const risk = planning() && dayOutlook().fails;
+    els.dayBtn.classList.toggle("finalRisk", risk);
+    els.dayBtn.setAttribute("aria-label", state.complete && !state.runComplete ? "Next plot"
+      : risk ? "Advance day: final day and goals are short, the garden would fail" : "Advance day");
     els.dayBtn.disabled = state.fail;
     els.sound.textContent = state.sound ? "Sound On" : "Sound Off";
     els.sound.setAttribute("aria-pressed", String(state.sound));
@@ -484,23 +542,40 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     ctx.fillStyle = "#69e6a8"; ctx.beginPath(); ctx.arc(110, 50, 170, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#6ecbff"; ctx.beginPath(); ctx.arc(806, 76, 150, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    ctx.fillStyle = "#f2fff8"; ctx.font = "950 23px system-ui"; ctx.fillText(stage().name, 28, 62);
+    ctx.fillStyle = "#f2fff8"; ctx.font = "950 23px system-ui"; ctx.fillText(stage().name, 28, 40, 700);
     ctx.fillStyle = "rgba(169,194,182,.9)"; ctx.font = "800 12px system-ui";
-    ctx.fillText("Tool " + state.selectedTool.toUpperCase() + "   Seeds " + countItems("seed") + "   Sprinklers " + countItems("sprinkler") + "   Shade " + countItems("shade"), 28, 88);
+    ctx.fillText("Seeds " + countItems("seed"), 28, 88, 112);
+    ctx.fillText("Sprinklers " + countItems("sprinkler"), 28, 106, 112);
+    ctx.fillText("Shade " + countItems("shade"), 28, 124, 112);
   }
   function drawBoard() {
     ctx.fillStyle = "rgba(7,17,15,.78)"; ctx.strokeStyle = "rgba(130,238,178,.32)"; ctx.lineWidth = 2;
     roundRect(BOARD.x - 16, BOARD.y - 16, BOARD.w + 32, BOARD.h + 32, 14, true, true);
+    // Live watering field: same distance rule derivePlantIn applies, computed fresh
+    // each render so empty soil shows the reach too. Watered now = dist <= day + 1;
+    // the dashed edge marks the ring the next Day press adds (dist === day + 2).
+    const distAt = (r, c) => sprinklerDistanceIn(state.cells, r, c);
     for (let r = 0; r < N; r += 1) for (let c = 0; c < N; c += 1) {
       const x = BOARD.x + c * CELL, y = BOARD.y + r * CELL, data = cell(r, c);
       ctx.fillStyle = data.soil === "red" ? "rgba(255,123,155,.15)" : data.soil === "yellow" ? "rgba(255,209,102,.15)" : data.soil === "blue" ? "rgba(110,203,255,.15)" : "rgba(105,230,168,.15)";
       ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
-      ctx.strokeStyle = "rgba(130,238,178,.16)"; ctx.lineWidth = 1; ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
-      if (data.wave > 0) {
-        ctx.fillStyle = "rgba(110,203,255,.08)";
-        ctx.beginPath(); ctx.arc(x + CELL / 2, y + CELL / 2, Math.min(CELL * .45, 8 + data.wave * 8), 0, Math.PI * 2); ctx.fill();
+      if (distAt(r, c) <= state.day + 1) {
+        ctx.fillStyle = "rgba(110,203,255,.16)";
+        ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
       }
+      ctx.strokeStyle = "rgba(130,238,178,.16)"; ctx.lineWidth = 1; ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
       drawItem(data, x + CELL / 2, y + CELL / 2);
+    }
+    for (let r = 0; r < N; r += 1) for (let c = 0; c < N; c += 1) {
+      const x = BOARD.x + c * CELL, y = BOARD.y + r * CELL;
+      if (distAt(r, c) === state.day + 2) {
+        ctx.strokeStyle = "rgba(110,203,255,.6)"; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]);
+        ctx.strokeRect(x + 5, y + 5, CELL - 10, CELL - 10); ctx.setLineDash([]);
+      }
+      if (hasNeighborTypeIn(state.cells, r, c, "shade") && cell(r, c).item !== "shade") {
+        ctx.fillStyle = "rgba(185,166,255,.8)";
+        ctx.beginPath(); ctx.moveTo(x + CELL - 5, y + 5); ctx.lineTo(x + CELL - 18, y + 5); ctx.lineTo(x + CELL - 5, y + 18); ctx.closePath(); ctx.fill();
+      }
     }
     const cx = BOARD.x + state.cursor.c * CELL, cy = BOARD.y + state.cursor.r * CELL;
     ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 4; roundRect(cx + 7, cy + 7, CELL - 14, CELL - 14, 8, false, true);
@@ -527,22 +602,28 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
     ctx.restore();
   }
   function drawGoals() {
-    const goals = goalProgress();
+    const o = planning() ? dayOutlook() : null;
+    const goals = o ? o.goals : goalProgress();
     const x = 680, y = 104;
-    ctx.fillStyle = "rgba(7,17,15,.72)"; ctx.strokeStyle = "rgba(130,238,178,.25)"; ctx.lineWidth = 2; roundRect(x, y, 190, 240, 13, true, true);
+    const rules = ["Water reaches day+1 squares", "Sprout: first watered day", "Bloom: watered 2 days", "Leaf: shade beside + water", "Star: water + shade, 3 days", "Dry days wilt plants back"];
+    const rulesTop = y + 56 + goals.length * 54 + 10;
+    const h = 56 + goals.length * 54 + 10 + rules.length * 17 + 12;
+    ctx.fillStyle = "rgba(7,17,15,.72)"; ctx.strokeStyle = "rgba(130,238,178,.25)"; ctx.lineWidth = 2; roundRect(x, y, 190, h, 13, true, true);
     ctx.fillStyle = "#f2fff8"; ctx.font = "950 18px system-ui"; ctx.fillText("Goals", x + 18, y + 34);
     goals.forEach((g, i) => {
+      const done = o ? g.ready : g.done;
       const yy = y + 64 + i * 54;
-      ctx.fillStyle = g.done ? "rgba(105,230,168,.18)" : "rgba(255,255,255,.04)";
-      ctx.strokeStyle = g.done ? "rgba(105,230,168,.7)" : "rgba(130,238,178,.18)";
+      ctx.fillStyle = done ? "rgba(105,230,168,.18)" : "rgba(255,255,255,.04)";
+      ctx.strokeStyle = done ? "rgba(105,230,168,.7)" : "rgba(130,238,178,.18)";
       roundRect(x + 14, yy - 22, 162, 42, 8, true, true);
       ctx.fillStyle = COLORS[g.color]; ctx.beginPath(); ctx.arc(x + 34, yy - 1, 10, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = g.done ? "#69e6a8" : "#f2fff8"; ctx.font = "900 13px system-ui";
-      ctx.fillText(g.have + "/" + g.need + " " + g.color + " " + g.shape, x + 52, yy + 3);
+      ctx.fillStyle = done ? "#69e6a8" : "#f2fff8"; ctx.font = "900 13px system-ui";
+      ctx.fillText(g.have + "/" + g.need + " " + g.color + " " + g.shape, x + 52, yy - 1);
+      ctx.fillStyle = o ? "#ffd166" : "rgba(169,194,182,.9)"; ctx.font = "800 10px system-ui";
+      ctx.fillText(o ? "Day " + o.nextDay + " → " + g.will + "/" + g.need : (g.done ? "ready" : "short"), x + 52, yy + 13);
     });
     ctx.fillStyle = "rgba(169,194,182,.9)"; ctx.font = "800 12px system-ui";
-    ctx.fillText("Water makes blooms.", x + 18, y + 198);
-    ctx.fillText("Shade makes leaves.", x + 18, y + 218);
+    rules.forEach((line, i) => ctx.fillText(line, x + 18, rulesTop + 12 + i * 17, 158));
   }
   function drawOverlay() {
     if (!state.fail && !state.complete && !state.runComplete) return;
@@ -592,6 +673,7 @@ main{display:grid;gap:8px}.pill,.btn,.selectedCue,.goalChip{border:1px solid var
       goalProgress: goalProgress(),
       goalReadiness: goalReadiness(),
       goalReady: goalReadiness().allGoalsReady,
+      dayOutlook: planning() ? dayOutlook() : null,
       feedback: state.feedback,
       feedbackActive: state.feedbackMs > 0,
       lastAction: state.lastAction,
