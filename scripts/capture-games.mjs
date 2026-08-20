@@ -1353,13 +1353,28 @@ function getInteractionRecipe(slug) {
         await clickSelectorIfVisible(page, "#startBtn");
         await page.evaluate(() => {
           if (typeof window.render_game_to_text !== "function" || typeof window.advanceTime !== "function") return;
-          window.advanceTime(400);
+          const press = (key, code) => {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true }));
+          };
+          // Wave 1's first fragment spawns at 720ms (plus 110 on odd lanes), so the
+          // old 400ms advance landed on an empty board. It also typed the globally
+          // lowest fragment's text while focus stayed on column 1, so once a token
+          // did exist the keystrokes hit "No token" and drained integrity instead of
+          // typing. Focus the lane that holds it, then type the game's own active token.
+          window.advanceTime(1200);
+          const first = JSON.parse(window.render_game_to_text());
+          const lowest = first.visibleTokens && first.visibleTokens[0];
+          if (lowest) {
+            const digit = String(lowest.lane + 1);
+            press(digit, `Digit${digit}`);
+            window.advanceTime(60);
+          }
           const snap = JSON.parse(window.render_game_to_text());
-          const text = snap.activeToken?.text || (snap.visibleTokens && snap.visibleTokens[0]?.text) || "";
+          const text = snap.activeToken?.text || "";
           for (const ch of text.slice(0, 3)) {
             const key = String(ch);
-            document.dispatchEvent(new KeyboardEvent("keydown", { key, code: `Key${key.toUpperCase()}`, bubbles: true }));
-            document.dispatchEvent(new KeyboardEvent("keyup", { key, code: `Key${key.toUpperCase()}`, bubbles: true }));
+            press(key, `Key${key.toUpperCase()}`);
             window.advanceTime(80);
           }
           window.advanceTime(220);

@@ -105,6 +105,8 @@
   .typed{min-width:0;color:#e6edf3;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .typed span{color:#5eead4}
   .status{font-size:12px;text-transform:uppercase;color:rgba(94,234,212,0.86);font-weight:800;text-align:right;white-space:nowrap}
+  .status[data-risk="soon"]{color:#fbbf24}
+  .status[data-risk="critical"]{color:#fb7185}
   .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
   button{
     min-height:40px;border-radius:8px;border:1px solid rgba(94,234,212,0.24);
@@ -164,7 +166,7 @@
     <div class="status" id="statusLine">Press Enter or Start.</div>
   </div>
   <div class="stage-wrap">
-    <canvas id="game" width="900" height="600" tabindex="0" aria-label="Type falling cipher fragments. Use Tab, arrows, or column buttons to focus columns, then type the active fragment."></canvas>
+    <canvas id="game" width="900" height="600" tabindex="0" aria-label="Type falling cipher fragments. Use arrow keys, number keys 1 to 4, or the column buttons to focus columns, then type the active fragment."></canvas>
   </div>
   <input id="typingBridge" class="type-bridge" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Type cipher fragment" />
   <div class="columns" aria-label="Column focus controls">
@@ -177,7 +179,8 @@
     <button type="button" id="soundBtn" aria-pressed="true">Sound On</button>
     <button type="button" id="fullscreenBtn">Fullscreen</button>
   </div>
-  <div class="hint">Type letters, Backspace edits, Enter submits. Tab/arrows or 1-4 change column. R restarts, F fullscreen, M sound.</div>
+  <div class="hint">Type letters, Backspace edits, Enter submits. Arrows or 1-4 change column. R restarts, F fullscreen, M sound.</div>
+  <div class="hint">Fragments fall faster every wave, 67px/s in wave 1 up to 112px/s in wave 6, and a leak costs 10 plus the wave number in integrity. The number under each column is how long until that column leaks: amber under 2.2s, red under 1.0s.</div>
 </main>
 
 <script>
@@ -210,6 +213,10 @@
   const COLS = 4;
   const TOTAL_WAVES = 6;
   const BEST_KEY = "typeforge-cipher.bestScore.v1";
+  // 72 fragments across the run, each worth at most 5*90 + 6*45 + 72*28, so the
+  // arithmetic ceiling is under 197k. Anything above this is a corrupt record,
+  // not a score, and an uncapped one sits on the pill unbeatable forever.
+  const BEST_CAP = 250000;
   const SOUND_KEY = "typeforge-cipher.sound.v1";
   const ALPHABET = "ABCDEGHJKLNPQSTUVWXYZ";
   const laneColors = ["#5eead4","#22d3ee","#7c9eff","#f472b6"];
@@ -237,7 +244,7 @@
   }
   function loadBestScore(){
     const raw = Number(safeGet(BEST_KEY, "0"));
-    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+    return Number.isFinite(raw) && raw > 0 && raw <= BEST_CAP ? Math.floor(raw) : 0;
   }
   function loadSound(){
     const raw = safeGet(SOUND_KEY, "true");
@@ -403,6 +410,44 @@
     }
     return visible[0];
   }
+  // Danger is measured in SECONDS, not pixels. Fall speed rises every wave
+  // (58 + 9*wave, so 67/s to 112/s), which meant the old fixed 86px red band was
+  // 1.28s of warning in wave 1 and 0.77s in wave 6 -- the warning shrank by 40%
+  // exactly as the leak penalty grew by 45%. These thresholds are typing-time
+  // based instead: the longest fragment is 5 glyphs, so ~1.0s is "still savable
+  // if you are already in this column" and ~2.2s is "finish this one, then come".
+  const RISK_CRITICAL = 1.0;
+  const RISK_SOON = 2.2;
+  function waveSpeed(wave){ return 58 + wave * 9; }
+  function leakCost(wave){ return 10 + wave; }
+  function riskLevel(seconds){
+    return seconds <= RISK_CRITICAL ? "critical" : seconds <= RISK_SOON ? "soon" : "safe";
+  }
+  function tokenRisk(token){
+    const seconds = Math.max(0, (failY - tokenY(token)) / token.speed);
+    return { seconds, level: riskLevel(seconds) };
+  }
+  // One record per column: the lowest visible token is the one that leaks next,
+  // and visibleTokens() is already sorted lowest-first, so find() is that token.
+  function columnRisk(){
+    const visible = visibleTokens();
+    const out = [];
+    for (let lane = 0; lane < COLS; lane += 1) {
+      const lowest = visible.find((token) => token.lane === lane);
+      if (!lowest) { out.push({ lane, seconds: null, level: "clear", text: "" }); continue; }
+      const risk = tokenRisk(lowest);
+      out.push({ lane, seconds: risk.seconds, level: risk.level, text: lowest.text });
+    }
+    return out;
+  }
+  function urgentColumn(){
+    const live = columnRisk().filter((r) => r.seconds !== null);
+    if (!live.length) return null;
+    return live.reduce((a, b) => (b.seconds < a.seconds ? b : a));
+  }
+  function secondsLabel(seconds){
+    return seconds >= 10 ? "9.9s+" : seconds.toFixed(1) + "s";
+  }
   function updateAccuracy(){
     const attempts = state.correctChars + state.wrongChars;
     state.accuracy = attempts ? Math.round((state.correctChars / attempts) * 100) : 100;
@@ -459,7 +504,7 @@
     state.complete = false;
     state.gameOver = false;
     spawnWave(1);
-    setMessage("Wave 1 armed.", "wave");
+    setMessage(waveBriefing(1), "wave");
     play("wave");
     focusBridge();
   }
@@ -491,8 +536,17 @@
     state.currentInput = "";
     state.focusedTokenId = null;
     spawnWave(state.wave);
-    setMessage("Wave " + state.wave + " armed.", "wave");
+    setMessage(waveBriefing(state.wave), "wave");
     play("wave");
+  }
+  // The two numbers that change every wave -- fall speed and the leak penalty --
+  // reached no surface at all, so each wave silently retuned the game and the
+  // player relearned it by losing integrity. Both are read from the same
+  // functions the simulation and the miss handler use.
+  function waveBriefing(wave){
+    const speed = waveSpeed(wave);
+    const rise = wave > 1 ? " (up from " + waveSpeed(wave - 1) + ")" : "";
+    return "Wave " + wave + " armed. Fragments fall " + speed + "px/s" + rise + ". A leak costs " + leakCost(wave) + " integrity.";
   }
   function completeRun(){
     if (state.mode !== "playing") return;
@@ -558,8 +612,9 @@
     if (token.id === state.focusedTokenId) state.focusedTokenId = null;
     updateAccuracy();
     feedback.missed += 1;
-    state.integrity = clamp(state.integrity - (10 + state.wave), 0, 100);
-    setMessage("Leak in column " + (token.lane + 1), "missed");
+    const cost = leakCost(state.wave);
+    state.integrity = clamp(state.integrity - cost, 0, 100);
+    setMessage("Leak in column " + (token.lane + 1) + " (" + token.text + ") -" + cost + " integrity", "missed");
     play("wrong");
     if (state.integrity <= 0) loseRun();
     else maybeAdvanceWave();
@@ -649,7 +704,24 @@
     if (!active) return "Col " + column + " active: waiting for token";
     const typed = state.currentInput || "";
     const remaining = active.text.slice(typed.length);
-    return "Col " + column + " active: type " + (remaining || active.text);
+    const risk = tokenRisk(active).level;
+    const tail = risk === "critical" ? " (leaking now)" : risk === "soon" ? " (leaking soon)" : "";
+    return "Col " + column + " active: type " + (remaining || active.text) + tail;
+  }
+  // The phone strips the canvas to ~0.4 scale, so the per-column countdowns
+  // under the lanes are unreadable there. This is the same fact in words.
+  // Deliberately LEVEL-based, not a ticking number: this text sits inside an
+  // aria-live region, so a per-frame countdown here would talk over a screen
+  // reader continuously. The exact seconds stay on the canvas, where a changing
+  // number costs nothing; this line changes only when the danger changes.
+  function pressureText(){
+    if (state.mode !== "playing") return "";
+    const urgent = urgentColumn();
+    if (!urgent) return "All columns clear.";
+    const where = urgent.lane === state.focusedColumn ? "This column" : "Column " + (urgent.lane + 1);
+    if (urgent.level === "critical") return where + " is leaking now: -" + leakCost(state.wave) + " integrity.";
+    if (urgent.level === "soon") return where + " leaks soon: -" + leakCost(state.wave) + " integrity.";
+    return where + " leaks next.";
   }
 
   function update(dt){
@@ -698,7 +770,10 @@
       ctx.stroke();
     }
   }
+  const RISK_INK = { critical: "#fb7185", soon: "#fbbf24", safe: "rgba(230,237,243,0.82)", clear: "rgba(230,237,243,0.5)" };
   function drawColumns(){
+    const risks = columnRisk();
+    const urgent = urgentColumn();
     for (let lane = 0; lane < COLS; lane += 1) {
       const x = laneX(lane);
       const active = lane === state.focusedColumn;
@@ -715,6 +790,25 @@
       ctx.lineTo(x + laneW - 20, failY - 16);
       ctx.stroke();
       ctx.globalAlpha = 1;
+      // Time-to-leak for this column, under the lane and beside the fail line.
+      // Four of these answer "where do I go next" at a glance, which is the whole
+      // decision of the game and previously had no surface at all.
+      const risk = risks[lane];
+      const isUrgent = !!urgent && urgent.lane === lane && risk.seconds !== null;
+      ctx.font = "900 15px ui-monospace,SFMono-Regular,Consolas,monospace";
+      ctx.fillStyle = RISK_INK[risk.level] || RISK_INK.clear;
+      ctx.fillText(risk.seconds === null ? "clear" : secondsLabel(risk.seconds), x + laneW / 2, 578);
+      if (isUrgent) {
+        ctx.fillStyle = RISK_INK[risk.level] || "#fbbf24";
+        ctx.font = "900 10px ui-sans-serif, system-ui";
+        ctx.fillText("NEXT", x + laneW / 2, 592);
+        ctx.beginPath();
+        ctx.moveTo(x + laneW / 2, 558);
+        ctx.lineTo(x + laneW / 2 - 7, 566);
+        ctx.lineTo(x + laneW / 2 + 7, 566);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
   function drawTokens(){
@@ -725,12 +819,15 @@
       const isActive = active && active.id === token.id;
       const laneColor = laneColors[token.lane];
       const y = rect.y;
-      const danger = y > failY - 86;
+      const risk = tokenRisk(token);
+      const danger = risk.level === "critical";
+      const warn = risk.level === "soon";
+      const edgeInk = danger ? "#fb7185" : warn ? "#fbbf24" : laneColor;
       const grad = ctx.createLinearGradient(rect.x, y, rect.x, y + rect.h);
       grad.addColorStop(0, isActive ? "#eafffb" : laneColor);
-      grad.addColorStop(1, danger ? "#fb7185" : laneColor);
-      ctx.shadowColor = danger ? "#fb7185" : laneColor;
-      ctx.shadowBlur = isActive ? 22 : danger ? 16 : 8;
+      grad.addColorStop(1, edgeInk);
+      ctx.shadowColor = edgeInk;
+      ctx.shadowBlur = isActive ? 22 : danger ? 16 : warn ? 12 : 8;
       drawRounded(rect.x, rect.y, rect.w, rect.h, 10, grad, isActive ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.14)");
       ctx.shadowBlur = 0;
       ctx.textAlign = "center";
@@ -769,7 +866,11 @@
     ctx.fillText(state.message, W / 2, H / 2 + 8);
     ctx.fillStyle = "rgba(230,237,243,0.78)";
     ctx.font = "700 14px ui-sans-serif, system-ui";
-    ctx.fillText("Enter starts. Tab/arrows focus columns. Type the highlighted fragment.", W / 2, H / 2 + 42);
+    ctx.fillText("Enter starts. Arrows or 1-4 focus columns. Type the highlighted fragment.", W / 2, H / 2 + 42);
+    ctx.fillStyle = "rgba(230,237,243,0.62)";
+    ctx.font = "700 13px ui-sans-serif, system-ui";
+    ctx.fillText("Six waves, faster each time: 67px/s up to 112px/s. A leak costs 10 + the wave number.", W / 2, H / 2 + 68);
+    ctx.fillText("The number under each column is the seconds until that column leaks.", W / 2, H / 2 + 88);
   }
   function render(){
     drawBackground();
@@ -790,7 +891,10 @@
     els.comboPill.dataset.hot = state.combo >= 4 ? "true" : "false";
     els.integrityPill.dataset.warn = state.integrity <= 32 ? "true" : "false";
     els.activeCue.textContent = cueText(active);
-    els.status.textContent = state.message;
+    const urgent = state.mode === "playing" ? urgentColumn() : null;
+    const pressure = pressureText();
+    els.status.textContent = pressure && state.flashUntil <= state.time ? pressure : state.message;
+    els.status.dataset.risk = urgent ? urgent.level : "clear";
     els.start.textContent = state.mode === "playing" ? "Restart" : state.mode === "ready" ? "Start" : "New Run";
     els.sound.textContent = state.soundEnabled ? "Sound On" : "Muted";
     els.sound.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
@@ -874,11 +978,12 @@
       backspace();
       return;
     }
-    if (key === "Tab") {
-      event.preventDefault();
-      focusColumn(state.focusedColumn + (event.shiftKey ? -1 : 1));
-      return;
-    }
+    // Tab is handed back to the browser on purpose. It used to be swallowed
+    // unconditionally to cycle columns, which made every control after the
+    // canvas -- Sound, Fullscreen and all four column buttons -- unreachable by
+    // keyboard: eight real Tab presses never moved focus off the typing bridge.
+    // Arrows and the 1-4 keys already cycle columns, so nothing is lost.
+    if (key === "Tab") return;
     if (key === "ArrowLeft" || key === "ArrowUp") {
       event.preventDefault();
       focusColumn(state.focusedColumn - 1);
@@ -947,7 +1052,13 @@
       currentInput: state.currentInput,
       focusedColumn: state.focusedColumn,
       activeCue: cueText(active),
-      activeToken: active ? { text: active.text, lane: active.lane, y: Math.round(tokenY(active)), state: "active" } : null,
+      waveRule: { speed: waveSpeed(state.wave), leakCost: leakCost(state.wave), riskSoon: RISK_SOON, riskCritical: RISK_CRITICAL },
+      columnRisk: columnRisk().map(function(r){
+        return { lane: r.lane, seconds: r.seconds === null ? null : Math.round(r.seconds * 100) / 100, level: r.level, text: r.text };
+      }),
+      urgentColumn: urgentColumn() ? urgentColumn().lane : null,
+      pressure: pressureText(),
+      activeToken: active ? { text: active.text, lane: active.lane, y: Math.round(tokenY(active)), state: "active", secondsLeft: Math.round(tokenRisk(active).seconds * 100) / 100, risk: tokenRisk(active).level } : null,
       visibleTokens: visibleTokens().slice(0, 12).map(function(token){
         const isActive = active && active.id === token.id;
         return {
