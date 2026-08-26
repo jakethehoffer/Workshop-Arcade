@@ -312,20 +312,20 @@
     <span class="status-copy" id="statusText">Pick any two hidden cards.</span>
   </div>
   <p class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Ready. Pick any two hidden cards.</p>
-  <div class="board" id="board" role="grid" aria-label="Memory match board"></div>
+  <div class="board" id="board" role="group" aria-label="Memory match board"></div>
 </div>
 
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="overlay-card">
     <span class="eyebrow">Workshop Arcade</span>
     <h3 id="helpTitle">How to Play</h3>
-    <p>Flip two cards at a time to find their matching pair. Match every pair to win — fewer moves and faster times win bragging rights.</p>
+    <p>Flip two cards at a time to find their matching pair. Match every pair to win. Best = fewest moves, ties go to the faster time, and a perfect run equals the pair count.</p>
     <ul>
       <li>Click or tap a face-down card to flip it.</li>
-      <li>Two non-matching cards flip back after a moment.</li>
-      <li>Use <kbd>Tab</kbd> and <kbd>Enter</kbd>/<kbd>Space</kbd> for keyboard play.</li>
-      <li>Press <kbd>F</kbd> for fullscreen.</li>
-      <li>Press <kbd>Esc</kbd> to close this dialog.</li>
+      <li>Two non-matching cards flip back after a moment — or just flip your next card; you never have to wait.</li>
+      <li>The timer pauses while this help is open or the tab is hidden.</li>
+      <li>Keyboard: <kbd>Tab</kbd> to the board, arrow keys to move, <kbd>Enter</kbd>/<kbd>Space</kbd> to flip.</li>
+      <li>Press <kbd>F</kbd> for fullscreen, <kbd>Esc</kbd> to close this dialog.</li>
     </ul>
     <div class="actions"><button class="btn primary" type="button" id="helpClose">Got it</button></div>
   </div>
@@ -337,6 +337,7 @@
     <h3 id="winTitle">You found every pair!</h3>
     <div class="stats">
       <div class="pill"><span class="label">Moves</span><span class="value" id="winMoves">0</span></div>
+      <div class="pill"><span class="label">Minimum</span><span class="value" id="winMin">0</span></div>
       <div class="pill"><span class="label">Time</span><span class="value" id="winTime">0:00</span></div>
     </div>
     <p id="winNote">Nice work.</p>
@@ -354,6 +355,10 @@
     hard:   { cols:6, pairs:18 }  // 6 rows
   };
   const FLIP_BACK_MS = 800;
+  const BEST_MOVES_CAP = 9999;      // no honest run needs more
+  const BEST_TIME_CAP = 86400000;   // 24h; a longer "record" is not a record
+  const motionQuery = (typeof matchMedia === 'function') ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function reducedMotionActive(){ return !!(motionQuery && motionQuery.matches); }
 
   const els = {
     moves:   document.getElementById('movesValue'),
@@ -376,6 +381,7 @@
     liveStatus:  document.getElementById('liveStatus'),
     winOverlay:  document.getElementById('winOverlay'),
     winMoves:    document.getElementById('winMoves'),
+    winMin:      document.getElementById('winMin'),
     winTime:     document.getElementById('winTime'),
     winNote:     document.getElementById('winNote'),
     winPlayAgain:document.getElementById('winPlayAgain'),
@@ -453,6 +459,10 @@
     mismatchCount: 0,
     streak: 0,           // consecutive matches in the current run
     bestStreak: 0,       // best streak this run
+    seen: new Set(),     // card ids revealed at least once this run
+    runMisses: 0,        // mismatches this run
+    runAvoidable: 0,     // mismatches where the first card's partner was already seen
+    moveFirstPartnerSeen: false, // at first flip: had the partner been revealed before?
     cardFeedback: Object.create(null),
     statusTone: 'ready',
     statusKicker: 'Ready',
@@ -466,8 +476,15 @@
       const raw = localStorage.getItem(bestKey());
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed.moves !== 'number' || typeof parsed.time !== 'number') return null;
-      return parsed;
+      if (!parsed) return null;
+      // A legal win needs at least one move per pair, so anything below that
+      // (or non-integer, or absurd) is a corrupt record, not a best.
+      const minMoves = DIFFICULTIES[state.difficulty].pairs;
+      const moves = parsed.moves;
+      const time = parsed.time;
+      if (!Number.isInteger(moves) || moves < minMoves || moves > BEST_MOVES_CAP) return null;
+      if (typeof time !== 'number' || !Number.isFinite(time) || time < 0 || time > BEST_TIME_CAP) return null;
+      return { moves, time };
     } catch { return null; }
   }
   function saveBest(record){
@@ -513,6 +530,7 @@
 
   function setDifficulty(name){
     if (!DIFFICULTIES[name]) return;
+    if (state.difficulty === name) return; // a stray click must not destroy a live run
     state.difficulty = name;
     els.difficultyButtons.forEach(b => {
       const active = b.dataset.difficulty === name;
@@ -536,12 +554,36 @@
     state.busy = false;
     state.streak = 0;
     state.bestStreak = 0;
+    state.seen = new Set();
+    state.runMisses = 0;
+    state.runAvoidable = 0;
+    state.moveFirstPartnerSeen = false;
     state.cardFeedback = Object.create(null);
+    focusId = 0;
     els.board.style.setProperty('--cols', conf.cols);
     renderBoard();
     updateHud();
     closeOverlay(els.winOverlay);
-    setVisibleStatus('ready', 'Ready', state.difficulty + ': find ' + conf.pairs + ' pairs.');
+    setVisibleStatus('ready', 'Ready', state.difficulty + ': find ' + conf.pairs + ' pairs. A perfect run is ' + conf.pairs + ' moves.');
+  }
+
+  // One roving tab stop for the whole board: Tab enters the board once, the
+  // arrow keys walk it. 36 hard-mode cards used to be 36 separate tab stops.
+  let focusId = 0;
+  function cardLabel(card){
+    const cols = DIFFICULTIES[state.difficulty].cols;
+    const pos = 'row ' + (Math.floor(card.id / cols) + 1) + ', column ' + ((card.id % cols) + 1);
+    if (card.state === 'hidden') return 'Hidden card, ' + pos;
+    return card.icon + ' card' + (card.state === 'matched' ? ', matched' : '') + ', ' + pos;
+  }
+  function setFocusId(id, moveFocus){
+    const prev = els.board.querySelector('button[tabindex="0"]');
+    if (prev && Number(prev.dataset.id) !== id) prev.tabIndex = -1;
+    const next = els.board.querySelector('button[data-id="' + id + '"]');
+    if (!next) return;
+    focusId = id;
+    next.tabIndex = 0;
+    if (moveFocus) next.focus();
   }
 
   function renderBoard(){
@@ -553,8 +595,8 @@
       btn.dataset.state = card.state;
       btn.dataset.feedback = state.cardFeedback[card.id] || 'idle';
       btn.dataset.id = String(card.id);
-      btn.setAttribute('role', 'gridcell');
-      btn.setAttribute('aria-label', card.state === 'hidden' ? 'Hidden card ' + (card.id + 1) : 'Card ' + (card.id + 1) + ': ' + card.icon);
+      btn.tabIndex = card.id === focusId ? 0 : -1;
+      btn.setAttribute('aria-label', cardLabel(card));
       btn.textContent = card.state === 'hidden' ? '' : card.icon;
       btn.addEventListener('click', () => onCardClick(card.id));
       els.board.appendChild(btn);
@@ -568,9 +610,7 @@
     btn.dataset.state = card.state;
     btn.dataset.feedback = state.cardFeedback[id] || 'idle';
     btn.textContent = card.state === 'hidden' ? '' : card.icon;
-    btn.setAttribute('aria-label', card.state === 'hidden'
-      ? 'Hidden card ' + (card.id + 1)
-      : 'Card ' + (card.id + 1) + ': ' + card.icon + (card.state === 'matched' ? ' (matched)' : ''));
+    btn.setAttribute('aria-label', cardLabel(card));
   }
 
   function updateHud(){
@@ -588,19 +628,34 @@
     }
   }
 
+  function partnerIdOf(id){
+    const icon = state.cards[id].icon;
+    for (const c of state.cards){ if (c.id !== id && c.icon === icon) return c.id; }
+    return -1;
+  }
+
   function onCardClick(id){
-    if (state.busy || state.won) return;
+    if (state.won) return;
     const card = state.cards[id];
     if (!card || card.state !== 'hidden') return;
+    if (state.busy){
+      // Waiting out the flip-back is never required: the next flip resolves
+      // the stale pair instantly and plays on.
+      resolvePendingMismatch();
+    }
     if (state.flipped.length >= 2) return;
+    setFocusId(id, false);
 
     if (!state.started) state.started = state.now;
     ensureLoop();
+    if (state.flipped.length === 0){
+      state.moveFirstPartnerSeen = state.seen.has(partnerIdOf(id));
+    }
+    state.seen.add(id);
     card.state = 'up';
     state.flipped.push(id);
     state.lastFlipAt = state.now;
     state.flipCount += 1;
-    setVisibleStatus('flipped', 'Card up', state.flipped.length === 1 ? 'Pick one more card.' : 'Checking the pair.');
     playFlip();
     refreshCard(id);
 
@@ -617,7 +672,9 @@
         state.streak += 1;
         if (state.streak > state.bestStreak) state.bestStreak = state.streak;
         setCardFeedback([aId, bId], 'match');
-        setVisibleStatus('match', 'Match', a.icon + ' pair found. ' + state.matched + ' of ' + DIFFICULTIES[state.difficulty].pairs + ' pairs.');
+        setVisibleStatus('match', 'Match', a.icon + ' pair found — ' +
+          (state.moveFirstPartnerSeen ? 'recalled from memory. ' : 'a lucky find. ') +
+          state.matched + ' of ' + DIFFICULTIES[state.difficulty].pairs + ' pairs.');
         playMatch(state.streak);
         refreshCard(aId);
         refreshCard(bId);
@@ -628,13 +685,18 @@
         state.pendingResolveAt = state.now + FLIP_BACK_MS;
         state.lastMismatchAt = state.now;
         state.mismatchCount += 1;
+        state.runMisses += 1;
+        if (state.moveFirstPartnerSeen) state.runAvoidable += 1;
         state.streak = 0;
         setCardFeedback([aId, bId], 'mismatch');
-        setVisibleStatus('mismatch', 'No match', 'Watch these two flip back.');
+        setVisibleStatus('mismatch', 'No match', state.moveFirstPartnerSeen
+          ? 'You had already seen the ' + a.icon + ' partner.'
+          : 'Two more cards learned. Flip on — no need to wait.');
         playMismatch();
         updateHud();
       }
     } else {
+      setVisibleStatus('flipped', 'Card up', 'Pick one more card.');
       updateHud();
     }
   }
@@ -655,18 +717,28 @@
   function finishGame(){
     state.won = true;
     const elapsed = state.now - state.started;
+    const pairs = DIFFICULTIES[state.difficulty].pairs;
     const best = loadBest();
     let beat = false;
     if (!best || state.moves < best.moves || (state.moves === best.moves && elapsed < best.time)){
-      saveBest({ moves: state.moves, time: elapsed });
+      saveBest({ moves: state.moves, time: Math.min(elapsed, BEST_TIME_CAP) });
       beat = true;
     }
     els.winMoves.textContent = String(state.moves);
     els.winTime.textContent = formatTime(elapsed);
+    els.winMin.textContent = String(pairs);
+    const missNote = state.runMisses === 0
+      ? ' No misses.'
+      : ' ' + state.runMisses + ' miss' + (state.runMisses === 1 ? '' : 'es') +
+        (state.runAvoidable > 0
+          ? ', ' + state.runAvoidable + ' where you had already seen the partner.'
+          : ', none avoidable.');
     const streakNote = state.bestStreak >= 3 ? ' Best streak: ' + state.bestStreak + '.' : '';
     els.winNote.textContent = (beat
-      ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves in ' + formatTime(elapsed) + '.'
-      : 'Finished in ' + state.moves + ' moves and ' + formatTime(elapsed) + '.') + streakNote;
+      ? 'New best for ' + state.difficulty + '! ' + state.moves + ' moves (minimum ' + pairs + ') in ' + formatTime(elapsed) + '.'
+      : 'Finished in ' + state.moves + ' moves (minimum ' + pairs + ') and ' + formatTime(elapsed) + '.' +
+        (best ? ' Best stays ' + best.moves + ' / ' + formatTime(best.time) + ' — fewest moves wins, ties go to time.' : '')) +
+      missNote + streakNote;
     setVisibleStatus('win', 'Complete', state.moves + ' moves in ' + formatTime(elapsed) + '.');
     playWin();
     openOverlay(els.winOverlay, els.winPlayAgain);
@@ -743,11 +815,13 @@
     overlay.classList.add('show');
     activeOverlay = overlay;
     returnFocusTo = document.activeElement;
+    if (overlay === els.helpOverlay) stopLoop(); // reading the rules is free time
     setTimeout(() => { (autofocus || overlay.querySelector('button, [href], input, [tabindex]')).focus(); }, 0);
   }
   function closeOverlay(overlay, restoreFocus){
     overlay.classList.remove('show');
     if (activeOverlay === overlay) activeOverlay = null;
+    if (overlay === els.helpOverlay) ensureLoop();
     if (restoreFocus !== false && returnFocusTo && document.contains(returnFocusTo)){
       returnFocusTo.focus({ preventScroll: true });
     }
@@ -781,7 +855,9 @@
   function tick(timestamp){
     raf = 0;
     if (!lastFrame) lastFrame = timestamp;
-    const delta = timestamp - lastFrame;
+    // Clamp the frame gap: a hidden or stalled tab must not bill its whole
+    // absence to the run clock the moment the first frame comes back.
+    const delta = Math.min(1000, timestamp - lastFrame);
     lastFrame = timestamp;
     state.now += delta;
     if (state.busy && state.now >= state.pendingResolveAt){
@@ -793,8 +869,31 @@
     if (loopActive()) raf = requestAnimationFrame(tick);
   }
   ensureLoop();
+  // The run clock pauses while the tab is hidden; ensureLoop() re-arms with a
+  // fresh lastFrame, so the hidden stretch charges nothing.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopLoop();
+    else ensureLoop();
+  });
 
   // ----- Wire controls -----
+  els.board.addEventListener('keydown', (e) => {
+    const target = e.target;
+    if (!target || !target.classList || !target.classList.contains('card')) return;
+    const cols = DIFFICULTIES[state.difficulty].cols;
+    const count = state.cards.length;
+    const id = Number(target.dataset.id);
+    let next = null;
+    if (e.key === 'ArrowRight') next = Math.min(count - 1, id + 1);
+    else if (e.key === 'ArrowLeft') next = Math.max(0, id - 1);
+    else if (e.key === 'ArrowDown') next = id + cols < count ? id + cols : id;
+    else if (e.key === 'ArrowUp') next = id - cols >= 0 ? id - cols : id;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = count - 1;
+    if (next === null) return;
+    e.preventDefault();
+    setFocusId(next, true);
+  });
   els.newGame.addEventListener('click', newGame);
   els.fullscreen.addEventListener('click', toggleFullscreen);
   els.help.addEventListener('click', () => openOverlay(els.helpOverlay, els.helpClose));
@@ -830,6 +929,11 @@
       cards: state.cards.map(c => ({ id: c.id, icon: c.icon, state: c.state })),
       streak: state.streak,
       bestStreak: state.bestStreak,
+      minMoves: DIFFICULTIES[state.difficulty].pairs,
+      runMisses: state.runMisses,
+      runAvoidable: state.runAvoidable,
+      seenCount: state.seen.size,
+      reducedMotion: reducedMotionActive(),
       soundEnabled: state.soundEnabled,
       liveStatus: els.liveStatus ? els.liveStatus.textContent : '',
       visibleFeedback: {

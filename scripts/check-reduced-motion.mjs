@@ -179,6 +179,11 @@ const MOTION_AWARE_GAMES = [
   // Already gated its sparks, shake, confetti, squash and bob behind a live
   // matchMedia read; it just never reported the flag, so it sat outside here.
   'websites/pylon-shift.html',
+  // DOM-rendered game (no canvas): all of its motion is CSS transitions and
+  // keyframes, neutralized under reduce by its own media block plus the
+  // runtime reset. It now reports the live matchMedia state, so that coverage
+  // is verifiable here rather than assumed.
+  'websites/memory-match.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {
