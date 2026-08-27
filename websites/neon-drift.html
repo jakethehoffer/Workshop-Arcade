@@ -182,7 +182,10 @@
     <div class="pill"><span class="label">Time</span><span class="value" id="timeValue">0.00</span></div>
     <div class="pill" id="checkpointPill"><span class="label">Check</span><span class="value" id="checkValue">1/8</span></div>
     <div class="pill" id="boostPill"><span class="label">Boost</span><span class="value" id="boostValue">100</span></div>
-    <div class="pill" id="bestPill"><span class="label">Best</span><span class="value" id="bestValue">-</span></div>
+    <div class="pill" id="lapTimePill"><span class="label">This lap</span><span class="value" id="lapTimeValue">0.00</span></div>
+    <div class="pill" id="lastLapPill"><span class="label">Last lap</span><span class="value" id="lastLapValue">-</span></div>
+    <div class="pill" id="bestLapPill"><span class="label">Best lap</span><span class="value" id="bestLapValue">-</span></div>
+    <div class="pill" id="bestPill"><span class="label">Best race</span><span class="value" id="bestValue">-</span></div>
   </div>
   <div class="stage-wrap">
     <canvas id="game" width="900" height="560" tabindex="0" aria-label="Neon Drift playfield. Drive through checkpoints for three laps using keyboard or touch controls."></canvas>
@@ -210,7 +213,8 @@
     <p>Drive through each checkpoint in order. Clean lines keep speed; grass and rails slow the car.</p>
     <ul>
       <li>Arrow keys or W/A/S/D steer and drive.</li>
-      <li>Space spends boost while accelerating.</li>
+      <li>Space spends boost while accelerating. Boost lifts your top speed from 540 to 660, but it drains about three times faster than it refills, so a full bar is roughly two seconds of boost and about seven seconds to earn back. It only refills while you are not boosting.</li>
+      <li>Leaving the track costs far more speed than the rails do: off the surface the car sheds roughly five times as much speed each moment as it does on it.</li>
       <li>F toggles fullscreen.</li>
       <li>R restarts the race.</li>
       <li>The highlighted gate is always the next checkpoint.</li>
@@ -236,6 +240,10 @@
     boost: document.getElementById("boostValue"),
     boostPill: document.getElementById("boostPill"),
     best: document.getElementById("bestValue"),
+    lapTime: document.getElementById("lapTimeValue"),
+    lastLap: document.getElementById("lastLapValue"),
+    lastLapPill: document.getElementById("lastLapPill"),
+    bestLap: document.getElementById("bestLapValue"),
     bestPill: document.getElementById("bestPill"),
     status: document.getElementById("statusLine"),
     start: document.getElementById("startBtn"),
@@ -319,6 +327,7 @@
     elapsed: 0,
     lapStart: 0,
     lastLap: 0,
+    bestLap: 0,
     boost: 1,
     bestTime: parseBest(storage.get(keys.best, "0")),
     message: "Press Start to stage at the line.",
@@ -326,9 +335,31 @@
     trail: []
   };
 
+  // Total centreline length of the closed circuit, used to derive what a lap
+  // physically cannot beat.
+  // Everything here lives inside the function on purpose. parseBest() is called
+  // while the state object is still being built, so it runs BEFORE any const or
+  // let declared at this point in the file is initialised - reaching for one is a
+  // "cannot access before initialization" crash on load. Function declarations
+  // hoist; their bodies run later, when the values exist.
+  function fastestPossibleRace(){
+    const topSpeedBoosting = 660;
+    let total = 0;
+    for (let i = 0; i < track.length; i += 1) {
+      const a = track[i], b = track[(i + 1) % track.length];
+      total += Math.hypot(b.x - a.x, b.y - a.y);
+    }
+    return (total * maxLaps) / topSpeedBoosting;
+  }
+  function slowestCredibleRace(){ return 3600; }
   function parseBest(value){
     const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : null;
+    // `n > 0` alone accepted 1e-300: it printed as "0.00" and no real race could
+    // ever be quicker, so the record was permanently unbeatable. A lower-is-better
+    // record needs a FLOOR, which the physics supplies.
+    if (!Number.isFinite(n)) return null;
+    if (n < fastestPossibleRace() || n > slowestCredibleRace()) return null;
+    return n;
   }
 
   function clamp(n, min, max){
@@ -467,6 +498,7 @@
     state.elapsed = 0;
     state.lapStart = 0;
     state.lastLap = 0;
+    state.bestLap = 0;
     state.boost = 1;
     state.message = "Race live. Chase the highlighted gate.";
     resetCar();
@@ -498,6 +530,7 @@
     state.checkpointIndex = (state.checkpointIndex + 1) % track.length;
     if (oldIndex === 0) {
       state.lastLap = state.elapsed - state.lapStart;
+      if (!state.bestLap || state.lastLap < state.bestLap) state.bestLap = state.lastLap;
       state.lapStart = state.elapsed;
       state.lap += 1;
       if (state.lap > maxLaps) {
@@ -826,6 +859,19 @@
   function updateUi(){
     els.lap.textContent = `${Math.min(state.lap, maxLaps)}/${maxLaps}`;
     els.time.textContent = state.elapsed > 0 ? state.elapsed.toFixed(2) : "0.00";
+    // This lap, the one before it, and the quickest so far. All three were
+    // computed already; only a transient message ever mentioned them, and the
+    // next checkpoint overwrote it.
+    if (els.lapTime) {
+      const thisLap = Math.max(0, state.elapsed - state.lapStart);
+      els.lapTime.textContent = state.mode === "racing" ? thisLap.toFixed(2) : "0.00";
+    }
+    if (els.lastLap) els.lastLap.textContent = state.lastLap ? state.lastLap.toFixed(2) : "-";
+    if (els.bestLap) els.bestLap.textContent = state.bestLap ? state.bestLap.toFixed(2) : "-";
+    if (els.lastLapPill) {
+      // Green when the lap just finished was the quickest of the race.
+      els.lastLapPill.dataset.hot = (state.lastLap && state.bestLap && state.lastLap <= state.bestLap + 1e-9) ? "true" : "false";
+    }
     els.check.textContent = `${state.checkpointIndex === 0 ? track.length : state.checkpointIndex}/${track.length}`;
     els.boost.textContent = String(Math.round(state.boost * 100));
     els.best.textContent = state.bestTime ? formatTime(state.bestTime) : "-";
@@ -1005,7 +1051,10 @@
       time: {
         elapsed: round(state.elapsed),
         lapElapsed: round(state.elapsed - state.lapStart),
-        best: state.bestTime ? round(state.bestTime) : null
+        lastLap: state.lastLap ? round(state.lastLap) : null,
+        bestLap: state.bestLap ? round(state.bestLap) : null,
+        best: state.bestTime ? round(state.bestTime) : null,
+        fastestPossible: round(fastestPossibleRace())
       },
       car: {
         x: round(car.x),
