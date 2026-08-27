@@ -336,6 +336,14 @@ button{font:inherit}
     if (!s) return;
     try { s.setItem(key, String(value)); } catch (_) {}
   }
+  // Number(readStore(...)) || 0 let Infinity, -5, 12.7 and 1e24 reach the Best
+  // pill verbatim (measured). Score is a whole number of credits gained.
+  const BEST_CAP = 100000;
+  function readBest() {
+    const raw = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isInteger(raw) || raw < 0 || raw > BEST_CAP) return 0;
+    return raw;
+  }
   function readSound() {
     const raw = String(readStore(SOUND_KEY, "1")).toLowerCase();
     return !["0", "false", "off", "muted"].includes(raw);
@@ -348,7 +356,7 @@ button{font:inherit}
     turn: 1,
     cash: START_CASH,
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
+    best: readBest(),
     inventory: { ore: 0, grain: 0, chips: 0, meds: 0 },
     contracts: contractTemplates.map((c) => ({ ...c, done: false })),
     selectedGood: 0,
@@ -478,9 +486,25 @@ button{font:inherit}
     }
     return {
       headline: state.turn >= MAX_TURNS ? "Close the run" : "End to " + cardAt(state.turn + 1).name,
-      detail: state.turn >= MAX_TURNS ? "Final score marks inventory to market." : "Advance to card " + (state.turn + 1) + " of " + MAX_TURNS + ".",
+      detail: state.turn >= MAX_TURNS
+        ? "Final score marks inventory to market."
+        : cardAt(state.turn + 1).text + " " + nextMoveText(),
       tone: "step"
     };
+  }
+  // Which way each good is about to move, from the same pricesFor() the market
+  // itself is priced by. The next card was already named on the End Turn button;
+  // naming it while withholding what it does made the whole turn a memory test.
+  function nextMoveText() {
+    if (state.turn >= MAX_TURNS) return "";
+    const now = pricesFor(state.turn);
+    const next = pricesFor(state.turn + 1);
+    const parts = goods.map((g) => {
+      const change = next[g.id].price - now[g.id].price;
+      const arrow = change > 0 ? "+" : change < 0 ? "-" : "=";
+      return g.name + " " + arrow + (change === 0 ? "" : Math.abs(change));
+    });
+    return "Next: " + parts.join(", ") + ".";
   }
   function playSound(kind) {
     state.lastSound = kind;

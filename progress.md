@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 13c: Market Minute named the card about to hit and would not say what it did
+
+Targeted pass, not a rewrite - the goods, the eight-card demand deck, the contracts and the scoring are unchanged.
+
+- **The game told you the name of the next card and withheld the description it already had for it.** Ending a turn read "End to Factory Rush", and every card in the deck carries a written line like "Assembly lines chase chips and ore" that was never shown for the card you were about to face. Naming a card without saying what it does is a memory test, not a decision - especially in an eight-turn game where buying before a rise is the whole point.
+- **It now says what the next card does, and exactly what each price will do.** The End Turn line carries the card's own description plus the move every good is about to make, computed from the same pricing function the market itself is priced by. Verified across a full run: every promised move is exactly what the price did on the next turn, with zero mismatches.
+- **The stored best took anything.** `Infinity`, `-5`, `12.7` and `1e24` all reached the Best pill verbatim. Now required whole, non-negative and capped.
+- Verified: 20-check Playwright probe (a seven-turn run comparing every promised price move against the real one, the card description matched against the deck in the source, the next card still named, 6 junk plus 1 valid storage seed, fresh-page determinism, page weight); HEAD-first confirmation before any edit; scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings); npm test 56/56; git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 13b: Circuit Putt's aim line showed an eighth of the putt
 
 Targeted pass, not a rewrite - the three holes, the walls, bumpers, sand and physics constants are unchanged.
