@@ -247,6 +247,15 @@
   const HIT_Y = 454;
   const TOP_Y = 64;
   const NOTE_H = 22;
+  // Every timing number in one place. The judged windows, the painted bands and
+  // the auto-miss threshold used to be three separate literals, and they did not
+  // agree: a note stopped being hittable at 165ms late but did not miss until
+  // 190ms, so for 25ms a lane visibly holding a note answered "Empty lane",
+  // broke the combo, and then counted the miss as well - one late press punished
+  // twice, measured at 167ms late.
+  const WINDOW = { perfect: 70, good: 115, ok: 165 };
+  const MISS_AFTER_MS = WINDOW.ok;
+  const BEST_CAP = 2000000;
   const BEST_KEY = "rhythm-circuit.bestScore.v1";
   const SOUND_KEY = "rhythm-circuit.sound.v1";
   const laneKeys = ["d", "f", "j", "k"];
@@ -322,7 +331,15 @@
     lastAction: "loaded"
   };
 
-  function loadBestScore(){ try { const n = Number(localStorage.getItem(BEST_KEY)); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; } catch { return 0; } }
+  function loadBestScore(){
+    try {
+      const n = Number(localStorage.getItem(BEST_KEY));
+      // Finite-and-non-negative alone let 1e24 through: it floored to itself and
+      // printed "1e+24", an unbeatable record.
+      if (!Number.isFinite(n) || n < 0 || n > BEST_CAP) return 0;
+      return Math.floor(n);
+    } catch { return 0; }
+  }
   function saveBestScore(value){ try { localStorage.setItem(BEST_KEY, String(value)); } catch {} }
   function loadSoundPref(){ try { const raw = localStorage.getItem(SOUND_KEY); return raw === null ? true : raw === "true"; } catch { return true; } }
   function saveSoundPref(value){ try { localStorage.setItem(SOUND_KEY, String(value)); } catch {} }
@@ -573,7 +590,7 @@
     const candidates = chart
       .filter((note) => note.status === "pending" && note.lane === lane)
       .map((note) => ({ note, delta: state.time - note.time, abs: Math.abs(state.time - note.time) }))
-      .filter((item) => item.abs <= 165)
+      .filter((item) => item.abs <= WINDOW.ok)
       .sort((a,b) => a.abs - b.abs);
     if (!candidates.length) {
       state.laneFlashUntil[lane] = state.time + 120;
@@ -588,7 +605,7 @@
       return;
     }
     const { note, delta, abs } = candidates[0];
-    const judgement = abs <= 70 ? "Perfect" : abs <= 115 ? "Good" : "OK";
+    const judgement = abs <= WINDOW.perfect ? "Perfect" : abs <= WINDOW.good ? "Good" : "OK";
     applyJudgement(note, judgement, delta);
   }
 
@@ -597,7 +614,7 @@
     if (state.mode !== "playing") return;
     state.time += dt * 1000;
     for (const note of chart) {
-      if (note.status === "pending" && state.time - note.time > 190) {
+      if (note.status === "pending" && state.time - note.time > MISS_AFTER_MS) {
         missNote(note);
       }
     }
@@ -635,15 +652,24 @@
       const x = laneLeft(lane);
       const active = state.time < state.laneFlashUntil[lane];
       drawRoundedRect(x,52,laneWidth(),420,14,active ? "rgba(94,234,212,0.16)" : "rgba(10,18,31,0.62)", "rgba(94,234,212,0.18)");
-      const okBand = timingBandPixels(165);
-      const goodBand = timingBandPixels(115);
-      const perfectBand = timingBandPixels(70);
-      ctx.fillStyle = "rgba(244,114,182,0.035)";
+      const okBand = timingBandPixels(WINDOW.ok);
+      const goodBand = timingBandPixels(WINDOW.good);
+      const perfectBand = timingBandPixels(WINDOW.perfect);
+      // Painted at 0.035/0.045/0.07 alpha these bands were invisible: measured,
+      // the outer band was 4 brightness steps above bare lane and the middle one
+      // 11. The whole point of the bands is to show how much room a press has.
+      ctx.fillStyle = "rgba(244,114,182,0.16)";
       ctx.fillRect(x + 20, HIT_Y - okBand, laneWidth() - 40, okBand * 2);
-      ctx.fillStyle = "rgba(34,211,238,0.045)";
+      ctx.fillStyle = "rgba(34,211,238,0.20)";
       ctx.fillRect(x + 24, HIT_Y - goodBand, laneWidth() - 48, goodBand * 2);
-      ctx.fillStyle = "rgba(94,234,212,0.07)";
+      ctx.fillStyle = "rgba(94,234,212,0.30)";
       ctx.fillRect(x + 30, HIT_Y - perfectBand, laneWidth() - 60, perfectBand * 2);
+      // Edge lines so the boundary between bands is a place, not a gradient.
+      ctx.strokeStyle = "rgba(244,114,182,0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 20, HIT_Y - okBand, laneWidth() - 40, okBand * 2);
+      ctx.strokeStyle = "rgba(34,211,238,0.55)";
+      ctx.strokeRect(x + 24, HIT_Y - goodBand, laneWidth() - 48, goodBand * 2);
       ctx.fillStyle = "rgba(230,237,243,0.20)";
       ctx.font = "800 18px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
@@ -875,9 +901,11 @@
       judgement: state.time < state.judgementUntil ? state.judgement : "",
       timingFeedback: {
         nextCue: nextCueText(),
-        hitWindowMs: 165,
-        perfectWindowMs: 70,
-        goodWindowMs: 115,
+        hitWindowMs: WINDOW.ok,
+        perfectWindowMs: WINDOW.perfect,
+        goodWindowMs: WINDOW.good,
+        // The moment a note stops being hittable is now the moment it misses.
+        missAfterMs: MISS_AFTER_MS,
         lastText: state.lastTimingText,
         lastJudgement: state.lastJudgement,
         lastDeltaMs: state.lastDelta,

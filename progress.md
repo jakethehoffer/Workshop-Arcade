@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 13a: Rhythm Circuit punished one late press twice and drew its timing bands almost invisibly
+
+Batch 13 opens. Targeted pass, not a rewrite - the chart, the lanes, the scoring curve and the judged windows are unchanged.
+
+- **A 25 millisecond gap where a lane holding a note said the lane was empty.** A note stopped being hittable at 165ms late, but did not count as missed until 190ms. In between, pressing that lane answered "Empty lane", broke the combo and played the miss sound - and then the note aged out and counted a miss as well. Measured on the shipped page: a note 167ms late, pressed, reported "Empty", and the miss count went up anyway. One late press, punished twice, for a note that was already doomed.
+- **Three numbers that were meant to agree, written in three places.** The judged windows, the painted bands and the auto-miss threshold were separate literals. They now come from one block, so a note stops being hittable at exactly the moment it misses. Verified across a whole run: there is no longer any moment where a pending note cannot be hit, and a press at the very edge of the window still scores a hit and counts no miss.
+- **The bands were painted at an alpha nobody could see.** Measured against bare lane brightness of 42, the outer band read 46 and the middle one 53 - a difference of four and eleven steps. The whole purpose of the bands is to show how much room a press has. They now read 72, 101 and 142 against the same bare lane, with edge lines so the boundary between bands is a place rather than a gradient.
+- **The stored best had no ceiling.** Finite-and-non-negative let `1e24` through, since it floors to itself and printed as "1e+24". Capped now.
+- Verified: 24-check Playwright probe (window-versus-miss agreement, an edge-of-window press scoring a hit with no miss, a full-run sweep finding zero unhittable moments, canvas pixel sampling of all three bands against bare lane, twelve real presses whose judgement and reported offset match the stated windows, 4 junk plus 1 valid storage seed, fresh-page determinism, idle frames, page weight, and a check that no stray timing literal remains); HEAD-first confirmation of all three defects before any edit; scoped test:games / capture:games (desktop and mobile both 0, screenshot read) / audit:contrast (0 findings); test:best-score-guard; test:realtime-progression; npm test 56/56; git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 12f: Patchwork Foundry had a function to answer its only question and never called it
 
 BATCH 12 COMPLETE (pinball-foundry, cipher-rooms, wordle, vector-pool, neon-drift, patchwork-foundry). Targeted pass, not a rewrite - the five boards, the plates, the vents, the ports and the budgets are unchanged.
