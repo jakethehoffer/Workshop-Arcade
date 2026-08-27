@@ -352,7 +352,21 @@
     els.gear.textContent = String(state.command.gear);
     els.brake.textContent = String(state.command.brake);
     els.apex.textContent = state.command.apex[0].toUpperCase() + state.command.apex.slice(1);
-    els.hint.textContent = state.mode === "planning" ? c.call + ": " + c.note : state.mode === "replay" ? "Ghost replay in progress." : state.feedback;
+    // Say how the CURRENT command would grade on this corner. grade() is a pure
+    // function of (corner, command) and ran at exactly one call site - inside
+    // buildReplay, after every corner had already been committed - so a planner
+    // could not tell a clean line from a crash until the whole stage replayed.
+    let hint = state.mode === "planning" ? c.call + ": " + c.note
+      : state.mode === "replay" ? "Ghost replay in progress." : state.feedback;
+    if (state.mode === "planning") {
+      const look = grade(c, state.command);
+      // Kept short: a fuller sentence overflowed the phone layout and the render
+      // gate caught it.
+      hint = c.call + " | this line: " + look.feedback + " " + fmt(look.timeMs);
+      if (look.penalty) hint += " +" + fmt(look.penalty);
+      if (look.damage) hint += " dmg" + look.damage;
+    }
+    els.hint.textContent = hint;
     els.status.textContent = state.feedback;
     els.main.textContent = state.mode === "planning" ? "Commit" : state.mode === "replay" ? "Replaying" : state.mode === "stage-complete" ? "Next Stage" : "Restart";
     els.main.disabled = state.mode === "replay";
@@ -444,6 +458,12 @@
       stage: { index: state.stageIndex + 1, total: stages.length, name: stage().name },
       corner: { index: state.cornerIndex + 1, total: stage().corners.length, call: corner().call },
       command: { ...state.command },
+      // The grade this exact command would earn on this corner, from the same
+      // grade() the replay is scored by.
+      commandOutlook: state.mode === "planning" ? (() => {
+        const g = grade(corner(), state.command);
+        return { feedback: g.feedback, kind: g.kind, timeMs: Math.round(g.timeMs), penaltyMs: Math.round(g.penalty), damage: g.damage };
+      })() : null,
       plannedCorners: state.plan.length,
       replay: seg ? { corner: seg.index + 1, feedback: seg.feedback, elapsedMs: Math.round(state.replayMs), stageMs: state.stageMs } : null,
       car: { x: norm(state.car.x), y: norm(state.car.y), angle: norm(state.car.angle), speed: norm(state.car.speed) },

@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 14b: Switchback Rally would not tell you how a line graded until the whole stage had replayed
+
+Targeted pass, not a rewrite - the stages, corners, grading rule and scoring are unchanged.
+
+- **The grader was a pure function of the corner and your command, and ran at exactly one place: after every corner had already been committed.** So a planner set a gear, a brake level and an apex for each corner in turn and learned whether any of them was a clean line, a slowdown or a crash only once the whole stage replayed. Choosing a command now names the line it would produce, the time it would take, any time it would lose and any damage it would cost, from the same grader the replay is scored by.
+- Verified while planning: the line is stated on screen for every corner, the words shown match the graded verdict exactly, and changing the command changes the verdict.
+- **A layout regression caught before pushing.** The first version of the line overflowed the phone layout and failed the render gate locally. Shortened, and the catalog-wide capture then passed.
+- Verified: a planning sweep checking the on-screen line against the graded verdict for every corner, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), the full catalog-wide capture:games:ci, npm test 56/56, git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 14a: Circuit Draft scored the install only after the turn was spent
 
 Batch 14 opens. Targeted pass, not a rewrite - the cards, lanes, combos and scoring are unchanged.
