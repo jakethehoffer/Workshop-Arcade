@@ -316,7 +316,13 @@
 
   function parseBest(value){
     const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    // Strokes: LOWER is better, so the impossible value is a SMALL one. `> 0`
+    // accepted a stored total of 1 for the whole course, which no round could
+    // ever beat. The floor is one stroke per hole - a hole in one everywhere.
+    const floor = holes.length;
+    const ceiling = holes.length * 99;
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < floor || n > ceiling) return null;
+    return n;
   }
 
   function clamp(n, min, max){
@@ -851,6 +857,64 @@
     ctx.restore();
   }
 
+  // The putt the player is about to hit, stepped through the SAME rules the real
+  // roll obeys: the same bounds bounce at 0.82, the same wall and bumper
+  // resolvers, the same sand and green friction, the same cup radius. Runs on a
+  // copy of the ball, so calling it every frame cannot disturb the hole.
+  function puttForecast(angle, power){
+    const hole = currentHole();
+    const b = state.ball;
+    const speed = 170 + power * 760;
+    const ghost = { x: b.x, y: b.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: b.r, moving: true };
+    const real = state.ball;
+    const path = [{ x: ghost.x, y: ghost.y }];
+    let sank = false, firstHit = null, rolled = 0, sandTouched = false;
+    // Step exactly the way update() steps. A fixed slice diverged from the real
+    // roll by up to 166px on putts with several bounces, because the game varies
+    // its substep count with speed - sharing the RULES is not enough, the
+    // integrator has to match too.
+    const frameDt = 1 / 60;
+    // Borrow the real resolvers by pointing state.ball at the copy, then putting
+    // it back. They are the authority on collisions; re-implementing them here is
+    // exactly how a preview drifts from the game.
+    state.ball = ghost;
+    try {
+      outer:
+      for (let frameNo = 0; frameNo < 900; frameNo += 1) {
+        const speedNow = Math.hypot(ghost.vx, ghost.vy);
+        const subSteps = Math.max(1, Math.ceil(speedNow / 260));
+        const slice = frameDt / subSteps;
+        for (let i = 0; i < subSteps; i += 1) {
+          const px = ghost.x, py = ghost.y;
+          ghost.x += ghost.vx * slice;
+          ghost.y += ghost.vy * slice;
+          const beforeSpeed = Math.hypot(ghost.vx, ghost.vy);
+          resolveBounds(hole.bounds);
+          for (const rect of hole.walls) resolveRectCollision(rect);
+          for (const bumper of hole.bumpers) resolveBumper(bumper);
+          const afterSpeed = Math.hypot(ghost.vx, ghost.vy);
+          if (!firstHit && afterSpeed !== beforeSpeed) firstHit = { x: ghost.x, y: ghost.y, kind: "wall" };
+          const sand = isInSand(ghost.x, ghost.y);
+          if (sand) { sandTouched = true; if (!firstHit) firstHit = { x: ghost.x, y: ghost.y, kind: "sand" }; }
+          const friction = sand ? 0.966 : 0.989;
+          const frameScale = slice * 60;
+          ghost.vx *= Math.pow(friction, frameScale);
+          ghost.vy *= Math.pow(friction, frameScale);
+          rolled += Math.hypot(ghost.x - px, ghost.y - py);
+          path.push({ x: ghost.x, y: ghost.y });
+          if (Math.hypot(ghost.x - hole.cup.x, ghost.y - hole.cup.y) <= hole.cup.r + ghost.r + 2) { sank = true; break outer; }
+        }
+        if (Math.hypot(ghost.vx, ghost.vy) < 18) break;
+      }
+    } finally {
+      state.ball = real;
+    }
+    path.push({ x: ghost.x, y: ghost.y });
+    const thin = path.filter((_, i) => i % 4 === 0 || i === path.length - 1);
+    return { path: thin, stop: { x: ghost.x, y: ghost.y }, sank, firstHit, rolled, sandTouched,
+             distanceLeft: Math.hypot(ghost.x - hole.cup.x, ghost.y - hole.cup.y) };
+  }
+
   function drawAim(){
     if (state.mode !== "playing" || state.ball.moving) return;
     const b = state.ball;
@@ -874,22 +938,38 @@
       ctx.stroke();
       ctx.restore();
     }
-    const len = 58 + power * 88;
-    const endX = b.x + Math.cos(angle) * len;
-    const endY = b.y + Math.sin(angle) * len;
+    // The roll the ball will actually take. The old indicator was a straight ray
+    // of 58 + power*88 px, unrelated to speed or friction: measured, it drew
+    // 109-146px while the ball rolled 694-1015px, six to eight times further, and
+    // it never showed the wall or bumper the putt would meet on the way.
+    const plan = puttForecast(angle, power);
     ctx.save();
-    ctx.strokeStyle = "#6cf0d8";
-    ctx.lineWidth = 4;
-    ctx.shadowColor = "rgba(94,234,212,0.42)";
-    ctx.shadowBlur = 14;
+    if (plan.path.length > 1) {
+      ctx.strokeStyle = plan.sank ? "#fde68a" : "#6cf0d8";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = plan.sank ? "rgba(253,230,138,0.5)" : "rgba(94,234,212,0.42)";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.moveTo(plan.path[0].x, plan.path[0].y);
+      for (let i = 1; i < plan.path.length; i += 1) ctx.lineTo(plan.path[i].x, plan.path[i].y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    // Where it stops, or a ring on the cup when the putt drops.
+    ctx.strokeStyle = plan.sank ? "#fde68a" : "rgba(226,253,255,0.72)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash(plan.sank ? [] : [4, 4]);
     ctx.beginPath();
-    ctx.moveTo(b.x, b.y);
-    ctx.lineTo(endX, endY);
+    ctx.arc(plan.stop.x, plan.stop.y, b.r + 4, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = "#6cf0d8";
-    ctx.beginPath();
-    ctx.arc(endX, endY, 5 + power * 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.setLineDash([]);
+    if (plan.sank) {
+      ctx.fillStyle = "#fde68a";
+      ctx.font = "900 13px ui-sans-serif,system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("IN THE CUP", plan.stop.x, plan.stop.y - 16);
+      ctx.textAlign = "left";
+    }
     ctx.restore();
   }
 
@@ -1142,6 +1222,13 @@
         walls: hole.walls.map(rect => ({ x: rect.x, y: rect.y, w: rect.w, h: rect.h })),
         bumpers: hole.bumpers.map(bumper => ({ x: bumper.x, y: bumper.y, r: bumper.r }))
       },
+      puttForecast: (state.mode === "playing" && !state.ball.moving) ? (() => {
+        const plan = puttForecast(state.aimAngle, state.aimPower);
+        return { sank: plan.sank, stop: { x: round(plan.stop.x), y: round(plan.stop.y) },
+                 rollDistance: round(plan.rolled), distanceLeft: round(plan.distanceLeft),
+                 firstHit: plan.firstHit ? { kind: plan.firstHit.kind, x: round(plan.firstHit.x), y: round(plan.firstHit.y) } : null,
+                 crossesSand: plan.sandTouched, pathPoints: plan.path.length };
+      })() : null,
       feedback: {
         lastEvent: feedback.lastEvent,
         strokeActive: feedback.stroke > 0,

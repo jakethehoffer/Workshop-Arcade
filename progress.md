@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 13b: Circuit Putt's aim line showed an eighth of the putt
+
+Targeted pass, not a rewrite - the three holes, the walls, bumpers, sand and physics constants are unchanged.
+
+- **The aim line was six to eight times too short.** It was a straight ray of `58 + power * 88` pixels, a formula touching neither the launch speed nor the friction that decides the roll. Measured across a sweep of real putts: it drew 109 to 146 pixels while the ball rolled 694 to 1015. In a game whose holes are built from rails, bumpers and sand, the indicator also never showed which of them the ball would meet.
+- **The preview is now the putt.** It steps a copy of the ball through the game's own resolvers - the same bounds bounce, the same wall and bumper handlers, the same sand and green friction, the same cup radius - draws the real curving path, rings where the ball will stop, and turns gold and says "IN THE CUP" when the putt drops.
+- **Sharing the rules was not enough; the stepping had to match too.** A fixed slice diverged from the real roll by up to 166 pixels on putts with several bounces, because the game varies its substep count with speed. Once the forecast stepped exactly as the game steps, the worst resting-place error across eighteen putts fell inside a few pixels and every predicted hole-out really sank.
+- **A stroke record with no floor.** This is golf, so fewer strokes is better and the impossible value is a small one. The guard only asked that the number be finite and above zero, so a stored total of **1 stroke for the whole course** was accepted and no round could ever beat it. The floor is now one putt per hole, which is a hole in one everywhere, and anything below it is rejected.
+- Verified: 29-check Playwright probe (an eighteen-putt forecast-versus-reality sweep across aim and power, hole-out predictions checked both ways, resting place and roll distance against the real ball, a fifty-call no-side-effects check, canvas pixel sampling proving the path is painted, seven impossible stroke records plus a plausible one, fresh-page determinism, both media settings, page weight, and a check that the old ray formula is gone); HEAD-first confirmation before any edit; scoped test:games / capture:games (desktop and mobile both 0, screenshot read) / audit:contrast (0 findings); npm test 56/56; git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 13a: Rhythm Circuit punished one late press twice and drew its timing bands almost invisibly
 
 Batch 13 opens. Targeted pass, not a rewrite - the chart, the lanes, the scoring curve and the judged windows are unchanged.
