@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 13d: Relay Choir's record accepted anything, and guarding it uncovered a load-order trap
+
+Targeted pass, not a rewrite - the stages, the pads, the gates and the scoring are unchanged.
+
+- **The stored best took anything.** `-5`, `12.7` and `1e24` all reached the Best pill verbatim, and `1e24` printed as "1e+24" - a record no run could beat. Now required whole, non-negative and capped.
+- **The first version of that guard broke the page, and only for one kind of value.** It read a cap declared beside it, but the guard runs while the state object is still being built, before any const at that point exists. A negative or fractional value returned earlier in the function and never touched the cap, so the crash hid behind exactly the inputs the guard handles first - only an absurdly large value reached the line that failed. Moving the cap inside the function fixed it, and all seven stored-value cases now load cleanly.
+- Checked and already correct: the board already marks which targets are being hit and which are not, the guidance already names how many sources or gates are still needed, and the animation loop legitimately runs because the sequencer is always playing.
+- Verified: seven stored-value cases (negative, fractional, absurd, junk, unparseable, null and a real record) each loading with no page error and the right value; scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings); npm test 56/56; test:corrupt-storage across all 100 games (clean on re-run after one known transient); git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 13c: Market Minute named the card about to hit and would not say what it did
 
 Targeted pass, not a rewrite - the goods, the eight-card demand deck, the contracts and the scoring are unchanged.

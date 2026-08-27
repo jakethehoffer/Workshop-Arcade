@@ -237,7 +237,7 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
     stageSolved: false,
     runComplete: false,
     score: 0,
-    best: Number(saved.best) || 0,
+    best: readBest(saved.best),
     sound: saved.sound !== false,
     lastSound: "none",
     soundCount: 0,
@@ -264,6 +264,20 @@ main{min-width:0}.stage{border:1px solid rgba(126,231,243,.28);border-radius:8px
     motionQuery.addEventListener("change", (event) => { reducedMotion = event.matches; });
   } catch (_) {}
 
+  // Number(saved.best) || 0 let -5, 12.7 and 1e24 reach the Best pill verbatim
+  // (measured), and 1e24 printed as "1e+24" - an unbeatable record. Score is a
+  // whole number of points across a handful of stages.
+  function readBest(value) {
+    // The cap lives inside the function on purpose. readBest() is called while
+    // the state object is still being built, which is before a const declared
+    // here would be initialised - reaching for one crashes the page, and only on
+    // the branch that reads it (a negative or fractional value returns earlier,
+    // so the bug hid behind the very inputs the guard handles first).
+    const cap = 100000;
+    const raw = Number(value);
+    if (!Number.isInteger(raw) || raw < 0 || raw > cap) return 0;
+    return raw;
+  }
   function emptyGrid() {
     return Array.from({ length: ROWS }, () => Array.from({ length: STEPS }, () => ""));
   }
