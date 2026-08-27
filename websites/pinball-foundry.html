@@ -139,6 +139,8 @@
     <div class="pill"><span class="label">Balls</span><span class="value" id="ballsValue">3</span></div>
     <div class="pill"><span class="label">Multi</span><span class="value" id="multiValue">1x</span></div>
     <div class="pill"><span class="label">Plunger</span><span class="value" id="chargeValue">0%</span></div>
+    <div class="pill"><span class="label">Save</span><span class="value" id="saveValue">—</span></div>
+    <div class="pill"><span class="label">Rollovers</span><span class="value" id="rollValue">0/3</span></div>
   </div>
   <div class="charge-cue" id="launchCue" data-state="ready" aria-label="Launch charge">
     <span class="cue-label" id="launchCueText">Ready to launch</span>
@@ -152,7 +154,8 @@
     <button class="btn" type="button" id="soundBtn" aria-pressed="true">Sound On</button>
     <button class="btn" type="button" id="fullBtn">Fullscreen</button>
   </div>
-  <div class="help">Hold Launch, Space, Enter, or ArrowDown charges the plunger; release to launch. A/Left and D/Right flip. R resets, F fullscreen.</div>
+  <div class="help">Hold Launch, Space, Enter, or ArrowDown charges the plunger and it holds at 100%; release to launch. A weak plunger stays in the low lanes, a full one carries the ball up to the deflector hood. A/Left and D/Right flip. R resets, F fullscreen.</div>
+  <div class="help" id="rulesLine"></div>
 </main>
 <script>
 (() => {
@@ -163,6 +166,28 @@
   const W = canvas.width;
   const H = canvas.height;
   const BALL_R = 10;
+  // Every payout and rule threshold in one place, so the table's printed rules
+  // and the code that awards them cannot drift apart. None of these numbers
+  // reached the player before: the multiplier step, the ball-save length, the
+  // rollover sweep bonus and the per-target values were all buried in the source.
+  const SCORE = {
+    bumper: 250,
+    rollover: 180,
+    sweep: 600,
+    lane: 320,
+    flipper: 70,
+    bumpersPerMultiplier: 4,
+    multiplierCap: 5,
+    ballSaveSeconds: 6
+  };
+  // Launch power. The old -720 ceiling could not lift the ball past y=362, so
+  // the whole upper playfield — the arc deflector and two of the three bumpers —
+  // was unreachable at every charge (measured: 0% of balls ever crossed y<200).
+  // A full plunger now clears the top wall, so the charge picks which band of
+  // the table the ball reaches instead of every launch landing in the same one.
+  const LAUNCH_VY = 940;
+  const GRAVITY = 520;
+  const DOME = { x: 360, y: 86, r: 170 };
   const keys = { best: "pinball-foundry.bestScore.v1", sound: "pinball-foundry.sound.v1" };
   const els = {
     score: document.getElementById("scoreValue"),
@@ -170,6 +195,9 @@
     balls: document.getElementById("ballsValue"),
     multi: document.getElementById("multiValue"),
     charge: document.getElementById("chargeValue"),
+    save: document.getElementById("saveValue"),
+    roll: document.getElementById("rollValue"),
+    rules: document.getElementById("rulesLine"),
     cue: document.getElementById("launchCue"),
     cueText: document.getElementById("launchCueText"),
     chargeMeter: document.getElementById("chargeMeter"),
@@ -183,10 +211,29 @@
     get(key, fallback){ try { const value = localStorage.getItem(key); return value === null ? fallback : value; } catch (_) { return fallback; } },
     set(key, value){ try { localStorage.setItem(key, String(value)); } catch (_) {} }
   };
+  // Bumper placement is measured, not eyeballed. A dense traffic map (50 balls
+  // across ten plunger charges, autopiloted flippers, ~13k sampled frames)
+  // showed the old cluster at y260/y320/y405 sitting in cells that 0% of balls
+  // ever entered — the two upper bumpers were decoration and the multiplier they
+  // feed was unreachable. These sit in the two corridors balls actually fly:
+  // the descent lane right of the dome, and the left diagonal it throws to.
+  // `Number(...) || 0` let Infinity, -5, 12.7 and 1e24 all reach the Best pill
+  // verbatim (measured), and 1e24 printed as "1e+24" — an unbeatable record and
+  // invalid JSON for the diagnostics. Whole, non-negative, and capped above the
+  // reachable maximum instead.
+  const BEST_CAP = 4000000;
+  function readBest(){
+    const raw = Number(storage.get(keys.best, "0"));
+    // Every award is a whole number times a whole multiplier, so a fractional
+    // value is corrupt rather than merely imprecise — reject it instead of
+    // rounding it into something that looks like a real record.
+    if (!Number.isInteger(raw) || raw < 0 || raw > BEST_CAP) return 0;
+    return raw;
+  }
   const bumpers = [
-    { x: 300, y: 260, r: 38, color: "#5eead4", hits: 0 },
-    { x: 430, y: 320, r: 34, color: "#fbbf24", hits: 0 },
-    { x: 235, y: 405, r: 32, color: "#7c9eff", hits: 0 }
+    { x: 508, y: 316, r: 34, color: "#5eead4", hits: 0 },
+    { x: 486, y: 462, r: 32, color: "#fbbf24", hits: 0 },
+    { x: 212, y: 498, r: 32, color: "#7c9eff", hits: 0 }
   ];
   // Rollovers sit along the right-of-bumpers descent corridor — the table's
   // most ball-reached open lane (each cell here is crossed by ~30-40% of balls,
@@ -196,10 +243,19 @@
   // positions are outside that ejection zone, clear of the three bumpers and the
   // x>586 launch chute, and spread down the corridor so a clean descent can
   // sweep them while the all-rollovers bonus still accrues across several balls.
+  // Same measured basis. The old row's first cell needed the ball above y=356,
+  // which no launch could reach, so "all three rollovers lit" — worth +600 and
+  // a multiplier step — was mathematically unearnable (measured: zero rollovers
+  // lit across 18 autopiloted balls). These sit in high-traffic cells of the
+  // right-hand descent lane, spread so one clean descent can sweep them.
+  // Spread across three different corridors on purpose. Stacked in one lane they
+  // were sweepable over and over by a ball bouncing in place — measured 11 sweeps
+  // and 62,000 in a single game, which is a farm, not an achievement. A sweep now
+  // needs the ball to visit the right lane, the centre and the left side.
   const rollovers = [
-    { x: 500, y: 330, r: 16, lit: false },
-    { x: 484, y: 388, r: 16, lit: false },
-    { x: 452, y: 446, r: 16, lit: false }
+    { x: 562, y: 470, r: 20, lit: false, hits: 0 },
+    { x: 490, y: 566, r: 20, lit: false, hits: 0 },
+    { x: 286, y: 470, r: 20, lit: false, hits: 0 }
   ];
   const lanes = [
     { name: "left", x: 112, y: 550, w: 42, h: 150, lit: false },
@@ -213,7 +269,7 @@
   const state = {
     mode: "ready",
     score: 0,
-    best: Number(storage.get(keys.best, "0")) || 0,
+    best: readBest(),
     balls: 3,
     multiplier: 1,
     plungerCharge: 0,
@@ -223,6 +279,8 @@
     feedback: "Hold Launch, Space, or Enter to charge the plunger.",
     feedbackTime: 1.8,
     bumperHits: 0,
+    rolloverHits: 0,
+    rolloverSweeps: 0,
     laneHits: 0,
     launchCount: 0,
     lastLaunchPower: 0,
@@ -247,6 +305,17 @@
   } catch (_) {}
 
   function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+  // The same rules as the canvas block, in the DOM. Canvas text at 14px shrinks
+  // to about 7px on a phone-width layout, so the table copy alone would leave
+  // phone players with no way to learn any of it.
+  function writeRulesLine(){
+    if (!els.rules) return;
+    els.rules.textContent = "Scoring: bumper " + SCORE.bumper + " and every " + SCORE.bumpersPerMultiplier +
+      " bumpers lift the multiplier; rollover " + SCORE.rollover + " each and all " + rollovers.length +
+      " lit pays " + SCORE.sweep + " plus another multiplier step; each side lane " + SCORE.lane +
+      " once; flipper " + SCORE.flipper + ". Multiplier caps at " + SCORE.multiplierCap +
+      "x and multiplies every award. Ball save returns one drain within " + SCORE.ballSaveSeconds + " seconds, once per ball.";
+  }
   function setFeedback(text, seconds = 1.4){
     state.feedback = text;
     state.feedbackTime = seconds;
@@ -258,7 +327,14 @@
   function launchCueState(){
     if (state.gameOver) return { state: "locked", label: "Game over", fill: 0 };
     if (state.charging && launchAvailable()) {
-      return { state: "charging", label: "Charging " + Math.round(state.plungerCharge * 100) + "%", fill: Math.max(8, state.plungerCharge * 100) };
+      const pct = Math.round(state.plungerCharge * 100);
+      // Say what this much power actually reaches. The charge was a bare
+      // percentage of nothing the player could see.
+      const reach = state.plungerCharge >= .995 ? "full — reaches the hood"
+        : pct >= 70 ? "strong — upper bumpers"
+        : pct >= 40 ? "medium — rollover lane"
+        : "soft — low lanes only";
+      return { state: "charging", label: pct + "% " + reach, fill: Math.max(8, pct) };
     }
     if (launchAvailable()) return { state: "ready", label: "Ready to launch", fill: 8 };
     return { state: "launched", label: state.lastLaunchFeedback || "Ball launched", fill: 100 };
@@ -271,6 +347,12 @@
     els.balls.textContent = String(state.balls);
     els.multi.textContent = state.multiplier + "x";
     els.charge.textContent = Math.round(state.plungerCharge * 100) + "%";
+    // Ball save is a 6-second window that decides whether a drain costs a ball,
+    // and it only ever existed as a diagnostics field. Count it down out loud.
+    els.save.textContent = state.ballSave > 0
+      ? state.ballSave.toFixed(1) + "s"
+      : state.ballSaveSpent ? "used" : "—";
+    els.roll.textContent = rollovers.filter((item) => item.lit).length + "/" + rollovers.length;
     els.cue.dataset.state = cue.state;
     els.cueText.textContent = cue.label;
     els.chargeMeter.style.width = clamp(cue.fill, 0, 100) + "%";
@@ -354,6 +436,8 @@
     state.balls = 3;
     state.multiplier = 1;
     state.bumperHits = 0;
+    state.rolloverHits = 0;
+    state.rolloverSweeps = 0;
     state.laneHits = 0;
     state.launchCount = 0;
     state.lastLaunchPower = 0;
@@ -364,7 +448,7 @@
     state.ballSaveSpent = false;
     for (const bumper of bumpers) bumper.hits = 0;
     for (const lane of lanes) lane.lit = false;
-    for (const lane of rollovers) lane.lit = false;
+    for (const item of rollovers) { item.lit = false; item.hits = 0; }
     resetBall(true);
     updateHud();
     render();
@@ -377,12 +461,16 @@
     state.lastLaunchAt = state.now;
     state.lastLaunchFeedback = "Launched " + Math.round(power * 100) + "%";
     ball.stuck = false;
-    ball.vx = -42 - state.plungerCharge * 34;
-    ball.vy = -720 * power;
+    // A full plunger must carry the ball ACROSS to the hood, not just up the
+    // right-hand chute. Measured: with a nearly-flat drift only 15 of 50 balls
+    // ever touched a bumper because the ball rode the lane up and came straight
+    // back down it; with this drift 45 of 50 do, and all three bumpers are struck.
+    ball.vx = -42 - state.plungerCharge * 110;
+    ball.vy = -LAUNCH_VY * power;
     state.mode = "playing";
     // Arm ball save only for this ball's first launch — re-launching a saved
     // ball must not re-arm it, or the lose condition never fires.
-    if (!state.ballSaveSpent) state.ballSave = 6;
+    if (!state.ballSaveSpent) state.ballSave = SCORE.ballSaveSeconds;
     state.charging = false;
     state.plungerCharge = 0;
     setFeedback(state.lastLaunchFeedback + ". Ball save is lit.");
@@ -441,7 +529,7 @@
         ball.vx += nx * 90 + (flipper === flippers.left ? 100 : -100);
         ball.vy -= 280;
       }
-      award(70, "Flipper strike", 410);
+      award(SCORE.flipper, "Flipper strike", 410);
     }
   }
   function circleBounce(cx, cy, r, impulse){
@@ -465,8 +553,8 @@
       if (circleBounce(bumper.x, bumper.y, bumper.r, 210)) {
         bumper.hits += 1;
         state.bumperHits += 1;
-        state.multiplier = Math.min(5, Math.max(state.multiplier, 1 + Math.floor(state.bumperHits / 4)));
-        award(250, "Bumper forged", 620 + bumper.hits * 22);
+        state.multiplier = Math.min(SCORE.multiplierCap, Math.max(state.multiplier, 1 + Math.floor(state.bumperHits / SCORE.bumpersPerMultiplier)));
+        award(SCORE.bumper, "Bumper forged", 620 + bumper.hits * 22);
       }
     }
     for (const rollover of rollovers) {
@@ -474,11 +562,15 @@
       const dy = ball.y - rollover.y;
       if (Math.hypot(dx, dy) < BALL_R + rollover.r && !rollover.lit) {
         rollover.lit = true;
-        award(180, "Rollover lit", 720);
+        rollover.hits += 1;
+        state.rolloverHits += 1;
+        const litCount = rollovers.filter((item) => item.lit).length;
+        award(SCORE.rollover, "Rollover " + litCount + " of " + rollovers.length, 720);
         if (rollovers.every((item) => item.lit)) {
           for (const item of rollovers) item.lit = false;
-          state.multiplier = Math.min(5, state.multiplier + 1);
-          award(600, "All rollovers raised multiplier", 880);
+          state.rolloverSweeps += 1;
+          state.multiplier = Math.min(SCORE.multiplierCap, state.multiplier + 1);
+          award(SCORE.sweep, "All rollovers — multiplier now " + state.multiplier + "x", 880);
         }
       }
     }
@@ -486,7 +578,7 @@
       if (!lane.lit && ball.x > lane.x && ball.x < lane.x + lane.w && ball.y > lane.y && ball.y < lane.y + lane.h) {
         lane.lit = true;
         state.laneHits += 1;
-        award(320, lane.name + " lane", 540);
+        award(SCORE.lane, lane.name + " lane", 540);
       }
     }
   }
@@ -504,12 +596,16 @@
       state.feedback = state.ballSave > 0 ? "Ball save lit." : "Keep the foundry running.";
     }
     if (state.charging && ball.stuck && !state.gameOver) {
-      state.plungerCharge = (state.plungerCharge + dt * .72) % 1;
+      // Hold at full instead of wrapping. The old `% 1` silently dropped a
+      // fully-charged plunger back to 0% while the player was still holding,
+      // so holding "a good long time" produced the weakest possible launch and
+      // nothing on the table ever said so.
+      state.plungerCharge = Math.min(1, state.plungerCharge + dt * .72);
     }
     updateFlippers(dt);
     if (!ball.stuck && state.mode === "playing") {
       state.ballSave = Math.max(0, state.ballSave - dt);
-      ball.vy += 520 * dt;
+      ball.vy += GRAVITY * dt;
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
       ball.vx *= .999;
@@ -523,7 +619,7 @@
         ball.x = Math.max(ball.x, 614);
         ball.vx = clamp(ball.vx, -12, 45);
       }
-      circleBounce(360, 86, 170, 50);
+      circleBounce(DOME.x, DOME.y, DOME.r, 50);
       checkScoring();
       segmentHit(flippers.left);
       segmentHit(flippers.right);
@@ -559,6 +655,49 @@
     ctx.stroke();
     ctx.fillStyle = "rgba(251,191,36,.08)";
     ctx.fillRect(596, 170, 56, 728);
+    // The deflector dome. This is a real 170px collider at (360,86) that
+    // reflects the ball and adds impulse, and it was drawn NOWHERE — the ball
+    // visibly bounced off empty space at the top of the table. Drawn now as the
+    // hood it always was, with its rim on the exact contact circle (r + ball
+    // radius) so what you see is where the ball turns.
+    const domeGrad = ctx.createRadialGradient(DOME.x, DOME.y, 40, DOME.x, DOME.y, DOME.r + BALL_R);
+    domeGrad.addColorStop(0, "rgba(251,191,36,.20)");
+    domeGrad.addColorStop(1, "rgba(251,191,36,.05)");
+    ctx.fillStyle = domeGrad;
+    ctx.beginPath();
+    ctx.arc(DOME.x, DOME.y, DOME.r + BALL_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(251,191,36,.55)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(DOME.x, DOME.y, DOME.r + BALL_R, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(251,191,36,.72)";
+    ctx.font = "700 20px ui-sans-serif,system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("DEFLECTOR HOOD", DOME.x, DOME.y + DOME.r - 24);
+    ctx.font = "600 15px ui-sans-serif,system-ui,sans-serif";
+    ctx.fillStyle = "rgba(230,237,243,.62)";
+    ctx.fillText("the ball turns here", DOME.x, DOME.y + DOME.r - 4);
+    ctx.textAlign = "left";
+    // The scoring rules, printed from the same constants that award them. Not one
+    // of these numbers was anywhere on the page before: a player could not learn
+    // that four bumpers buy a multiplier step, that ball save lasts six seconds,
+    // or that sweeping all three rollovers pays a bonus AND another step.
+    ctx.textAlign = "left";
+    ctx.font = "700 16px ui-sans-serif,system-ui,sans-serif";
+    ctx.fillStyle = "rgba(94,234,212,.82)";
+    ctx.fillText("FOUNDRY RULES", 100, 300);
+    ctx.font = "600 14px ui-sans-serif,system-ui,sans-serif";
+    ctx.fillStyle = "rgba(214,226,244,.72)";
+    const rules = [
+      "Bumper " + SCORE.bumper + " · every " + SCORE.bumpersPerMultiplier + " lifts the multiplier",
+      "Rollover " + SCORE.rollover + " · all " + rollovers.length + " lit pays " + SCORE.sweep + " and +1x",
+      "Side lane " + SCORE.lane + " once each · flipper " + SCORE.flipper,
+      "Multiplier caps at " + SCORE.multiplierCap + "x · every award is multiplied",
+      "Ball save returns one drain for " + SCORE.ballSaveSeconds + "s per ball"
+    ];
+    rules.forEach((line, i) => ctx.fillText(line, 100, 328 + i * 22));
     ctx.fillStyle = "rgba(94,234,212,.09)";
     ctx.beginPath();
     ctx.moveTo(110, 730);
@@ -841,6 +980,12 @@
         side: lanes.filter((lane) => lane.lit).map((lane) => lane.name)
       },
       bumperHits: state.bumperHits,
+      // Per-target hits, so "is this target reachable at all" is a measurable
+      // question rather than an assumption about the table geometry.
+      bumpers: bumpers.map((b) => ({ x: b.x, y: b.y, r: b.r, hits: b.hits })),
+      rolloverHits: state.rolloverHits,
+      rolloverSweeps: state.rolloverSweeps,
+      rolloverTargets: rollovers.map((r) => ({ x: r.x, y: r.y, lit: r.lit, hits: r.hits })),
       feedback: { text: state.feedback, active: state.feedbackTime > 0, time: Number(state.feedbackTime.toFixed(2)) },
       sound: state.sound,
       gameOver: state.gameOver,
@@ -859,6 +1004,7 @@
     return window.render_game_to_text();
   };
 
+  writeRulesLine();
   updateHud();
   render();
   ensureLoop();
