@@ -1,5 +1,18 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 12d: Vector Pool's aim line stopped a third of the way along the shot
+
+Targeted pass, not a rewrite - the table, the four stages, the physics constants and the payouts are unchanged.
+
+- **The aim line had no relationship to the shot.** It was a straight dashed ray of `118 + power * 270` pixels, a formula that touches neither the launch speed nor the friction that actually decides how far the ball rolls. Measured across a sweep of real aims: the ray drew 240px while the ball rolled 348 to 666px, and at full power it draws 388px against a real roll of roughly 2,300px. The direction was right; the length was fiction, and the error grows with power - exactly when a player most needs to know.
+- **It also never showed what the shot would hit,** which in a pool game is the only question that matters.
+- **The preview is now the shot, traced through the same rules the shot obeys** - the same launch speed, the same friction curve, the same 0.9 rail damping, the same pocket radius. It draws the path to the first contact solid, rings that contact and names it ("1 WORTH 100", "SCRATCH", "RAIL 2"), dashes the roll-on afterwards so a certainty reads differently from a continuation, and outlines where the cue ball comes to rest.
+- **The forecast is verified against reality, not just drawn.** Over 24 shots spanning aim and power: every predicted ball contact really struck that ball, every shot predicted to touch nothing left every ball still, the predicted resting place matched the real one, and the predicted roll distance tracked the real roll. The forecast is also published in the diagnostics, so it is testable rather than only visible.
+- **Forecasting is free of side effects.** It steps a copy, so calling it forty times in a row leaves the table byte-identical - checked, because a preview that shares mutable state with the simulation is the classic way this fix goes wrong.
+- **The scoring rules were nowhere.** A potted ball pays its own value plus 8 for every stroke left plus, if the cue ball touched a rail first, 60 and another 25 per rail up to five; a scratch costs 40. None of that appeared on screen - the table said only "Bank x0". The rules are now written out in the page text, and the table shows the live value of the bank you have built and the stroke bonus you would collect.
+- **The stored best had no ceiling.** The guard checked only that the value was finite, so `1e24` passed straight through and printed as "1e+24" - an unbeatable record. Capped now.
+- Verified: 24-check Playwright probe (a 24-shot forecast-versus-reality sweep across aim and power, canvas pixel sampling proving the line is painted, a no-side-effects check over 40 forecasts, 5 junk plus 1 valid storage seed, fresh-page determinism, idle frames while waiting to aim, a real Tab walk, page weight, and a check that the old hard-coded ray formula is gone); HEAD-first confirmation before any edit; scoped test:games / capture:games (desktop and mobile both 0, screenshots read) / audit:contrast (0 findings); validate-catalog; test:catalog-freeze; npm test 56/56; git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 12c: Lexica could hand you an unwinnable round, and kept no record of anything
 
 Targeted pass, not a rewrite - the word lists, the colouring rule and the six-guess structure are unchanged.

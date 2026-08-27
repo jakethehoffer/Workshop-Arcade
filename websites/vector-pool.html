@@ -127,7 +127,7 @@
 <div class="shell">
   <div class="topbar">
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Vector Pool</span></div>
-    <div class="hint">Drag from the cue ball to set a vector. Arrows adjust aim, +/- or W/S adjust power, Space shoots, R restarts, F fullscreen, M sound.</div>
+    <div class="hint">Drag from the cue ball to set a vector. Arrows adjust aim, +/- or W/S adjust power, Space shoots, R restarts, F fullscreen, M sound.<br />Scoring: a potted ball pays its own value, plus 8 for every stroke you have left, plus a bank bonus of 60 and another 25 per rail (up to 5 rails) if the cue ball touched a rail first. Scratching the cue ball costs 40.</div>
   </div>
   <div class="hud" aria-label="Vector Pool status">
     <div class="pill"><span class="label">Stage</span><span class="value" id="stageValue">1/4</span></div>
@@ -253,10 +253,14 @@
     } catch (_) {}
   }
 
+  const BEST_CAP = 200000;
   function loadBest() {
     const raw = safeGet(BEST_KEY, 0);
     const value = typeof raw === "number" ? raw : Number(raw && raw.bestScore !== undefined ? raw.bestScore : raw);
-    return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    // Number.isFinite alone let 1e24 through, since it is finite and floors to
+    // itself - it printed as "1e+24", an unbeatable record. Cap it.
+    if (!Number.isFinite(value) || value < 0 || value > BEST_CAP) return 0;
+    return Math.floor(value);
   }
 
   function loadSound() {
@@ -933,31 +937,133 @@
     }
   }
 
+  // The shot the player is about to take, traced through the SAME rules the real
+  // shot obeys: the same launch speed, the same friction curve, the same 0.9 rail
+  // damping and the same pocket radius. Reads nothing but a copy, so calling it
+  // every frame cannot disturb the table.
+  function shotForecast() {
+    const cue = state.cueBall;
+    if (!cue) return { path: [], tail: [], contact: null, stop: null, rails: 0 };
+    const speed = MIN_SHOT_SPEED + MAX_SHOT_SPEED * clamp(state.power, POWER_MIN, 1);
+    const ball = { x: cue.x, y: cue.y, vx: Math.cos(state.aimAngle) * speed, vy: Math.sin(state.aimAngle) * speed, r: cue.r };
+    const others = state.balls.filter((b) => !b.potted && b !== cue);
+    const path = [{ x: ball.x, y: ball.y }];
+    const tail = [];
+    let contact = null;
+    let rails = 0;
+    const dt = 1 / 240;
+    for (let step = 0; step < 2400; step += 1) {
+      const prevX = ball.x, prevY = ball.y;
+      ball.x += ball.vx * dt;
+      ball.y += ball.vy * dt;
+      // Pocket, using the same test checkPocket() applies.
+      let pocketed = null;
+      for (const pocket of pockets) {
+        if (Math.hypot(ball.x - pocket.x, ball.y - pocket.y) <= pocket.r - 3) { pocketed = pocket; break; }
+      }
+      if (pocketed) {
+        contact = { kind: "pocket", x: pocketed.x, y: pocketed.y, label: "scratch", after: rails };
+        path.push({ x: ball.x, y: ball.y });
+        break;
+      }
+      // Another ball.
+      let struck = null;
+      for (const other of others) {
+        if (Math.hypot(ball.x - other.x, ball.y - other.y) <= ball.r + other.r) { struck = other; break; }
+      }
+      if (struck) {
+        contact = { kind: "ball", x: struck.x, y: struck.y, label: (struck.label ? struck.label + " " : "") + "worth " + struck.value, after: rails, value: struck.value };
+        path.push({ x: prevX, y: prevY });
+        break;
+      }
+      // Rails, mirroring resolveRail() including its 0.9 damping.
+      let railed = false;
+      if (ball.x - ball.r < PLAY.left) { ball.x = PLAY.left + ball.r; ball.vx = Math.abs(ball.vx) * 0.9; railed = true; }
+      else if (ball.x + ball.r > PLAY.right) { ball.x = PLAY.right - ball.r; ball.vx = -Math.abs(ball.vx) * 0.9; railed = true; }
+      if (ball.y - ball.r < PLAY.top) { ball.y = PLAY.top + ball.r; ball.vy = Math.abs(ball.vy) * 0.9; railed = true; }
+      else if (ball.y + ball.r > PLAY.bottom) { ball.y = PLAY.bottom - ball.r; ball.vy = -Math.abs(ball.vy) * 0.9; railed = true; }
+      if (railed) {
+        if (Math.hypot(ball.vx, ball.vy) > 48) rails += 1;
+        if (!contact) contact = { kind: "rail", x: ball.x, y: ball.y, label: "rail " + rails, after: rails };
+      }
+      // Friction, mirroring applyFriction().
+      const sp = Math.hypot(ball.vx, ball.vy);
+      const next = Math.max(0, sp - FRICTION * dt);
+      if (next <= STOP_SPEED) { ball.vx = 0; ball.vy = 0; }
+      else { ball.vx *= next / sp; ball.vy *= next / sp; }
+      const point = { x: ball.x, y: ball.y };
+      if (contact && contact.kind === "rail") tail.push(point); else path.push(point);
+      if (ball.vx === 0 && ball.vy === 0) break;
+    }
+    if (contact && contact.kind === "rail" && tail.length) tail.unshift({ x: contact.x, y: contact.y });
+    const stop = (contact && contact.kind === "ball") ? null : { x: ball.x, y: ball.y };
+    const thin = (list) => list.filter((_, i) => i % 3 === 0 || i === list.length - 1);
+    return { path: thin(path), tail: thin(tail), contact, stop, rails };
+  }
+
   function drawAim() {
     if (!canAim()) return;
     const cue = state.cueBall;
     const dx = Math.cos(state.aimAngle);
     const dy = Math.sin(state.aimAngle);
-    const len = 118 + state.power * 270;
+    const plan = shotForecast();
     ctx.save();
-    ctx.strokeStyle = "rgba(230,237,243,.28)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 9]);
-    ctx.beginPath();
-    ctx.moveTo(cue.x + dx * 18, cue.y + dy * 18);
-    ctx.lineTo(cue.x + dx * len, cue.y + dy * len);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // The path the cue ball will actually roll, up to its first contact. The old
+    // preview was a straight dashed ray of 118 + power*270 px with no relation to
+    // the shot: measured, it drew 240px while the ball rolled 348-666px, and at
+    // full power it draws 388px against a real roll of roughly 2300px.
+    if (plan.path.length > 1) {
+      ctx.strokeStyle = "rgba(94,234,212,.9)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(plan.path[0].x, plan.path[0].y);
+      for (let i = 1; i < plan.path.length; i += 1) ctx.lineTo(plan.path[i].x, plan.path[i].y);
+      ctx.stroke();
+    }
+    // Where it rolls on afterwards if nothing were struck: dashed, so a player
+    // can tell a certainty from a continuation.
+    if (plan.tail.length > 1) {
+      ctx.strokeStyle = "rgba(230,237,243,.30)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([9, 8]);
+      ctx.beginPath();
+      ctx.moveTo(plan.tail[0].x, plan.tail[0].y);
+      for (let i = 1; i < plan.tail.length; i += 1) ctx.lineTo(plan.tail[i].x, plan.tail[i].y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // Mark what the shot meets first, and name it.
+    if (plan.contact) {
+      const colour = plan.contact.kind === "pocket" ? "#fbbf24"
+        : plan.contact.kind === "ball" ? "#5eead4" : "rgba(230,237,243,.75)";
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(plan.contact.x, plan.contact.y, 13, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = colour;
+      ctx.font = "900 12px ui-sans-serif,system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(plan.contact.label.toUpperCase(), plan.contact.x, plan.contact.y - 20);
+      ctx.textAlign = "left";
+    }
+    // Where the cue ball comes to rest.
+    if (plan.stop) {
+      ctx.strokeStyle = "rgba(230,237,243,.55)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(plan.stop.x, plan.stop.y, BALL_R, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // The cue stick behind the ball still shows the power.
     ctx.strokeStyle = "rgba(94,234,212,.86)";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(cue.x - dx * (46 + state.power * 54), cue.y - dy * (46 + state.power * 54));
     ctx.lineTo(cue.x - dx * 18, cue.y - dy * 18);
     ctx.stroke();
-    ctx.fillStyle = "rgba(94,234,212,.9)";
-    ctx.beginPath();
-    ctx.arc(cue.x + dx * len, cue.y + dy * len, 4, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
   }
 
@@ -970,7 +1076,10 @@
     ctx.fillText(state.stageName.toUpperCase(), 62, 30);
     ctx.fillStyle = "rgba(230,237,243,.84)";
     ctx.font = "800 12px ui-sans-serif,system-ui";
-    ctx.fillText("Balls " + remainingBalls() + "  Bank x" + state.bankCount + "  Power " + Math.round(state.power * 100) + "%", 62, 50);
+    const bankWorth = state.bankCount > 0 ? 60 + Math.min(5, state.bankCount) * 25 : 0;
+    const strokeWorth = Math.max(0, state.strokeLimit - state.strokes) * 8;
+    ctx.fillText("Balls " + remainingBalls() + "  Bank x" + state.bankCount + (bankWorth ? " (+" + bankWorth + ")" : "") +
+      "  Stroke bonus +" + strokeWorth + "  Power " + Math.round(state.power * 100) + "%", 62, 50);
     if (state.feedbackTimer > 0 || state.complete || state.gameOver || state.mode === "stage-clear") {
       const text = state.feedbackText;
       ctx.textAlign = "center";
@@ -1065,6 +1174,17 @@
       power: round(state.power),
       moving: state.moving,
       bankCount: state.bankCount,
+      forecast: (() => {
+        if (!canAim()) return null;
+        const plan = shotForecast();
+        return {
+          contact: plan.contact ? { kind: plan.contact.kind, x: round(plan.contact.x), y: round(plan.contact.y), label: plan.contact.label } : null,
+          stop: plan.stop ? { x: round(plan.stop.x), y: round(plan.stop.y) } : null,
+          railsBeforeContact: plan.rails,
+          pathPoints: plan.path.length,
+          rollDistance: round(plan.path.concat(plan.tail).reduce((acc, pt, i, arr) => i === 0 ? 0 : acc + Math.hypot(pt.x - arr[i-1].x, pt.y - arr[i-1].y), 0))
+        };
+      })(),
       soundEnabled: state.soundEnabled,
       lastSound: state.lastSound,
       feedbackActive: state.feedbackTimer > 0 || state.mode === "stage-clear" || state.complete || state.gameOver,
