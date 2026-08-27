@@ -184,6 +184,9 @@ const MOTION_AWARE_GAMES = [
   // runtime reset. It now reports the live matchMedia state, so that coverage
   // is verifiable here rather than assumed.
   'websites/memory-match.html',
+  // Also DOM-rendered with no canvas, so the CSS reset plus its own media block
+  // really is complete coverage. Added 2026-08-27 once it reported the flag.
+  'websites/cipher-rooms.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {

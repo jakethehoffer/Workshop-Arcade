@@ -1,5 +1,20 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude — overhaul campaign batch 12b: Cipher Rooms' first door punished you for following its own printed rule
+
+Targeted pass, not a rewrite — the four rooms, their objects, clues, codes and scoring are unchanged.
+
+- **The answer key was hiding in plain sight and the game never said so.** In every room the door runes are listed *in code order*: rune one is the symbol whose digit goes first. That relationship held in all four rooms and was stated nowhere — the "rule" line was flavour text about light levels and constellations.
+- **And in the very first room the flavour text pointed the wrong way.** Moon Atrium said "Order symbols from low light to high light", its clue chips read circle 2, triangle 4, prism 7, and the door wanted 4-7-2. Measured on the shipped page: inspecting all three objects and entering **247 — exactly what the printed rule implies — is rejected**, costs 18 points, and burns one of only three attempts. On the first door of the game.
+- **The door now shows the order it reads in.** Under the runes sits a numbered slot per position, each holding the digit you have discovered for that rune or a "?" until you find it. Discovering digits is still the entire puzzle; which slot each digit fills is no longer a guess. Verified: nothing is revealed before inspecting, one inspection fills exactly one slot, and reading the slots straight off the door opens all four doors first try and completes the run.
+- **There were two different orders on one screen, which was the whole confusion.** The clue chips listed objects left to right while the door read its runes, and in room one those disagree. Chips are now numbered and ordered by the door, so exactly one order appears anywhere.
+- **A load-time audit now proves the promise.** Every room's rune order is mapped through its own symbol-to-digit table and checked against its code; a mismatch says so on screen. Four of four rooms pass, so the rule the game now prints cannot quietly stop being true.
+- **The keyboard was completely trapped.** Tab was swallowed to cycle objects, so eight real Tab presses never moved focus at all and every control after the scene was unreachable. Tab is handed back — the arrow keys already cycled objects — and arrows now step both directions instead of both stepping forward.
+- **The loop ran forever on a puzzle where nothing moves.** Measured 61 frames per second on a fully idle room. It now parks unless a feedback message is decaying or a room transition is pending, verified at 0 idle frames while a message still decays in real time.
+- **The stored best took anything.** `Infinity`, `-5`, `12.7` and `1e24` all reached the Best pill verbatim. Now required whole, non-negative and capped.
+- **Joins the reduced-motion gate, 50 games to 51.** Another of the five games the 2026-08-16 census flagged as CSS-only; like memory-match it is DOM-rendered with no canvas, so its CSS coverage really is complete coverage — it simply never reported the state. Proved true under reduce and false under no-preference.
+- Verified: 39-check Playwright probe (load-time audit of all four rooms, a full four-room win driven only by reading the door slots, slot reveal behaviour, chip-versus-slot order agreement, idle frames plus real-time feedback decay, a real six-press Tab walk, arrows both ways, 6 junk plus 1 valid storage seed with JSON validity each, both media settings, capture recipe verbatim, fresh-page determinism, page weight); HEAD-first confirmation of all six defects before any edit; scoped test:games / capture:games (desktop and mobile both 0, screenshots read) / audit:contrast (0 findings); validate-catalog; test:catalog-freeze; test:reduced-motion (51 games); npm test 56/56; git diff --check clean.
+
 ## 2026-08-27 Claude — overhaul campaign batch 12a: Pinball Foundry's biggest object was invisible, and most of its table could not be reached
 
 Batch 12 opens (pinball-foundry, cipher-rooms, wordle, vector-pool, neon-drift, patchwork-foundry). Targeted pass, not a rewrite — the table art, the flipper geometry, the payout values and the ball-save rule are unchanged.
