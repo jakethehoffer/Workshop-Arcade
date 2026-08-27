@@ -279,7 +279,13 @@
   function loadBest() {
     const raw = safeGet(BEST_KEY, 0);
     const num = Number(raw && typeof raw === "object" ? raw.bestScore : raw);
-    return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0;
+    // `num > 0` alone let 1e24 through: it is finite and floors to itself, and
+    // printed as "1e+24" - a record no run could ever beat.
+    // Every award is a whole number, so a fractional value is corrupt rather
+    // than imprecise - reject it instead of rounding it into a real-looking record.
+    const cap = 500000;
+    if (!Number.isInteger(num) || num < 0 || num > cap) return 0;
+    return num;
   }
   function loadSound() {
     const raw = safeGet(SOUND_KEY, true);
@@ -454,6 +460,36 @@
         received: received.get(key) || [],
       };
     });
+  }
+
+  // What one rotation of the selected piece would achieve, answered by the SAME
+  // beam simulation that judges the real board. The player spends from a fixed
+  // move budget, and the game could always have told them what a move buys.
+  function rotationOutlook() {
+    if (state.mode !== "playing") return null;
+    const tile = state.cursor;
+    const component = state.components.find((c) => c.r === tile.r && c.c === tile.c &&
+      (c.type === "mirror" || c.type === "splitter"));
+    if (!component) return { rotatable: false, reason: "Select a mirror or splitter" };
+    const litNow = countLit();
+    const before = component.rot;
+    let litAfter = litNow;
+    try {
+      component.rot = (component.rot + 1) % 2;
+      simulateBeams();
+      litAfter = countLit();
+    } finally {
+      component.rot = before;
+      simulateBeams();
+    }
+    const movesLeftAfter = state.budget - (state.moves + 1);
+    return {
+      rotatable: true, type: component.type, litNow, litAfter,
+      total: state.receivers.length, gain: litAfter - litNow,
+      movesLeftAfter,
+      wouldComplete: litAfter === state.receivers.length && state.receivers.length > 0,
+      lastMove: movesLeftAfter <= 0
+    };
   }
 
   function countLit() {
@@ -1017,7 +1053,20 @@
     els.best.textContent = String(state.bestScore);
     els.litPill.dataset.hot = String(lit === state.receivers.length && state.receivers.length > 0);
     els.litPill.dataset.warn = String(state.moves >= state.budget && !state.solved);
-    els.selectedTile.textContent = selectedTileLabel(selected);
+    // Say what a rotation would BUY, not just what is selected. The budget is
+    // fixed, so "3/4 lit to 4/4, 2 moves left after" is the whole decision.
+    const look = rotationOutlook();
+    let tileLine = selectedTileLabel(selected);
+    if (look && look.rotatable) {
+      // Kept short on purpose: a longer sentence overflowed the phone layout by
+      // 27px and the render gate caught it.
+      const sign = look.gain > 0 ? "+" + look.gain : look.gain < 0 ? String(look.gain) : "0";
+      tileLine += ` | rotate ${look.litNow}>${look.litAfter}/${look.total} (${sign})`;
+      tileLine += ` | ${Math.max(0, look.movesLeftAfter)} left`;
+      if (look.wouldComplete) tileLine += " | COMPLETES";
+      else if (look.lastMove) tileLine += " | LAST MOVE";
+    }
+    els.selectedTile.textContent = tileLine;
     els.receiverCount.textContent = `Receivers ${counts.lit} / ${counts.total} lit`;
     els.receiverChips.replaceChildren(...state.receivers.map((receiver, index) => {
       const chip = document.createElement("span");
@@ -1105,6 +1154,7 @@
       soundCount: state.soundCount,
       feedback: state.feedback,
       feedbackActive: state.feedbackMs > 0,
+      rotationOutlook: rotationOutlook(),
       rotateButton: {
         text: els.rotate.textContent,
         enabled: !els.rotate.disabled,

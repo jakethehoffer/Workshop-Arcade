@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 13e: Prism Relay could simulate the board but only after you spent a move
+
+BATCH 13 COMPLETE (rhythm-circuit, circuit-putt, market-minute, relay-choir, prism-relay; shadow-switch was listed here but had already been done in an earlier batch). Targeted pass, not a rewrite - the stages, mirrors, splitters, receivers and budgets are unchanged.
+
+- **The beam simulation existed and was only ever asked about the board you already had.** Rotating a mirror costs one of a fixed number of moves, and the game could always have told you what that rotation would light - it runs the same simulation immediately afterwards. Selecting a piece now states how many receivers are lit, how many the rotation would light, the change, how many moves would remain, and whether the move completes the stage or is a last move that would not.
+- **Proved exact.** Every rotatable tile on the board was predicted and then actually rotated: the predicted lit-count matched the real one every time. The preview restores the piece and re-runs the real simulation afterwards, so previewing forty times leaves the board byte-identical.
+- **The stored best took anything.** `1e24` passed the finite-and-positive check, floored to itself and printed as "1e+24". Now required whole, non-negative and capped, with a fractional value rejected rather than rounded.
+- **A layout regression caught before pushing.** The first version of the new readout was a full sentence, which overflowed the phone layout by 27 pixels and failed the render gate. Shortened, and the catalog-wide capture then passed locally.
+- Verified: a grid sweep predicting and taking every rotatable tile with zero mismatches, a forty-call no-side-effects check, six stored-value cases, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), the full catalog-wide capture:games:ci, npm test 56/56, git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 13d: Relay Choir's record accepted anything, and guarding it uncovered a load-order trap
 
 Targeted pass, not a rewrite - the stages, the pads, the gates and the scoring are unchanged.
