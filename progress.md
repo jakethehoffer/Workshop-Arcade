@@ -1,5 +1,17 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 12f: Patchwork Foundry had a function to answer its only question and never called it
+
+BATCH 12 COMPLETE (pinball-foundry, cipher-rooms, wordle, vector-pool, neon-drift, patchwork-foundry). Targeted pass, not a rewrite - the five boards, the plates, the vents, the ports and the budgets are unchanged.
+
+- **The forecast was written and never used.** `connectionStats(extra)` takes an `extra` argument for exactly one purpose: answering "what would this placement connect?" All four call sites passed nothing. So a player spent moves from a fixed budget with no way to know what a move would buy, while the code to tell them sat one argument away.
+- **Now every aim states what it would achieve.** The readout gives the ports before and after ("ports 2/4 to 3/4 (+1)"), how many vents the placement would block, how many moves would remain, and it says outright when a move completes the stage or when it is your last move and would not finish. All of it comes from the same breadth-first connectivity search that judges the real placement, so the promise cannot drift from the result.
+- **Proved exact, not just plausible.** Every square on the board, at every rotation, was predicted and then actually placed: **zero mismatches between the predicted port count and the real one**, across both legal placements and refused ones.
+- **Proved the promise is never a lie.** A search that plays only by the forecast found a winning line for the opening stage and replayed it on a fresh board to a solved stage, and across 220 attempted lines every single move the forecast called stage-completing really did complete it.
+- **Proved side-effect free.** The forecast runs on a copy, so calling it forty times leaves the board byte-identical - a preview sharing mutable state with the real simulation is the standard way this fix goes wrong.
+- **The stored best took anything.** `Infinity`, `-5`, `12.7` and `1e24` all reached the Best pill verbatim. Now required whole, non-negative and capped.
+- Verified: 27-check Playwright probe (a full board sweep of predictions versus real placements, refusal wording, the ports-and-moves readout, a 220-attempt solvability search with the winning line replayed on a fresh board, completion-prediction honesty, a 40-call no-side-effects check, 6 junk storage seeds, fresh-page determinism, page weight, and a check that the preview call site now exists); HEAD-first confirmation before any edit; scoped test:games / capture:games (desktop and mobile both 0, screenshots read) / audit:contrast (0 findings); validate-catalog; test:corrupt-storage (100 games); npm test 56/56; git diff --check clean. Checked and already correct: refusals were already named per reason, and the loop already parks.
+
 ## 2026-08-27 Claude - overhaul campaign batch 12e: Neon Drift timed every lap and showed you none of them
 
 Targeted pass, not a rewrite - the track, the physics constants, the gates and the three-lap structure are unchanged.

@@ -202,8 +202,15 @@ canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}
   function readSound() {
     return !["0","false","off","muted"].includes(String(read(SOUND_KEY, "1")).toLowerCase());
   }
+  // Number(read(...)) || 0 accepted Infinity, -5, 12.7 and 1e24 verbatim.
+  const BEST_CAP = 100000;
+  function readBest() {
+    const raw = Number(read(BEST_KEY, "0"));
+    if (!Number.isInteger(raw) || raw < 0 || raw > BEST_CAP) return 0;
+    return raw;
+  }
   const state = {
-    mode:"playing", stage:0, score:0, best:Number(read(BEST_KEY, "0")) || 0, movesLeft:0, placed:[], selectedPiece:0,
+    mode:"playing", stage:0, score:0, best:readBest(), movesLeft:0, placed:[], selectedPiece:0,
     cursor:{ x:0, y:0 }, hover:null, dragging:false, soundEnabled:readSound(), lastSound:"none", userGesture:false,
     feedback:"Select a plate and bridge the first power bus.", feedbackMs:1200, complete:false, fail:false,
     lastConnected:0, lastBlocked:0, timeMs:0, selectionPulseMs:900, rotationPulseMs:0
@@ -291,6 +298,31 @@ canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}
     let blocked = 0;
     allPlateCells().forEach((c) => { if (vents.has(cellKey(c.x, c.y))) blocked += 1; });
     return { connected, total:b.ports.length, ventsBlocked:blocked };
+  }
+  // What the currently-aimed placement would achieve, answered with the SAME
+  // breadth-first connectivity search the real placement is judged by.
+  // connectionStats() has always taken an `extra` argument for precisely this
+  // question and not one call site ever passed it, so the player spent moves from
+  // a fixed budget without ever being told what a move would buy.
+  function placementOutlook(x, y) {
+    const piece = selectedBase();
+    if (!piece || state.complete || state.fail) return null;
+    const rot = piece.rot || 0;
+    const issue = placementIssue(piece, x, y, rot);
+    const now = connectionStats();
+    if (issue) {
+      return { legal: false, issue, reason: issueLabel(issue), connectedNow: now.connected, total: now.total,
+               connectedAfter: now.connected, gain: 0, ventsBlocked: now.ventsBlocked, wouldComplete: false, movesLeftAfter: state.movesLeft };
+    }
+    const after = connectionStats(cellsFor(piece, x, y, rot));
+    const movesLeftAfter = state.movesLeft - 1;
+    return {
+      legal: true, issue: "", reason: "",
+      connectedNow: now.connected, total: now.total, connectedAfter: after.connected,
+      gain: after.connected - now.connected, ventsBlocked: after.ventsBlocked,
+      wouldComplete: after.connected === after.total && after.ventsBlocked === 0,
+      movesLeftAfter
+    };
   }
   function setFeedback(text, ms = 900) {
     state.feedback = text;
@@ -551,8 +583,22 @@ canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}
       els.selection.textContent = "Retry " + board().name + " | " + state.feedback;
       els.selection.dataset.state = "blocked";
     } else if (selected) {
-      els.selection.textContent = "Plate " + pieceLabel(selected) + " | rot " + rotation + " deg | " + issueLabel(issue) + " at " + state.cursor.x + "," + state.cursor.y;
-      els.selection.dataset.state = issue ? "blocked" : "ready";
+      // Say what this move would BUY, not just where the cursor is. The budget is
+      // fixed, so "ports 2/4 -> 3/4, 2 moves left after" is the whole decision.
+      const look = placementOutlook(state.cursor.x, state.cursor.y);
+      let line = "Plate " + pieceLabel(selected) + " | rot " + rotation + " deg | at " + state.cursor.x + "," + state.cursor.y;
+      if (look && !look.legal) {
+        line += " | " + look.reason;
+      } else if (look) {
+        line += " | ports " + look.connectedNow + "/" + look.total + " to " + look.connectedAfter + "/" + look.total;
+        line += look.gain > 0 ? " (+" + look.gain + ")" : " (no gain)";
+        if (look.ventsBlocked > 0) line += " | blocks " + look.ventsBlocked + " vent" + (look.ventsBlocked === 1 ? "" : "s");
+        line += " | " + look.movesLeftAfter + " move" + (look.movesLeftAfter === 1 ? "" : "s") + " left after";
+        if (look.wouldComplete) line += " | COMPLETES THE STAGE";
+        else if (look.movesLeftAfter <= 0) line += " | LAST MOVE, would not finish";
+      }
+      els.selection.textContent = line;
+      els.selection.dataset.state = issue ? "blocked" : (look && look.wouldComplete) ? "clear" : "ready";
     } else {
       els.selection.textContent = "All plates installed";
       els.selection.dataset.state = "clear";
@@ -808,6 +854,10 @@ canvas:focus-visible{outline:3px solid rgba(251,191,36,.85);outline-offset:-5px}
       selectedRotationDegrees: selected ? (selected.rot || 0) * 90 : 0,
       selectedPlacement: selected ? { status:issue || "ready", label:issueLabel(issue), cursor:{ x:state.cursor.x, y:state.cursor.y } } : null,
       cursor: { x:state.cursor.x, y:state.cursor.y },
+      // What the aimed placement would achieve, from the same search that judges
+      // the real one. Published so the forecast is testable, not merely visible.
+      placementOutlook: placementOutlook(state.cursor.x, state.cursor.y),
+      selectionLine: els.selection ? els.selection.textContent : "",
       powerConnectedCount: stats.connected,
       "power connected count": stats.connected,
       powerPortTotal: stats.total,
