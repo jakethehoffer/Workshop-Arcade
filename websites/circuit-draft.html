@@ -230,7 +230,7 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
   };
   const saved = safeStore.get(STORE, {});
   const state = {
-    turn: 0, score: 0, best: Number(saved.best) || 0, lanes: [[], [], []], selectedLane: 0, selectedDraft: 0,
+    turn: 0, score: 0, best: readBest(saved.best), lanes: [[], [], []], selectedLane: 0, selectedDraft: 0,
     sound: saved.sound !== false, runComplete: false, feedback: "Draft a module into a lane. Each pick runs the engine.",
     feedbackKind: "", feedbackTtl: 0, lastRun: emptyRun(), lastInstall: null, lastSound: "none", elapsedMs: 0, userGesture: false
   };
@@ -260,7 +260,16 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
     const card = currentDraft();
     if (!card) return "Run complete. Install Card starts a fresh board.";
     const lane = LANES[state.selectedLane];
-    return "Install " + card.name + " into " + lane.name + " for turn " + (state.turn + 1) + ".";
+    // Say what the install would SCORE, not just where it goes. The turn is
+    // spent either way, and evaluate() could always have answered this.
+    const look = installOutlook();
+    let line = "Install " + card.name + " into " + lane.name + " for turn " + (state.turn + 1) + ".";
+    if (look) {
+      line += " Run " + look.outputNow + " to " + look.outputAfter +
+        (look.gain > 0 ? " (+" + look.gain + ")" : look.gain < 0 ? " (" + look.gain + ")" : " (no change)") + ".";
+      if (look.newCombos.length) line += " Fires " + look.newCombos.length + " new combo" + (look.newCombos.length === 1 ? "" : "s") + ".";
+    }
+    return line;
   }
   function allModules() {
     return state.lanes.flat();
@@ -305,6 +314,35 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
     gain.gain.exponentialRampToValueAtTime(.0001, now + .16);
     osc.connect(gain).connect(ctx.destination);
     osc.start(now); osc.stop(now + .18);
+  }
+  function readBest(value) {
+    // Cap and bound inside the function: readBest() runs while the state object
+    // is still being built, so a const declared beside it would not exist yet.
+    const cap = 200000;
+    const raw = Number(value);
+    if (!Number.isInteger(raw) || raw < 0 || raw > cap) return 0;
+    return raw;
+  }
+  // What installing the selected card into the selected lane would score, from
+  // the SAME evaluate() that scores the real install. evaluate() reads
+  // state.lanes, so it was always able to answer this - it was only ever asked
+  // about the board after the turn had already been spent.
+  function installOutlook() {
+    if (state.runComplete) return null;
+    const card = currentDraft();
+    if (!card) return null;
+    const lane = state.selectedLane;
+    const now = evaluate();
+    state.lanes[lane].push(card);
+    let after;
+    try { after = evaluate(); } finally { state.lanes[lane].pop(); }
+    return {
+      card: card.name, lane: LANES[lane].name,
+      outputNow: now.output, outputAfter: after.output, gain: after.output - now.output,
+      charge: after.charge - now.charge, signal: after.signal - now.signal, heat: after.heat - now.heat,
+      newCombos: after.combos.filter((id) => !now.combos.includes(id)),
+      scoreAfter: state.score + after.output
+    };
   }
   function evaluate() {
     let charge = 0, signal = 0, heat = 0, output = 0;
@@ -658,6 +696,7 @@ main{display:grid;place-items:center}.table{width:min(1040px,100%);display:grid;
     maxTurns: MAX_TURNS,
     score: state.score,
     best: state.best,
+    installOutlook: installOutlook(),
     selectedLane: LANES[state.selectedLane].id,
     selectedLaneLabel: LANES[state.selectedLane].name,
     selectedLaneModules: state.lanes[state.selectedLane].length,

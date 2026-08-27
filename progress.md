@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-27 Claude - overhaul campaign batch 14a: Circuit Draft scored the install only after the turn was spent
+
+Batch 14 opens. Targeted pass, not a rewrite - the cards, lanes, combos and scoring are unchanged.
+
+- **The scoring function could always have answered the question and was only ever asked afterwards.** Installing a card spends one of a fixed number of turns, and the game runs its whole circuit evaluation immediately after the install. Choosing a card and a lane now states what the run would score before and after, the change, and how many new combos it would fire.
+- **Proved exact.** Every install across a run was predicted and then actually taken, and the predicted score matched the real one every time. The preview pushes the card, evaluates, and pops it again, so previewing forty times leaves the board byte-identical.
+- **The stored best took anything,** including a value that printed as an unbeatable record. Now required whole, non-negative and capped, with the bound inside the function so it cannot be read before it exists.
+- Verified: a full-run sweep of predicted-versus-real installs with zero mismatches, a forty-call no-side-effects check, five stored-value cases, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), npm test 56/56, git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 13e: Prism Relay could simulate the board but only after you spent a move
 
 BATCH 13 COMPLETE (rhythm-circuit, circuit-putt, market-minute, relay-choir, prism-relay; shadow-switch was listed here but had already been done in an earlier batch). Targeted pass, not a rewrite - the stages, mirrors, splitters, receivers and budgets are unchanged.
