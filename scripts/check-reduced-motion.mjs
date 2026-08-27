@@ -187,6 +187,11 @@ const MOTION_AWARE_GAMES = [
   // Also DOM-rendered with no canvas, so the CSS reset plus its own media block
   // really is complete coverage. Added 2026-08-27 once it reported the flag.
   'websites/cipher-rooms.html',
+  // DOM tiles too. Its own file has no media query at all, but its motion is
+  // entirely CSS keyframes (tile flip, row shake, input pulse), which the shared
+  // runtime reset collapses to ~0 under reduce — measured at 1e-05s. Listing it
+  // makes that dependency on the shared reset a tested fact.
+  'websites/wordle.html',
 ];
 
 async function gameReducedMotionFlag(browser, baseUrl, gamePath, reducedMotion) {
