@@ -364,6 +364,33 @@
     return exits.find((link) => link.dir === wanted) || null;
   }
 
+  // Where a packet launched right now would end up, traced through the SAME
+  // routeFrom() the live packet follows and the SAME loss rules advancePacket()
+  // applies. Routing is fully determined by the router settings, so the game
+  // could always have answered this - it only ever found out by running.
+  function routeOutlook() {
+    const src = stage().source;
+    const first = routeFrom(src);
+    if (!first) return { outcome: "unrouted", at: src, hops: 0, path: [src], message: "the source has no route set" };
+    const path = [first.from];
+    let hops = 0;
+    let cursor = first;
+    while (true) {
+      hops += 1;
+      path.push(cursor.to);
+      const arrived = getNode(cursor.to);
+      if (arrived.type === "target") return { outcome: "delivered", at: cursor.to, hops, path, message: "reaches " + cursor.to + " in " + hops + " hop" + (hops === 1 ? "" : "s") };
+      if (arrived.type === "drop") return { outcome: "firewall", at: cursor.to, hops, path, message: "runs into the firewall at " + cursor.to };
+      // Mirror advancePacket's own loop rules exactly.
+      if (hops > 12 || path.filter((id) => id === cursor.to).length > 3) {
+        return { outcome: "loop", at: cursor.to, hops, path, message: "loops without reaching the target" };
+      }
+      const next = routeFrom(cursor.to);
+      if (!next) return { outcome: "unrouted", at: cursor.to, hops, path, message: "dead ends at " + cursor.to + ", which has no route set" };
+      cursor = next;
+    }
+  }
+
   function markGesture() {
     userGesture = true;
     canvas.focus({ preventScroll: true });
@@ -471,7 +498,10 @@
     state.stepsRemaining -= 1;
     state.selectedId = id;
     state.cursorId = id;
-    setFeedback(`${id} routes ${next}`, 520);
+    // Say where a packet would now end up. The step budget is fixed, so
+    // "reaches TARGET in 4 hops" versus "dead ends at B3" is the whole decision.
+    const look = routeOutlook();
+    setFeedback(`${id} routes ${next} - ${look.message}`, 900);
     playSound("route");
     render();
   }
@@ -903,6 +933,7 @@
       stage: { index: state.stageIndex + 1, total: STAGES.length, name: current.name },
       score: state.score,
       bestScore: state.bestScore,
+      routeOutlook: routeOutlook(),
       delivered: { stage: state.stageDelivered, total: state.delivered },
       lost: { stage: state.stageLost, total: state.lost },
       remaining: {

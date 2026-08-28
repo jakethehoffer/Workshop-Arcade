@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-28 Claude - overhaul campaign batch 14d: Packet Pilot only found out where a packet went by sending one
+
+Targeted pass, not a rewrite - the stages, the nodes, the links and the scoring are unchanged.
+
+- **The route was fully decided before you pressed go, and the game would not say what it was.** You spend a limited number of steps setting routers, and the path a packet takes follows straight from those settings. The game only discovered the answer by launching a packet and watching. Changing a router now says where a packet would end up: reaching the target in so many hops, dead ending at a node with no route set, running into a firewall, or looping without arriving.
+- **The trace uses the game's own rules,** including the same hop limit and revisit limit a live packet is killed by, so the promise cannot drift from the result.
+- **Proved in both directions.** Across ten different router configurations, every route the trace called delivered really delivered, and no route it called doomed ever delivered.
+- Verified: a five-check probe covering the above, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), npm test 56/56, git diff --check clean.
+
 ## 2026-08-28 Claude - overhaul campaign batch 14c: Crate Circuit let you wedge a crate forever and said nothing
 
 Targeted pass, not a rewrite - the five rooms, the walls, the pads and the scoring are unchanged.
