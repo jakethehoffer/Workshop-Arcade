@@ -2242,7 +2242,9 @@ animation: none;
   </template>
 
   <script>
-(()=>{const COST_GROWTH=1.13;const MILESTONES=[10,25,50,100,200];const ANGEL_RATE=.02
+(()=>{
+// One element-lookup helper for the whole page.
+function byId(id){return document.getElementById(id)}const COST_GROWTH=1.13;const MILESTONES=[10,25,50,100,200];const ANGEL_RATE=.02
 ;const MOMENTUM_BONUS=.6;const EVENT_COOLDOWN={min:45,max:90};const DAILY_COOLDOWN=24*60*60*1e3
 ;const DAILY_GRACE=48*60*60*1e3;const ACHIEVEMENT_TARGET_GROWTH=1.9
 ;const ACHIEVEMENT_REWARD_GROWTH=1.35;const MANAGER_COST_MULT=.9;const QUEST_REWARD_SECONDS=18
@@ -2396,53 +2398,53 @@ body:"Buying 10/25/50/100/200 of the same venture increases its tier and doubles
 body:"Perks are powerful upgrades for clicks, auto income, speed, crits, and surge. Prestige resets this run (credits, ventures, perks) for angel investors; each angel adds +2% income forever.",
 marker:{x:.5,y:.05}},{target:"#missionsPanel",title:"Missions",
 body:"Claim the Daily Drop, and clear quests and achievements for bonus credits. Use the Claim buttons (or Q/A to claim all) to fund more ventures and upgrades."
-}];const ui={cash:document.getElementById("cash"),lifetime:document.getElementById("lifetime"),
-allTime:document.getElementById("allTime"),autoIncome:document.getElementById("autoIncome"),
-clickIncome:document.getElementById("clickIncome"),angelCount:document.getElementById("angelCount"),
-angelBonus:document.getElementById("angelBonus"),nextUnlock:document.getElementById("nextUnlock"),
-actionHint:document.getElementById("actionHint"),ventureFlow:document.getElementById("ventureFlow"),
-buyStatus:document.getElementById("buyStatus"),saveStatus:document.getElementById("saveStatus"),
-clicker:document.getElementById("clicker"),clickerFx:document.getElementById("clickerFx"),
-momentumFill:document.getElementById("momentumFill"),
-momentumLabel:document.getElementById("momentumLabel"),
-clickPower:document.getElementById("clickPower"),autoClicks:document.getElementById("autoClicks"),
-critChance:document.getElementById("critChance"),
-critMultiplier:document.getElementById("critMultiplier"),
-eventCard:document.getElementById("eventCard"),eventName:document.getElementById("eventName"),
-eventDesc:document.getElementById("eventDesc"),eventTimer:document.getElementById("eventTimer"),
-boostCard:document.getElementById("boostCard"),boostFill:document.getElementById("boostFill"),
-boostTimer:document.getElementById("boostTimer"),boostDesc:document.getElementById("boostDesc"),
-boostBtn:document.getElementById("boostBtn"),etaNextUnlock:document.getElementById("etaNextUnlock"),
-automationCoverage:document.getElementById("automationCoverage"),
-topProfit:document.getElementById("topProfit"),nextAngel:document.getElementById("nextAngel"),
-prestigeCount:document.getElementById("prestigeCount"),
-angelPotential:document.getElementById("angelPotential"),
-angelBonusCard:document.getElementById("angelBonusCard"),
-prestigeBtn:document.getElementById("prestigeBtn"),
-dailyStatus:document.getElementById("dailyStatus"),
-dailyReward:document.getElementById("dailyReward"),
-dailyStreak:document.getElementById("dailyStreak"),dailyClaim:document.getElementById("dailyClaim"),
-questList:document.getElementById("questList"),
-achievementList:document.getElementById("achievementList"),
-claimQuests:document.getElementById("claimQuests"),
-claimAchievements:document.getElementById("claimAchievements"),
-buyToggle:document.getElementById("buyToggle"),runAllBtn:document.getElementById("runAllBtn"),
-hireAllBtn:document.getElementById("hireAllBtn"),
-fullscreenBtn:document.getElementById("fullscreenBtn"),resetBtn:document.getElementById("resetBtn"),
-saveBtn:document.getElementById("saveBtn"),menuBtn:document.getElementById("menuBtn"),
-toast:document.getElementById("toast"),businessList:document.getElementById("businessList"),
-upgradeList:document.getElementById("upgradeList")};const menu={
-container:document.getElementById("mainMenu"),slots:document.getElementById("saveSlots"),
-subtitle:document.getElementById("menuSubtitle"),help:document.getElementById("menuHelp"),
-returnBtn:document.getElementById("menuReturnBtn"),
-soundToggle:document.getElementById("menuSoundToggle"),
-musicToggle:document.getElementById("menuMusicToggle"),
-tutorialToggle:document.getElementById("menuTutorialToggle")};const tutorial={
-overlay:document.getElementById("tutorialOverlay"),step:document.getElementById("tutorialStep"),
-title:document.getElementById("tutorialTitle"),body:document.getElementById("tutorialBody"),
-backBtn:document.getElementById("tutorialBack"),nextBtn:document.getElementById("tutorialNext"),
-skipBtn:document.getElementById("tutorialSkip"),marker:document.getElementById("tutorialMarker"),
- markerLabel:document.getElementById("tutorialMarkerLabel")};let gameStarted=false
+}];const ui={cash:byId("cash"),lifetime:byId("lifetime"),
+allTime:byId("allTime"),autoIncome:byId("autoIncome"),
+clickIncome:byId("clickIncome"),angelCount:byId("angelCount"),
+angelBonus:byId("angelBonus"),nextUnlock:byId("nextUnlock"),
+actionHint:byId("actionHint"),ventureFlow:byId("ventureFlow"),
+buyStatus:byId("buyStatus"),saveStatus:byId("saveStatus"),
+clicker:byId("clicker"),clickerFx:byId("clickerFx"),
+momentumFill:byId("momentumFill"),
+momentumLabel:byId("momentumLabel"),
+clickPower:byId("clickPower"),autoClicks:byId("autoClicks"),
+critChance:byId("critChance"),
+critMultiplier:byId("critMultiplier"),
+eventCard:byId("eventCard"),eventName:byId("eventName"),
+eventDesc:byId("eventDesc"),eventTimer:byId("eventTimer"),
+boostCard:byId("boostCard"),boostFill:byId("boostFill"),
+boostTimer:byId("boostTimer"),boostDesc:byId("boostDesc"),
+boostBtn:byId("boostBtn"),etaNextUnlock:byId("etaNextUnlock"),
+automationCoverage:byId("automationCoverage"),
+topProfit:byId("topProfit"),nextAngel:byId("nextAngel"),
+prestigeCount:byId("prestigeCount"),
+angelPotential:byId("angelPotential"),
+angelBonusCard:byId("angelBonusCard"),
+prestigeBtn:byId("prestigeBtn"),
+dailyStatus:byId("dailyStatus"),
+dailyReward:byId("dailyReward"),
+dailyStreak:byId("dailyStreak"),dailyClaim:byId("dailyClaim"),
+questList:byId("questList"),
+achievementList:byId("achievementList"),
+claimQuests:byId("claimQuests"),
+claimAchievements:byId("claimAchievements"),
+buyToggle:byId("buyToggle"),runAllBtn:byId("runAllBtn"),
+hireAllBtn:byId("hireAllBtn"),
+fullscreenBtn:byId("fullscreenBtn"),resetBtn:byId("resetBtn"),
+saveBtn:byId("saveBtn"),menuBtn:byId("menuBtn"),
+toast:byId("toast"),businessList:byId("businessList"),
+upgradeList:byId("upgradeList")};const menu={
+container:byId("mainMenu"),slots:byId("saveSlots"),
+subtitle:byId("menuSubtitle"),help:byId("menuHelp"),
+returnBtn:byId("menuReturnBtn"),
+soundToggle:byId("menuSoundToggle"),
+musicToggle:byId("menuMusicToggle"),
+tutorialToggle:byId("menuTutorialToggle")};const tutorial={
+overlay:byId("tutorialOverlay"),step:byId("tutorialStep"),
+title:byId("tutorialTitle"),body:byId("tutorialBody"),
+backBtn:byId("tutorialBack"),nextBtn:byId("tutorialNext"),
+skipBtn:byId("tutorialSkip"),marker:byId("tutorialMarker"),
+ markerLabel:byId("tutorialMarkerLabel")};let gameStarted=false
 ;let lastFrame=performance.now();let toastTimer=null;let saveTimer=null;let saveStatusTimer=null;let activeEvent=null
 ;let nextEventAt=0;let surgeActiveUntil=0;let surgeCooldownUntil=0;let markerFrame=null
 ;function init(){buildBusinessCards();buildPerkCards();buildAchievementCards();bindEvents()
@@ -2713,7 +2715,7 @@ if(!tutorialTarget||!tutorial.marker)return;const rect=tutorialTarget.getBoundin
 function scrollToTutorialTarget(target){const rect=target.getBoundingClientRect()
 ;const offset=getTutorialScrollOffset();const absoluteTop=rect.top+window.scrollY
 ;const top=Math.max(0,absoluteTop-offset);window.scrollTo({top:top,behavior:"smooth"})}
-function getTutorialScrollOffset(){const tray=document.getElementById("statTray")
+function getTutorialScrollOffset(){const tray=byId("statTray")
 ;const trayHeight=tray?tray.getBoundingClientRect().height:0;return trayHeight+24}function boot(){
 migrateLegacySave();loadSettings();bindMenuEvents();bindTutorialEvents();bindOverlayKeys()
 ;const pendingSlot=consumePendingSlot();if(pendingSlot){startWithSlot(pendingSlot,{tutorial:false})
@@ -2755,8 +2757,7 @@ function readSlotData(slot){const raw=localStorage.getItem(getSaveKey(slot));if(
 ;try{return JSON.parse(raw)}catch(error){console.warn("Slot load failed",error);return null}}
 function getLastActiveSlot(){const raw=localStorage.getItem(ACTIVE_SLOT_KEY);const slot=Number(raw)
 ;if(!Number.isFinite(slot))return null;if(slot<1||slot>SAVE_SLOT_COUNT)return null;return slot}
-function findFirstSlotWithData(){for(let slot=1;slot<=SAVE_SLOT_COUNT;slot+=1){
-if(readSlotData(slot))return slot}return null}function handleSlotSelection(slot){
+function handleSlotSelection(slot){
 recordInteractionFeedback("slot-select",{slot:slot});playSfx("menu");if(!gameStarted){
 startWithSlot(slot);return}const currentSlot=activeSlot||getLastActiveSlot();if(currentSlot===slot){
 hideMainMenu();if(settings.tutorialOnStart){startTutorial()}return}
@@ -2784,7 +2785,7 @@ status.textContent=data?slot===lastSlot?"Continue recent":"Continue":"Start new"
 ;card.addEventListener("click",(()=>handleSlotSelection(slot)))
 ;card.addEventListener("keydown",(event=>{if(event.key==="Enter"||event.key===" "){
 event.preventDefault();handleSlotSelection(slot)}}));menu.slots.appendChild(card)}}
-function buildBusinessCards(){const template=document.getElementById("businessTemplate")
+function buildBusinessCards(){const template=byId("businessTemplate")
 ;ui.businessList.innerHTML="";businesses.forEach(((biz,index)=>{
 const fragment=template.content.cloneNode(true);const card=fragment.querySelector(".business-card")
 ;card.style.setProperty("--delay",`${index*.05}s`)
@@ -2812,7 +2813,7 @@ action:"run",business:biz.id,status:message})}}))
 durationEl:durationEl,payoutEl:payoutEl,boostEl:boostEl,progressEl:progressEl,
 statusEl:statusEl,milestoneEl:milestoneEl,automationEl:automationEl,rateEl:rateEl,synergyEl:synergyEl,lockEl:lockEl,
 startBtn:startBtn,buyBtn:buyBtn,managerBtn:managerBtn};ui.businessList.appendChild(fragment)}))}
-function buildPerkCards(){const template=document.getElementById("perkTemplate")
+function buildPerkCards(){const template=byId("perkTemplate")
 ;ui.upgradeList.innerHTML="";perks.forEach(((perk,index)=>{
 const fragment=template.content.cloneNode(true);const card=fragment.querySelector(".perk-card")
 ;card.style.setProperty("--delay",`${index*.05}s`)
@@ -2889,10 +2890,10 @@ id:biz.id,name:biz.name,unlocked:isBusinessUnlocked(biz),owned:biz.owned,running
 manager:biz.manager,progress:Math.round(biz.progress*100)/100,
 cost:Math.round(calcBulkCost(biz,Math.max(1,resolveBuyCount(biz)))),
 payout:Math.round(calcBusinessPayout(biz)),duration:Math.round(calcBusinessDuration(biz)*10)/10,
-status:biz.ui?.statusEl?.textContent||"",
+status:biz.ui?.statusEl?.textContent||"",outlook:biz.ui?.milestoneEl?.textContent||"",
 affordable:state.cash>=calcBulkCost(biz,Math.max(1,resolveBuyCount(biz)))})))
-;const canRunAll=businesses.some((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running))
-;const canHireAll=businesses.some((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&state.cash>=calcManagerCost(biz)))
+;const canRunAll=businesses.some(canRunVenture)
+;const canHireAll=businesses.some(canHireFor)
 ;const claimableQuests=state.quests.reduce(((count,quest)=>{const progress=getQuestProgress(quest)
 ;return count+(progress.current>=progress.target?1:0)}),0);const activeQuest=state.quests[0]?{
 id:state.quests[0].id,name:state.quests[0].name,progress:getQuestProgress(state.quests[0])}:null
@@ -3136,7 +3137,7 @@ target:target,reward:reward,start:start}})).filter((quest=>{
 if(!quest||!quest.id||seen.has(quest.id))return false
 ;const metricType=getQuestMetricType(quest.metric);if(seenMetrics.has(metricType))return false
 ;seen.add(quest.id);seenMetrics.add(metricType);return true}))}function buildAchievementCards(){
-const template=document.getElementById("missionTemplate");if(!template||!ui.achievementList)return
+const template=byId("missionTemplate");if(!template||!ui.achievementList)return
 ;ui.achievementList.innerHTML="";ACHIEVEMENTS.forEach(((ach,index)=>{
 const fragment=template.content.cloneNode(true);const card=fragment.querySelector(".mission-card")
 ;card.style.setProperty("--delay",`${index*.04}s`);const title=card.querySelector(".mission-title")
@@ -3151,7 +3152,7 @@ const fragment=template.content.cloneNode(true);const card=fragment.querySelecto
 ;claimBtn.addEventListener("click",(()=>claimAchievement(ach)));ach.ui={card:card,title:title,
 desc:desc,reward:reward,progressFill:progressFill,progressText:progressText,claimBtn:claimBtn}
 ;ui.achievementList.appendChild(fragment)}))}function renderQuests(){
-const template=document.getElementById("missionTemplate");if(!template||!ui.questList)return
+const template=byId("missionTemplate");if(!template||!ui.questList)return
 ;ui.questList.innerHTML="";state.quests.forEach(((quest,index)=>{
 const fragment=template.content.cloneNode(true);const card=fragment.querySelector(".mission-card")
 ;card.style.setProperty("--delay",`${index*.04}s`);const title=card.querySelector(".mission-title")
@@ -3278,12 +3279,8 @@ const ownedVentures=businesses.filter((biz=>isBusinessUnlocked(biz)&&biz.owned>0
 ;const managedCount=ownedVentures.filter((biz=>biz.manager)).length;if(ownedVentures.length>0){
 const ratio=managedCount/ownedVentures.length
 ;ui.automationCoverage.textContent=`${formatWhole(managedCount)}/${formatWhole(ownedVentures.length)} managed (${(ratio*100).toFixed(0)}%)`
-}else{ui.automationCoverage.textContent="--"}let topProfitBiz=null;let topRate=0
-;businesses.forEach((biz=>{if(!isBusinessUnlocked(biz)||biz.owned<=0)return
-;const duration=calcBusinessDuration(biz,null,{includeEvent:false,includeSurge:false})
-;const payout=calcBusinessPayout(biz,null,{includeEvent:false,includeSurge:false})
-;if(duration<=0||payout<=0)return;const rate=payout/duration;if(rate>topRate){topRate=rate
-;topProfitBiz=biz}}));if(topProfitBiz&&topRate>0){
+}else{ui.automationCoverage.textContent="--"}
+const{top:topProfitBiz,topRate:topRate}=steadyRates();if(topProfitBiz&&topRate>0){
 ui.topProfit.textContent=`${topProfitBiz.name} • ${formatNumber(topRate)}/s`}else{
 ui.topProfit.textContent="--"}const nextAngelTarget=Math.pow(state.angelInvestors+1,2)*1e6
 ;const neededAngel=Math.max(0,nextAngelTarget-state.allTime);if(neededAngel<=0){
@@ -3315,6 +3312,24 @@ includeSurge:includeSurge})*mult.auto;let businessIncome=0;businesses.forEach((b
 if(biz.manager&&biz.owned>0){businessIncome+=calcBusinessPayout(biz,eventRef,{
 includeEvent:includeEvent,includeSurge:includeSurge})/calcBusinessDuration(biz,eventRef,{
 includeEvent:includeEvent,includeSurge:includeSurge})}}));return autoClickerIncome+businessIncome}
+// Steady basis (no event, no surge) so two ventures stay comparable frame to frame.
+function steadyRates(){const options={includeEvent:false,includeSurge:false}
+;let total=0;let top=null;let topRate=0;businesses.forEach((entry=>{
+if(!isBusinessUnlocked(entry)||entry.owned<=0)return
+;const duration=calcBusinessDuration(entry,null,options);if(duration<=0)return
+;const rate=calcBusinessPayout(entry,null,options)/duration;if(!(rate>0))return
+;total+=rate;if(rate>topRate){topRate=rate;top=entry}}));return{total:total,top:top,topRate:topRate}}
+// The card printed a cost and, on an unowned venture, all-zero stats, so nothing
+// on screen said what a buy was worth. Ask the game's own resolvers what the
+// world looks like after it: that catches the milestone doubling and the synergy
+// lift on the next tier, which the player cannot infer from the printed numbers.
+function purchaseOutlook(biz,count,baseline){if(!(count>0))return null
+;const owned=biz.owned;const multiplier=biz.multiplier;const index=biz.milestoneIndex;let gain=0
+;try{biz.owned+=count;checkMilestones(biz,true);gain=steadyRates().total-baseline}
+finally{biz.owned=owned;biz.multiplier=multiplier;biz.milestoneIndex=index}
+if(!(gain>0))return null;const milestone=MILESTONES[index]
+;const tail=milestone===undefined?"":owned+count>=milestone?`, doubles at ${milestone}`:`, boost at ${milestone}`
+;return`+${formatNumber(gain)}/s, back in ${formatDuration(calcBulkCost(biz,count)/gain)}${tail}`}
 function currentClickValue(event,options={}){const mult=getActiveMultipliers(event,options)
 ;return state.clickPower*state.clickMultiplier*calcAngelBonus()*mult.click}
 function earn(amount,showFx){if(!Number.isFinite(amount)||amount<=0)return;state.cash+=amount
@@ -3348,7 +3363,8 @@ const bonus=1+state.momentum*MOMENTUM_BONUS
 ;ui.angelPotential.textContent=`+${formatWhole(gain)}`
 ;ui.angelBonusCard.textContent=`x${angelBonusAfter.toFixed(2)}`
 ;ui.prestigeBtn.textContent=gain>0?`Prestige for +${formatWhole(gain)} Angels`:"Prestige locked"
-;ui.prestigeBtn.disabled=gain<=0;businesses.forEach(updateBusinessUI);perks.forEach(updatePerkUI)
+;ui.prestigeBtn.disabled=gain<=0;const steadyBaseline=steadyRates().total
+;businesses.forEach((biz=>updateBusinessUI(biz,steadyBaseline)));perks.forEach(updatePerkUI)
 ;updateGuidanceUI();updateQuestUI();updateAchievementUI();updateDailyUI();updateInsightUI();if(ui.claimQuests){
 const claimableQuests=state.quests.reduce(((count,quest)=>{const progress=getQuestProgress(quest)
 ;return count+(progress.current>=progress.target?1:0)}),0)
@@ -3360,14 +3376,13 @@ const tier=getAchievementTier(ach);const target=getAchievementTarget(ach,tier)
 ;ui.claimAchievements.disabled=claimableAchievements===0
 ;ui.claimAchievements.textContent=claimableAchievements>0?`Claim all (${formatWhole(claimableAchievements)})`:"Claim all"
 }if(ui.runAllBtn){
-const canRun=businesses.some((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running))
+const canRun=businesses.some(canRunVenture)
 ;ui.runAllBtn.disabled=!canRun}if(ui.hireAllBtn){
-const canHire=businesses.some((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&state.cash>=calcManagerCost(biz)))
-;ui.hireAllBtn.disabled=!canHire}}function updateBusinessUI(biz){
+const canHire=businesses.some(canHireFor)
+;ui.hireAllBtn.disabled=!canHire}}function updateBusinessUI(biz,steadyBaseline){
 const unlocked=isBusinessUnlocked(biz);const duration=calcBusinessDuration(biz)
 ;const payout=calcBusinessPayout(biz);const synergy=getSynergyMultiplier(biz)
-;const rate=duration>0?payout/duration:0;const unitPayout=calcBusinessUnitPayout(biz)
-;const unitRate=duration>0?unitPayout/duration:0;const buyCount=resolveBuyCount(biz)
+;const rate=duration>0?payout/duration:0;const buyCount=resolveBuyCount(biz)
 ;const displayCount=state.buyAmount==="max"&&buyCount===0?1:buyCount
 ;const buyCost=calcBulkCost(biz,displayCount);const managerCost=calcManagerCost(biz)
 ;const canBuy=unlocked&&buyCount>0&&state.cash>=buyCost
@@ -3377,7 +3392,7 @@ const unlocked=isBusinessUnlocked(biz);const duration=calcBusinessDuration(biz)
 ;biz.ui.payoutEl.textContent=formatNumber(payout)
 ;biz.ui.boostEl.textContent=`x${biz.multiplier.toFixed(0)}`
 ;biz.ui.progressEl.style.width=biz.running?`${Math.min(100,biz.progress*100)}%`:"0%"
-;biz.ui.milestoneEl.textContent=nextMilestone?`Next boost at ${nextMilestone}`:"Max boost reached"
+;biz.ui.milestoneEl.textContent=(unlocked&&purchaseOutlook(biz,displayCount,steadyBaseline))||(nextMilestone?`Next boost at ${nextMilestone}`:"Max boost reached")
 ;biz.ui.automationEl.textContent=biz.manager?"Auto":"Manual";if(biz.ui.rateEl){
 biz.ui.rateEl.textContent=`${formatNumber(rate)}/s`}if(biz.ui.synergyEl){
 biz.ui.synergyEl.textContent=`Synergy x${synergy.toFixed(2)}`
@@ -3406,12 +3421,14 @@ perk.ui.buyBtn.textContent=`Buy (${formatNumber(perk.cost)})`
 ;perk.ui.buyBtn.disabled=!unlocked||state.cash<perk.cost;perk.ui.card.classList.remove("owned")}}
 function getNextUnlockText(){const next=businesses.find((biz=>!isBusinessUnlocked(biz)))
 ;if(!next)return"All ventures unlocked";return`${next.name} at ${formatNumber(next.unlockAt)} run`}
+function canRunVenture(biz){return isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running}
+function canHireFor(biz){return isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&state.cash>=calcManagerCost(biz)}
 function isBusinessUnlocked(biz){return state.lifetime>=biz.unlockAt||biz.owned>0}
 function isPerkUnlocked(perk){return state.lifetime>=perk.unlockAt}function getBuyAmountLabel(){
 return state.buyAmount==="max"?"MAX":`x${state.buyAmount}`}function updateGuidanceUI(){
 if(ui.buyStatus){ui.buyStatus.textContent=`Buying ${getBuyAmountLabel()}`}const first=businesses[0]
-;const readyCycle=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running))
-;const affordableManager=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&state.cash>=calcManagerCost(biz)))
+;const readyCycle=businesses.find(canRunVenture)
+;const affordableManager=businesses.find(canHireFor)
 ;const running=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&biz.running))
 ;const affordableNew=businesses.find((biz=>isBusinessUnlocked(biz)&&biz.owned<=0&&state.cash>=calcBulkCost(biz,1)))
 ;const nextUnlock=businesses.find((biz=>!isBusinessUnlocked(biz)));let hint="Tap the core to earn credits, buy a venture, then run cycles."
@@ -3425,7 +3442,7 @@ hint=`${running.name} is running. Watch the payout, then buy or automate.`}else 
 hint=`Earn ${formatNumber(Math.max(0,nextUnlock.unlockAt-state.lifetime))} more run credits to reveal ${nextUnlock.name}.`}else{
 hint="All ventures are visible. Balance milestones, managers, and prestige."}if(ui.actionHint){
 ui.actionHint.textContent=hint;ui.actionHint.classList.toggle("ready",ready)}
-if(ui.ventureFlow){const readyCount=businesses.filter((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&!biz.manager&&!biz.running)).length
+if(ui.ventureFlow){const readyCount=businesses.filter(canRunVenture).length
 ;const runningCount=businesses.filter((biz=>isBusinessUnlocked(biz)&&biz.owned>0&&(biz.running||biz.manager))).length
 ;let flow="No venture action ready";if(first&&first.owned<=0){flow=state.cash>=calcBulkCost(first,1)?`Ready to buy: ${first.name}`:`First venture: ${first.name}`}else if(readyCount>0){flow=`${readyCount} cycle${readyCount===1?"":"s"} ready to run`}else if(affordableNew){
 flow=`Affordable: ${affordableNew.name}`}else if(runningCount>0){flow=`${runningCount} venture${runningCount===1?"":"s"} producing`}else if(nextUnlock){
@@ -3496,9 +3513,9 @@ const total=Math.max(0,Math.ceil(seconds));const hours=Math.floor(total/3600)
 const total=Math.max(0,Math.floor(seconds));const hours=Math.floor(total/3600)
 ;const minutes=Math.floor(total%3600/60);if(hours>0)return`${hours}h ${minutes}m`
 ;if(minutes>0)return`${minutes}m`;return`${total}s`}
-;function $cd(i){return document.getElementById(i)}var confirmDlg=$cd("confirmDialog"),confirmMsg=$cd("confirmDialogMsg"),confirmResolver=null;
+var confirmDlg=byId("confirmDialog"),confirmMsg=byId("confirmDialogMsg"),confirmResolver=null;
 function domConfirm(m){if(!confirmDlg||!confirmDlg.showModal)return Promise.resolve(confirm(m));if(confirmMsg)confirmMsg.textContent=m;return new Promise(function(r){confirmResolver=r;confirmDlg.returnValue="cancel";confirmDlg.showModal()})}
-;[["confirmDialogYes","confirm"],["confirmDialogNo","cancel"]].forEach(function(p){var b=$cd(p[0]);if(b)b.addEventListener("click",function(){confirmDlg.close(p[1])})});
+;[["confirmDialogYes","confirm"],["confirmDialogNo","cancel"]].forEach(function(p){var b=byId(p[0]);if(b)b.addEventListener("click",function(){confirmDlg.close(p[1])})});
 if(confirmDlg)confirmDlg.addEventListener("close",function(){var r=confirmResolver;confirmResolver=null;if(r)r(confirmDlg.returnValue==="confirm")});
 boot()})();
 </script>
