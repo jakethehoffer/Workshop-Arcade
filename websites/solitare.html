@@ -127,6 +127,7 @@
     font-variant-numeric:tabular-nums;
   }
   .hud .dot{width:8px;height:8px;border-radius:99px;background:var(--accent);display:inline-block;box-shadow:0 0 8px rgba(94,234,212,0.55)}
+  #boardState.board-dead{color:var(--warn)}
 
   main{padding:8px 12px 12px;display:flex;align-items:flex-start;justify-content:center}
   .board{width:min(100%, 1080px);display:grid;gap:var(--gap);grid-template-rows:calc(var(--card-h) + 8px) 1fr}
@@ -264,6 +265,7 @@
       <div><span class="dot"></span><span id="status" role="status" aria-live="polite" aria-atomic="true">Ready</span></div>
       <div>Moves: <b id="moves">0</b></div>
       <div>Time: <b id="time">0:00</b></div>
+      <div><b id="boardState">Board: ready</b></div>
     </div>
   </header>
 
@@ -787,7 +789,9 @@ function startAutoComplete(){
     const won = isWon();
     updateWinFeedback(won);
     el('#moves').textContent = state.moves;
-    refreshStatusElement(won ? 'You win! Great finish.' : recommendStatus());
+    const playable = playableMoveCount();
+    updateBoardState(won, playable);
+    refreshStatusElement(won ? 'You win! Great finish.' : recommendStatus(playable));
     updateToFoundationControl();
     updateAutoCompleteVisibility();   // <-- add this line
     els('.pile').forEach(p=>p.classList.remove('kb-cursor'));
@@ -795,10 +799,35 @@ function startAutoComplete(){
     
   }
 
-  function recommendStatus(){
+  // How many real moves the board offers. listAllMoves injects a {type:'draw'}
+  // placeholder when nothing else exists, so that one never counts as a move.
+  function playableMoveCount(){
+    return listAllMoves().filter(m => m.type !== 'draw').length;
+  }
+
+  // The board-state line. Stock passes are unlimited here, so a player is never
+  // strictly stuck and the old 'Stuck.' verdict could not fire; what they need
+  // to know instead is that the board offers nothing and the deck has already
+  // been round with nothing played. Both numbers were computed and discarded.
+  function boardStateText(won, playable){
+    if(won) return 'Board: solved';
+    if(playable > 0) return `Board: ${playable} move${playable === 1 ? '' : 's'} available`;
+    const passes = state.passesSinceProgress || 0;
+    if(passes === 0) return 'Board: nothing playable, draw from the stock';
+    return `Board: nothing playable after ${passes} deck pass${passes === 1 ? '' : 'es'} with nothing played`;
+  }
+
+  function updateBoardState(won, playable){
+    const node = el('#boardState');
+    if(!node) return;
+    node.textContent = boardStateText(won, playable);
+    node.classList.toggle('board-dead', !won && playable === 0 && (state.passesSinceProgress || 0) > 0);
+  }
+
+  function recommendStatus(playable){
     const upCount = state.piles.t.reduce((a,p)=>a+p.up.length,0) + state.piles.waste.length + state.piles.f.reduce((a,f)=>a+f.length,0);
     if(upCount<6) return 'Good luck!';
-    if(listAllMoves().length===0 && state.piles.stock.length===0 && state.piles.waste.length===0) return 'Stuck.';
+    if(playable===0 && state.piles.stock.length===0 && state.piles.waste.length===0) return 'Stuck.';
     return 'Playing…';
   }
 
@@ -814,7 +843,7 @@ function startAutoComplete(){
     const deck = seededShuffle(newDeck(), rng);
 
     state.piles = makeEmptyPiles();
-    state.moves = 0; state.time = 0; state.stockCycles = 0;
+    state.moves = 0; state.time = 0; state.stockCycles = 0; state.passesSinceProgress = 0;
     stopTimer(); startTimer();
 
     // Deal to tableaus
@@ -1037,9 +1066,14 @@ function startAutoComplete(){
   }
 
   // ===== Moves & Undo =====
-  function snapshot(){ return deepClone({seed: state.seed, drawOne: state.drawOne, unlimited: state.unlimited, piles: state.piles, moves: state.moves, time: state.time, stockCycles: state.stockCycles}) }
+  function snapshot(){ return deepClone({seed: state.seed, drawOne: state.drawOne, unlimited: state.unlimited, piles: state.piles, moves: state.moves, time: state.time, stockCycles: state.stockCycles, passesSinceProgress: state.passesSinceProgress}) }
   function restore(snap){ Object.assign(state, deepClone(snap)); render(); updateTimeHud() }
-  function pushHistory(label){ state.history.push(snapshot()); state.future.length=0; state.moves++; lastAction = label || 'move'; }
+  function pushHistory(label){
+    state.history.push(snapshot()); state.future.length=0; state.moves++; lastAction = label || 'move';
+    // Drawing and recycling shuffle the deck without playing anything. Any other
+    // action is real progress and clears the "nothing is happening" counter.
+    if(label !== 'draw' && label !== 'recycle') state.passesSinceProgress = 0;
+  }
   function undo(){
     if(state.history.length){
       const cur=snapshot();
@@ -1069,6 +1103,7 @@ function startAutoComplete(){
       state.piles.stock = state.piles.waste.reverse();
       state.piles.waste = [];
       state.stockCycles++;
+      state.passesSinceProgress = (state.passesSinceProgress || 0) + 1;
       recordStockFeedback('stock-recycle', recycled);
       playSound('stock-recycle');
       render();
@@ -1501,6 +1536,9 @@ function doHint(){
       timeText: fmtTime(state.time),
       won: isWon(),
       stuck: !isWon() && noMoves && stockEmpty && noWaste,
+      playableMoves: playableMoveCount(),
+      passesSinceProgress: state.passesSinceProgress || 0,
+      boardState: el('#boardState') ? el('#boardState').textContent : '',
       status: el('#status').textContent,
       lastAction,
       liveStatus: {
