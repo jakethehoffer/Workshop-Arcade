@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-28 Claude - overhaul campaign batch 14c: Crate Circuit let you wedge a crate forever and said nothing
+
+Targeted pass, not a rewrite - the five rooms, the walls, the pads and the scoring are unchanged.
+
+- **A crate pushed into a corner can never move again, and the game carried on as if nothing had happened.** Measured on the opening room: pushing the first crate into the top-left corner leaves the pad unreachable, and two hundred further moves in every direction never shift it - while the game kept reporting "Runner moved" and stayed in play. A player could wander a dead room indefinitely with no hint that it was already lost.
+- **It now says so, and the test never cries wolf.** A crate slides along an axis only if both cells on that axis are clear, one to receive it and one for the runner to stand in, so a wall on one side of the horizontal axis and one side of the vertical axis freezes it permanently. A crate the check names really is immovable. The message says what happened and points at undo or restart.
+- Verified: a fresh board raises nothing, the wedged crate is reported with a message naming both the problem and the way out, the on-screen line says it, undo brings the crate back out and clears the warning, restart clears it, solving the room normally raises no false alarm, and the room still completes as before.
+- Verified: a ten-check probe covering all of the above, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), npm test 56/56, git diff --check clean.
+
 ## 2026-08-27 Claude - overhaul campaign batch 14b: Switchback Rally would not tell you how a line graded until the whole stage had replayed
 
 Targeted pass, not a rewrite - the stages, corners, grading rule and scoring are unchanged.

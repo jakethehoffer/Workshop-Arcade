@@ -426,6 +426,34 @@
     return state.room.pads.every((pad) => padPowered(pad));
   }
 
+  // Crates that can never move again. A crate slides along an axis only if BOTH
+  // cells on that axis are clear - one to receive it, one for the runner to
+  // stand in. So a wall on one side of the horizontal axis AND one side of the
+  // vertical axis freezes it forever. That test never cries wolf: a crate it
+  // names really is immovable. Measured before this existed: pushing the first
+  // room's crate into the top-left corner left the room unwinnable, and 200
+  // further moves in every direction never shifted it while the game kept
+  // reporting "Runner moved" and stayed in play.
+  function stuckCrates() {
+    return state.crates.filter((crate) => {
+      if (state.room.pads.some((pad) => pad.x === crate.x && pad.y === crate.y)) return false;
+      const blockedX = isWall(crate.x - 1, crate.y) || isWall(crate.x + 1, crate.y);
+      const blockedY = isWall(crate.x, crate.y - 1) || isWall(crate.x, crate.y + 1);
+      return blockedX && blockedY;
+    });
+  }
+  function stuckReport() {
+    const stuck = stuckCrates();
+    if (!stuck.length) return null;
+    return {
+      count: stuck.length,
+      crates: stuck.map((c) => ({ x: c.x, y: c.y })),
+      message: stuck.length === 1
+        ? "That crate is wedged against two walls and can never move again. Undo, or restart the room."
+        : stuck.length + " crates are wedged against two walls and can never move again. Undo, or restart the room."
+    };
+  }
+
   function pushUndo() {
     state.undo.push({
       player: { ...state.player },
@@ -493,6 +521,10 @@
       play("move");
     }
     if (roomSolved()) completeRoom();
+    else {
+      const stuck = stuckReport();
+      if (stuck) setFeedback(stuck.message, 3200);
+    }
     render();
   }
 
@@ -859,6 +891,7 @@
       undoDepth: state.undo.length,
       soundEnabled: state.soundEnabled,
       lastSound: state.lastSound,
+      stuck: stuckReport(),
       feedback: state.feedback,
       feedbackActive: state.feedbackMs > 0,
       complete: state.complete,
