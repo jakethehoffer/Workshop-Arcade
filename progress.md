@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-28 Claude - overhaul campaign batch 14e: Harbor Switchboard knew which dock every boat would reach and would not say
+
+Targeted pass, not a rewrite - the lanes, switches, cargo plan and scoring are unchanged.
+
+- **Every boat's destination is already decided by the switches ahead of it, and the game only found out at the dock.** Flipping a switch silently re-aims every boat still upstream of it. Flipping one now says how many boats are on course for their own dock and how many are not.
+- **Proved exact.** Across four runs and several switch settings, each boat's predicted dock was recorded while it was still upstream, then checked once it had passed the final switch, after which nothing can change its lane. Every single prediction matched.
+- **The stored best took anything.** An earlier scan had missed this one because the guard was written slightly differently. Now required whole, non-negative and capped, with the bound inside the function so it cannot be read before it exists.
+- Verified: a prediction-versus-reality check over many boats with zero mismatches, five stored-value cases, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), npm test 56/56, git diff --check clean.
+
 ## 2026-08-28 Claude - overhaul campaign batch 14d: Packet Pilot only found out where a packet went by sending one
 
 Targeted pass, not a rewrite - the stages, the nodes, the links and the scoring are unchanged.

@@ -185,7 +185,7 @@
   const state = {
     mode: "playing",
     score: 0,
-    best: Number(readStore(BEST_KEY, "0")) || 0,
+    best: readBest(),
     timeMs: 0,
     spawnIndex: 0,
     spawnTimer: 450,
@@ -206,6 +206,38 @@
     userGesture: false,
     particles: []
   };
+
+  function readBest() {
+    // Bound inside the function: readBest() runs while the state object is still
+    // being built, so a const declared here would not exist yet.
+    const cap = 200000;
+    const raw = Number(readStore(BEST_KEY, "0"));
+    if (!Number.isInteger(raw) || raw < 0 || raw > cap) return 0;
+    return raw;
+  }
+  // Which dock a skiff will actually reach if nothing is touched, worked out by
+  // applying every switch still ahead of it - the same swap routeThroughSwitch()
+  // performs when it gets there. The traffic is deterministic, so the game could
+  // always have answered this; it only ever found out at the dock.
+  function predictedLane(vehicle) {
+    let lane = vehicle.lane;
+    for (const sw of switches) {
+      if (vehicle.passed[sw.id] || vehicle.x >= sw.x) continue;
+      if (!sw.divert) continue;
+      if (lane === sw.a) lane = sw.b;
+      else if (lane === sw.b) lane = sw.a;
+    }
+    return lane;
+  }
+  function trafficOutlook() {
+    return state.vehicles.map((v) => {
+      const lane = predictedLane(v);
+      return { id: v.id, name: v.name, wants: v.targetLane, wouldReach: lane, onCourse: lane === v.targetLane };
+    });
+  }
+  function offCourseCount() {
+    return trafficOutlook().filter((v) => !v.onCourse).length;
+  }
 
   function markGesture() {
     state.userGesture = true;
@@ -328,7 +360,13 @@
     const sw = switches[(index + switches.length) % switches.length];
     sw.divert = !sw.divert;
     state.selectedSwitch = switches.indexOf(sw);
-    setFeedback(sw.name + " switch set to " + (sw.divert ? "divert." : "straight."), 580);
+    // Say what the flip did to the boats already on the water. Every skiff's dock
+    // is decided by the switches ahead of it, so a flip silently re-aims traffic.
+    const off = offCourseCount();
+    const total = state.vehicles.length;
+    let line = sw.name + " switch set to " + (sw.divert ? "divert." : "straight.");
+    if (total) line += " " + (total - off) + "/" + total + " skiff" + (total === 1 ? "" : "s") + " on course.";
+    setFeedback(line, 800);
     play("switch");
     syncUi();
     render();
@@ -675,6 +713,7 @@
   }
   function snapshot() {
     return JSON.stringify({
+      trafficOutlook: trafficOutlook(),
       mode: state.mode,
       coordinateSystem: "canvas pixels, origin top-left, x right, y down",
       score: state.score,
