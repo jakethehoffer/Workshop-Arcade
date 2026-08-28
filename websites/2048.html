@@ -564,8 +564,10 @@ function enqueue(dir){
   // Ignore if we're in a blocked state
   if (over || (won && !keepPlaying) || overlay.classList.contains('show')) return;
 
-  // Coalesce repeats: if the last queued direction equals this one, skip
-  if (inputQ.length && inputQ[inputQ.length - 1] === dir) return;
+  // Three quick taps of the same direction used to land as two moves, because
+  // a repeat of the queued direction was dropped here. Auto-repeat is filtered
+  // at the key handler now, so every direction that reaches this point is a
+  // press the player meant and gets queued.
 
   // Keep the queue short so it never feels "laggy"
   if (inputQ.length >= MAX_Q) inputQ.shift();
@@ -694,8 +696,11 @@ if(!immediate) animatePop(t, effectivePopTime());  // was POP_TIME
 function move(dir){
   if(over || (won && !keepPlaying) || moving) return false;
 
-  lastState = snapshot();
-  undoBtn.disabled = false;
+  // Hold the snapshot aside until the slide is known to be real. Committing it
+  // to lastState here and nulling it on the !moved path below threw away a
+  // perfectly good undo every time a player pressed a direction the board
+  // could not move in, even though nothing on the board or the score changed.
+  const pending = snapshot();
   setStatus(`Sliding ${directionLabel(dir)}...`, 'active');
   syncActionButtons();
   const mergeTargets = [];
@@ -768,7 +773,6 @@ function move(dir){
   const movedTileCount = tiles.filter(t => t.r!==t.toR || t.c!==t.toC || t.removing).length;
 
   if(!moved){
-    lastState = null; undoBtn.disabled = true;
     recordInvalidFeedback(dir);
     syncActionButtons();
     if(!canAnyMove()){
@@ -778,6 +782,9 @@ function move(dir){
     }
     return false;
   }
+
+  // The slide is real, so this is the board undo should return to.
+  lastState = pending;
 
   // Animate slide, then commit + spawn
   moving = true;
@@ -1388,7 +1395,11 @@ function checkWinOnly(){
       if(k !== 'Tab') e.preventDefault();
       return;
     }
-  if(dir){ e.preventDefault(); enqueue(dir); }  // ⬅️ was move(dir)
+  // A held arrow key auto-repeats at the OS rate and would flood the queue.
+  // Drop those here, at the source, so enqueue can trust every direction it
+  // receives is a deliberate press and never has to discard one.
+  if(dir && !e.repeat){ e.preventDefault(); enqueue(dir); }
+  else if(dir){ e.preventDefault(); }
   }, {passive:false});
 
   // Touch swipe handling (simple threshold)
