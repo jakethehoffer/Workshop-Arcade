@@ -1,5 +1,13 @@
 Original prompt: Do this for me
 
+## 2026-08-28 Claude - overhaul campaign batch 14f: Block Drop showed "Best NaN"
+
+Targeted pass, not a rewrite - the pieces, the board, the speed curve and the scoring are unchanged.
+
+- **The high score had no guard at all.** Measured on the shipped page: a junk stored value displayed as "Best NaN", and `Infinity`, `-5`, `12.7` and `1e24` all reached the pill verbatim, with `1e24` printing as an unbeatable "1e+24". Now required whole, non-negative and capped.
+- **This one was found by widening a scan that had already run.** An earlier sweep across the remaining games reported this file as fine, because the guard here is spelled differently from the pattern that sweep looked for. A negative result from a text search across many files is weak evidence.
+- Verified: seven stored-value cases each loading with no page error and the right number shown, scoped test:games / capture:games (desktop and mobile both 0) / audit:contrast (0 findings), npm test 56/56, test:corrupt-storage across all 100 games (clean on re-run after one known transient), git diff --check clean.
+
 ## 2026-08-28 Claude - overhaul campaign batch 14e: Harbor Switchboard knew which dock every boat would reach and would not say
 
 Targeted pass, not a rewrite - the lanes, switches, cargo plan and scoring are unchanged.

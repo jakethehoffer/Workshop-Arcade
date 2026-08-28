@@ -556,7 +556,18 @@
   const mobileStatusEl = document.getElementById('mobileStatus');
 
   const HS_KEY = 'blockdrop_best';
-  let best = 0; try { best = Number(localStorage.getItem(HS_KEY)||0); } catch(_) {}
+  // The stored best had no guard at all: measured, a junk value showed as
+  // "Best NaN", and Infinity, -5, 12.7 and 1e24 all reached the pill verbatim -
+  // 1e24 printing as an unbeatable "1e+24". Score is a whole number of points.
+  function readBest(){
+    const cap = 10000000;
+    try {
+      const raw = Number(localStorage.getItem(HS_KEY));
+      if (!Number.isInteger(raw) || raw < 0 || raw > cap) return 0;
+      return raw;
+    } catch(_) { return 0; }
+  }
+  let best = readBest();
   bestEl.textContent = 'Best: ' + best;
   setMobileStatus('Ready - Best ' + best);
 
