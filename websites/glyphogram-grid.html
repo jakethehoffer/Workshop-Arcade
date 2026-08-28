@@ -147,8 +147,18 @@ button{font:inherit}.app{min-height:100dvh;display:grid;grid-template-rows:auto 
   let lastFrame = 0;
   let layout = null;
   let drag = null;
+  // Measured on the shipped page: this record accepted absurd values verbatim,
+  // and 1e24 printed as "1e+24" - a score no run could ever beat. Bound lives
+  // inside the function because it is called while the state object is still
+  // being built, before a const declared beside it would exist.
+  function readBestGuarded(raw) {
+    const cap = 5000000;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 0 || n > cap) return 0;
+    return n;
+  }
   const state = {
-    mode: "ready", stage: 0, score: 0, best: Number(read(BEST_KEY, "0")) || 0, mistakes: 0,
+    mode: "ready", stage: 0, score: 0, best: readBestGuarded(read(BEST_KEY, "0")), mistakes: 0,
     cells: [], cursor: { x: 0, y: 0 }, tool: "fill", feedback: "Press Begin Draft, then match the row and column clues.",
     feedbackKind: "", feedbackTimer: 0, clearTimer: 0, pulse: 0, wrong: new Map(), sound: enabledFromStore(),
     lastSound: "none", gesture: false, lastInput: "none", lastAction: "ready", touchActive: false

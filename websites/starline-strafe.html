@@ -301,6 +301,16 @@
     dashTimer: 0,
     invulnerable: 0
   };
+  // Measured on the shipped page: this record accepted absurd values verbatim,
+  // and 1e24 printed as "1e+24" - a score no run could ever beat. Bound lives
+  // inside the function because it is called while the state object is still
+  // being built, before a const declared beside it would exist.
+  function readBestGuarded(raw) {
+    const cap = 5000000;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 0 || n > cap) return 0;
+    return n;
+  }
   const state = {
     mode: "ready",
     wave: 1,
@@ -308,7 +318,7 @@
     spawned: 0,
     breakTimer: 0,
     score: 0,
-    best: Number(storage.get(keys.best, "0")) || 0,
+    best: readBestGuarded(storage.get(keys.best, "0")),
     shields: 4,
     bullets: [],
     enemies: [],

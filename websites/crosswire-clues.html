@@ -140,9 +140,19 @@ button{font:inherit}.app{width:min(1080px,100%);display:grid;gap:10px}.top,.hud,
   function read(k,fb){ const s=storage(); if(!s)return fb; try{ const v=s.getItem(k); return v==null?fb:v }catch(_){ return fb } }
   function write(k,v){ const s=storage(); if(!s)return; try{s.setItem(k,String(v))}catch(_){} }
   const rawSound = String(read(SOUND_KEY,"1")).toLowerCase();
+  // Measured on the shipped page: this record accepted absurd values verbatim,
+  // and 1e24 printed as "1e+24" - a score no run could ever beat. Bound lives
+  // inside the function because it is called while the state object is still
+  // being built, before a const declared beside it would exist.
+  function readBestGuarded(raw) {
+    const cap = 5000000;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 0 || n > cap) return 0;
+    return n;
+  }
   const state = {
     mode:"menu", stageIndex:0, cells:[], entries:[], selectedEntryId:"A1", selectedCell:{x:OFFSET,y:OFFSET}, direction:"across",
-    integrity:6, hintsRemaining:10, hintsUsed:0, score:0, combo:0, bestScore:Number(read(BEST_KEY,"0"))||0,
+    integrity:6, hintsRemaining:10, hintsUsed:0, score:0, combo:0, bestScore:readBestGuarded(read(BEST_KEY,"0")),
     soundEnabled:!["0","false","off","muted"].includes(rawSound), userGesture:false, toneCount:0, lastSound:"none",
     feedback:"Press Start, then fill A1.", feedbackMs:2200, lastInput:"none", lastEvent:"ready"
   };

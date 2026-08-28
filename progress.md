@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-08-28 Claude - overhaul campaign batch 14g: five more records that accepted anything, found by measuring instead of reading
+
+Targeted pass across Crosswire Clues, Glyphogram Grid, Starline Strafe, Sky Hopper and Inkline Courier. Nothing else in these games changed.
+
+- **A text search had already declared these files fine, and it was wrong.** After two records slipped past source scans earlier in this campaign, the check was redone as a runtime census instead: for every record-shaped saved value in each game, seed it with an absurd number and see whether that number reaches something a player can read. Five games failed. Reading is not measuring.
+- **All five accepted values no run could ever beat,** including one that printed as "1e+24". They now require a whole, non-negative number within a sane ceiling, with the bound written inside the guard so it cannot be read before it exists - the load-order trap this campaign has now hit twice.
+- **Real records still survive.** Each game was reloaded with a genuine stored score and kept it exactly.
+- Verified: the runtime census reporting all five clean afterwards, a real-record check for each, scoped test:games and capture:games for all five (every surface 0) and audit:contrast (0 findings), npm test 56/56, test:corrupt-storage across all 100 games, test:best-score-guard, git diff --check clean.
+
 ## 2026-08-28 Claude - overhaul campaign batch 14f: Block Drop showed "Best NaN"
 
 Targeted pass, not a rewrite - the pieces, the board, the speed curve and the scoring are unchanged.
