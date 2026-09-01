@@ -186,6 +186,7 @@
         <span class="pill">⏱️ <span id="time">000</span></span>
         <span class="pill" id="bestWrap">Best <span id="bestTime">--</span></span>
         <span class="pill">💣 <span id="mines">000</span></span>
+        <span class="pill" id="safeWrap" title="Safe squares still covered">🟩 <span id="safeLeft">000</span></span>
       </div>
       <div class="control-group">
         <button id="reset" type="button">🙂 New Game (N)</button>
@@ -772,6 +773,7 @@
   }
 
   function checkWin() {
+    updateSafeLeft();
     if (state.over) return;
     const total = state.cols * state.rows;
     if (state.revealedCount === total - state.mines) {
@@ -783,6 +785,7 @@
 
   function gameOver(win) {
     state.over = true;
+    updateSafeLeft();
     state.win = win;
     stopTimer();
     if (win) {
@@ -804,6 +807,7 @@
   // ===== Timer & HUD =====
   const timeEl = document.getElementById('time');
   const minesEl = document.getElementById('mines');
+  const safeEl = document.getElementById('safeLeft');
   const bestEl = document.getElementById('bestTime');
   const bestWrap = document.getElementById('bestWrap');
   const BEST_KEY_PREFIX = 'minesweeper_best_';
@@ -851,7 +855,28 @@
   }
   function stopTimer() { if (state.timerId) { clearInterval(state.timerId); state.timerId=null; } }
   function updateTimer() { timeEl.textContent = formatTime(state.timer); }
+  // Safe squares still covered. The board knows this every time a cell opens;
+  // until now it only reached render_game_to_text().
+  function safeLeft() {
+    // Mines are only placed on the first click, so before that the grid has
+    // none to skip and counting it would report every square as safe.
+    if (!state.started) return Math.max(0, state.cols * state.rows - state.mines);
+    let covered = 0;
+    for (let r = 0; r < state.rows; r++) {
+      const row = state.grid[r];
+      if (!row) continue;
+      for (let c = 0; c < state.cols; c++) {
+        const cell = row[c];
+        if (cell && !cell.mine && !cell.revealed) covered++;
+      }
+    }
+    return covered;
+  }
+  function updateSafeLeft() {
+    if (safeEl) safeEl.textContent = String(safeLeft()).padStart(3, '0');
+  }
   function updateMinesLeft() {
+    updateSafeLeft();
     const left = state.mines - state.flagsPlaced;
     const display = left < 0 ? '-' + String(Math.abs(left)).padStart(2,'0') : String(left).padStart(3,'0');
     minesEl.textContent = display;
@@ -1794,7 +1819,8 @@ function drawRaisedTile(x, y, s, hovered) {
       win: !!state.win,
       firstClickSafe: !!state.firstClickSafe,
       revealedCount: state.revealedCount,
-      hiddenSafeCount: Math.max(0, state.cols * state.rows - state.mines - state.revealedCount),
+      hiddenSafeCount: safeLeft(),
+      safeLeftText: safeEl ? safeEl.textContent : '',
       flagsPlaced: state.flagsPlaced,
       minesLeft: state.mines - state.flagsPlaced,
       timer: state.timer,
