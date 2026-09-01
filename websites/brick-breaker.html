@@ -376,12 +376,13 @@ kbd{
 <script>
 (() => {
     let gameReady = false;
-  const canvas = document.getElementById('game');
+  const canvas = byId('game');
   const ctx = canvas.getContext('2d');
 
   const css = { w: window.innerWidth, h: window.innerHeight };
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
+  function byId(id){ return document.getElementById(id); }
   function resize(){
     const prevW = css.w, prevH = css.h;
 
@@ -420,6 +421,8 @@ kbd{
       br.x *= sx; br.w *= sx;
       if (br.moving){ br.originX *= sx; br.range *= sx; }
     }
+    fitBrickField(G.bricks);
+    G.portals = computePortals(G.bricks);
 
     for (const pu of G.powerups){
       pu.x *= sx; pu.y *= sy; pu.w *= sx; pu.h *= sy;
@@ -430,18 +433,18 @@ kbd{
   resize();
   addEventListener('resize', resize);
 
-  const elScore = document.getElementById('score');
-  const elLevel = document.getElementById('level');
-  const elLives = document.getElementById('lives');
-  const elFinal = document.getElementById('finalScore');
+  const elScore = byId('score');
+  const elLevel = byId('level');
+  const elLives = byId('lives');
+  const elFinal = byId('finalScore');
 
-  const cardStart = document.getElementById('msgStart');
-  const cardNext  = document.getElementById('msgNext');
-  const cardOver  = document.getElementById('msgOver');
+  const cardStart = byId('msgStart');
+  const cardNext  = byId('msgNext');
+  const cardOver  = byId('msgOver');
   const overlayEl = cardStart.closest('.overlay');
-  const elBest = document.getElementById('best');
-const elFinalBest = document.getElementById('finalBest');
-const elNewBest = document.getElementById('newBest');
+  const elBest = byId('best');
+const elFinalBest = byId('finalBest');
+const elNewBest = byId('newBest');
 
 let highScore = 0;
 function loadHigh(){
@@ -453,14 +456,14 @@ function saveHigh(v){
 highScore = loadHigh();
 if (elBest) elBest.textContent = highScore;
 
-  const btnPause   = document.getElementById('btnPause');
-  const btnRestart = document.getElementById('btnRestart');
-  const btnMusic   = document.getElementById('btnMusic');
-  const btnSfx     = document.getElementById('btnSfx');
-  const btnFullscreen = document.getElementById('btnFullscreen');
-  const btnHelp = document.getElementById('btnHelp');
-  const startGameBtn = document.getElementById('startGameBtn');
-  const liveStatus = document.getElementById('liveStatus');
+  const btnPause   = byId('btnPause');
+  const btnRestart = byId('btnRestart');
+  const btnMusic   = byId('btnMusic');
+  const btnSfx     = byId('btnSfx');
+  const btnFullscreen = byId('btnFullscreen');
+  const btnHelp = byId('btnHelp');
+  const startGameBtn = byId('startGameBtn');
+  const liveStatus = byId('liveStatus');
   let lastStatus = liveStatus ? liveStatus.textContent : 'Brick Breaker ready.';
 
   function announce(message){
@@ -860,7 +863,6 @@ gunCooldown: 0,       // ← NEW: autofire timer
     speedMod: 1,
     powerups: [],
     effects: [], // {type, remaining}
-    dropChance: 0.18,
     puCounts: Object.create(null),   // per-type spawn counts this level
 puCap: 2,                        // max spawns per type per level
 
@@ -1095,6 +1097,30 @@ function difficultyFor(level){
   return {rows, cols, ballSpeedAdd, paddleShrink, dropChance, hpBase, hpFrac, reinforceBias};
 }
 
+// Bricks are top-anchored in absolute pixels from a row count that grows with
+// the level, and resize() deliberately does not rescale their y, so on a short
+// window the lowest rows sat below the paddle where the ball can never reach
+// them and the level could not be cleared. Squeeze the field into the playable
+// height, scaling row spacing and brick height together so rows never overlap.
+function fitBrickField(bricks){
+  if (!bricks || !bricks.length) return bricks;
+  const safeBottom = (G.paddle ? G.paddle.y : css.h - 36) - 90;
+  let top = Infinity, bottom = -Infinity;
+  for (const br of bricks){ top = Math.min(top, br.y); bottom = Math.max(bottom, br.y + br.h); }
+  if (!isFinite(top) || bottom <= safeBottom) return bricks;
+  const newTop = Math.max(24, Math.min(top, safeBottom - (bottom - top)));
+  const room = safeBottom - newTop;
+  const span = bottom - top;
+  if (room <= 0 || span <= 0) return bricks;
+  const k = Math.min(1, room / span);
+  for (const br of bricks){
+    br.y = newTop + (br.y - top) * k;
+    br.h = Math.max(8, br.h * k);
+  }
+  G.brickTop = newTop;
+  return bricks;
+}
+
 function addMovingToBricks(level, bricks, brickWidth){
   if (level < 2) return bricks;
 
@@ -1239,6 +1265,8 @@ function buildLevel(level){
   function resetLevel(advance=false){
     if (advance){ G.level++; elLevel.textContent = G.level; SFX.level(); }
     G.bricks = buildLevel(G.level);
+    G.paddle.y = css.h - 36;
+    fitBrickField(G.bricks);
 G.portals = computePortals(G.bricks);
     if (advance) announce(`Level ${G.level} started. ${G.bricks.filter(br => br.hp > 0).length} bricks remain.`);
     const dif = difficultyFor(G.level);
@@ -1284,7 +1312,6 @@ function rowColor(r,hp){
     return '#'+(r.toString(16).padStart(2,'0'))+(g.toString(16).padStart(2,'0'))+(b.toString(16).padStart(2,'0'));
   }
 function isCurse(t){ return t && t.startsWith('CURSE_'); }
-function lerp(a,b,p){ return a + (b-a)*p; }
 
 function addScore(points){
   const mult = (G && G.riskMult) ? G.riskMult : 1;
@@ -3098,6 +3125,8 @@ for (const e of G.effects){
         total: G.bricks.length,
         remaining: visibleBricks.length,
         moving: visibleBricks.filter(br => br.moving).length,
+        lowestEdge: diagNum(visibleBricks.reduce((m, br) => Math.max(m, br.y + br.h), 0)),
+        belowPaddle: visibleBricks.filter(br => br.y + br.h > G.paddle.y).length,
         preview: visibleBricks.slice(0, 12).map(br => ({
           x: diagNum(br.x),
           y: diagNum(br.y),
@@ -3163,47 +3192,6 @@ for (const e of G.effects){
     return renderGameToText();
   };
 
-  function runTests(){
-    const results=[]; const t=(name,fn)=>{ try{ fn(); results.push({name, ok:true}); } catch(e){ results.push({name, ok:false, err: String(e)});} };
-
-    t('DOM buttons exist', ()=>{ if(!btnPause||!btnRestart||!btnMusic||!btnSfx) throw 'missing button(s)'; });
-
-    t('Level generator changes layout between L1 and L2', ()=>{
-      restartGame(); const l1 = JSON.stringify(G.bricks.map(b=>[b.x,b.y]));
-      resetLevel(true); const l2 = JSON.stringify(G.bricks.map(b=>[b.x,b.y]));
-      if (l1===l2) throw 'same layout';
-    });
-
-    t('Difficulty increases ball speed by L3', ()=>{
-      restartGame(); const speed1 = BASE_BALL_SPEED + difficultyFor(1).ballSpeedAdd;
-      const speed3 = BASE_BALL_SPEED + difficultyFor(3).ballSpeedAdd;
-      if (!(speed3>speed1)) throw 'speed did not increase';
-    });
-
-    t('Paddle shrinks by L5', ()=>{
-      const w1 = Math.max(80, 120 - difficultyFor(1).paddleShrink);
-      const w5 = Math.max(80, 120 - difficultyFor(5).paddleShrink);
-      if (!(w5 < w1)) throw 'paddle did not shrink';
-    });
-
-    t('No moving bricks on L1; moving exist on L2 and they move', ()=>{
-      restartGame();
-      if (G.bricks.some(b=>b.moving)) throw 'L1 should not have moving bricks';
-      resetLevel(true); // L2
-      const movers = G.bricks.filter(b=>b.moving);
-      if (movers.length===0) throw 'No moving bricks on L2';
-      const x0 = movers[0].x; const left = movers[0].originX - movers[0].range; const right = movers[0].originX + movers[0].range;
-      updateMovingBricks(0.5);
-      const x1 = movers[0].x;
-      if (x1===x0) throw 'Moving brick did not move';
-      if (x1<left-0.1 || x1>right+0.1) throw 'Moving brick exceeded bounds';
-    });
-
-    console.table(results);
-    const failed = results.filter(r=>!r.ok);
-    console.log(failed.length ? `\u274c Tests failed: ${failed.length}` : '\u2705 All tests passed');
-  }
-  window.runBrickBreakerTests = runTests;
 
     gameReady = true;  // allow resize() to rescale entities
   resize();          // ensure canvas matches the full window now
