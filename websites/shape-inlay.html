@@ -824,6 +824,7 @@
           ballX: 0,
           ballVX: 0,
           risk: 0,
+          riskSide: 0,
           shake: 0
         };
 
@@ -918,11 +919,16 @@
           widthCountdown: 0
         };
 
-        const storedBest = Number.parseInt(localStorage.getItem("slope-best") || "0", 10);
-        if (Number.isFinite(storedBest)) {
-          state.best = storedBest;
-          bestEl.textContent = String(state.best);
-        }
+        // parseInt with only a finite check let "-500" through, which rendered
+        // as the Best and made every later distance a new record. It also had
+        // no ceiling and no try/catch, so a storage-blocked context threw here
+        // at module scope and the game never booted. safeStorageGet is a
+        // function declaration below, so it is already hoisted.
+        state.best = (() => {
+          const n = Number(safeStorageGet("slope-best"));
+          return Number.isInteger(n) && n >= 0 && n <= 1e9 ? n : 0;
+        })();
+        bestEl.textContent = String(state.best);
 
         function clamp(value, min, max) {
           return Math.min(max, Math.max(min, value));
@@ -1171,6 +1177,12 @@
           view.width = rect.width;
           view.height = rect.height;
           view.midX = rect.width / 2;
+          // The widest the world can render is at z = 0, where the far rail can
+          // sit maxWidth/2 + maxOffset from the middle. Shrink the horizontal
+          // world just enough to keep that inside the canvas. On a wide screen
+          // this is 1, so desktop geometry is untouched.
+          view.worldScale = Math.max(0.25, Math.min(1,
+            (rect.width / 2 - 10) / (config.maxWidth / 2 + config.maxOffset)));
           view.horizon = rect.height * 0.22;
           view.cameraHeight = rect.height * 0.72;
           initStars();
@@ -1311,10 +1323,14 @@
         }
 
         function projectPoint(x, z) {
-          const scale = config.fov / (config.fov + z);
+          const depth = config.fov / (config.fov + z);
+          // Horizontal distances and every size derived from them shrink with
+          // the canvas; the vertical perspective keeps the raw depth so the
+          // horizon and road foreshortening are unchanged.
+          const scale = depth * (view.worldScale || 1);
           return {
             x: view.midX + x * scale,
-            y: view.horizon + view.cameraHeight * scale,
+            y: view.horizon + view.cameraHeight * depth,
             scale
           };
         }
@@ -1565,21 +1581,24 @@
             ctx.fill();
 
             const railHeat = Math.max(feedback.edgePulse, feedback.dangerCue * 0.7);
-            ctx.strokeStyle = railHeat > 0.2
-              ? `rgba(255, 107, 143, ${0.24 + railHeat * 0.54})`
-              : `rgba(66, 242, 255, ${0.18 + depth * 0.12})`;
-            ctx.lineWidth = 1.5 + depth * 3 + railHeat * 3;
-            ctx.shadowBlur = 10 + railHeat * 18;
-            ctx.shadowColor = railHeat > 0.2 ? "rgba(255, 107, 143, 0.65)" : "rgba(66, 242, 255, 0.35)";
-            ctx.beginPath();
-            ctx.moveTo(farProj.x - farHalf, farProj.y);
-            ctx.lineTo(nearProj.x - nearHalf, nearProj.y);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(farProj.x + farHalf, farProj.y);
-            ctx.lineTo(nearProj.x + nearHalf, nearProj.y);
-            ctx.stroke();
+            // Heat only the rail the ball is actually drifting toward. Lighting
+            // both said "danger from both sides", which is worse than no cue.
+            const side = state.riskSide || 0;
+            const drawRail = (dir) => {
+              const heat = side === 0 ? railHeat : (dir === side ? railHeat : railHeat * 0.15);
+              ctx.strokeStyle = heat > 0.2
+                ? `rgba(255, 107, 143, ${0.24 + heat * 0.54})`
+                : `rgba(66, 242, 255, ${0.18 + depth * 0.12})`;
+              ctx.lineWidth = 1.5 + depth * 3 + heat * 3;
+              ctx.shadowBlur = 10 + heat * 18;
+              ctx.shadowColor = heat > 0.2 ? "rgba(255, 107, 143, 0.65)" : "rgba(66, 242, 255, 0.35)";
+              ctx.beginPath();
+              ctx.moveTo(farProj.x + dir * farHalf, farProj.y);
+              ctx.lineTo(nearProj.x + dir * nearHalf, nearProj.y);
+              ctx.stroke();
+            };
+            drawRail(-1);
+            drawRail(1);
             ctx.shadowBlur = 0;
 
             if (i % 4 === 0) {
@@ -1883,6 +1902,7 @@
             const edge = segment.width / 2 - config.ballRadius * 0.9;
             const localX = state.ballX - segment.center;
             state.risk = clamp(Math.abs(localX) / Math.max(edge, 1), 0, 1);
+            state.riskSide = state.risk > 0.08 ? Math.sign(localX) : 0;
             if (state.running) {
               if (Math.abs(localX) > edge) {
                 triggerCrash("Dropped off track.");
@@ -2093,6 +2113,8 @@
             best: state.best,
             speed: Math.round(state.speed),
             risk: Math.round(state.risk * 100) / 100,
+            riskSide: state.riskSide || 0,
+            worldScale: Math.round((view.worldScale || 1) * 1000) / 1000,
             shake: Math.round(state.shake * 10) / 10,
             lastStatus: liveState.lastStatus,
             lastInput: liveState.lastInput,
