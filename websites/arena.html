@@ -903,7 +903,7 @@
       let hits = Math.max(1, Math.ceil(baseEnemyHits() * hitsMul));
       if (type === 'fast' && hits > 1) hits -= 1;
 
-      state.enemies.push({ x, y, r, speed, vx:0, vy:0, lifeHits: hits, lifeTick: 0, type, color });
+      state.enemies.push({ x, y, r, speed, vx:0, vy:0, lifeHits: hits, maxLife: hits, lifeTick: 0, type, color });
     }
 
     function spawnGem(x,y){ state.gems.push({ x, y, r: 6, life: 8, maxLife: 8 }); }
@@ -1168,6 +1168,33 @@
       ctx.arc(-e.r * .25, -e.r * .25, Math.max(2, e.r * .18), 0, Math.PI*2);
       ctx.fill();
       ctx.restore();
+
+      // Every enemy carries an 8-14 second life and then dies on its own into a
+      // gem. That decides every engagement - kite it, or hold position and take
+      // the free gem - and it reached only render_game_to_text(). Draw it as a
+      // shrinking ring at the true collision radius, so it doubles as an honest
+      // hitbox edge for the shapes that are drawn wider than they are collided.
+      if (state.mode === 'playing' && e.lifeHits > 0) {
+        const maxLife = e.maxLife || e.lifeHits || 1;
+        const remaining = Math.max(0, e.lifeHits - (e.lifeTick || 0));
+        const frac = Math.max(0, Math.min(1, remaining / maxLife));
+        const closing = remaining <= 2;
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        ctx.lineWidth = closing ? 3 : 2;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.16;
+        ctx.strokeStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, e.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = closing && !reducedMotion ? 0.55 + Math.sin(state.time * 12) * 0.25 : (closing ? 0.8 : 0.5);
+        ctx.strokeStyle = closing ? '#8affc1' : '#cfe4ff';
+        ctx.beginPath();
+        ctx.arc(0, 0, e.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     function drawGem(g) {
@@ -1701,7 +1728,9 @@
           type: enemy.type,
           distance: Math.round(threat.distance),
           threat: Math.round(threat.cue * 100) / 100,
-          lifeHits: enemy.lifeHits
+          lifeHits: enemy.lifeHits,
+          maxLife: enemy.maxLife ?? null,
+          lifeRemaining: Math.round(Math.max(0, enemy.lifeHits - (enemy.lifeTick || 0)) * 100) / 100
         };
       }),
       gems: state.gems.slice(0, 10).map((gem) => ({
