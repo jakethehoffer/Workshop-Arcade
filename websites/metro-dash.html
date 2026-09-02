@@ -299,6 +299,8 @@ const feedback = {
   nearMissCount: 0,
   dangerCue: 0,
   dangerLane: 0,
+  // Threat for each lane the player could be in next, indexed lane + 1.
+  laneThreat: [0, 0, 0],
   crashFlash: 0,
   lastPickupAge: 999,
   lastNearMissAge: 999,
@@ -347,6 +349,9 @@ function updateFeedback(dt60) {
     feedback.lastDiagnosticEventAge += dt60;
   }
   feedback.dangerCue = Math.max(0, feedback.dangerCue - 0.08 * dt60);
+  for (let i = 0; i < 3; i++) {
+    feedback.laneThreat[i] = Math.max(0, feedback.laneThreat[i] - 0.08 * dt60);
+  }
   feedback.crashFlash = Math.max(0, feedback.crashFlash - 0.045 * dt60);
   for (let i = scorePops.length - 1; i >= 0; i--) {
     const p = scorePops[i];
@@ -684,6 +689,41 @@ function drawScene(dt60, speed) {
     ctx.setLineDash([]);
   }
 
+  // Neighbouring lanes that are also blocked, drawn dimmer than your own lane
+  // so the strong cue still belongs to where you are standing.
+  if (state === "playing") {
+    for (let lane = -1; lane <= 1; lane++) {
+      if (lane === player.targetLane) continue;
+      const threat = feedback.laneThreat[lane + 1];
+      if (threat <= 0) continue;
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.2, threat * 0.16);
+      ctx.fillStyle = "#fb3f5c";
+      ctx.beginPath();
+      ctx.moveTo(projX(lane - 0.5, 0), H);
+      ctx.lineTo(projX(lane - 0.5, 1), vy);
+      ctx.lineTo(projX(lane + 0.5, 1), vy);
+      ctx.lineTo(projX(lane + 0.5, 0), H);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = Math.min(0.5, threat * 0.4);
+      ctx.strokeStyle = "#ff8fa3";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 8]);
+      for (const side of [lane - 0.5, lane + 0.5]) {
+        ctx.beginPath();
+        for (let z = 0; z <= 1; z += 0.04) {
+          const x = projX(side, z);
+          const y = projY(z);
+          z === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
   if (feedback.dangerCue > 0 && state === "playing") {
     const pulse = 0.5 + Math.sin(performance.now() / 75) * 0.35;
     const lane = feedback.dangerLane || 0;
@@ -922,8 +962,8 @@ function obstacleCoversLane(o, lane) {
   return false;
 }
 
-function obstacleThreat(o) {
-  if (state !== "playing" || !obstacleCoversLane(o, player.targetLane)) return 0;
+function obstacleThreat(o, lane = player.targetLane) {
+  if (state !== "playing" || !obstacleCoversLane(o, lane)) return 0;
   if (o.z < PLAYER_Z - 0.04 || o.z > 0.42) return 0;
   const avoidActive = (o.type === "barrier" && player.isJumping) || (o.type === "overhead" && player.isSliding);
   const proximity = 1 - clamp(Math.abs(o.z - PLAYER_Z) / 0.34, 0, 1);
@@ -945,6 +985,12 @@ function updateObstacles(dt60) {
     if (threat > feedback.dangerCue) {
       feedback.dangerCue = threat;
       feedback.dangerLane = player.targetLane;
+    }
+    // Ask the same question of the lanes either side, so a swerve is a choice
+    // rather than a guess.
+    for (let lane = -1; lane <= 1; lane++) {
+      const laneThreat = obstacleThreat(o, lane);
+      if (laneThreat > feedback.laneThreat[lane + 1]) feedback.laneThreat[lane + 1] = laneThreat;
     }
     // Collision fires if the obstacle is at the player's plane this frame (a
     // small window, so a player who steps into a stalled obstacle still hits)
@@ -1321,6 +1367,7 @@ function startGame() {
     nearMissCount: 0,
     dangerCue: 0,
     dangerLane: 0,
+    laneThreat: [0, 0, 0],
     crashFlash: 0,
     lastPickupAge: 999,
     lastNearMissAge: 999,
@@ -1972,6 +2019,7 @@ function renderGameToText() {
       lastLaneDelta: feedback.lastLaneDelta,
       dangerCue: Math.round(feedback.dangerCue * 100) / 100,
       dangerLane: feedback.dangerLane,
+      laneThreat: feedback.laneThreat.map((v) => Math.round(v * 100) / 100),
       crashFlash: Math.round(feedback.crashFlash * 100) / 100,
       scorePops: scorePops.length,
       pickupRings: pickupRings.length,
