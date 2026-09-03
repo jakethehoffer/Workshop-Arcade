@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-09-02 Claude - overhaul campaign batch 14q: Maze Chase's ghosts never once watched what you were eating
+
+Targeted pass, not a rewrite - the maze, the ghost personalities, the speeds and the scoring are unchanged.
+
+- **The mechanic this kind of game is built around had never run.** Two functions that count the dots you eat and decide when a ghost may leave its box were fully written and never called from anywhere, so every ghost left on a four second clock no matter how you played. Eating a dot now counts, both the small ones and the large ones, and the dot count gets its chance to open the door before the clock does. Losing a life switches to the shared count the original arcade game used, so the ghosts come out at seven, seventeen and thirty two dots in order.
+- **Nothing reported it, because the clock was covering for it.** The ghosts still came out, so the game looked healthy and every existing check passed. The game now records why each ghost was released, so a dead trigger cannot hide behind a working fallback again.
+- **The best score was read carelessly and written about ten times a second.** It is now required to be a whole, non-negative number within a sane ceiling, and it is written at most once a second, with a forced write at game over, on a level clear and on reset.
+- **A ghost across the side tunnel counted as touching you.** The danger check now measures the same wrapped distance the rest of the game already uses.
+- Verified: a scripted playthrough proving the blue ghost was released by the thirtieth dot and not by the clock, the three post-death releases at their exact thresholds and in order, 59 record rises producing exactly 1 storage write plus a forced write at game over that survived a reload, five corrupt stored records all ignored, and the same probe failing on exactly those three points when pointed at the pre-fix file. Then npm test 56/56, catalog validation, catalog freeze, scoped test:games and audit:contrast for maze-chase (0 findings), capture:games:ci across all 100 games with max score 0, test:best-score-guard, test:corrupt-storage, test:reduced-motion, git diff --check clean.
+
 ## 2026-08-28 Claude - overhaul campaign batch 14g: five more records that accepted anything, found by measuring instead of reading
 
 Targeted pass across Crosswire Clues, Glyphogram Grid, Starline Strafe, Sky Hopper and Inkline Courier. Nothing else in these games changed.

@@ -450,10 +450,11 @@ preventScroll:true})}else if(!event.shiftKey&&document.activeElement===last){eve
 ;for(let row=0;row<height;row+=1){for(let col=0;col<width;col+=1){const tile=map[row][col]
 ;const index=row*width+col;if(tile==="."){basePellets.push(index)}else if(tile==="o"){
 basePower.push(index)}}}const totalPellets=basePellets.length+basePower.length;const state={
-phase:"ready",score:0,highScore:(()=>{const h=Number(localStorage.getItem("mazeChaseHigh"));return Number.isFinite(h)&&h>=0?Math.floor(h):0;})(),level:1,lives:3,
+phase:"ready",score:0,highScore:(()=>{const h=Number(readStorageValue("mazeChaseHigh"));return Number.isInteger(h)&&h>=0&&h<=1e9?h:0;})(),level:1,lives:3,
 frightenedTimer:0,eatStreak:0,pendingNextLevel:false};const house={timer:0,exitCooldown:0,
 dotTimer:0,globalCounter:0,globalCounterActive:false,pendingRelease:null,
-disableGlobalAfterRelease:false};const dotReleaseOrder=["Rosewire","Bluewire","Amberline"]
+disableGlobalAfterRelease:false,lastRelease:null,
+releaseCounts:{dotCounter:0,globalCounter:0,timer:0}};const dotReleaseOrder=["Rosewire","Bluewire","Amberline"]
 ;const globalDotThresholds={Rosewire:7,Bluewire:17,Amberline:32}
 ;const modeSchedule=[7,20,7,20,5,20,5,Infinity];const modeState={index:0,timer:modeSchedule[0]}
 ;const speedLevelCap=12;const pacmanSpeedBase=7;const ghostSpeedBase=6.2;const pacmanSpeedStep=.035
@@ -482,7 +483,12 @@ lastGhostEatAge:null,lastHitAge:null,counters:{pellet:0,power:0,fruit:0,ghostEat
 restart:"restart",pellet:"pellet","power-pellet":"powerPellet",fruit:"fruit","ghost-eat":"ghostEat",
 "player-death":"playerDeath","level-clear":"levelClear","game-over":"gameOver",
 "audio-unavailable":"unavailableAction","action-unavailable":"unavailableAction"}
-;function readStorageValue(key){try{return localStorage.getItem(key)}catch(error){return null}}
+;let lastHighWriteAt=0;let lastHighWritten=String(state.highScore)
+;function persistHighScore(force){const value=String(state.highScore)
+;if(value===lastHighWritten){return}const now=Date.now()
+;if(!force&&now-lastHighWriteAt<1000){return}lastHighWriteAt=now;lastHighWritten=value
+;writeStorageValue("mazeChaseHigh",value)}
+function readStorageValue(key){try{return localStorage.getItem(key)}catch(error){return null}}
 function writeStorageValue(key,value){try{localStorage.setItem(key,value)}catch(error){}}
 function persistedSoundValueToMuted(value){if(value===null){return null}
 const normalized=String(value).toLowerCase();if(["1","true","on","enabled"].includes(normalized)){
@@ -684,7 +690,9 @@ function getDotLimitForGhost(name){if(name==="Rosewire"){return 0}if(name==="Blu
 return state.level===1?30:0}if(name==="Amberline"){if(state.level===1){return 60}
 if(state.level===2){return 50}return 0}return 0}function resetDotCountersForLevel(){
 house.globalCounterActive=false;house.globalCounter=0;house.pendingRelease=null
-;house.disableGlobalAfterRelease=false;house.dotTimer=0;ghosts.forEach((ghost=>{ghost.dotCounter=0
+;house.disableGlobalAfterRelease=false;house.dotTimer=0;house.lastRelease=null
+;house.releaseCounts={dotCounter:0,globalCounter:0,timer:0}
+;ghosts.forEach((ghost=>{ghost.dotCounter=0
 ;ghost.dotLimit=getDotLimitForGhost(ghost.name)}))}function enableGlobalDotCounter(){
 house.globalCounterActive=true;house.globalCounter=0;house.pendingRelease=null
 ;house.disableGlobalAfterRelease=false;house.dotTimer=0}function resetGhostModes(){modeState.index=0
@@ -694,13 +702,13 @@ house.globalCounterActive=true;house.globalCounter=0;house.pendingRelease=null
 ;ghost.dir=-1;ghost.state=ghost.name==="Redshift"?"normal":"waiting"
 ;ghost.inHouse=tileAt(Math.floor(ghost.pos.x),Math.floor(ghost.pos.y))==="H"
 ;ghost.houseTarget=ghost.houseTop;ghost.respawnTimer=0}));state.frightenedTimer=0;state.eatStreak=0
-;clearFruit()}function resetGame(){state.score=0;state.level=1;state.lives=3
+;clearFruit()}function resetGame(){persistHighScore(true);state.score=0;state.level=1;state.lives=3
 ;state.pendingNextLevel=false;resetPellets();resetFruitState();resetGhostModes()
 ;resetDotCountersForLevel();resetPositions();resetFeedback(true)
 ;setPhase("ready","Ready","Press Enter or tap Start.")
 ;announceStatus("Ready. Press Enter or tap Start.");updateHud()}function updateHud(){
-if(state.score>state.highScore){state.highScore=state.score
-;localStorage.setItem("mazeChaseHigh",state.highScore)}scoreEl.textContent=state.score
+if(state.score>state.highScore){state.highScore=state.score;persistHighScore(false)}
+scoreEl.textContent=state.score
 ;highScoreEl.textContent=state.highScore;levelEl.textContent=state.level
 ;livesEl.textContent=state.lives}function setPhase(phase,title,message){state.phase=phase
 ;overlayTitle.textContent=title;overlayMessage.textContent=message
@@ -747,25 +755,33 @@ return ghost&&ghost.state==="waiting"&&ghost.inHouse&&ghost.respawnTimer<=0}
 function getPreferredHouseGhost(){for(let i=0;i<dotReleaseOrder.length;i+=1){
 const ghost=getGhostByName(dotReleaseOrder[i]);if(isGhostReadyToLeave(ghost)){return ghost}}
 return null}function getHouseTimerLimit(){return state.level>=5?3:4}
-function getGlobalReleaseCandidate(){if(house.globalCounter===globalDotThresholds.Rosewire){
-return getGhostByName("Rosewire")}if(house.globalCounter===globalDotThresholds.Bluewire){
-return getGhostByName("Bluewire")}if(house.globalCounter===globalDotThresholds.Amberline){
-return getGhostByName("Amberline")}return null}function registerDotEaten(){house.dotTimer=0
+function getGlobalReleaseCandidate(){for(let i=0;i<dotReleaseOrder.length;i+=1){
+const name=dotReleaseOrder[i];const ghost=getGhostByName(name)
+;if(house.globalCounter>=globalDotThresholds[name]&&isGhostReadyToLeave(ghost)){return ghost}}
+return null}function registerDotEaten(){house.dotTimer=0
 ;if(house.globalCounterActive){house.globalCounter+=1;const candidate=getGlobalReleaseCandidate()
-;if(isGhostReadyToLeave(candidate)){house.pendingRelease=candidate
-;if(house.globalCounter===globalDotThresholds.Amberline){house.disableGlobalAfterRelease=true}}
-return}const counterGhost=getPreferredHouseGhost();if(counterGhost){counterGhost.dotCounter+=1}}
-function releaseGhost(ghost){ghost.state="leaving";ghost.inHouse=true;ghost.dir=0
-;ghost.houseTarget=null;house.exitCooldown=houseExitCooldown}function updateHouse(dt){
+;if(candidate){house.pendingRelease=candidate;if(candidate.name==="Amberline"){
+house.disableGlobalAfterRelease=true}}
+if(house.globalCounter>=globalDotThresholds.Amberline&&!isGhostReadyToLeave(getGhostByName("Amberline"))){
+house.globalCounterActive=false;house.globalCounter=0;house.disableGlobalAfterRelease=false}return}
+const counterGhost=getPreferredHouseGhost();if(counterGhost){counterGhost.dotCounter+=1}}
+function releaseGhost(ghost,reason){ghost.state="leaving";ghost.inHouse=true;ghost.dir=0
+;ghost.houseTarget=null;house.exitCooldown=houseExitCooldown
+;house.lastRelease={ghost:ghost.name,reason:reason||"unknown",dotCounter:ghost.dotCounter,
+dotLimit:ghost.dotLimit,globalCounter:house.globalCounter}
+;if(house.releaseCounts[reason]!==undefined){house.releaseCounts[reason]+=1}}
+function updateHouse(dt){
 house.timer+=dt;house.dotTimer+=dt;if(house.exitCooldown>0){
 house.exitCooldown=Math.max(0,house.exitCooldown-dt)}if(house.exitCooldown>0){return}
 if(house.pendingRelease&&isGhostReadyToLeave(house.pendingRelease)){
-releaseGhost(house.pendingRelease);house.pendingRelease=null;if(house.disableGlobalAfterRelease){
+releaseGhost(house.pendingRelease,"globalCounter");house.pendingRelease=null
+;if(house.disableGlobalAfterRelease){
 house.globalCounterActive=false;house.globalCounter=0;house.disableGlobalAfterRelease=false}return}
+if(!house.globalCounterActive){const counterGhost=getPreferredHouseGhost()
+;if(counterGhost&&counterGhost.dotCounter>=counterGhost.dotLimit){
+releaseGhost(counterGhost,"dotCounter");return}}
 if(house.dotTimer>=getHouseTimerLimit()){const forced=getPreferredHouseGhost();if(forced){
-releaseGhost(forced);house.dotTimer=0;return}}if(!house.globalCounterActive){
-const counterGhost=getPreferredHouseGhost()
-;if(counterGhost&&counterGhost.dotCounter>=counterGhost.dotLimit){releaseGhost(counterGhost)}}}
+releaseGhost(forced,"timer");house.dotTimer=0}}}
 function updateHousePacing(ghost,dt){ghost.inHouse=true;if(ghost.respawnTimer>0){
 ghost.respawnTimer-=dt;return}if(!ghost.houseTarget){ghost.houseTarget=ghost.houseTop}
 if(isCentered(ghost.pos)){snapToCenter(ghost.pos);if(Math.abs(ghost.pos.y-ghost.houseTarget.y)<.05){
@@ -810,10 +826,10 @@ const levelMultiplier=1+getLevelFactor(10)*.08
 ;return Math.round(250*Math.pow(2,state.eatStreak)*levelMultiplier)}function consumePellet(){
 const col=Math.floor(pacman.pos.x);const row=Math.floor(pacman.pos.y);const index=row*width+col
 ;if(pellets.has(index)){pellets.delete(index);pelletsRemaining-=1;state.score+=10
-;recordPellet(col,row);playPelletSound();updateHud()
+;registerDotEaten();recordPellet(col,row);playPelletSound();updateHud()
 ;announceStatus(`Pellet collected. ${pelletsRemaining} left.`);checkFruitSpawn()
 }else if(powerPellets.has(index)){powerPellets.delete(index);pelletsRemaining-=1;state.score+=50
-;recordPower(col,row);activatePower();playPowerSound();updateHud()
+;registerDotEaten();recordPower(col,row);activatePower();playPowerSound();updateHud()
 ;announceStatus(`Power pellet collected. ${pelletsRemaining} left.`);checkFruitSpawn()}}
 function updatePacman(dt){if(isCentered(pacman.pos)){snapToCenter(pacman.pos);consumePellet()
 ;if(pacman.nextDir>=0&&canMovePacman(pacman.nextDir)){pacman.dir=pacman.nextDir}
@@ -864,23 +880,24 @@ if(ghost.state==="eyes"){const dx=ghost.pos.x-ghost.housePos.x;const dy=ghost.po
 target=ghost.pos}else if(mode==="chase"){target=getChaseTarget(ghost)}
 ghost.dir=chooseGhostDirection(ghost,target)}const speed=getGhostSpeed(ghost)
 ;moveEntity(ghost,speed,dt)}function checkCollisions(){ghosts.forEach((ghost=>{
-const dx=pacman.pos.x-ghost.pos.x;const dy=pacman.pos.y-ghost.pos.y
-;const dist=Math.sqrt(dx*dx+dy*dy);if(dist<.45){if(ghost.state==="frightened"){ghost.state="eyes"
+const dist=distanceToGhost(ghost);if(dist<.45){if(ghost.state==="frightened"){ghost.state="eyes"
 ;ghost.dir=(ghost.dir+2)%DIRS.length;const points=getGhostComboScore();state.score+=points
 ;state.eatStreak+=1;recordGhostEat(ghost,points);playGhostEatSound();updateHud()
 }else if(ghost.state!=="eyes"&&ghost.state!=="waiting"){if(state.phase==="playing"){recordHit(ghost)
 }loseLife()}}}))}function loseLife(){if(state.phase!=="playing"){return}state.lives-=1
 ;playDeathSound();updateHud();if(state.lives<=0){playGameOverSound()
-;setPhase("gameover","Game Over","Press Enter to retry.")
+;persistHighScore(true);setPhase("gameover","Game Over","Press Enter to retry.")
 ;announceStatus(`Caught. Game over with ${state.score} points.`);return}resetGhostModes()
 ;resetPositions();setPhase("ready","Ready","Press Enter to continue.")
-;announceStatus(`Caught. ${state.lives} lives left.`)}function updateTimers(dt){updateHouse(dt)
+;enableGlobalDotCounter();announceStatus(`Caught. ${state.lives} lives left.`)}
+function updateTimers(dt){updateHouse(dt)
 ;if(state.frightenedTimer>0){state.frightenedTimer=Math.max(0,state.frightenedTimer-dt)
 ;if(state.frightenedTimer===0){ghosts.forEach((ghost=>{if(ghost.state==="frightened"){
 ghost.state="normal"}}))}}if(advanceGhostMode(dt)){reverseGhostsOnModeChange()}updateFruit(dt)}
 function update(dt){updateTimers(dt);updatePacman(dt);checkFruitPickup()
 ;ghosts.forEach((ghost=>updateGhost(ghost,dt)));checkCollisions();updateFeedback(dt)
 ;if(state.phase==="playing"&&pelletsRemaining<=0&&!state.pendingNextLevel){state.pendingNextLevel=true;playLevelClearSound()
+;persistHighScore(true)
 ;setPhase("levelcomplete","Level Clear","Press Enter for the next wave.")
 ;announceStatus(`Level ${state.level} clear. Press Enter for the next wave.`)}}function drawWalls(){
 ctx.save();ctx.fillStyle="#0c1a3f";ctx.strokeStyle="rgba(76, 201, 240, 0.8)"
@@ -994,7 +1011,10 @@ state:ghost.state,x:round(ghost.pos.x),y:round(ghost.pos.y),tile:{col:Math.floor
 row:Math.floor(ghost.pos.y)},dir:dirName(ghost.dir),inHouse:!!ghost.inHouse,
 dotCounter:ghost.dotCounter,dotLimit:ghost.dotLimit}))),house:{
 globalCounterActive:!!house.globalCounterActive,globalCounter:house.globalCounter,
-pendingRelease:house.pendingRelease},feedback:{
+pendingRelease:house.pendingRelease?house.pendingRelease.name:null,
+dotTimer:round(house.dotTimer),dotTimerLimit:getHouseTimerLimit(),
+lastRelease:house.lastRelease?{...house.lastRelease}:null,
+releaseCounts:{...house.releaseCounts}},feedback:{
 lastPelletAge:ageForDiagnostics(feedback.lastPelletAge),
 lastPowerAge:ageForDiagnostics(feedback.lastPowerAge),
 lastFruitAge:ageForDiagnostics(feedback.lastFruitAge),
