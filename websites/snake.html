@@ -97,9 +97,13 @@
     line-height:1.1;
     display:inline-flex; align-items:center;
   }
-  .pill#score, .pill#best {
+  .pill#score, .pill#best, .pill#room {
     font-variant-numeric:tabular-nums;
   }
+  /* Room reuses the status pill's audited ink/background pairings so the amber
+     and rose states keep their known contrast ratios. */
+  .pill#room[data-kind="tight"] { color:#fde68a; border-color:rgba(245,158,11,0.7); background:linear-gradient(180deg,rgba(64,44,14,0.96),rgba(24,20,18,0.94)); }
+  .pill#room[data-kind="danger"] { color:#fecdd3; border-color:rgba(251,113,133,0.72); background:linear-gradient(180deg,rgba(65,20,34,0.96),rgba(24,14,24,0.94)); }
   .pill#status {
     color:rgba(94,234,212,0.95);
     font-size:12px; letter-spacing:0.04em;
@@ -193,6 +197,7 @@
   <div class="hud">
     <div class="pill" id="score">Score: 0</div>
     <div class="pill" id="best">Best: 0</div>
+    <div class="pill" id="room" title="Open cells your head can still reach">Room: 0</div>
     <div class="pill" id="status" role="status" aria-live="polite" aria-atomic="true">Press Space to start</div>
     <button class="pill button primary-start" id="startMobileBtn" type="button">Start</button>
     <button class="pill button utility-pill has-hotkey" id="fullscreenPill" type="button" title="Enter fullscreen (F)" aria-label="Enter fullscreen" aria-pressed="false"><span class="icon" aria-hidden="true">⛶</span><span class="label">Fullscreen</span><span class="hotkey">F</span></button>
@@ -244,6 +249,8 @@
       <ul style="margin:8px 0; padding-left:20px; color:#b8c1cc; line-height:1.8;">
         <li>Each food eaten increases your score and makes the snake longer</li>
         <li>Plan your path to avoid trapping yourself</li>
+        <li>The Room pill counts the open cells your head can still reach. It turns amber when that space shrinks toward your own length, and red when the food is walled off or you are sealed in</li>
+        <li>Food only ever spawns somewhere you can still reach</li>
       </ul>
 
       <button class="btn btn-close" id="helpClose" type="button">Close</button>
@@ -256,6 +263,7 @@
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('best');
+  const roomEl = document.getElementById('room');
   const statusEl = document.getElementById('status');
   const startMobileBtn = document.getElementById('startMobileBtn');
   const fullscreenPill=document.getElementById('fullscreenPill');
@@ -490,7 +498,29 @@
 
   const COLS=24, ROWS=24;
   const HS_KEY='neonsnake_best';
-  let best=0; try{ const n=Number(localStorage.getItem(HS_KEY)); best=Number.isFinite(n)&&n>=0?n:0; }catch(_){ }
+  // Score is one point per food, and the board holds COLS*ROWS cells minus the
+  // three-segment start, so MAX_SCORE is the largest record this game can
+  // legitimately produce. Guard integer-ness and that ceiling as well as the
+  // sign: Number('12.7') and Number('9e9') are both finite and non-negative but
+  // neither is a score, and either would sit in the HUD forever as a fake best.
+  // writeBest() only ever stores String(integer), so also require the stored
+  // text to round-trip through Number exactly. Without that, Number() coercion
+  // quietly accepts forms this game never wrote -- '0x10' becomes 16, ' 7 '
+  // becomes 7, '007' becomes 7 -- each of which would install a record the
+  // player never earned.
+  const MAX_SCORE = COLS*ROWS - 3;
+  function readBest(){
+    let raw = null;
+    try{ raw = localStorage.getItem(HS_KEY); }catch(_){ return 0; }
+    if(typeof raw !== 'string' || raw === '') return 0;
+    const n = Number(raw);
+    if(!Number.isInteger(n) || n < 0 || n > MAX_SCORE) return 0;
+    return String(n) === raw ? n : 0;
+  }
+  function writeBest(value){
+    try{ localStorage.setItem(HS_KEY, String(value)); }catch(_){ }
+  }
+  let best = readBest();
   bestEl.textContent='Best: '+best;
 
   // Honor prefers-reduced-motion: gate decorative eat/event rings and glow
@@ -503,6 +533,12 @@
   } catch (_) {}
 
   let snake=[], prevSnake=[], dir={x:1,y:0}, dirQueue=[], food=null, running=false, gameOver=false, gameWon=false, score=0, acc=0, stepMs=140;
+  // The cell that actually killed the run, plus what was standing in it. Kept so
+  // the frozen game-over frame can show the crash rather than the last legal
+  // cell before it.
+  let death = null;
+  // Live free-space census, refreshed every step. See surveySpace().
+  const space = { freeCells: COLS*ROWS, reachableCells: 0, sealed: false, foodReachable: true };
   const feedback = {
     lastEvent: null,
     lastEventAge: null,
@@ -585,7 +621,7 @@
     prevSnake=snake.map(p=>({...p}));
     dir={x:1,y:0}; dirQueue=[];
     score=0; stepMs=140; acc=0;
-    running=false; gameOver=false; gameWon=false;
+    running=false; gameOver=false; gameWon=false; death=null;
     Object.assign(feedback, {
       lastEvent: null,
       lastEventAge: null,
@@ -611,18 +647,84 @@
 
   function updateHUD(){
     scoreEl.textContent='Score: '+score;
-    if(score>best){ best=score; try{ localStorage.setItem(HS_KEY,String(best)); }catch(_){ } }
+    if(score>best){ best=Math.min(MAX_SCORE, score); writeBest(best); }
     bestEl.textContent='Best: '+best;
     // ramp tempo slightly with score
     Music.setBpm(96 + Math.min(32, Math.floor(score/4)*2));
   }
 
-  function spawnFood(){
+  const STEP_DIRS=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+
+  // Free-space census. `free` is every cell the body is not sitting on, and
+  // `reachable` is the subset the head can actually walk to right now, found by
+  // flooding out from the head's four neighbours through `free`. The two only
+  // differ once the body seals a pocket, and that gap is the whole skill of
+  // snake: food inside a sealed pocket is food you cannot eat, and reachable
+  // space that has dropped below your own length is a trap you already entered.
+  function surveySpace(){
+    const blocked=new Set(snake.map(c=>c.x+','+c.y));
     const free=[];
-    const taken=new Set(snake.map(c=>c.x+','+c.y));
-    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(!taken.has(x+','+y)) free.push({x,y});
-    food = free.length ? free[Math.floor(Math.random()*free.length)] : null;
-    if(food === null){ triggerWin(); }
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+      if(!blocked.has(x+','+y)) free.push({x,y});
+    }
+    const reachable=[];
+    const seen=new Set();
+    const head=snake[0];
+    if(head){
+      for(const d of STEP_DIRS){
+        const nx=head.x+d.x, ny=head.y+d.y;
+        if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+        const k=nx+','+ny;
+        if(blocked.has(k)||seen.has(k)) continue;
+        seen.add(k); reachable.push({x:nx,y:ny});
+      }
+    }
+    for(let i=0;i<reachable.length;i++){
+      const cell=reachable[i];
+      for(const d of STEP_DIRS){
+        const nx=cell.x+d.x, ny=cell.y+d.y;
+        if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+        const k=nx+','+ny;
+        if(blocked.has(k)||seen.has(k)) continue;
+        seen.add(k); reachable.push({x:nx,y:ny});
+      }
+    }
+    return { free, reachable, reachableKeys: seen };
+  }
+
+  function updateSpace(survey){
+    const s = survey || surveySpace();
+    space.freeCells = s.free.length;
+    space.reachableCells = s.reachable.length;
+    space.sealed = s.free.length > 0 && s.reachable.length === 0;
+    space.foodReachable = food ? s.reachableKeys.has(food.x+','+food.y) : true;
+    updateRoomPill();
+    return s;
+  }
+
+  function updateRoomPill(){
+    if(!roomEl) return;
+    let text = 'Room: ' + space.reachableCells;
+    let kind = 'ok';
+    if(space.sealed){ text += ' - sealed in'; kind = 'danger'; }
+    else if(!space.foodReachable){ text += ' - food walled off'; kind = 'danger'; }
+    else if(space.freeCells > 0 && space.reachableCells <= snake.length){ text += ' - tight'; kind = 'tight'; }
+    roomEl.textContent = text;
+    roomEl.dataset.kind = kind;
+    roomEl.setAttribute('aria-label', text.replace('Room:', 'Reachable open cells:'));
+  }
+
+  function spawnFood(){
+    const survey = surveySpace();
+    if(!survey.free.length){ food=null; updateSpace(survey); triggerWin(); return; }
+    // Only ever place food where the head can still reach it. `free` was already
+    // the exact flood-fill seed, and picking uniformly from it is what let food
+    // land inside a pocket the body had sealed off, which reads as the game
+    // cheating. The fallback to `free` fires only when the head has no legal move
+    // left at all, and updateRoomPill() says so out loud when it does.
+    const pool = survey.reachable.length ? survey.reachable : survey.free;
+    food = pool[Math.floor(Math.random()*pool.length)];
+    updateSpace(survey);
   }
 
   function triggerWin(){
@@ -653,9 +755,21 @@
       recordSnakeFeedback('turn-accepted', { direction: directionLabel(dir) });
     }
     const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
-    if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS|| snake.some((c,i)=>i>0&&c.x===head.x&&c.y===head.y)){
+    const outOfBounds = head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS;
+    const hitIndex = outOfBounds ? -1 : snake.findIndex((c,i)=>i>0&&c.x===head.x&&c.y===head.y);
+    if(outOfBounds || hitIndex>=0){
+      // Record the cell that actually killed the run before freezing. The frame
+      // used to stop with the head still on its last legal cell, one short of the
+      // crash, so the final picture never showed what was hit.
+      death = {
+        x: head.x, y: head.y,
+        cause: outOfBounds ? 'wall' : 'self',
+        wall: outOfBounds ? (head.x<0 ? 'left' : head.x>=COLS ? 'right' : head.y<0 ? 'top' : 'bottom') : null,
+        hitIndex: outOfBounds ? -1 : hitIndex,
+        from: { x: snake[0].x, y: snake[0].y }
+      };
       recordSnakeFeedback('death');
-      gameOver=true; running=false; setStatus('Game Over - Press Space', 'danger'); SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
+      gameOver=true; running=false; setStatus(deathStatusText(), 'danger'); SFX.die(); Music.stop(); syncStartMobileButton(); draw(); return;
     }
     snake.unshift(head);
     if(food && head.x===food.x && head.y===food.y){
@@ -663,7 +777,21 @@
       score+=1; updateHUD(); setStatus('Score: '+score+' - food collected', 'food'); spawnFood(); SFX.eat();
     } else {
       snake.pop(); SFX.move();
+      updateSpace();
     }
+  }
+
+  function deathStatusText(){
+    if(!death) return 'Game Over - Press Space';
+    if(death.cause === 'wall') return 'Game Over - ' + death.wall + ' wall - Press Space';
+    return 'Game Over - your own body - Press Space';
+  }
+
+  function deathHeadline(){
+    if(!death) return null;
+    if(death.cause === 'wall') return 'Crashed into the ' + death.wall + ' wall';
+    const segment = death.hitIndex >= 0 ? ' - segment ' + (death.hitIndex + 1) + ' of ' + snake.length : '';
+    return 'Ran into your own body' + segment;
   }
 
   function sameDir(a,b){ return a.x===b.x && a.y===b.y; }
@@ -841,12 +969,48 @@
       drawSegment(x, y, cw, ch, base, glow, Math.min(cw,ch)*0.28);
     }
 
+    // Mark whatever the head ran into, underneath the head itself.
+    if(gameOver && death && death.cause === 'self' && death.hitIndex >= 0 && snake[death.hitIndex]){
+      const hit = snake[death.hitIndex];
+      ctx.save();
+      ctx.strokeStyle='#fb7185';
+      ctx.lineWidth=Math.max(2, Math.min(cw,ch)*0.12);
+      ctx.beginPath();
+      ctx.arc(hit.x*cw+cw/2, hit.y*ch+ch/2, Math.min(cw,ch)*0.46, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if(gameOver && death && death.cause === 'wall'){
+      ctx.save();
+      ctx.strokeStyle='#fb7185';
+      ctx.lineWidth=Math.max(3, Math.min(cw,ch)*0.22);
+      const half=ctx.lineWidth/2;
+      ctx.beginPath();
+      if(death.wall === 'left'){ ctx.moveTo(half,0); ctx.lineTo(half,canvas.height); }
+      else if(death.wall === 'right'){ ctx.moveTo(canvas.width-half,0); ctx.lineTo(canvas.width-half,canvas.height); }
+      else if(death.wall === 'top'){ ctx.moveTo(0,half); ctx.lineTo(canvas.width,half); }
+      else { ctx.moveTo(0,canvas.height-half); ctx.lineTo(canvas.width,canvas.height-half); }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if(snake.length){
-      const to = snake[0];
-      const from = (prevSnake[0] || to);
-      const hx = lerp(from.x, to.x, t)*cw;
-      const hy = lerp(from.y, to.y, t)*ch;
-      drawSegment(hx,hy,cw,ch,'#22d3ee','#67e8f9', Math.min(cw,ch)*0.35);
+      // On a death frame the head belongs on the cell that killed it, not on the
+      // last legal cell one short of it. A wall death lands outside the grid, so
+      // clamp it to half a cell over the edge: still visibly the crash site, and
+      // still on canvas.
+      const dead = gameOver && !!death;
+      let hx, hy;
+      if(dead){
+        hx = Math.min(COLS-0.5, Math.max(-0.5, death.x))*cw;
+        hy = Math.min(ROWS-0.5, Math.max(-0.5, death.y))*ch;
+      } else {
+        const to = snake[0];
+        const from = (prevSnake[0] || to);
+        hx = lerp(from.x, to.x, t)*cw;
+        hy = lerp(from.y, to.y, t)*ch;
+      }
+      drawSegment(hx,hy,cw,ch, dead ? '#f87171' : '#22d3ee', dead ? '#fecaca' : '#67e8f9', Math.min(cw,ch)*0.35);
 
       const eyeR=Math.min(cw,ch)*0.09;
       let ex1,ey1,ex2,ey2;
@@ -880,14 +1044,21 @@
       const cue = feedbackCue(true);
       ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='#e6edf3'; ctx.textAlign='center'; ctx.font='32px system-ui, sans-serif';
-      ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 16);
+      ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 40);
+      const headline = deathHeadline();
+      if(headline){
+        ctx.fillStyle='#fecdd3';
+        ctx.font='16px system-ui, sans-serif';
+        ctx.fillText(headline, canvas.width/2, canvas.height/2 - 14);
+      }
+      ctx.fillStyle='#e6edf3';
       ctx.font='18px system-ui, sans-serif';
-      ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 10);
-      ctx.fillText('Press Space', canvas.width/2, canvas.height/2 + 36);
+      ctx.fillText('Score: '+score+'  |  Best: '+best, canvas.width/2, canvas.height/2 + 12);
+      ctx.fillText('Press Space', canvas.width/2, canvas.height/2 + 38);
       if(cue){
         ctx.fillStyle=cue.fg;
         ctx.font='14px system-ui, sans-serif';
-        ctx.fillText(cue.text, canvas.width/2, canvas.height/2 + 60);
+        ctx.fillText(cue.text, canvas.width/2, canvas.height/2 + 62);
       }
     } else if(!running){
       ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -1074,6 +1245,23 @@
       bodyLength: snake.length,
       bodyPreview: snake.slice(0, 12).map(c => ({ x: c.x, y: c.y })),
       food: food ? { x: food.x, y: food.y } : null,
+      space: {
+        freeCells: space.freeCells,
+        reachableCells: space.reachableCells,
+        sealed: !!space.sealed,
+        foodReachable: !!space.foodReachable,
+        roomLabel: roomEl ? roomEl.textContent : null,
+        roomKind: roomEl ? (roomEl.dataset.kind || null) : null
+      },
+      death: death ? {
+        x: death.x,
+        y: death.y,
+        cause: death.cause,
+        wall: death.wall,
+        hitIndex: death.hitIndex,
+        from: { x: death.from.x, y: death.from.y },
+        headline: deathHeadline()
+      } : null,
       helpOpen: !!(helpOverlay && helpOverlay.classList.contains('show')),
       music: {
         label: musicToggleLabel ? musicToggleLabel.textContent : musicToggleBtn.textContent,
