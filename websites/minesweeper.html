@@ -223,7 +223,7 @@
   <canvas id="game" width="1200" height="780" tabindex="0" role="application" aria-describedby="boardStatus" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown W A S D Enter Space X" aria-label="Minesweeper board. Focus the board, move with arrows or WASD, reveal with Enter or Space, and flag with X."></canvas>
 
   <footer>
-    <span class="help">Controls: <span class="kbd">Left Click</span>/<span class="kbd">Tap</span> reveal • <span class="kbd">Right Click</span>/<span class="kbd">Long‑press</span> flag • Toggle <b>🚩 Flag Mode</b> on touch for easier flagging.</span>
+    <span class="help">Controls: <span class="kbd">Left Click</span>/<span class="kbd">Tap</span> reveal • <span class="kbd">Right Click</span>/<span class="kbd">Long‑press</span> flag • Toggle <b>🚩 Flag Mode</b> on touch for easier flagging • Click a number whose flags all match to open the rest around it.</span>
   </footer>
 
   <!-- Help Menu -->
@@ -237,7 +237,17 @@
         <li><b>Left Click</b> - Reveal a tile</li>
         <li><b>Right Click</b> - Flag/unflag a tile (mark as mine)</li>
         <li><b>Flag Mode</b> - Toggle to make touch controls easier (tap to flag, tap again to reveal)</li>
+        <li><b>Arrow keys</b> or <b>W A S D</b> - Move the keyboard cursor</li>
+        <li><b>Enter</b> or <b>Space</b> - Reveal the cursor tile</li>
+        <li><b>X</b> - Flag the cursor tile</li>
         <li><b>N</b> - Start a new game</li>
+      </ul>
+
+      <p><b>The quick-open shortcut:</b></p>
+      <ul style="margin:8px 0; padding-left:20px; line-height:1.8;">
+        <li>Once a number has as many flags around it as the number itself, click that number to open every remaining tile beside it in one go.</li>
+        <li>Point at a number that is ready and the tiles it would open are outlined, so you can always see the shortcut before you use it.</li>
+        <li>It trusts your flags. If one of them is wrong, this opens a mine.</li>
       </ul>
 
       <p><b>How to Play:</b></p>
@@ -440,6 +450,32 @@
         state.grid[r][c].adj = n;
       }
     }
+  }
+
+  // Which cell is the player pointing at, mouse or keyboard.
+  function focusedCell() {
+    // Follow whichever input the player last used. Checking canvas focus instead
+    // would show the preview on the keyboard cursor for a mouse player, because
+    // clicking the board focuses it.
+    if (state.keyboardMode && state.selected.c >= 0) return state.selected;
+    if (state.hover.c >= 0) return state.hover;
+    if (state.selected.c >= 0) return state.selected;
+    return null;
+  }
+  // The same test chordReveal makes, asked before the click instead of after.
+  function chordPreview() {
+    if (state.over || !state.started) return null;
+    const at = focusedCell();
+    if (!at || at.c < 0 || at.r < 0) return null;
+    const cell = state.grid[at.r] && state.grid[at.r][at.c];
+    if (!cell || !cell.revealed || cell.adj <= 0) return null;
+    let flags = 0; const hidden = [];
+    forEachNbr(at.c, at.r, (nc, nr) => {
+      const n = state.grid[nr][nc];
+      if (n.flagged) flags++; else if (!n.revealed) hidden.push([nc, nr]);
+    });
+    if (flags !== cell.adj || hidden.length === 0) return null;
+    return { c: at.c, r: at.r, adj: cell.adj, opens: hidden };
   }
 
   function forEachNbr(c, r, fn) {
@@ -975,6 +1011,23 @@
         ctx.strokeRect(x+0.5*DPR, y+0.5*DPR, tile-1*DPR, tile-1*DPR);
         if (selected) drawSelectedCell(x, y, tile);
       }
+    }
+
+    const armed = chordPreview();
+    if (armed) {
+      ctx.save();
+      ctx.lineWidth = 2 * DPR;
+      ctx.setLineDash([5 * DPR, 4 * DPR]);
+      ctx.strokeStyle = 'rgba(94, 234, 212, .95)';
+      ctx.shadowColor = 'rgba(94, 234, 212, .55)';
+      ctx.shadowBlur = 8 * DPR;
+      for (const [nc, nr] of armed.opens) {
+        ctx.strokeRect(ox + nc * tile + 2 * DPR, oy + nr * tile + 2 * DPR, tile - 4 * DPR, tile - 4 * DPR);
+      }
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(94, 234, 212, .8)';
+      ctx.strokeRect(ox + armed.c * tile + 2 * DPR, oy + armed.r * tile + 2 * DPR, tile - 4 * DPR, tile - 4 * DPR);
+      ctx.restore();
     }
 
     ctx.restore();
@@ -1830,6 +1883,10 @@ function drawRaisedTile(x, y, s, hovered) {
       keyboardMode: !!state.keyboardMode,
       lastInput: state.lastInput,
       hover: { c: state.hover.c, r: state.hover.r },
+      chordArmed: (() => {
+        const a = chordPreview();
+        return a ? { c: a.c, r: a.r, adj: a.adj, opens: a.opens.map(([c, r]) => ({ c, r })) } : null;
+      })(),
       helpOpen: !!helpOpen,
       preset: currentPreset,
       audio: {
