@@ -2083,6 +2083,7 @@ if (b.vy > 0){
 
         b.vx = Math.sin(angle) * speed;
         b.vy = -Math.abs(Math.cos(angle) * speed);
+        b.speed = speed;
         b.y  = yTop - b.r - 0.1;
 
         if (G.effects.some(e=>e.type==='STICKY')){
@@ -2092,6 +2093,24 @@ if (b.vy > 0){
         SFX.paddle();
       }
     }
+  }
+}
+
+if (!b.stuck && !G.waitingLaunch){
+  const pl = p.x - p.w/2, pr = p.x + p.w/2, pt = p.y - p.h/2, pb = p.y + p.h/2;
+  if (b.x + b.r > pl && b.x - b.r < pr && b.y + b.r > pt && b.y - b.r < pb){
+    const oL = (b.x + b.r) - pl, oR = pr - (b.x - b.r), oT = (b.y + b.r) - pt;
+    if (oT <= Math.min(oL, oR)){
+      b.y = pt - b.r - 0.1;
+      b.vy = -Math.abs(b.vy || b.speed * 0.9);
+    } else if (oL < oR){
+      b.x = pl - b.r - 0.1;
+      b.vx = -Math.abs(b.vx || b.speed * 0.4);
+    } else {
+      b.x = pr + b.r + 0.1;
+      b.vx = Math.abs(b.vx || b.speed * 0.4);
+    }
+    SFX.paddle();
   }
 }
 
@@ -3118,6 +3137,7 @@ for (const e of G.effects){
         vx: diagNum(b.vx),
         vy: diagNum(b.vy),
         r: diagNum(b.r),
+        speed: diagNum(b.speed),
         stuck: !!b.stuck,
         fire: !!b.fire
       })),
