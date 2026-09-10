@@ -928,7 +928,23 @@ const fruit=fruitTypes[fruitState.kindIndex];const x=fruitSpawn.x*tileSize
 ;ctx.arc(0,0,tileSize*.28,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(255, 255, 255, 0.55)"
 ;ctx.beginPath();ctx.arc(-tileSize*.08,-tileSize*.08,tileSize*.08,0,Math.PI*2);ctx.fill()
 ;ctx.strokeStyle="#6ee7b7";ctx.lineWidth=tileSize*.05;ctx.beginPath();ctx.moveTo(0,-tileSize*.28)
-;ctx.lineTo(tileSize*.06,-tileSize*.42);ctx.stroke();ctx.restore()}function drawPacman(time){
+;ctx.lineTo(tileSize*.06,-tileSize*.42);ctx.stroke()
+// How long is left, as a ring that empties, and what it pays, written above it.
+;const full=Math.max(.001,getFruitDuration());const left=Math.max(0,Math.min(1,fruitState.timer/full))
+;const going=fruitState.timer<=2
+;ctx.lineWidth=tileSize*.09;ctx.lineCap="round"
+;ctx.strokeStyle="rgba(255,255,255,.16)";ctx.beginPath()
+;ctx.arc(0,0,tileSize*.46,0,Math.PI*2);ctx.stroke()
+;ctx.strokeStyle=going?"#ff6b6b":"#ffe066"
+;ctx.beginPath();ctx.arc(0,0,tileSize*.46,-Math.PI/2,-Math.PI/2+Math.PI*2*left);ctx.stroke()
+;ctx.restore();ctx.save();ctx.translate(x,y+bob)
+;const label=String(getFruitScore())
+;ctx.font=`700 ${Math.max(9,tileSize*.42)}px ui-sans-serif, system-ui, sans-serif`
+;ctx.textAlign="center";ctx.textBaseline="bottom"
+;ctx.lineWidth=Math.max(2,tileSize*.14);ctx.strokeStyle="rgba(4,8,16,.92)"
+;ctx.strokeText(label,0,-tileSize*.62);ctx.fillStyle=going?"#ff9d9d":"#ffe9a8"
+;ctx.fillText(label,0,-tileSize*.62)
+;ctx.restore()}function drawPacman(time){
 const centerX=pacman.pos.x*tileSize;const centerY=pacman.pos.y*tileSize;const radius=tileSize*.45
 ;const mouth=.25+Math.abs(Math.sin(time*8))*.18;let angle=0;if(pacman.dir===0){angle=-Math.PI/2
 }else if(pacman.dir===1){angle=0}else if(pacman.dir===2){angle=Math.PI/2}else if(pacman.dir===3){
@@ -1006,6 +1022,8 @@ index:modeState.index,timer:round(modeState.timer),name:getGlobalMode()},pacman:
 x:round(pacman.pos.x),y:round(pacman.pos.y),tile:{col:Math.floor(pacman.pos.x),
 row:Math.floor(pacman.pos.y)},dir:dirName(pacman.dir),nextDir:dirName(pacman.nextDir)},fruit:{
 active:!!fruitState.active,timer:round(fruitState.timer),spawned:fruitState.spawned,
+points:fruitState.active?getFruitScore():0,duration:round(getFruitDuration()),
+name:fruitState.active?fruitTypes[fruitState.kindIndex].name:null,
 kind:fruitTypes[fruitState.kindIndex]?.name||null},ghosts:ghosts.map((ghost=>({name:ghost.name,
 state:ghost.state,x:round(ghost.pos.x),y:round(ghost.pos.y),tile:{col:Math.floor(ghost.pos.x),
 row:Math.floor(ghost.pos.y)},dir:dirName(ghost.dir),inHouse:!!ghost.inHouse,
