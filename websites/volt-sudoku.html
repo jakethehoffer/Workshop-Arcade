@@ -79,6 +79,9 @@ button{font:inherit}.app{min-height:100dvh;width:min(1160px,100%);margin:auto;pa
    here, so render() also writes a full aria-label onto each value. */
 .hud .value::before{display:block;color:#57ecff;font-size:8px;font-weight:950;line-height:1.1;text-transform:uppercase}
 .hud #stageValue::before{content:"Stage"}.hud #scoreValue::before{content:"Score"}.hud #bestValue::before{content:"Best"}.hud #mistakeValue::before{content:"Mistakes"}.hud #hintValue::before{content:"Hints"}.hud #timeValue::before{content:"Time"}.pill{min-width:0;padding:5px 4px}.value{font-size:14px}.boardShell{padding:6px}.stageName{font-size:16px}.copy,.selectLine{display:none}.modeLine{display:none}.cueShelf{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.cueItem{padding:5px 4px;font-size:9px}.cueItem b{font-size:11px}.payout{margin-top:6px;padding:5px 7px;font-size:10px;line-height:1.35}.payout::before{font-size:9px;letter-spacing:.08em}.controlDeck{gap:5px}.keypad{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.actionDock{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;bottom:4px}.actionDock .btn{flex:0 1 auto;min-height:34px;padding-inline:3px}.foot{display:grid;grid-template-columns:1fr;gap:6px}.foot .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.keys{display:none}.cell.noteMatch::after{inset:4px}}
+
+/* A sideways phone is 844x390: wider than the 900px breakpoint's threshold but a third of the height, so the width-only rule above stacked the digit pad under the grid and dropped every digit button 593px down a 390px screen. A phone has no number row, so the puzzle was readable and unplayable. Restore the two columns and size the grid from the height. */
+@media(orientation:landscape) and (max-height:560px){.app{padding:6px 10px;gap:5px;grid-template-rows:auto minmax(0,1fr) auto;align-content:stretch}.title{font-size:19px}.eyebrow{font-size:9px;letter-spacing:.18em}.top{align-items:center;gap:6px}.hud{gap:5px}.pill{min-width:56px;padding:4px 6px}.label{font-size:8px}.value{font-size:13px}.desk{grid-template-columns:minmax(0,calc(100dvh - 104px)) minmax(260px,1fr);gap:10px;align-items:center;justify-content:stretch}.boardShell{width:100%;max-width:none;justify-self:start;padding:5px}.side{width:auto;justify-self:stretch;gap:6px;align-content:center;grid-template-columns:1fr}.panel{padding:8px 9px}.stageName{margin:0 0 3px;font-size:15px}.copy{font-size:11px;line-height:1.32}.status{min-height:32px;font-size:12px}.selectLine{margin-top:6px;font-size:11px}.selectLine b{font-size:14px}.modeLine{display:none}.keys{display:none}.controlDeck{padding:8px 9px;gap:5px}.keypad{gap:5px}.btn{min-height:31px;padding:5px 6px;font-size:11px}.digit{font-size:16px;padding:4px}.actionDock{position:static;padding:0;border:0;background:none;box-shadow:none}.foot{gap:5px}.actions .btn{min-height:28px;padding:4px 7px;font-size:10px}.cell{font-size:clamp(14px,3.6vh,26px)}}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -96,7 +99,7 @@ button{font:inherit}.app{min-height:100dvh;width:min(1160px,100%);margin:auto;pa
     </div>
   </header>
   <main class="desk" aria-label="Volt Sudoku game">
-    <section class="boardShell" aria-label="Sudoku grid">
+    <section class="boardShell" data-landscape-essential="sudoku grid" aria-label="Sudoku grid">
       <div class="board" id="board" role="grid" aria-label="Nine by nine Volt Sudoku board"></div>
       <div class="overlay" id="overlay">
         <div class="card">
@@ -124,7 +127,7 @@ button{font:inherit}.app{min-height:100dvh;width:min(1160px,100%);margin:auto;pa
       </section>
       <section class="panel status" id="statusLine" aria-live="polite">Pick a blank cell. Digits charge cells; Note Mode sketches candidates.</section>
       <section class="panel controlDeck" aria-label="Digit pad and Sudoku actions">
-        <div class="keypad" aria-label="Digit pad">
+        <div class="keypad" data-landscape-essential="digit pad" aria-label="Digit pad">
           <button class="btn digit" type="button" data-digit="1">1</button><button class="btn digit" type="button" data-digit="2">2</button><button class="btn digit" type="button" data-digit="3">3</button><button class="btn digit" type="button" data-digit="4">4</button><button class="btn digit" type="button" data-digit="5">5</button>
           <button class="btn digit" type="button" data-digit="6">6</button><button class="btn digit" type="button" data-digit="7">7</button><button class="btn digit" type="button" data-digit="8">8</button><button class="btn digit" type="button" data-digit="9">9</button><button class="btn" type="button" id="eraseBtn">Erase</button>
         </div>

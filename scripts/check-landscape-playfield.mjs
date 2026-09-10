@@ -23,7 +23,13 @@
 //
 // Games that render their board in the DOM instead of a canvas have no single
 // unambiguous playfield element to measure, so they are reported as skipped
-// rather than silently passed.
+// rather than silently passed. Such a game can still opt in by tagging the
+// surfaces a sideways player cannot do without — its board and, on a touch
+// device, its on-screen keypad — with `data-landscape-essential="<name>"`.
+// Every tagged element must sit *entirely* inside the first landscape screen:
+// half a digit pad is not a usable digit pad. That was added on 2026-09-10,
+// when wordle, volt-sudoku and cipher-rooms were each found showing their
+// puzzle with the only way to answer it 590-736px down a 390px screen.
 
 import { createServer } from 'node:http';
 import { mkdir, open, readFile, writeFile } from 'node:fs/promises';
@@ -116,11 +122,21 @@ function measurePlayfield(minPlayfieldPx) {
     if (rect.width < minPlayfieldPx || rect.height < minPlayfieldPx) continue;
     if (!best || rect.width * rect.height > best.width * best.height) best = rect;
   }
-  if (!best) return { hasCanvas: false, viewportHeight };
+  const essential = [...document.querySelectorAll('[data-landscape-essential]')].map((node) => {
+    const rect = node.getBoundingClientRect();
+    return {
+      name: node.getAttribute('data-landscape-essential'),
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      height: Math.round(rect.height),
+    };
+  });
+  if (!best) return { hasCanvas: false, viewportHeight, essential };
   const visible = Math.max(0, Math.min(best.bottom, viewportHeight) - Math.max(best.top, 0));
   return {
     hasCanvas: true,
     viewportHeight,
+    essential,
     top: Math.round(best.top),
     height: Math.round(best.height),
     width: Math.round(best.width),
@@ -152,6 +168,19 @@ try {
       const result = await page.evaluate(measurePlayfield, MIN_PLAYFIELD_PX);
       measurements.push({ slug, ...result });
 
+      // A tagged surface is one the player cannot play without. Unlike the
+      // canvas floor above, it has to fit whole: a keypad cut off at the fold
+      // is a keypad the player has to scroll away from the board to reach.
+      for (const surface of result.essential) {
+        if (surface.top < -1 || surface.bottom > result.viewportHeight + 1) {
+          fail(
+            `${slug}: the ${surface.name} does not fit the first landscape screen `
+            + `(top=${surface.top}px, bottom=${surface.bottom}px, viewport=${result.viewportHeight}px) `
+            + '— a sideways phone cannot reach it without scrolling away from the board',
+          );
+        }
+      }
+
       if (!result.hasCanvas) continue;
 
       if (result.top >= result.viewportHeight) {
@@ -178,6 +207,7 @@ try {
 
 const canvasGames = measurements.filter((entry) => entry.hasCanvas);
 const skipped = measurements.filter((entry) => !entry.hasCanvas).map((entry) => entry.slug);
+const taggedGames = measurements.filter((entry) => entry.essential.length > 0);
 const ranked = [...canvasGames].sort((a, b) => a.visible - b.visible);
 
 const outputDir = join(repoRoot, 'test-results', 'landscape-playfield', startedAt.replace(/[:.]/g, '-'));
@@ -193,6 +223,7 @@ await writeFile(
     gamesChecked: manifest.length,
     canvasGames: canvasGames.length,
     domRenderedSkipped: skipped,
+    taggedSurfaces: taggedGames.map((entry) => ({ slug: entry.slug, essential: entry.essential })),
     passed: issues.length === 0,
     issues,
     measurements: ranked,
@@ -205,6 +236,10 @@ console.log(
   `Checked ${canvasGames.length} canvas games at ${VIEWPORT.width}x${VIEWPORT.height}; `
   + `${skipped.length} DOM-rendered games have no single playfield canvas to measure `
   + `(${skipped.join(', ') || 'none'}).`,
+);
+console.log(
+  `${taggedGames.length} game(s) additionally require tagged surfaces to fit whole: `
+  + `${taggedGames.map((entry) => `${entry.slug} (${entry.essential.map((surface) => surface.name).join(', ')})`).join('; ') || 'none'}.`,
 );
 
 if (issues.length) {
