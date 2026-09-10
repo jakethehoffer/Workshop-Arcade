@@ -90,7 +90,9 @@
     .hud-actions { display:inline-flex; gap:6px; margin-left:auto; }
     .overlay { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: auto; z-index: 10; }
     .overlay[hidden] { display: none !important; }
-    .card { pointer-events: auto; width: min(420px, 92vw); padding: 22px 22px 18px; border-radius: 16px; background: linear-gradient(180deg, rgba(10,18,32,.94), rgba(6,10,18,.9)); border: 1px solid rgba(125,211,252,.24); box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); text-align: center; }
+    .card { pointer-events: auto; width: min(420px, 92vw); padding: 22px 22px 18px; border-radius: 16px;
+      max-height: calc(100vh - 72px); max-height: calc(100dvh - 72px); overflow-y: auto;
+      overscroll-behavior: contain; touch-action: pan-y; background: linear-gradient(180deg, rgba(10,18,32,.94), rgba(6,10,18,.9)); border: 1px solid rgba(125,211,252,.24); box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); text-align: center; }
     .card h1 { margin: 2px 0 8px; font-size: clamp(28px, 8vw, 42px); color: #7dd3fc; text-transform: uppercase; letter-spacing: .08em; }
     .card p { margin: 4px 0 12px; color: #b8c1cc; font-size: 14px; }
     button { appearance: none; border: 0; padding: 12px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #2b84ff, #22d3ee); color: #04111f; box-shadow: 0 10px 28px rgba(34,211,238,.26); font-size: 16px; }
@@ -186,7 +188,7 @@
           <li>When enemies expire, they drop dust particles</li>
           <li>Collect the dust particles to increase your score and advance to the next level</li>
           <li>Dust particles also provide temporary invulnerability</li>
-          <li>Advancing to the next level clears the arena of enemies</li>
+          <li>Advancing a level destroys every enemy on screen and drops their dust, but any still off the edge keep coming</li>
           <li>The game is over when you are hit by an enemy</li>
         </ul>
 
@@ -802,39 +804,6 @@
       draw();
     }
 
-    function resetGame() {
-      Sound.gameStart('restart');
-      state.mode = 'playing';
-      ensureLoop();
-      state.time = 0;
-      state.score = 0;
-      state.enemies.length = 0;
-      state.spawnTimer = 0;
-      state.spawnEvery = 2.0;
-      state.player.x = state.vw * 0.5;
-      state.player.y = state.vh * 0.5;
-      state.player.speed = state.startSpeed;
-      state.player.flash = 0;
-      state.shake = 0;
-      state.pendingOver = 0;
-      state.popups.length = 0;
-      state.popupTimer = 5;
-      state.gems.length = 0;
-      state.level = 1;
-      state.xp = 0;
-      state.xpToLevel = xpNeeded(1);
-      levelEl.textContent = '1';
-      state.levelFlash = 0;
-      state.levelTexts.length = 0;
-      state.invuln = 0;
-      state.nukeFlash = 0;
-      resetFeedback();
-      scoreEl.textContent = '0';
-      ctx.globalAlpha = 1;
-      hideOverlays();
-      pauseBtn.textContent = '⏸';
-    }
-
     function startGameImmediate() {
       if (state.mode === 'playing') return;
       const startKind = state.mode === 'gameover' ? 'restart' : 'start';
@@ -870,7 +839,8 @@
       hideOverlays();
       pauseBtn.textContent = '⏸';
 
-      for (let i = 0; i < 3; i++) spawnEnemy();
+      const opening = Math.max(1, Math.round(3 * arenaPressure()));
+      for (let i = 0; i < opening; i++) spawnEnemy();
     }
 
     function lerp(a,b,t){return a + (b-a)*t}
@@ -904,6 +874,37 @@
       if (type === 'fast' && hits > 1) hits -= 1;
 
       state.enemies.push({ x, y, r, speed, vx:0, vy:0, lifeHits: hits, maxLife: hits, lifeTick: 0, type, color });
+    }
+
+    // The canvas is the whole viewport, so the arena's area is whatever the
+    // browser window happens to be: a phone gets roughly a third of a laptop's
+    // dodging room, and a large monitor gets double. Enemy pressure is spawned
+    // on a clock rather than per unit of space, so without this the same crowd
+    // is packed into wildly different amounts of room and the window size, not
+    // the player, decides how hard the game is. Scale the spawn clock with the
+    // arena so enemy DENSITY is the constant, anchored on the 1280x820 layout
+    // the game was tuned and captured at, which therefore behaves identically.
+    // Clamped at both ends: the floor keeps a tiny window from being empty, the
+    // ceiling keeps a very large one from spawning an unbounded crowd.
+    const REFERENCE_ARENA = 1280 * 820;
+    function arenaPressure() {
+      const area = state.vw * state.vh;
+      if (!(area > 0)) return 1;
+      return Math.max(0.2, Math.min(2, area / REFERENCE_ARENA));
+    }
+
+    function spawnInterval() {
+      const dynamic = state.spawnEvery - state.time * 0.004 - state.level * 0.02;
+      return Math.max(0.18, dynamic) / arenaPressure();
+    }
+
+    function stepSpawns(dt) {
+      state.spawnTimer += dt;
+      const target = spawnInterval();
+      while (state.spawnTimer >= target) {
+        state.spawnTimer -= target;
+        spawnEnemy();
+      }
     }
 
     function spawnGem(x,y){ state.gems.push({ x, y, r: 6, life: 8, maxLife: 8 }); }
@@ -1603,13 +1604,7 @@
         if (highEl) highEl.textContent = String(s);
       }
 
-      state.spawnTimer += dt;
-      const dynamic = state.spawnEvery - state.time * 0.004 - state.level * 0.02;
-      const target = Math.max(0.18, dynamic);
-      while (state.spawnTimer >= target) {
-        state.spawnTimer -= target;
-        spawnEnemy();
-      }
+      stepSpawns(dt);
 
       handleInput(dt);
       updateEnemies(dt);
@@ -1660,13 +1655,7 @@
         if (highEl) highEl.textContent = String(s);
       }
 
-      state.spawnTimer += dt;
-      const dynamic = state.spawnEvery - state.time * 0.004 - state.level * 0.02;
-      const target = Math.max(0.18, dynamic);
-      while (state.spawnTimer >= target) {
-        state.spawnTimer -= target;
-        spawnEnemy();
-      }
+      stepSpawns(dt);
 
       handleInput(dt);
       updateEnemies(dt);
@@ -1706,6 +1695,18 @@
         shortcut: 'F'
       },
       coordinateSystem: 'canvas pixels, origin top-left, x right, y down',
+      arena: {
+        width: Math.round(state.vw),
+        height: Math.round(state.vh),
+        referenceWidth: 1280,
+        referenceHeight: 820,
+        pressure: Math.round(arenaPressure() * 1000) / 1000,
+        spawnInterval: Math.round(spawnInterval() * 1000) / 1000,
+        enemyCount: state.enemies.length,
+        enemiesPerMegapixel: state.vw * state.vh > 0
+          ? Math.round((state.enemies.length / (state.vw * state.vh / 1e6)) * 100) / 100
+          : 0
+      },
       player: {
         x: Math.round(state.player.x),
         y: Math.round(state.player.y),
