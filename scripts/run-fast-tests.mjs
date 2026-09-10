@@ -39,6 +39,7 @@ const EXCLUDED_SCRIPTS = new Map([
   ['test:publish-ready', 'Slow local publish-readiness aggregate — runs browser, render, and performance gates. Run via `npm run test:publish-ready`.'],
   ['test:runtime-storage', 'Browser-backed sandboxed runtime storage probe — needs Chromium. Run via `npm run test:runtime-storage`.'],
   ['test:reduced-motion', 'Browser-backed reduced-motion baseline probe — needs Chromium. Run via `npm run test:reduced-motion`.'],
+  ['test:landscape-playfield', 'Browser-backed phone-landscape playfield probe — loads every game at 844x390 in Chromium. Run via `npm run test:landscape-playfield`.'],
   ['test:hidden-tab-clock', 'Browser-backed hidden-tab clock probe — hand-pumps animation frames in Chromium across every timed game. Run via `npm run test:hidden-tab-clock`.'],
   ['test:realtime-progression', 'Browser-backed real-time progression probe — needs Chromium. Run via `npm run test:realtime-progression`.'],
   ['test:best-score-guard', 'Browser-backed best-score NaN-guard probe — needs Chromium. Run via `npm run test:best-score-guard`.'],
