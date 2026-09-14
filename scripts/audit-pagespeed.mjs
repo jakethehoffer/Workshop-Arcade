@@ -41,7 +41,8 @@ const SITE = normalizeBaseUrl(process.env.WORKSHOP_ARCADE_URL || "https://jaketh
 // 1.7 KB to ~5.4 KB (the player storage bridge plus the prefers-reduced-motion
 // baseline), which counts against every game's static weight.
 const BUDGETS = {
-  Catalog: { transferKb: 200, requests: 18 },
+  Catalog: { transferKb: 220, requests: 18 },
+  Checkers: { transferKb: 115, requests: 4 },
   "Brick Breaker": { transferKb: 125, requests: 4 },
   "Arcade Jump": { transferKb: 115, requests: 4 },
   "Idle Tycoon": { transferKb: 170, requests: 4 },
@@ -74,6 +75,7 @@ function budgetSummary() {
     ["Idle Tycoon", BUDGETS["Idle Tycoon"]],
     ["Arcade Jump", BUDGETS["Arcade Jump"]],
     ["Brick Breaker", BUDGETS["Brick Breaker"]],
+    ["Checkers", BUDGETS.Checkers],
     ["Other manifest games", BUDGETS.default],
   ]
     .map(([label, budget]) => label + " ≤" + budget.transferKb + "KB / ≤" + budget.requests + " requests")

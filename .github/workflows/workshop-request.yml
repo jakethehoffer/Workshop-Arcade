@@ -64,17 +64,20 @@ jobs:
               labels: labels.map((label) => label.name)
             });
 
-            // Parse useful context out of the catalog-generated brief in the
-            // issue body so the triage comment can deep-link the game file.
+            // Only echo names and paths read from the trusted default-branch
+            // catalog. Public issue text must not become bot-authored Markdown.
             const body = issue.body || '';
-            const fileMatch = body.match(/^File:\s*(\S+)\s*$/m);
-            const gameMatch = body.match(/^Game:\s*(.+?)\s*$/m);
-            const file = fileMatch ? fileMatch[1] : null;
-            const game = gameMatch ? gameMatch[1] : null;
+            const fileMatch = body.match(/^File:[ \t]*(websites\/[a-z0-9-]+\.html)[ \t]*\r?$/m);
+            const requestedFile = fileMatch ? fileMatch[1] : null;
+            const catalogResponse = await github.rest.repos.getContent({owner, repo, path: 'websites/manifest.json', ref: context.sha});
+            const catalog = JSON.parse(Buffer.from(catalogResponse.data.content, 'base64').toString('utf8'));
+            const selected = catalog.find(game => game.url === requestedFile);
+            const isFrozenNewGameRequest = requestedFile === 'websites/your-game.html';
+            const file = selected ? selected.url : isFrozenNewGameRequest ? 'websites/your-game.html' : null;
+            const game = selected ? selected.title : null;
             const fileLink = file
               ? '[`' + file + '`](https://github.com/' + owner + '/' + repo + '/blob/main/' + file + ')'
               : 'the requested game file';
-            const isFrozenNewGameRequest = file === 'websites/your-game.html';
 
             const branch = 'codex/workshop-' + issue.number;
             const marker = '<!-- workshop-triage-checklist -->';

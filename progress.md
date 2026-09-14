@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-09-14 Codex - September adversarial-review repairs
+
+- Opening a game caches its HTML and shared scripts through the catalog. Offline Play opens the cached standalone page with the same in-player save namespace, including real outages where the browser still reports a connection. Missing games reach the offline page. The opaque player sandbox is unchanged.
+- Large saves are seeded synchronously through a fresh frame name instead of a size-limited URL. Near-budget Unicode/escaped data, special keys, immediate game reloads, and subsequent writes are covered. Removed the unused storage hello/snapshot reply.
+- Restored measured maintenance headroom with targeted Catalog and Checkers budgets, keeping the existing headroom floors. Trimmed shared-runtime comments to preserve the other named game budgets.
+- Pruned accumulated render captures. Future runs retain the latest 10 completed runs and protect active work, with abandoned runs removed only after seven quiet days. Cleanup fixtures cover dry runs, repeat cleanup, and linked paths.
+- Workshop triage uses names and paths from the trusted catalog, with hostile-issue fixtures. Renewed the disclosure policy through 2027-09-10 and added a weekly 90-day expiry warning.
+- Verification: catalog validation and freeze, all 59 fast gates, full 100-game smoke, 200/200 render captures, strict 101-page performance audit, opaque storage and large-save checks, PWA real-outage/save-continuity checks, and maintenance fixtures passed. Offline gameplay reached round two in Echo Mimic and accepted a touch-keyboard guess in Lexica. Desktop/mobile screenshots were inspected. Updated the catalog smoke to await asynchronous player loading.
+
 ## 2026-09-10 Claude - three puzzles you could read sideways but not answer
 
 Targeted pass across Lexica, Volt Sudoku and Cipher Rooms plus an extension to the landscape gate. No puzzle content, art or difficulty changed.

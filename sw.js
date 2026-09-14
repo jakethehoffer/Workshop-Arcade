@@ -16,8 +16,8 @@
 // Deterministic hash of the install-time shell assets below plus the newest
 // COVER_PREFETCH_COUNT manifest covers. check-pwa.mjs recomputes it so shell
 // asset changes must also move the cache namespace.
-const SHELL_REVISION = 'shell-a71270aebfdb';
-const VERSION = 'wa-v52-shell-a71270aebfdb';
+const SHELL_REVISION = "shell-8e32e865bbbd";
+const VERSION = "wa-v53-shell-8e32e865bbbd";
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const RUNTIME_CACHE_MAX_ENTRIES = 96;
@@ -135,6 +135,25 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== scopeUrl.origin) return;
   if (!url.pathname.startsWith(scopePath)) return;
 
+  // A parent fetch is controllable even though its opaque player iframe is
+  // not. Report a real network outage as well as navigator.onLine=false.
+  if (request.destination === '' && /\/websites\/[A-Za-z0-9_-]+\.html$/.test(url.pathname)) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(request);
+        await putRuntime(request, fresh).catch(() => {});
+        return fresh;
+      } catch {
+        const cached = await caches.match(request);
+        if (!cached) return new Response('Offline', {status: 503});
+        const headers = new Headers(cached.headers);
+        headers.set('X-Workshop-Offline', '1');
+        return new Response(cached.body, {status: cached.status, headers});
+      }
+    })());
+    return;
+  }
+
   // Navigations: prefer the network so the user gets the freshest catalog
   // (or game page) when online. Offline, fall back to the cached copy of
   // the requested URL, then to the catalog shell, then to a branded
@@ -148,6 +167,11 @@ self.addEventListener('fetch', (event) => {
       } catch {
         const cached = await caches.match(request);
         if (cached) return cached;
+        // A game miss must not serve catalog HTML at a game-relative URL.
+        if (/\/websites\/[^/]+\.html$/.test(url.pathname)) {
+          const offlineMatch = await caches.match(OFFLINE_URL);
+          if (offlineMatch) return Response.redirect(OFFLINE_URL);
+        }
         const shellMatch = await caches.match(new URL('', scopeUrl).toString());
         if (shellMatch) return shellMatch;
         const offlineMatch = await caches.match(OFFLINE_URL);

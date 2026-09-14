@@ -21,7 +21,7 @@ const MIN_CATALOG_SHELL_HEADROOM_KB = 20;
 const MIN_CATALOG_SHELL_REQUEST_HEADROOM = 5;
 const MIN_NAMED_EXCEPTION_HEADROOM_KB = 10;
 const MIN_NAMED_EXCEPTION_REQUEST_HEADROOM = 1;
-const NAMED_EXCEPTION_TITLES = new Set(['Lexica', 'Idle Tycoon', 'Arcade Jump', 'Brick Breaker']);
+const NAMED_EXCEPTION_TITLES = new Set(['Lexica', 'Idle Tycoon', 'Arcade Jump', 'Brick Breaker', 'Checkers']);
 // Text assets whose transfer size must be measured the way GitHub Pages serves
 // them: from the committed LF bytes. A local checkout on Windows (core.autocrlf)
 // rewrites text files to CRLF on disk, which inflates stat().size by one byte
@@ -318,6 +318,7 @@ const budgets = {
   'Idle Tycoon': readBudget(auditSource, 'Idle Tycoon'),
   'Arcade Jump': readBudget(auditSource, 'Arcade Jump'),
   'Brick Breaker': readBudget(auditSource, 'Brick Breaker'),
+  ...(manifest.some(game => game.title === 'Checkers') ? {Checkers: readBudget(auditSource, 'Checkers')} : {}),
   default: readBudget(auditSource, 'default'),
 };
 

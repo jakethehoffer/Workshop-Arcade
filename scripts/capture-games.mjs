@@ -10,6 +10,7 @@ import {
   runWithPlaywrightTransportRetry,
 } from "./playwright-harness.mjs";
 import { parseScopedSlugs, resolveScopedGames } from "./scoped-slugs.mjs";
+import { pruneRenderCaptures } from "./prune-render-captures.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -193,6 +194,10 @@ try {
   await closeCaptureContexts();
   if (browser) await browser.close();
   if (server) await new Promise((resolve) => server.close(resolve));
+  try {
+    const pruned = await pruneRenderCaptures(repoRoot);
+    if (pruned.removed.length) console.log(`Removed ${pruned.removed.length} old completed capture runs; kept the newest 10.`);
+  } catch (error) { console.warn(`Capture cleanup skipped: ${error.message}`); }
 }
 
 function phaseSnapshot(phase, game = null, viewport = null) {

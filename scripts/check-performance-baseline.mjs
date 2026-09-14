@@ -77,6 +77,7 @@ const budgetRows = [
   ['Idle Tycoon', 'Idle Tycoon'],
   ['Arcade Jump', 'Arcade Jump'],
   ['Brick Breaker', 'Brick Breaker'],
+  ...(manifest.some(game => game.title === 'Checkers') ? [['Checkers', 'Checkers']] : []),
   ['default', 'Other manifest games'],
 ];
 

@@ -4,7 +4,7 @@
 // The catalog player runs games inside `sandbox="allow-scripts"` iframes, so
 // their origin is opaque and real localStorage is unreachable. The storage
 // bridge keeps persistence anyway: the catalog seeds each game with its saved
-// entries via a `#wa-storage=` fragment, and workshop-runtime.js forwards
+// entries via the frame name, and workshop-runtime.js forwards
 // writes back to the catalog over postMessage, where they land in the parent
 // origin's localStorage under `workshop-arcade:game:<slug>:`.
 //
@@ -202,6 +202,36 @@ try {
   if (revived !== '42') {
     fail(`saved value must survive reload and player reopen (got ${JSON.stringify(revived)})`);
   }
+
+  // The old URI seed silently disappeared above 200000 encoded characters.
+  // Exercise almost the full mirror budget with multi-byte text, JSON escapes,
+  // a lone surrogate, and a key that ordinary object assignment would lose.
+  const largeValue = '\u754c"\\\ud800'.repeat(8000);
+  await frame.evaluate((value) => {
+    localStorage.clear();
+    for (let i = 0; i < 8; i++) localStorage.setItem('large-' + i, value);
+    localStorage.setItem('__proto__', 'ordinary saved key');
+  }, largeValue);
+  await page.waitForFunction(({prefix, value}) => localStorage.getItem(prefix + 'large-7') === value,
+    {prefix: MIRROR_PREFIX, value: largeValue}, {timeout: WAIT_MS});
+  await page.locator('#playerClose').click();
+  await page.goto(`${baseUrl}#play=${GAME_SLUG}`);
+  frame = await gameFrame(page);
+  const largeSeed = await frame.evaluate((value) => ({
+    intact: Array.from({length: 8}, (_, i) => localStorage.getItem('large-' + i) === value).every(Boolean),
+    specialKey: localStorage.getItem('__proto__'),
+  }), largeValue);
+  if (!largeSeed.intact || largeSeed.specialKey !== 'ordinary saved key') fail('large or escaped saves were lost on player reopen');
+  // A write followed immediately by game-initiated reload must be available
+  // synchronously on the next load, without waiting for a parent reply.
+  await Promise.all([frame.waitForNavigation(), frame.evaluate(() => {
+    localStorage.setItem('reload-probe', 'fresh');
+    location.reload();
+  })]);
+  await frame.waitForFunction(() => typeof render_game_to_text === 'function');
+  if (await frame.evaluate(() => localStorage.getItem('reload-probe')) !== 'fresh') fail('immediate game reload lost the latest save');
+  await frame.evaluate(() => localStorage.setItem('after-large-seed', 'still saving'));
+  await page.waitForFunction(key => localStorage.getItem(key) === 'still saving', MIRROR_PREFIX + 'after-large-seed', {timeout: WAIT_MS});
 
   await page.close();
 } catch (error) {

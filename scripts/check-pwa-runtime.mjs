@@ -9,13 +9,15 @@
 
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { open, readFile } from 'node:fs/promises';
+import { mkdir, open, readFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const issues = [];
+const sitePrefix = '/Workshop-Arcade/';
+let expectedOutage = false;
 const mimeTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'],
@@ -70,12 +72,13 @@ async function expectedShellRevision() {
 
 function requestPath(requestUrl) {
   const pathname = decodeURIComponent(new URL(requestUrl, 'http://127.0.0.1').pathname);
-  const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  if (!pathname.startsWith(sitePrefix)) return null;
+  const relative = pathname === sitePrefix ? 'index.html' : pathname.slice(sitePrefix.length);
   const target = resolve(repoRoot, relative);
-  return target.startsWith(repoRoot) ? target : null;
+  return target.startsWith(repoRoot + '\\') || target.startsWith(repoRoot + '/') ? target : null;
 }
 
-async function startServer() {
+async function startServer(port = 0) {
   const server = createServer(async (request, response) => {
     try {
       const file = requestPath(request.url || '/');
@@ -103,9 +106,9 @@ async function startServer() {
       response.writeHead(404).end('Not found');
     }
   });
-  await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
+  await new Promise((resolveListen) => server.listen(port, '127.0.0.1', resolveListen));
   const address = server.address();
-  return { server, baseUrl: `http://127.0.0.1:${address.port}/` };
+  return { server, baseUrl: `http://127.0.0.1:${address.port}${sitePrefix}` };
 }
 
 let server;
@@ -121,6 +124,7 @@ try {
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     if (/ERR_INTERNET_DISCONNECTED|status of 404/i.test(message.text())) return;
+    if (expectedOutage && /ERR_CONNECTION_REFUSED|status of 503/i.test(message.text())) return;
     fail(`console error: ${message.text()}`);
   });
 
@@ -148,6 +152,85 @@ try {
   if (!cacheTruth.version || !cacheTruth.names.length || cacheTruth.names.some((name) => !name.startsWith(cacheTruth.version))) {
     fail(`cache revision truth mismatch: ${JSON.stringify(cacheTruth)}`);
   }
+
+  // Play ONLY through the real catalog player before the outage. Clear the
+  // ordinary HTTP cache so it cannot disguise a missing service-worker copy.
+  for (const slug of ['echo-mimic', 'wordle']) {
+    await page.evaluate(slug => { location.hash = 'play=' + slug; }, slug);
+    await page.waitForSelector('#playerFrame[src]');
+    const frame = await (await page.locator('#playerFrame').elementHandle()).contentFrame();
+    await frame.waitForFunction(() => typeof render_game_to_text === 'function');
+    await frame.evaluate(() => localStorage.setItem('offline-save-probe', 'before outage'));
+    await page.waitForFunction(slug => localStorage.getItem('workshop-arcade:game:' + slug + ':offline-save-probe') === 'before outage', slug);
+    await page.locator('#playerClose').click();
+    await page.waitForFunction(async slug => !!(await caches.match(new URL('websites/' + slug + '.html', location.href))), slug);
+  }
+  await page.waitForFunction(async () => !!(await caches.match(new URL('websites/words5.js', location.href))));
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Network.clearBrowserCache');
+  expectedOutage = true;
+  await context.setOffline(true);
+  await page.reload({waitUntil: 'domcontentloaded'});
+  const screenshots = join(repoRoot, 'test-results', 'adversarial-fixes');
+  await mkdir(screenshots, {recursive: true});
+  for (const [slug, viewport] of [['echo-mimic', {width: 1280, height: 820}], ['wordle', {width: 390, height: 844}]]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(slug => { location.hash = 'play=' + slug; }, slug);
+    await page.waitForURL('**/websites/' + slug + '.html#wa-player=' + slug);
+    await page.waitForFunction(() => typeof render_game_to_text === 'function');
+    const saved = await page.evaluate(() => localStorage.getItem('offline-save-probe'));
+    if (saved !== 'before outage') fail(slug + ': offline player lost its in-player save');
+    await page.evaluate(() => localStorage.setItem('offline-save-probe', 'during outage'));
+    await page.reload({waitUntil: 'domcontentloaded'});
+    await page.waitForFunction(() => typeof render_game_to_text === 'function');
+    if (await page.evaluate(() => localStorage.getItem('offline-save-probe')) !== 'during outage') fail(slug + ': offline reload lost its save');
+    if (slug === 'echo-mimic') {
+      await page.getByRole('button', {name: 'Start a run', exact: true}).click();
+      await page.waitForFunction(() => JSON.parse(render_game_to_text()).phase === 'mimic');
+      const pad = await page.evaluate(() => JSON.parse(render_game_to_text()).sequence[0]);
+      await page.locator('.pad').nth(pad).click();
+      await page.waitForFunction(() => JSON.parse(render_game_to_text()).round === 2);
+    } else {
+      for (const letter of 'crane') await page.locator(`.key[data-key="${letter}"]`).click();
+      await page.locator('.key[data-key="enter"]').click();
+      await page.waitForFunction(() => JSON.parse(render_game_to_text()).guessesUsed === 1);
+    }
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) fail(slug + ': offline page overflows horizontally');
+    await page.screenshot({path: join(screenshots, slug + '-offline.png'), fullPage: true});
+    await page.goto(baseUrl);
+  }
+  await context.setOffline(false);
+  expectedOutage = false;
+  await page.reload();
+  await page.evaluate(() => { location.hash = 'play=echo-mimic'; });
+  await page.waitForSelector('#playerFrame[src]');
+  let replayFrame = await (await page.locator('#playerFrame').elementHandle()).contentFrame();
+  await replayFrame.waitForFunction(() => typeof render_game_to_text === 'function');
+  if (await replayFrame.evaluate(() => localStorage.getItem('offline-save-probe')) !== 'during outage') fail('returning online lost the offline save');
+  await page.locator('#playerClose').click();
+
+  // A real server outage can leave navigator.onLine true. Exercise that case
+  // too, with no ordinary HTTP cache left to mask the broken iframe path.
+  await cdp.send('Network.clearBrowserCache');
+  expectedOutage = true;
+  await new Promise(resolveClose => server.close(resolveClose));
+  server = null;
+  if (!await page.evaluate(() => navigator.onLine)) fail('real outage probe must keep navigator.onLine true');
+  await page.evaluate(() => { location.hash = 'play=echo-mimic'; });
+  await page.waitForURL('**/websites/echo-mimic.html#wa-player=echo-mimic');
+  await page.waitForFunction(() => typeof render_game_to_text === 'function');
+  await page.goto(baseUrl);
+  await page.evaluate(() => { location.hash = 'play=checkers'; });
+  await page.waitForURL(/\/offline\.html(?:#.*)?$/);
+  if (!/offline/i.test(await page.locator('body').innerText())) fail('never-cached game must show the offline fallback');
+  await page.getByRole('link', {name: /back to catalog/i}).click();
+  await page.waitForURL(baseUrl);
+  await page.waitForSelector('#grid .card');
+
+  // Resume the existing cache-cap and direct-navigation tests on this origin.
+  const restarted = await startServer(Number(new URL(baseUrl).port));
+  server = restarted.server;
+  expectedOutage = false;
 
   const replayUrl = new URL('websites/echo-mimic.html', baseUrl).href;
   await page.goto(replayUrl, { waitUntil: 'domcontentloaded' });
@@ -252,4 +335,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log('PWA runtime check passed: worker control, cache revision, offline replay, and offline fallback all worked.');
+console.log('PWA runtime check passed: in-player cache, real outage, offline save continuity, mobile fit, direct replay, cache cap, and fallback.');

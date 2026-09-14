@@ -1044,6 +1044,7 @@ async function checkCatalog(browser, baseUrl) {
   setPhase("catalog", "open first game in player");
   await page.locator(".card .play").first().click();
   await page.waitForSelector("#playerModal:not([hidden])");
+  await page.waitForSelector('#playerFrame[src^="websites/"]');
   const frameSrc = await page.locator("#playerFrame").getAttribute("src");
   if (!frameSrc || !frameSrc.startsWith("websites/")) {
     addFailure("catalog", `player iframe did not receive a game URL: ${frameSrc}`);
@@ -1063,7 +1064,7 @@ async function checkCatalog(browser, baseUrl) {
 
   const firstPlayerTitle = await page.locator("#playerTitle").textContent();
   await page.locator("#playerRandom").click();
-  await page.waitForTimeout(250);
+  await page.waitForSelector('#playerFrame[src^="websites/"]');
   const randomTitle = await page.locator("#playerTitle").textContent();
   if (!randomTitle || randomTitle.trim() === firstPlayerTitle?.trim()) {
     addFailure("catalog", "player Random control did not open a different game");

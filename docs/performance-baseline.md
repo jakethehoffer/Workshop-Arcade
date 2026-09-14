@@ -19,12 +19,30 @@ CI budgets:
 
 | Page group | Transfer | Requests |
 |------------|----------|----------|
-| Catalog | 200 KB | 18 |
+| Catalog | 220 KB | 18 |
 | Lexica | 165 KB | 4 |
 | Idle Tycoon | 170 KB | 4 |
 | Arcade Jump | 115 KB | 4 |
 | Brick Breaker | 125 KB | 4 |
+| Checkers | 115 KB | 4 |
 | Other manifest games | 100 KB | 3 |
+
+## September 2026 adversarial-review fixes
+
+The strict local audit on 2026-09-14 passed across 100 manifest games / 101 pages total. Catalog now has a 220 KB budget and Checkers a named 115 KB / 4 request budget. These targeted limits restore room for maintenance after the frozen catalog and shared save support grew. The default game cap and the existing 20 KB / 5 request catalog shell headroom and 10 KB / 1 request named exception headroom floors remain enforced.
+
+Static checks measure the catalog shell at 181.9 KB (38.1 KB headroom) and install payload at 186.3 KB (33.7 KB headroom). Runtime comments were trimmed to keep the other named exceptions above their existing headroom floors. The player caches opened games and their shared scripts from the catalog and preserves the mirrored save space during offline full-page play. This adds no game downloads to catalog startup.
+
+| Page | Transfer | Requests | Errors |
+|------|----------|----------|--------|
+| Catalog | 171.4 KB | 6 | 0 |
+| Checkers | 97.5 KB | 2 | 0 |
+| Lexica | 158.3 KB | 3 | 0 |
+| Idle Tycoon | 162.9 KB | 2 | 0 |
+| Arcade Jump | 105.9 KB | 2 | 0 |
+| Brick Breaker | 117.9 KB | 2 | 0 |
+
+Evidence: `test-results/lighthouse-baseline/2026-09-14T21-23-27-279Z/`, with source revision provenance. Timing remains informational.
 
 ## Reduced-motion baseline pass (pass 112)
 

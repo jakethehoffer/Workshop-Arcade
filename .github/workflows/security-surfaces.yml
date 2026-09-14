@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Check disclosure policy before it expires
+        run: npm run test:security-expiry
+
       - name: Check GitHub-native security surfaces with maintainer token
         if: ${{ env.HAS_SECURITY_SURFACES_TOKEN == 'true' }}
         env:
