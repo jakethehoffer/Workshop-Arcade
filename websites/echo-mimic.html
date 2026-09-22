@@ -168,6 +168,23 @@
     .brand .title{font-size:18px;letter-spacing:0.14em}
     .grid{gap:10px}
   }
+  /* A sideways phone is short, not narrow. The stacked layout above put the
+     560px pad square in a 390px screen, so no scroll position showed more than
+     two pads, and a 420ms flash cannot be followed by scrolling. Put the pads
+     beside the status and size the square from the screen height. */
+  @media (orientation:landscape) and (max-height:560px){
+    body{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr auto auto auto auto auto 1fr;
+      grid-template-areas:". grid" "brand grid" "hud grid" "status grid" "track grid" "controls grid" ". grid";
+      column-gap:20px;row-gap:8px;align-items:center;padding:8px 16px}
+    .panel{display:contents}
+    .brand{grid-area:brand;margin:0}
+    .brand .title{font-size:18px;letter-spacing:0.14em}
+    .hud{grid-area:hud}
+    .status{grid-area:status}
+    .track{grid-area:track;margin-top:0}
+    .controls{grid-area:controls}
+    .grid{grid-area:grid;width:min(calc(100dvh - 16px),52vw);gap:10px}
+  }
 </style>
 </head>
 <body>
@@ -187,7 +204,7 @@
     <div class="steps" id="stepRow"></div>
     <span class="pace" id="paceValue" data-topped="false">Flash 420ms</span>
   </div>
-  <div class="grid" id="grid" role="application" aria-label="Echo Mimic pads">
+  <div class="grid" id="grid" data-landscape-essential="coloured pads" role="application" aria-label="Echo Mimic pads">
     <button class="pad" type="button" data-color="red"    data-index="0" data-active="false" aria-label="Red pad"></button>
     <button class="pad" type="button" data-color="yellow" data-index="1" data-active="false" aria-label="Yellow pad"></button>
     <button class="pad" type="button" data-color="green"  data-index="2" data-active="false" aria-label="Green pad"></button>

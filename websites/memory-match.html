@@ -146,7 +146,7 @@
   .status-strip[data-tone="win"] .status-kicker{color:#fde68a}
 
   .board{
-    --cols:4;
+    --cols:4;--rows:4;
     display:grid;gap:10px;width:100%;
     grid-template-columns:repeat(var(--cols),1fr);
   }
@@ -276,6 +276,32 @@
     .card[data-state="matched"]::after,
     .card[data-feedback="mismatch"]::after{right:4px;top:4px;padding:2px 4px;font-size:7px}
   }
+  /* A sideways phone is short, not narrow. The stacked layout above left 12 of
+     the 16 easy cards completely below a 390px screen. Put the board beside the
+     controls and size each card from the screen height and the row count. */
+  @media (orientation:landscape) and (max-height:560px){
+    body{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr auto auto auto auto 1fr;
+      grid-template-areas:". board" "brand board" "hud board" "controls board" "status board" ". board";
+      column-gap:16px;row-gap:8px;align-items:center;padding:8px 14px}
+    .panel{display:contents}
+    .brand{grid-area:brand;margin:0}
+    .brand .title{font-size:18px;letter-spacing:0.14em}
+    .hud{grid-area:hud;gap:6px}
+    .pill{min-width:60px;padding:5px 8px;border-radius:10px}
+    .pill .label{font-size:8px;letter-spacing:0.18em}
+    .pill .value{font-size:15px}
+    .controls{grid-area:controls;gap:6px}
+    .btn,.seg button{padding:7px 9px;border-radius:9px;font-size:11px;letter-spacing:0.035em}
+    .status-strip{grid-area:status;justify-self:center;min-height:36px;padding:6px 9px;gap:7px;border-radius:10px}
+    .status-kicker{min-width:58px;font-size:9px;letter-spacing:0.16em}
+    .status-copy{font-size:12px}
+    .board{grid-area:board;gap:6px;
+      --card:min(calc((100dvh - 16px - (var(--rows) - 1) * 6px) / var(--rows)),calc((54vw - (var(--cols) - 1) * 6px) / var(--cols)));
+      width:calc(var(--card) * var(--cols) + (var(--cols) - 1) * 6px)}
+    .card{border-radius:10px;font-size:calc(var(--card) * 0.55)}
+    .card[data-state="matched"]::after,
+    .card[data-feedback="mismatch"]::after{right:3px;top:3px;padding:2px 4px;font-size:7px}
+  }
   @media (prefers-reduced-motion:reduce){
     .card{transition:none}
     .card[data-feedback="match"],.card[data-feedback="mismatch"]{animation:none}
@@ -312,7 +338,7 @@
     <span class="status-copy" id="statusText">Pick any two hidden cards.</span>
   </div>
   <p class="sr-only" id="liveStatus" role="status" aria-live="polite" aria-atomic="true">Ready. Pick any two hidden cards.</p>
-  <div class="board" id="board" role="group" aria-label="Memory match board"></div>
+  <div class="board" id="board" data-landscape-essential="card board" role="group" aria-label="Memory match board"></div>
 </div>
 
 <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -561,6 +587,7 @@
     state.cardFeedback = Object.create(null);
     focusId = 0;
     els.board.style.setProperty('--cols', conf.cols);
+    els.board.style.setProperty('--rows', conf.pairs * 2 / conf.cols);
     renderBoard();
     updateHud();
     closeOverlay(els.winOverlay);

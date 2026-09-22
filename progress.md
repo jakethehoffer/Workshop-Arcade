@@ -1,5 +1,14 @@
 Original prompt: Do this for me
 
+## 2026-09-22 Claude - two games you could not play with the phone sideways
+
+Targeted landscape pass on Echo Mimic and Memory Match. No rules, content, art or difficulty changed.
+
+- **Echo Mimic could not be played on a sideways phone.** The pad square was 560px tall in a 390px screen, so no scroll position ever showed more than two of the four pads, and a pad flashes for 420ms, which is too fast to scroll to. An earlier census called this "cramped but scrollable". For a watch-and-repeat game it was unplayable. The pads now sit beside the status and controls, sized from the screen height.
+- **Memory Match left 12 of its 16 easy cards completely below a sideways screen.** The board now sits beside the controls. Each card is sized from the screen height and the board's row count, so the six-row Medium and Hard boards fit too, with the emoji scaled to the card.
+- **Both boards are now tagged for the landscape gate** (`data-landscape-essential`), so a regression fails `test:landscape-playfield` instead of being skipped.
+- Verified: every pad and every card fully on screen at 844x390, 667x375, 568x320, 932x430 and the 844x331 catalog player frame, on all three Memory Match difficulties, with no horizontal overflow and no control pushed off screen. Every element box is unchanged at 1280x820, 390x844, 360x640 and 768x1024 compared with the previous commit. Real touch taps inside the catalog player on a sideways phone played Echo Mimic to round 4 and flipped Memory Match cards on the Hard board, with no console or page errors.
+
 ## 2026-09-14 Codex - September adversarial-review repairs
 
 - Opening a game caches its HTML and shared scripts through the catalog. Offline Play opens the cached standalone page with the same in-player save namespace, including real outages where the browser still reports a connection. Missing games reach the offline page. The opaque player sandbox is unchanged.
