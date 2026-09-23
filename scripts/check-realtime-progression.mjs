@@ -111,6 +111,96 @@ async function checkGame(browser, baseUrl, game) {
   }
 }
 
+// A reaction clock must keep advancing AFTER its cue. Driving advanceTime here
+// would hide a loop that stops at green and records every real reaction as zero.
+async function checkReactionClock(browser, baseUrl) {
+  const context = await browser.newContext({ hasTouch: true });
+  const label = 'websites/reflex-spark.html';
+  try {
+    const page = await context.newPage();
+    page.on('pageerror', (error) => fail(`${label}: page error: ${error.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') fail(`${label}: console error: ${message.text()}`);
+    });
+    await page.addInitScript(() => {
+      window.reactionFrames = 0;
+      const raf = window.requestAnimationFrame;
+      window.requestAnimationFrame = (callback) => raf.call(window, (time) => {
+        window.reactionFrames++;
+        callback(time);
+      });
+    });
+    await page.goto(new URL(label, baseUrl).href);
+    await page.evaluate(() => {
+      const stage = document.getElementById('stage');
+      new MutationObserver(() => {
+        if (stage.dataset.state === 'ready') window.cueTime = performance.now();
+      }).observe(stage, { attributes: true, attributeFilter: ['data-state'] });
+      for (const event of ['pointerdown', 'keydown']) {
+        stage.addEventListener(event, () => { window.inputTime = performance.now(); }, true);
+      }
+    });
+    const snapshot = () => page.evaluate(() => JSON.parse(window.render_game_to_text()));
+    async function checkRest(phase) {
+      // Allow the last already-scheduled frame to finish before measuring rest.
+      await page.waitForTimeout(100);
+      const before = await page.evaluate(() => window.reactionFrames);
+      await page.waitForTimeout(150);
+      const after = await page.evaluate(() => window.reactionFrames);
+      if (after !== before) fail(`${label}: clock kept running at ${phase}`);
+    }
+    await checkRest('idle');
+    const rounds = [
+      { delay: 120, input: 'mouse' },
+      { delay: 650, input: 'keyboard' },
+      { delay: 240, input: 'touch' },
+      { delay: 450, input: 'keyboard' },
+      { delay: 180, input: 'mouse' },
+    ];
+    const measured = [];
+    for (const [index, round] of rounds.entries()) {
+      await page.locator('#stage').press('Enter');
+      await page.waitForFunction(() => document.getElementById('stage').dataset.state === 'ready', undefined, { timeout: 6500 });
+      await page.waitForTimeout(round.delay);
+      if (round.input === 'keyboard') await page.locator('#stage').press('Enter');
+      else if (round.input === 'touch') await page.locator('#stage').tap();
+      else await page.locator('#stage').click();
+      const result = await snapshot();
+      const elapsed = await page.evaluate(() => window.inputTime - window.cueTime);
+      const actual = result.results[index]?.ms;
+      measured.push(actual);
+      if (result.results.length !== index + 1 || result.falseStartCount !== 0 || !(actual > 0) || !Number.isFinite(elapsed) || Math.abs(actual - elapsed) > 80) {
+        fail(`${label}: ${round.input} reaction ${index + 1} recorded ${actual}ms for ${Math.round(elapsed)}ms elapsed`);
+      }
+      const shown = await page.locator('#lastValue').textContent();
+      if (shown !== `${actual} ms`) fail(`${label}: visible time ${shown} disagrees with measured ${actual}ms`);
+      await checkRest(index === 4 ? 'done' : 'result');
+    }
+    const complete = await snapshot();
+    const average = measured.reduce((sum, time) => sum + time, 0) / rounds.length;
+    if (complete.phase !== 'done' || complete.best?.count !== 5 || Math.abs(complete.avgMs - average) > 1 || Math.abs(complete.best?.avg - average) > 1) {
+      fail(`${label}: five-round average/best did not match the played reactions`);
+    }
+    if (!(measured[1] > measured[0] + 300)) fail(`${label}: slower reaction did not produce a longer recorded time`);
+    await page.reload();
+    const restored = await snapshot();
+    if (JSON.stringify(restored.best) !== JSON.stringify(complete.best)) fail(`${label}: best reaction run did not survive reload`);
+    await page.locator('#stage').press('Enter');
+    await page.locator('#newRunBtn').click();
+    const reset = await snapshot();
+    if (reset.phase !== 'idle' || reset.round !== 0 || reset.results.length !== 0) fail(`${label}: restart did not reset an active round`);
+    await checkRest('restarted');
+    await page.locator('#stage').press('Enter');
+    await page.locator('#stage').press('Enter');
+    const early = await snapshot();
+    if (early.phase !== 'false-start' || early.falseStartCount !== 1 || early.results.length !== 1) fail(`${label}: early input was not a false start`);
+    await checkRest('false-start');
+    console.log(`Reflex Spark real reactions: ${measured.join(', ')}ms (mouse, keyboard, touch, keyboard, mouse).`);
+  } finally {
+    await context.close();
+  }
+}
+
 let server;
 let browser;
 try {
@@ -120,6 +210,7 @@ try {
   for (const game of TIME_DRIVEN_GAMES) {
     await checkGame(browser, started.baseUrl, game);
   }
+  await checkReactionClock(browser, started.baseUrl);
 } catch (error) {
   fail(error instanceof Error ? error.stack || error.message : String(error));
 } finally {
@@ -133,4 +224,4 @@ if (issues.length) {
   process.exit(1);
 }
 
-console.log(`Real-time progression check passed: ${TIME_DRIVEN_GAMES.length} time-driven game(s) advance under real time without advanceTime.`);
+console.log(`Real-time progression check passed: ${TIME_DRIVEN_GAMES.length} beat clocks and Reflex Spark reaction timing advance under real time without advanceTime.`);

@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-09-22 Codex - Reflex Spark reaction clock
+
+Cockpit upgrade, bounded game-polish pass. The real animation loop stopped as soon as the panel turned green, freezing the reaction clock. Independent natural-time probes recorded 0 ms for both 198 ms and 713 ms waits. A five-round mouse/keyboard/touch regression then reproduced five zero scores and a best run that disappeared on reload. Existing capture checks advanced synthetic time and missed the real-play failure.
+
+- Keep the loop active during both waiting and ready, stopping after the reaction as before. Game rules, wait ranges, controls, layout, and saved-record format remain unchanged.
+- Extend `test:realtime-progression` with independent cue/input timestamps, all five rounds, mouse/keyboard/touch, visible scores, average, saved best, active restart, false starts, and idle/result/done frame counts. The new check failed against the original game before the fix.
+- Verified natural-time reactions of 183, 667, 300, 450, and 217 ms with independent cue/input timestamps. All five scores, the average, and the saved best agreed. Idle, result, done, reset, and false-start states stop their animation frames. The original game failed the same check with five zero scores.
+- Passed: all 59 fast gates, catalog validation/freeze, full 100-game smoke, strict 200-surface capture, full contrast and landscape gates, PWA/runtime storage, strict 101-page performance audit, and `git diff --check`. Focused capture/contrast and the develop-web-game client also passed. Desktop/mobile direct and catalog-player screenshots inspected, no overflow or game errors; in-player natural-time reaction was 382 ms, with restart, help, and mute exercised. The named browser session logged favicon-fetch CSP errors during page inspection; independent Chromium game/performance checks had no console/page errors.
+- Performance: Reflex Spark 39.6 KB / 2 requests / 0 errors, versus 39.4 KB / 2 requests in the prior September audit, below the unchanged 100 KB game budget. Evidence: `test-results/reflex-clock/`, full capture `2026-09-22T21-57-03-632Z`, performance `2026-09-22T22-00-26-743Z`. The initial upgrade was completed locally; the user then requested publication to the existing live arcade. Release verification is recorded in the shared handoff. The earlier 048f2bc landscape fix's three workflows and seven validation/deploy jobs were confirmed successful at startup.
+
 ## 2026-09-22 Claude - two games you could not play with the phone sideways
 
 Targeted landscape pass on Echo Mimic and Memory Match. No rules, content, art or difficulty changed.

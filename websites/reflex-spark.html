@@ -658,9 +658,10 @@
   els.helpClose.addEventListener('click', () => closeOverlay(els.helpOverlay));
   els.helpOverlay.addEventListener('click', (e) => { if (e.target === els.helpOverlay) closeOverlay(els.helpOverlay); });
 
-  // RAF tick — drives the wait → ready transition
+  // Keep the clock running through green until the player reacts. Stopping at
+  // ready freezes state.now at readyAt and records every real reaction as 0 ms.
   let lastFrame = 0, raf = 0;
-  function loopActive(){ return state.phase === 'waiting'; }
+  function loopActive(){ return state.phase === 'waiting' || state.phase === 'ready'; }
   function ensureLoop(){ if (raf || !loopActive()) return; lastFrame = 0; raf = requestAnimationFrame(tick); }
   function stopLoop(){ if (raf) cancelAnimationFrame(raf); raf = 0; }
   function tick(t){
