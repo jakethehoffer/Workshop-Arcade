@@ -123,6 +123,16 @@ async function checkReactionClock(browser, baseUrl) {
       if (message.type() === 'error') fail(`${label}: console error: ${message.text()}`);
     });
     await page.addInitScript(() => {
+      // Cold audio startup can block the page for hundreds of milliseconds.
+      // Make that cost repeatable so it cannot be charged to the first reaction.
+      if (window.AudioContext) window.AudioContext = new Proxy(window.AudioContext, {
+        construct(target, args) {
+          const context = Reflect.construct(target, args);
+          const started = performance.now();
+          while (performance.now() - started < 200) { /* Simulated cold sound startup. */ }
+          return context;
+        },
+      });
       window.reactionFrames = 0;
       const raf = window.requestAnimationFrame;
       window.requestAnimationFrame = (callback) => raf.call(window, (time) => {

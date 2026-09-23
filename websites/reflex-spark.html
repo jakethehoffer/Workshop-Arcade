@@ -505,6 +505,9 @@
   function startRound(){
     if (state.phase === 'idle' || state.phase === 'result' || state.phase === 'false-start' || state.phase === 'done'){
       if (state.phase === 'done') { newRun(); }
+      // Warm audio before the wait: cold startup must not delay the green cue
+      // while the reaction clock is already running.
+      if (soundEnabled) ensureAudio();
       state.round += 1;
       const wait = WAIT_MIN_MS + Math.random() * (WAIT_MAX_MS - WAIT_MIN_MS);
       state.waitDeadline = state.now + wait;
