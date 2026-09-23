@@ -99,6 +99,40 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:760px){body{padding:9px 7px 14px}.app{gap:7px}.brand{display:none}.help{text-align:center;font-size:10px}.hud{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pill{padding:6px 4px}.value{font-size:14px}.routeStrip{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.routeActions{grid-column:1/-1;order:-1}.routeCell{padding:6px 6px}.routeCell .label{font-size:8px}.routeCell .value{font-size:11px}.status.routeStatus{font-size:11px;min-height:30px;padding:5px 8px}.bar button{flex:1 1 105px;min-height:38px;padding:8px}.touch{grid-template-columns:repeat(5,minmax(0,64px));gap:6px}.touch button{font-size:10px;min-height:44px}}
 @media(max-width:430px){.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.routeStrip{grid-template-columns:repeat(2,minmax(0,1fr))}.routeCell.wide,.routeActions,.status.routeStatus{grid-column:1/-1}.status{font-size:11px}.touch{grid-template-columns:repeat(3,minmax(0,86px))}}
+/* A live train can cross the yard while the player scrolls. Keep the whole
+   track and its controls together on short, wide screens. */
+@media(orientation:landscape) and (max-height:560px){
+  body{padding:6px;min-height:100dvh}
+  .app{height:calc(100dvh - 12px);grid-template-columns:minmax(0,1fr) clamp(220px,30vw,280px);grid-template-rows:auto minmax(0,1fr) 40px;gap:6px}
+  .top{display:none}
+  .hud{grid-column:2;grid-row:1;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .pill{padding:3px 2px}.label{font-size:8px}.value{font-size:12px;line-height:1.1}
+  .app>.panel{grid-column:1;grid-row:1/3;min-width:0;min-height:0;display:grid;place-items:center}
+  canvas{width:min(100%,calc((100dvh - 60px)*16/9));height:auto}
+  .routeStrip{grid-column:2;grid-row:2;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;align-content:start}
+  .routeCell{padding:3px 5px}.routeCell .value{font-size:11px}
+  .routeCell:nth-child(1){grid-column:1;grid-row:1}
+  .routeCell:nth-child(2){grid-column:1/-1;grid-row:2}
+  .routeCell:nth-child(3){grid-column:2;grid-row:1}
+  .routeCell.verdict{grid-column:1/-1;grid-row:3}
+  .routeActions{grid-column:1/-1;grid-row:4;order:0;gap:4px}
+  .routeActions button{min-height:36px;padding:5px;font-size:11px}
+  .status.routeStatus{grid-row:5;min-height:30px;padding:4px;font-size:10px}
+  .bar{grid-column:1;grid-row:3;gap:5px;flex-wrap:nowrap}
+  .bar button{flex:1 1 0;min-width:0;min-height:40px;padding:5px;font-size:10px}
+  .touch{grid-column:2;grid-row:3;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .touch button{min-width:0;min-height:40px;padding:3px 1px;font-size:9px}
+}
+@media(orientation:landscape) and (max-height:330px){
+  /* The catalog toolbar leaves less room on the smallest phones. The map
+     already shows the route and the switch button names the selection. */
+  .routeCell:nth-child(1),.routeCell:nth-child(2){display:none}
+  .routeCell:nth-child(3){grid-column:1;grid-row:1}
+  .routeCell.verdict{grid-column:2;grid-row:1}
+  .routeCell.verdict .value{white-space:normal}
+  .routeActions{grid-row:2}
+  .status.routeStatus{grid-row:3}
+}
 </style>
 <script src="workshop-runtime.js"></script>
 </head>
@@ -108,7 +142,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     <div class="brand"><span class="eyebrow">Workshop Arcade</span><span class="title">Rail Yard Relay</span></div>
     <div class="help">Click switches, or use arrows (or Q) to choose one and Space to flip it. Route each colored train into its matching station. The Dispatch panel says whether the route suits the next train. R restarts, F fullscreen.</div>
   </header>
-  <section class="hud" aria-label="Dispatcher status">
+  <section class="hud" aria-label="Dispatcher status" data-landscape-essential="yard clock and score">
     <div class="pill"><span class="label">Stage</span><span class="value" id="stageOut">1/4</span></div>
     <div class="pill"><span class="label">Clock</span><span class="value" id="timeOut">60</span></div>
     <div class="pill"><span class="label">Moves</span><span class="value" id="movesOut">0</span></div>
@@ -117,7 +151,7 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     <div class="pill"><span class="label">Score</span><span class="value" id="scoreOut">0</span></div>
     <div class="pill"><span class="label">Best</span><span class="value" id="bestOut">0</span></div>
   </section>
-  <section class="routeStrip" aria-label="Route status and quick dispatch controls">
+  <section class="routeStrip" aria-label="Route status and quick dispatch controls" data-landscape-essential="route and dispatch controls">
     <div class="routeCell"><span class="label">Selected</span><span class="value" id="selectedSwitchOut">B -> C</span></div>
     <div class="routeCell wide"><span class="label">Active Route</span><span class="value" id="routeOut">A -> B -> C</span></div>
     <div class="routeCell"><span class="label">Next Train</span><span class="value" id="nextTrainOut">Red</span></div>
@@ -129,15 +163,15 @@ button[aria-pressed="false"]{color:rgba(237,247,255,.72);border-color:rgba(255,2
     <div class="status routeStatus" id="statusOut" aria-live="polite">Press Start to open the yard.</div>
   </section>
   <div class="panel">
-    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Rail Yard Relay playfield with trains, switches, tracks, and colored stations"></canvas>
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Rail Yard Relay playfield with trains, switches, tracks, and colored stations" data-landscape-essential="whole rail yard"></canvas>
   </div>
   <div id="liveOut" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Press Start to open the yard.</div>
-  <section class="bar" aria-label="Game controls">
+  <section class="bar" aria-label="Game controls" data-landscape-essential="game controls">
     <button id="restartBtn" type="button">Restart</button>
     <button id="soundBtn" type="button" aria-pressed="true">Sound On</button>
     <button id="fullBtn" type="button">Fullscreen</button>
   </section>
-  <section class="touch" aria-label="Touch switch controls">
+  <section class="touch" aria-label="Touch switch controls" data-landscape-essential="touch switch controls">
     <button type="button" data-act="prev">Prev</button>
     <button type="button" data-act="toggle">Switch</button>
     <button type="button" data-act="next">Next</button>

@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-09-23 Codex - Rail Yard Relay on sideways phones
+
+Choose-best-next-move, bounded game-polish pass. The earlier landscape census recorded only 118 of 462 canvas pixels visible at 844x390, but a live routing game needs the complete track and switches together. At 568x320 the whole yard started below the screen. Scrolling also hid the clock, route verdict or touch controls while trains kept moving.
+
+- Short landscape screens now put the whole yard beside the clock, route verdict and dispatch controls, with restart/sound/fullscreen and touch controls below. At heights below 331px, duplicate route/selection text gives way to the drawn route and named switch button so the catalog toolbar cannot make controls overlap.
+- Tagged the yard, status and control groups for the existing landscape gate. Its real measurement rejects the previous layout for the yard and both bottom control groups. No game scripts, stage data, rules, scores or storage behavior changed.
+- Focused verification passed at 844x390, 667x375, 568x320, 932x430 and the shorter 844x331, 667x316, 568x261 and 932x371 player sizes. Real taps on the board and buttons, keyboard switching, natural train/clock movement, active reset, sound, fullscreen, failure/reset and saved best all passed without game errors or overflow. All four stages completed through touch controls with 5/6/7/8 deliveries and zero losses. Inspected screenshots, including the smallest player, plus the required game client. Every element box stayed identical to the previous page at desktop 1280x820, portrait 390x844 and 360x640, and tablet 768x1024.
+- Initial small-player screenshot exposed overlapping controls despite passing container bounds. Added hit tests at five points per button and the compact-height rule, then reran the affected probes successfully. A fullscreen probe initially timed out because its animation-frame polling had been disabled for deterministic play; fixed the probe to poll on a timer and it passed.
+- Evidence: ignored `test-results/rail-landscape/` contains the original page, before/after geometry, play screenshots, stage results and probes. Catalog freeze, focused smoke, focused contrast (70 elements, zero failures) and full landscape sweep passed. Final release checks are recorded in the shared handoff.
+
 ## 2026-09-22 Codex - Reflex Spark reaction clock
 
 Cockpit upgrade, bounded game-polish pass. The real animation loop stopped as soon as the panel turned green, freezing the reaction clock. Independent natural-time probes recorded 0 ms for both 198 ms and 713 ms waits. A five-round mouse/keyboard/touch regression then reproduced five zero scores and a best run that disappeared on reload. Existing capture checks advanced synthetic time and missed the real-play failure.
