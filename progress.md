@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-09-24 Codex - Prism Relay's whole puzzle on short screens
+
+Choose-best-next-move, bounded game-polish pass. The known landscape census gap was real: at 844x390 the board started at y=246 and ended at y=504, and the height cap stretched square cells flat. A second visual defect affected every screen: the drawing surface was 668px tall but the board actually painted down to y=710, cutting off the last row and overlapping its footer.
+
+- Landscape-only CSS now keeps the complete, undistorted board beside the move budget, rotation preview, receiver chips, status and all five buttons. A compact rule handles short catalog frames. Five essential-surface tags opt the game into the existing full-fit landscape gate.
+- Increased the drawing surface height to 744 so the last row and footer have room. The game script, stage data, scoring and input mapping are byte-identical. Every outer element box remains identical at 1280x820, 390x844, 360x640 and 768x1024, while the drawing inside now shows the full last row.
+- Independent ray tracing found solutions in 2/1/4/4 moves, then real touch taps solved all four stages across 11 short-screen sizes and both 844x390 and 568x320 catalog players. Verified keyboard rotation, active reset, losing/reset, new-run, sound, fullscreen and best-score persistence. No errors, overflow, clipped preview text or covered buttons. Inspected desktop, portrait, landscape, tiny catalog and all-stage screenshots, plus the required game client.
+- Before/after checks run the existing landscape measurement against the prior page with tags: the old board fails, the new layout passes. A canvas drawing probe proves the old y=710 board exceeded 668px and the corrected 744px surface contains it. An early tap probe used the wrong row offset; corrected the probe against the drawn tile centers, then all solutions passed.
+- Evidence and probes: ignored `test-results/prism-landscape/`. Full release checks and live verification are recorded in the shared handoff.
+
 ## 2026-09-23 Codex - Rail Yard Relay on sideways phones
 
 Choose-best-next-move, bounded game-polish pass. The earlier landscape census recorded only 118 of 462 canvas pixels visible at 844x390, but a live routing game needs the complete track and switches together. At 568x320 the whole yard started below the screen. Scrolling also hid the clock, route verdict or touch controls while trains kept moving.
