@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-09-24 Codex - 2048's whole board on sideways phones
+
+Choose-best-next-move, bounded game-polish pass. The existing landscape census counted 390 visible canvas pixels as a pass even though the board was 620px tall. After the start button took focus, the board began at y=-166, with the score and controls above the screen. No scroll position could show all sixteen tiles together.
+
+- Landscape-only CSS now puts the whole square board beside the score, controls and status. A compact short-frame rule fits the catalog player, including its wrapped toolbar. Start/win/loss cards stay inside the board, and help scrolls within the screen so Close remains reachable.
+- Tagged those four essential surfaces for the existing whole-fit landscape gate. Its actual measurement fails the old page for all four surfaces and passes the new page. Game script and rules are byte-identical. Every outer element box matches the old page at 1280x820, 390x844, 360x640 and 768x1024.
+- Focused verification passed at sixteen direct screen sizes plus actual 844x390 and 568x320 catalog players. Trusted touch swipes and keyboard moves merged known tile arrangements for independently checked scores. Undo restored the prior board, active reset cleared it, a prepared 1024 pair reached the win screen, Keep Playing continued, and a blocked board reached Game Over and restarted. Sound, help/Close, fullscreen and saved best passed with no game errors or horizontal overflow. Desktop, portrait, landscape, tiny-player and game-client pictures were inspected.
+- An early synthetic swipe sequence suppressed the next tap in Chromium. A fresh-game comparison isolated the test gesture; explicit touch-start/move/end pauses restored normal tap delivery. The game did not need an input change. The named browser also logged only its optional favicon 404s; independent game checks were clean.
+- Catalog freeze, all 59 fast gates, scoped smoke, scoped contrast (30 elements, zero failures), the full landscape gate (eight tagged games) and diff checks passed. Evidence and probes: ignored `test-results/2048-landscape/`. Full release and live checks are recorded in the shared handoff.
+
 ## 2026-09-24 Codex - Prism Relay's whole puzzle on short screens
 
 Choose-best-next-move, bounded game-polish pass. The known landscape census gap was real: at 844x390 the board started at y=246 and ended at y=504, and the height cap stretched square cells flat. A second visual defect affected every screen: the drawing surface was 668px tall but the board actually painted down to y=710, cutting off the last row and overlapping its footer.

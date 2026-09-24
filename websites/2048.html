@@ -179,12 +179,44 @@
       .board{margin-top:8px;width:min(100%,370px)}
       .help-card{padding:18px;max-height:86dvh;overflow:auto}
     }
+    /* A sideways player needs all sixteen tiles and the controls together. */
+    @media (orientation: landscape) and (max-height: 560px){
+      .wrap{width:min(100%,1100px);height:100dvh;min-height:0;padding:8px;gap:8px;grid-template-columns:minmax(0,1fr) minmax(230px,1fr);grid-template-rows:auto auto minmax(0,1fr);align-content:start}
+      header,.controls,.status-strip{grid-column:2;min-width:0}
+      header{grid-row:1;align-items:center;gap:6px;flex-wrap:nowrap}
+      h1{font-size:32px}
+      .badges{width:auto;gap:6px;margin-left:auto}
+      .badge{min-width:72px;padding:5px 7px}
+      .badge .label{font-size:10px}
+      .badge .value{font-size:18px}
+      .controls{grid-row:2;grid-template-columns:1fr;margin:0;gap:6px}
+      .control-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+      .utility-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+      button{min-height:36px;padding:7px 5px;font-size:12px}
+      .controls-hint{font-size:11px;text-align:center}
+      .status-strip{grid-row:3;align-self:start;margin:0;min-height:34px;padding:6px 8px;font-size:12px}
+      .board{grid-column:1;grid-row:1/-1;align-self:center;margin:0;width:min(100%,calc(100dvh - 16px))}
+      .card{padding:10px;max-width:94%;font-size:12px}
+      .card h2{font-size:18px;margin-bottom:6px}
+      .card p{margin-bottom:8px;line-height:1.3}
+      .card .actions{gap:6px}
+      .help-card{max-height:calc(100dvh - 16px);overflow:auto;padding:16px}
+    }
+    @media (orientation: landscape) and (max-height: 270px){
+      .wrap{padding:6px;gap:6px}
+      .board{width:min(100%,calc(100dvh - 12px))}
+      h1{font-size:27px}
+      .badge{padding:3px 6px}
+      button{min-height:32px;padding-block:5px}
+      .controls-hint{display:none}
+      .status-strip{font-size:11px;padding:5px 7px}
+    }
   </style>
   <script src="workshop-runtime.js"></script>
 </head>
 <body>
   <div class="wrap">
-    <header>
+    <header data-landscape-essential="score">
       <h1>2048</h1>
       <div class="badges">
         <div class="badge" aria-live="polite"><div class="label">Score</div><div id="score" class="value">0</div></div>
@@ -192,7 +224,7 @@
       </div>
     </header>
 
-    <div class="controls" aria-label="Game controls">
+    <div class="controls" aria-label="Game controls" data-landscape-essential="controls">
       <div class="control-group primary-controls">
         <button type="button" id="newBtn" class="primary-action" title="Start a new game (N)" aria-label="Start a new 2048 board (N)">New Game</button>
         <button type="button" id="undoBtn" class="undo-action" title="Undo last move (Z)" aria-label="Undo last move (Z)" disabled>Undo</button>
@@ -204,9 +236,9 @@
       </div>
       <span class="controls-hint" aria-hidden="true">Use ← ↑ → ↓ or WASD (swipe if mobile)</span>
     </div>
-    <div id="statusBar" class="status-strip" aria-live="polite" aria-atomic="true" data-tone="ready">Ready. Slide any direction to start.</div>
+    <div id="statusBar" class="status-strip" aria-live="polite" aria-atomic="true" data-tone="ready" data-landscape-essential="status">Ready. Slide any direction to start.</div>
 
-    <div class="board" id="board">
+    <div class="board" id="board" data-landscape-essential="whole-board">
       <canvas id="game" width="600" height="600" aria-label="2048 game board" role="img"></canvas>
       <div id="overlay" class="overlay" aria-live="polite" aria-hidden="true">
         <div class="card" role="dialog" aria-modal="true" aria-labelledby="overlayTitle" aria-describedby="overlayDesc">
