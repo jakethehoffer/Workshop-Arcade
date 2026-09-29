@@ -1,5 +1,15 @@
 Original prompt: Do this for me
 
+## 2026-09-28 Codex - Familiar games first
+
+Choose-best-next-move, bounded catalog pass following the user's recognizable-games direction. The previous empty-history home page defaulted to newest games and date-based picks, burying familiar starting points.
+
+- Added an editorial Familiar first order and a first classics shelf led by Snake, 2048 and Brick Breaker. Existing newest/alphabetical/popular orders, deep links, search, favorites and chronological recent play remain available. All 100 frozen identities and game mechanics are unchanged.
+- The heading invites familiar play and suggestions without promising a working game editor. Small-screen category chips now scroll horizontally so the classics fit in the first 320x640 screen. Featured game names wrap instead of losing their endings.
+- URL/default-order checks exercise the shipped helpers, preserve explicit newest links, omit the familiar default, and retain all manifest games. Page-weight accounting follows the actual eager covers, with updated negative fixtures. The small newest-cover install cache remains unchanged, while visited familiar covers enter runtime caching.
+- Focused browser probes cover desktop, phone, small phone and failed-manifest fallback: all games present, three featured game launches, search and sort reload, favorites, browse reset, chronological recent play, and a game-specific suggestion brief. Screenshots inspected. Catalog contrast measured 1449 text elements with zero failures. Final local and deployed release evidence is recorded in .ai-sync.
+- Probe lesson: serviceWorkers block injects service-worker access errors into opaque sandboxed iframes. The identical probe passes with ordinary service workers, including in a fresh independent browser. Shared lesson saved as cos rule 36ef. Evidence: test-results/familiar-first/.
+
 ## 2026-09-24 Codex - 2048's whole board on sideways phones
 
 Choose-best-next-move, bounded game-polish pass. The existing landscape census counted 390 visible canvas pixels as a pass even though the board was 620px tall. After the start button took focus, the board began at y=-166, with the score and controls above the screen. No scroll position could show all sixteen tiles together.

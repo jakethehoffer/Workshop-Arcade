@@ -230,15 +230,15 @@ async function checkServiceWorker() {
   if (!/function\s+newestCoverUrls\s*\(/.test(src)) {
     fail(`${swPath}: missing newestCoverUrls() helper that picks the newest covers from the manifest`);
   } else {
-    // The helper must fetch the manifest and sort by addedAt so the pre-cache
-    // matches what index.html's default 'newest first' sort surfaces.
+    // Retain the small newest-cover install cache. Familiar-first covers are
+    // fetched by the catalog and enter the runtime cache on the first visit.
     const helperMatch = src.match(/function\s+newestCoverUrls\s*\([^)]*\)\s*\{[\s\S]*?\n\}/);
     const helperSrc = helperMatch ? helperMatch[0] : '';
     if (!/fetch\(MANIFEST_URL/.test(helperSrc) && !/fetch\(['"`]websites\/manifest\.json['"`]/.test(helperSrc)) {
       fail(`${swPath}: newestCoverUrls() must fetch the manifest (via MANIFEST_URL or 'websites/manifest.json')`);
     }
     if (!/addedAt/.test(helperSrc)) {
-      fail(`${swPath}: newestCoverUrls() must sort by addedAt so the pre-cache mirrors index.html's default 'newest first' sort`);
+      fail(`${swPath}: newestCoverUrls() must sort by addedAt for the newest-cover install cache`);
     }
     if (!/\.cover/.test(helperSrc)) {
       fail(`${swPath}: newestCoverUrls() must read the .cover field from each manifest entry`);

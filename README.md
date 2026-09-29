@@ -6,7 +6,7 @@
 
 Workshop Arcade is a player-facing static arcade: 100 browser games, instant play in a sandboxed modal, favorites, recent plays, local player-data controls, random discovery from the catalog and player, direct game links, share links, install/offline support, and a lightweight suggestion flow for improvement ideas.
 
-Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The visible catalog is organized around player value: daily picks, for-you recommendations for returning players, quick plays, newest arrivals, continue playing, and saved favorites.
+Each game lives as a standalone HTML file under `websites/`, with catalog metadata in `websites/manifest.json` and cover art in `covers/`. The catalog starts with familiar games: Snake, 2048 and Brick Breaker lead the first shelf and default ordering. Players can still choose newest, alphabetical or popular order, use daily picks and recommendations, and return to recent games and saved favorites. Familiar-first is an editorial selection, not a measured popularity ranking.
 
 The Workshop flow is a quiet "Suggest an improvement" action. It turns player feedback into an AI-ready brief that can be copied, downloaded, saved locally in the browser, resumed later from Player picks, or opened as a pre-filled maintenance draft.
 

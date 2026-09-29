@@ -214,7 +214,7 @@ const BUDGETS = {
   default: { transferKb: 1, requests: 3 }
 };
 `);
-    await writeFixture(root, 'index.html', '<!doctype html><script>function aboveFoldCoverCount() { return 6; // desktop\\n}</script>');
+    await writeFixture(root, 'index.html', '<!doctype html><script>const FAMILIAR_SLUGS = ["fixture-game"]; function aboveFoldCoverCount() { return 6; // desktop\\n}</script>');
     await writeFixture(root, 'sw.js', 'self.addEventListener("install", () => {});');
     await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
     await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
@@ -252,7 +252,7 @@ const BUDGETS = {
   default: { transferKb: 100, requests: 3 }
 };
 `);
-    await writeFixture(root, 'index.html', '<!doctype html><script>function aboveFoldCoverCount() { return 1; // desktop\\n}</script>');
+    await writeFixture(root, 'index.html', '<!doctype html><script>const FAMILIAR_SLUGS = ["fixture-game"]; function aboveFoldCoverCount() { return 1; // desktop\\n}</script>');
     await writeFixture(root, 'sw.js', 'self.addEventListener("install", () => {});');
     await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
     await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
@@ -291,7 +291,7 @@ const BUDGETS = {
   default: { transferKb: 100, requests: 3 }
 };
 `);
-    await writeFixture(root, 'index.html', '<!doctype html><script>function aboveFoldCoverCount() { return 1; // desktop\\n}</script>');
+    await writeFixture(root, 'index.html', '<!doctype html><script>const FAMILIAR_SLUGS = ["fixture-game"]; function aboveFoldCoverCount() { return 1; // desktop\\n}</script>');
     await writeFixture(root, 'sw.js', 'self.addEventListener("install", () => {});');
     await writeFixture(root, 'app.webmanifest', '{"name":"Fixture"}');
     await writeFixture(root, 'covers/app-icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');

@@ -4,6 +4,7 @@ Use this file as the fast agent entrypoint for Workshop Arcade work. It is a com
 
 ## Current State
 
+- Product direction: lead with recognizable games that people already play or remember. The catalog defaults to Familiar first with a classics shelf. Keep the feedback flow honest: suggestions produce briefs, not instant playable edits. The exact 100-game freeze remains in force.
 - The catalog is a static single-page arcade with standalone game HTML in `websites/`, cover art in `covers/`, and catalog data in `websites/manifest.json`.
 - The catalog has 100 games and 101 audited pages. The games 85-100 quality pass is complete: the high-mismatch expansion entries now have distinct rules, visuals, authored level logic, and rendered evidence.
 - The exact 100-game catalog is frozen. Do not add, remove, rename, replace, or scaffold a game until the user explicitly changes their mind. Existing games may be repaired, polished, rebalanced, or refactored. `catalog-freeze.json` and `npm run test:catalog-freeze` enforce the identity set.

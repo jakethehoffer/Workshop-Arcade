@@ -176,10 +176,13 @@ async function collectGameDependencies(htmlPath, html) {
   return [...seen];
 }
 
-function defaultSortedGames(manifest) {
+function defaultSortedGames(manifest, indexHtml) {
+  const match = indexHtml.match(/const FAMILIAR_SLUGS = (\[[^;]+\]);/);
+  if (!match) { fail('index.html: missing familiar order for catalog shell budget'); return manifest; }
+  const slugs = JSON.parse(match[1]);
+  const rank = game => { const i = slugs.indexOf(game.slug); return i < 0 ? slugs.length : i; };
   return [...manifest].sort((a, b) => {
-    const byDate = new Date(b.addedAt || 0) - new Date(a.addedAt || 0);
-    return byDate || 0;
+    return rank(a) - rank(b) || a.title.localeCompare(b.title);
   });
 }
 
@@ -202,7 +205,7 @@ function readDesktopEagerCoverCount(indexHtml) {
 async function checkCatalogShell(manifest, budgets) {
   const indexHtml = await readText('index.html');
   const eagerCount = readDesktopEagerCoverCount(indexHtml);
-  const eagerCovers = defaultSortedGames(manifest)
+  const eagerCovers = defaultSortedGames(manifest, indexHtml)
     .slice(0, eagerCount)
     .map((game) => game.cover)
     .filter(Boolean);
